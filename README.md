@@ -178,6 +178,7 @@ Nguyen tac:
 - Khong code truc tiep tren `main`.
 - Moi tinh nang/bugfix phai di qua nhanh rieng + Pull Request.
 - Chi merge khi CI pass.
+- Tuyet doi khong merge khi CI dang chay hoac co job fail.
 
 Luong lam viec de xuat cho 1 tinh nang moi:
 
@@ -218,6 +219,10 @@ git push -u origin feature/user-registration
 6. Tao Pull Request: `feature/user-registration` -> `main`.
 7. Cho CI chay xong (lint/test/build) va xu ly comment review.
 8. Merge PR khi da pass CI va duoc approve.
+
+Rule bat buoc truoc khi merge:
+- Tat ca CI checks phai o trang thai `success`.
+- Khong merge neu check con `pending`.
 
 Sau khi merge xong, don dep nhanh da dung:
 
