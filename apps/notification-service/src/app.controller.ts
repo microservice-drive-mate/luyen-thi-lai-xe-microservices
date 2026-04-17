@@ -12,7 +12,7 @@ export class AppController {
   }
 
   @EventPattern('user_created') // Lắng nghe sự kiện này
-  async handleUserCreated(data: any) {
+  handleUserCreated(data: any) {
     console.log('Nhận được sự kiện user_created:', data);
     // Logic gửi mail hoặc thông báo ở đây
   }

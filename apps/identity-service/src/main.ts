@@ -1,9 +1,14 @@
 import { NestFactory } from '@nestjs/core';
+import { ApiExceptionFilter, ApiResponseInterceptor } from '@repo/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.useGlobalInterceptors(new ApiResponseInterceptor());
+  app.useGlobalFilters(new ApiExceptionFilter());
+
+  await app.listen(process.env.PORT ?? 3000);
   const configService = app.get(ConfigService);
   const port = configService.get<number>('port') ?? 3000;
 
@@ -12,4 +17,4 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`✓ Identity Service listening on port ${port}`);
 }
-bootstrap();
+void bootstrap();

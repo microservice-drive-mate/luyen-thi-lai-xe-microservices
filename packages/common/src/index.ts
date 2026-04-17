@@ -1,3 +1,5 @@
+export * from './http-api';
+
 /**
  * @repo/common - Shared utilities, services, and configuration
  * Main entry point for all shared modules

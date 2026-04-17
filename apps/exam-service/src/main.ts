@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ApiExceptionFilter, ApiResponseInterceptor } from '@repo/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
@@ -12,5 +13,9 @@ async function bootstrap() {
 
   await app.listen(port);
   console.log(`✓ Exam Service listening on port ${port}`);
+  app.useGlobalInterceptors(new ApiResponseInterceptor());
+  app.useGlobalFilters(new ApiExceptionFilter());
+
+  await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap();

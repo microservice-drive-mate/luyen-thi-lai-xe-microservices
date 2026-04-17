@@ -14,11 +14,9 @@ export class AppController {
   async health() {
     return this.appService.healthCheck();
   }
-  
+
   @Post('test-rabbitMQ')
-  async createUser(
-    @Body() body: { email: string; name: string }
-  ) {
+  async createUser(@Body() body: { email: string; name: string }) {
     const result = await this.appService.createUser(body);
 
     return result;
