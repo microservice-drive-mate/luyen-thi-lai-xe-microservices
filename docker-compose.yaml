@@ -12,6 +12,8 @@ services:
       POSTGRES_DB: identity_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
     volumes:
       - db_identity_data:/var/lib/postgresql/data
 
@@ -22,6 +24,8 @@ services:
       POSTGRES_DB: user_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
     volumes:
       - db_user_data:/var/lib/postgresql/data
 
@@ -32,6 +36,8 @@ services:
       POSTGRES_DB: exam_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+    ports:
+      - "5434:5432"
     volumes:
       - db_exam_data:/var/lib/postgresql/data
 
@@ -42,6 +48,8 @@ services:
       POSTGRES_DB: course_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+    ports:
+      - "5435:5432"
     volumes:
       - db_course_data:/var/lib/postgresql/data
 
@@ -52,6 +60,8 @@ services:
       POSTGRES_DB: question_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+    ports:
+      - "5436:5432"
     volumes:
       - db_question_data:/var/lib/postgresql/data
 
@@ -62,6 +72,8 @@ services:
       POSTGRES_DB: notification_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+    ports:
+      - "5437:5432"
     volumes:
       - db_notification_data:/var/lib/postgresql/data
 
@@ -72,6 +84,8 @@ services:
       POSTGRES_DB: analytics_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+    ports:
+      - "5438:5432"
     volumes:
       - db_analytics_data:/var/lib/postgresql/data
 
@@ -82,6 +96,8 @@ services:
       POSTGRES_DB: simulation_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+    ports:
+      - "5439:5432"
     volumes:
       - db_simulation_data:/var/lib/postgresql/data
 
@@ -95,6 +111,39 @@ services:
       - "15672:15672" # Port cho giao diện quản lý (Web UI)
 
   # ========================================================
+  # 2.5 CONFIG SERVER (CONSUL)
+  # ========================================================
+  consul:
+    image: hashicorp/consul:1.19
+    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
+    ports:
+      - "8500:8500"   # HTTP API & UI
+      - "8600:8600"   # DNS
+      - "8600:8600/udp"
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - consul_data:/consul/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8500/v1/status/leader"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Sidecar chạy init.sh sau khi Consul healthy để seed cấu hình vào KV Store
+  consul-init:
+    image: curlimages/curl:latest
+    volumes:
+      - ./docker/consul/init.sh:/consul/init.sh:ro
+    environment:
+      CONSUL_URL: http://consul:8500
+    depends_on:
+      consul:
+        condition: service_healthy
+    command: sh /consul/init.sh
+    restart: "no"
+
+  # ========================================================
   # 3. CÁC MICROSERVICES (NestJS)
   # ========================================================
 
@@ -104,8 +153,10 @@ services:
       dockerfile: ./apps/identity-service/Dockerfile
     environment:
       - DATABASE_URL=postgresql://user:password@db-identity:5432/identity_db
+      - CONSUL_URL=http://consul:8500
     depends_on:
       - db-identity
+      - consul
 
   user-service:
     build:
@@ -113,8 +164,10 @@ services:
       dockerfile: ./apps/user-service/Dockerfile
     environment:
       - DATABASE_URL=postgresql://user:password@db-user:5432/user_db
+      - CONSUL_URL=http://consul:8500
     depends_on:
       - db-user
+      - consul
 
   exam-service:
     build:
@@ -122,8 +175,10 @@ services:
       dockerfile: ./apps/exam-service/Dockerfile
     environment:
       - DATABASE_URL=postgresql://user:password@db-exam:5432/exam_db
+      - CONSUL_URL=http://consul:8500
     depends_on:
       - db-exam
+      - consul
 
   course-service:
     build:
@@ -131,8 +186,10 @@ services:
       dockerfile: ./apps/course-service/Dockerfile
     environment:
       - DATABASE_URL=postgresql://user:password@db-course:5432/course_db
+      - CONSUL_URL=http://consul:8500
     depends_on:
       - db-course
+      - consul
 
   question-service:
     build:
@@ -140,8 +197,10 @@ services:
       dockerfile: ./apps/question-service/Dockerfile
     environment:
       - DATABASE_URL=postgresql://user:password@db-question:5432/question_db
+      - CONSUL_URL=http://consul:8500
     depends_on:
       - db-question
+      - consul
 
   notification-service:
     build:
@@ -149,8 +208,10 @@ services:
       dockerfile: ./apps/notification-service/Dockerfile
     environment:
       - DATABASE_URL=postgresql://user:password@db-notification:5432/notification_db
+      - CONSUL_URL=http://consul:8500
     depends_on:
       - db-notification
+      - consul
 
   analytics-service:
     build:
@@ -158,8 +219,10 @@ services:
       dockerfile: ./apps/analytics-service/Dockerfile
     environment:
       - DATABASE_URL=postgresql://user:password@db-analytics:5432/analytics_db
+      - CONSUL_URL=http://consul:8500
     depends_on:
       - db-analytics
+      - consul
 
   simulation-service:
     build:
@@ -167,8 +230,10 @@ services:
       dockerfile: ./apps/simulation-service/Dockerfile
     environment:
       - DATABASE_URL=postgresql://user:password@db-simulation:5432/simulation_db
+      - CONSUL_URL=http://consul:8500
     depends_on:
       - db-simulation
+      - consul
 
   # ========================================================
   # 4. API GATEWAY (KONG)
@@ -198,3 +263,4 @@ volumes:
   db_notification_data:
   db_analytics_data:
   db_simulation_data:
+  consul_data:

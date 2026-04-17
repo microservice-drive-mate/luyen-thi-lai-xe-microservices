@@ -4,7 +4,7 @@ node_modules/
 .pnp
 .pnp.js
 
-# Build Outputs (Thêm **/ để chặn dist của từng service)
+# Build Outputs (Thêm **/ để chặn dist của từng service và packages)
 dist/
 **/dist/
 build/
@@ -17,6 +17,9 @@ out/
 .env
 .env.*
 !.env.example
+
+# Consul seed production (chứa secrets thật - không commit)
+consul-seed-production.json
 
 # Logs & Debug
 **/*.log

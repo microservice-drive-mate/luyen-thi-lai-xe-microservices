@@ -48,6 +48,7 @@ URL quan trong:
 - Kong Proxy: http://localhost:8000
 - Kong Admin API: http://localhost:8001
 - RabbitMQ UI: http://localhost:15672
+- **Consul UI & KV Store: http://localhost:8500** (centralized configuration)
 
 Stop:
 
@@ -55,7 +56,43 @@ Stop:
 docker compose down
 ```
 
-## 4. Route qua gateway
+## 4. Consul Configuration Management
+
+Tất cả microservices sử dụng **Consul** để quản lý configuration tập trung.
+
+### Consul là gì?
+
+Consul cung cấp Key-Value Store (KV store) cho cấu hình của tất cả services. Khi services khởi động, chúng tự động nạp configuration từ Consul.
+
+**Ưu điểm:**
+- Configuration tập trung - dễ dàng thay đổi mà không cần rebuild container
+- Fallback to .env files - nếu Consul không hoạt động, services vẫn dùng .env
+- Health check tự động - Consul kiểm tra kết nối trước khi nạp config
+
+### Truy cập Consul UI
+
+Mở browser: **http://localhost:8500**
+
+Có thể browse tất cả configuration keys dưới `/config/development/`
+
+### Quản lý Configuration
+
+Xem hướng dẫn đầy đủ: [CONFIG_CONSUL.md](./CONFIG_CONSUL.md)
+
+Các command hữu ích:
+
+```bash
+# Seed configuration vào Consul
+npm run consul:seed
+
+# Liệt kê tất cả keys
+npm run consul:list /config/development
+
+# Xem value của 1 key
+npm run consul:get /config/development/identity-service/database.url
+```
+
+## 5. Route qua gateway
 
 - /auth -> identity-service
 - /users -> user-service
@@ -66,7 +103,7 @@ docker compose down
 - /analytics -> analytics-service
 - /simulations -> simulation-service
 
-## 5. Chay local de code/debug
+## 6. Chay local de code/debug
 
 Yeu cau:
 - Node.js >= 18
@@ -121,7 +158,7 @@ docker compose run --rm identity-service npm run db:deploy -w identity-service
 docker compose run --rm identity-service npm run db:seed -w identity-service
 ```
 
-## 6. Cach tao service moi
+## 7. Cach tao service moi
 
 Vi du service moi: payment-service
 

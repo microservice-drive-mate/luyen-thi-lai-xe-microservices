@@ -1,22 +1,31 @@
 {
   "name": "@repo/common",
   "version": "1.0.0",
-  "description": "",
-  "main": "./dist/index.js",
-  "types": "./src/index.ts",
+  "description": "Shared utilities and configuration for microservices",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "commonjs",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
       "default": "./dist/index.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch",
     "test": "echo 'No tests yet'"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs"
+  "peerDependencies": {
+    "@nestjs/common": ">=10.0.0",
+    "@nestjs/config": ">=3.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "joi": "^17.11.0"
+  }
 }
