@@ -1,92 +1,92 @@
-# Workflow Làm Việc
+# Workflow Làm Việc Với Consul
 
-## Dev hằng ngày
+## Mục tiêu
 
-- Bật infrastructure bằng Docker: PostgreSQL, RabbitMQ, Consul.
-- Service đang code chạy local bằng `npm run start:dev`.
-- Không cần rebuild Docker image sau mỗi lần sửa code.
+- Không cần tạo `.env` riêng cho từng service để chạy local.
+- Service chạy local vẫn gọi được DB, RabbitMQ, Consul đang nằm trong Docker.
+- Giữ tách bạch giữa local dev và full Docker.
 
-Ví dụ:
+## Quy ước môi trường
+
+- `development`: dùng cho service chạy trong Docker.
+- `development-local`: dùng cho service chạy local trên máy host.
+
+Consul được seed cả hai bộ config.
+
+## Cách chạy local, không cần `.env`
+
+1. Bật infrastructure:
 
 ```powershell
 docker compose up -d consul consul-init rabbitmq db-user db-exam
 ```
 
-Terminal 1:
+2. Chạy service local bình thường:
 
 ```powershell
 cd apps/user-service
 npm run start:dev
 ```
 
-Terminal 2:
-
 ```powershell
 cd apps/exam-service
 npm run start:dev
 ```
 
-## Host và Docker
+Khi chạy local, code sẽ tự chọn `development-local` nếu `CONSUL_URL` đang là `localhost`.
 
-- Service chạy trong Docker dùng hostname Docker như `db-user`, `rabbitmq`, `consul`.
-- Service chạy local trên máy dùng `localhost:<port đã expose>`.
+## Service sẽ lấy config gì
 
-Ví dụ:
+`development-local` dùng host machine:
 
-- Trong Docker: `postgresql://user:password@db-user:5432/user_db`
-- Chạy local: `postgresql://user:password@localhost:5433/user_db`
+- DB: `localhost:5432` đến `localhost:5439`
+- RabbitMQ: `localhost:5672`
+- Port app: `3001` đến `3008`
 
-`db-user` chỉ tồn tại trong mạng nội bộ của Docker Compose. Máy host không biết tên này, chỉ biết các cổng đã map ra như `localhost:5433`.
+`development` dùng Docker network:
 
-## Vai trò của `.env`
+- DB: `db-*`
+- RabbitMQ: `rabbitmq`
+- Port app: `3000`
 
-- Mỗi service có `.env` riêng trên máy dev.
-- `.env` dùng cho `PORT`, `DATABASE_URL`, `RABBITMQ_URL`, `CONSUL_URL`.
-- `.env` được load khi service khởi động.
+## Vì sao cách này tốt hơn `.env` từng service
 
-Thứ tự ưu tiên hiện tại:
+- Team không phải tự tạo nhiều file local.
+- Config local vẫn tập trung trong Consul.
+- Tư duy giống production hơn: code đọc config từ config server.
 
-1. Biến môi trường và `.env`
-2. Consul
-3. Default trong code
+## Seed Consul
 
-Nghĩa là local có thể dùng `.env` để đè giá trị seed trong Consul.
+`docker compose up` sẽ seed sẵn:
 
-## Consul development để làm gì
+- `config/development/*`
+- `config/development-local/*`
 
-Vẫn cần giữ `consul-seed-development.json`.
-
-Mục đích:
-
-- Là config dùng chung cho team
-- Phù hợp khi chạy service trong Docker
-- Giữ workflow gần production hơn
-
-Quy ước:
-
-- Local dev: `.env` của service đè lên Consul
-- Full Docker: dùng config trong Consul
-
-## Khi nào cần build Docker image
-
-Chỉ build image khi:
-
-- Muốn chạy service trong container
-- Muốn test full Docker
-- Chuẩn bị deploy
-
-Ví dụ:
+Nếu cần seed lại local:
 
 ```powershell
-docker compose build exam-service
-docker compose up -d exam-service
+npm run consul:seed:local
 ```
 
-## Production
+Nếu cần seed lại Docker mode:
 
-- Build image cho từng service
-- Push image lên registry
-- Seed config production vào Consul
-- Deploy container với `NODE_ENV=production` và `CONSUL_URL`
+```powershell
+npm run consul:seed development
+```
 
-`consul-seed-production.json` không dùng để build image. Nó dùng để nạp config runtime vào Consul production trước hoặc trong lúc deploy.
+## Best practice và production
+
+Đây là hướng đúng hơn cho team:
+
+- Local dev: dùng `development-local`
+- Full Docker: dùng `development`
+- Production: dùng `production`
+
+Production vẫn nên:
+
+- build image cho từng service
+- push image lên registry
+- seed config production vào Consul
+- inject tối thiểu `CONSUL_URL` và biến bootstrap cần thiết từ hệ thống deploy
+
+Không nên dùng `.env` làm nguồn config chính cho production.

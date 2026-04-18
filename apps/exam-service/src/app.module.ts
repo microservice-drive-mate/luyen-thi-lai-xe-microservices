@@ -12,7 +12,12 @@ import Joi from 'joi';
         ConsulConfigFactory.create(
           Joi.object({
             nodeEnv: Joi.string()
-              .valid('development', 'staging', 'production')
+              .valid(
+                'development',
+                'development-local',
+                'staging',
+                'production',
+              )
               .default('development'),
             port: Joi.number().default(3000),
             database: Joi.object({

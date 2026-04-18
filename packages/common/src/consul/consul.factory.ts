@@ -20,8 +20,8 @@ export class ConsulConfigFactory {
   ): ConfigFactory {
     return async () => {
       const env = process.env;
-      const nodeEnv = env.NODE_ENV || 'development';
       const consulUrl = env.CONSUL_URL || 'http://localhost:8500';
+      const nodeEnv = env.NODE_ENV || this.resolveDefaultNodeEnv(consulUrl);
 
       this.logger.log(`Loading configuration from environment: ${nodeEnv}`);
       this.logger.log(`Consul URL: ${consulUrl}`);
@@ -99,8 +99,10 @@ export class ConsulConfigFactory {
   }
 
   private static loadFromEnv(env: NodeJS.ProcessEnv): Record<string, any> {
+    const consulUrl = env.CONSUL_URL || 'http://localhost:8500';
+
     return {
-      nodeEnv: env.NODE_ENV || 'development',
+      nodeEnv: env.NODE_ENV || this.resolveDefaultNodeEnv(consulUrl),
       port: parseInt(env.PORT || '3000', 10),
       logging: {
         level: env.LOG_LEVEL || 'info',
@@ -186,5 +188,17 @@ export class ConsulConfigFactory {
     });
 
     return result;
+  }
+
+  private static resolveDefaultNodeEnv(consulUrl: string): string {
+    const normalizedUrl = consulUrl.toLowerCase();
+    if (
+      normalizedUrl.includes('localhost') ||
+      normalizedUrl.includes('127.0.0.1')
+    ) {
+      return 'development-local';
+    }
+
+    return 'development';
   }
 }

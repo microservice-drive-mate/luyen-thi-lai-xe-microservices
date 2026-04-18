@@ -1,0 +1,54 @@
+{
+  "development-local": {
+    "shared": {
+      "log.level": "debug",
+      "log.format": "text",
+      "node_env": "development-local"
+    },
+    "identity-service": {
+      "port": "3001",
+      "database.url": "postgresql://user:password@localhost:5432/identity_db",
+      "database.pool_size": "10",
+      "database.connection_timeout": "5000",
+      "rabbitmq.url": "amqp://localhost:5672",
+      "rabbitmq.username": "guest",
+      "rabbitmq.password": "guest",
+      "rabbitmq.vhost": "/"
+    },
+    "user-service": {
+      "port": "3002",
+      "database.url": "postgresql://user:password@localhost:5433/user_db",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "exam-service": {
+      "port": "3003",
+      "database.url": "postgresql://user:password@localhost:5434/exam_db",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "question-service": {
+      "port": "3005",
+      "database.url": "postgresql://user:password@localhost:5436/question_db",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "course-service": {
+      "port": "3004",
+      "database.url": "postgresql://user:password@localhost:5435/course_db",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "notification-service": {
+      "port": "3006",
+      "database.url": "postgresql://user:password@localhost:5437/notification_db",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "analytics-service": {
+      "port": "3007",
+      "database.url": "postgresql://user:password@localhost:5438/analytics_db",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "simulation-service": {
+      "port": "3008",
+      "database.url": "postgresql://user:password@localhost:5439/simulation_db",
+      "rabbitmq.url": "amqp://localhost:5672"
+    }
+  }
+}

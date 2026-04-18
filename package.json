@@ -8,6 +8,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "consul:seed": "tsx scripts/consul-seed.ts",
+    "consul:seed:local": "tsx scripts/consul-seed.ts development-local",
     "consul:list": "tsx scripts/consul-list.ts",
     "consul:get": "tsx scripts/consul-get.ts"
   },
