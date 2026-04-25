@@ -101,34 +101,42 @@ export class ConsulConfigFactory {
   private static loadFromEnv(env: NodeJS.ProcessEnv): Record<string, any> {
     const consulUrl = env.CONSUL_URL || 'http://localhost:8500';
 
+    // Only include a value when the env var is explicitly set.
+    // Returning undefined lets mergeConfig keep the Consul value instead of
+    // overwriting it with a hard-coded default.
     return {
       nodeEnv: env.NODE_ENV || this.resolveDefaultNodeEnv(consulUrl),
-      port: parseInt(env.PORT || '3000', 10),
-      logging: {
-        level: env.LOG_LEVEL || 'info',
-        format: env.LOG_FORMAT || 'text',
-      },
+      port: env.PORT !== undefined ? parseInt(env.PORT, 10) : undefined,
+      logging:
+        env.LOG_LEVEL !== undefined || env.LOG_FORMAT !== undefined
+          ? {
+              level: env.LOG_LEVEL,
+              format: env.LOG_FORMAT,
+            }
+          : undefined,
       database: env.DATABASE_URL
         ? {
             url: env.DATABASE_URL,
-            poolSize: parseInt(env.DATABASE_POOL_SIZE || '10', 10),
-            connectionTimeout: parseInt(
-              env.DATABASE_CONNECTION_TIMEOUT || '5000',
-              10,
-            ),
+            poolSize: env.DATABASE_POOL_SIZE
+              ? parseInt(env.DATABASE_POOL_SIZE, 10)
+              : undefined,
+            connectionTimeout: env.DATABASE_CONNECTION_TIMEOUT
+              ? parseInt(env.DATABASE_CONNECTION_TIMEOUT, 10)
+              : undefined,
           }
         : undefined,
       rabbitmq: env.RABBITMQ_URL
         ? {
             url: env.RABBITMQ_URL,
-            username: env.RABBITMQ_USERNAME || 'guest',
-            password: env.RABBITMQ_PASSWORD || 'guest',
-            vhost: env.RABBITMQ_VHOST || '/',
-            connectionTimeout: parseInt(
-              env.RABBITMQ_CONNECTION_TIMEOUT || '10000',
-              10,
-            ),
-            heartbeat: parseInt(env.RABBITMQ_HEARTBEAT || '60', 10),
+            username: env.RABBITMQ_USERNAME,
+            password: env.RABBITMQ_PASSWORD,
+            vhost: env.RABBITMQ_VHOST,
+            connectionTimeout: env.RABBITMQ_CONNECTION_TIMEOUT
+              ? parseInt(env.RABBITMQ_CONNECTION_TIMEOUT, 10)
+              : undefined,
+            heartbeat: env.RABBITMQ_HEARTBEAT
+              ? parseInt(env.RABBITMQ_HEARTBEAT, 10)
+              : undefined,
           }
         : undefined,
     };

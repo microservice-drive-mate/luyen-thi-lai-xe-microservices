@@ -7,3 +7,4 @@ export * from './http-api';
 
 // ============== CONSUL CONFIGURATION ==============
 export { ConsulConfigService, ConsulConfigFactory } from './consul';
+export * from './config/swagger.setup';

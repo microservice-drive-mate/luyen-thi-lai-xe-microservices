@@ -17,6 +17,10 @@ services:
       - name: user-route
         paths:
           - /users
+      - name: user-swagger-route
+        paths:
+          - /user-service
+        strip_path: true
 
   # 3. Quản lý các kỳ thi và kết quả sát hạch
   - name: exam-service
@@ -25,6 +29,10 @@ services:
       - name: exam-route
         paths:
           - /exams
+      - name: exam-swagger-route
+        paths:
+          - /exam-service
+        strip_path: true
 
   # 4. Quản lý ngân hàng câu hỏi (Lý thuyết, biển báo...)
   - name: question-service
@@ -33,6 +41,10 @@ services:
       - name: question-route
         paths:
           - /questions
+      - name: question-swagger-route
+        paths:
+          - /question-service
+        strip_path: true
 
   # 5. Quản lý khóa học và tài liệu ôn tập
   - name: course-service
@@ -41,6 +53,10 @@ services:
       - name: course-route
         paths:
           - /courses
+      - name: course-swagger-route
+        paths:
+          - /course-service
+        strip_path: true
 
   # 6. Dịch vụ thông báo (Email, SMS, App Push)
   - name: notification-service
@@ -49,6 +65,10 @@ services:
       - name: notification-route
         paths:
           - /notifications
+      - name: notification-swagger-route
+        paths:
+          - /notification-service
+        strip_path: true
 
   # 7. Thống kê và báo cáo tiến độ luyện tập
   - name: analytics-service
@@ -57,6 +77,10 @@ services:
       - name: analytics-route
         paths:
           - /analytics
+      - name: analytics-swagger-route
+        paths:
+          - /analytics-service
+        strip_path: true
 
   # 8. Mô phỏng các tình huống thực tế (120 tình huống)
   - name: simulation-service
@@ -65,9 +89,27 @@ services:
       - name: simulation-route
         paths:
           - /simulations
+      - name: simulation-swagger-route
+        paths:
+          - /simulation-service
+        strip_path: true
+
+  # 9. Swagger UI tập trung
+  - name: docs-service
+    url: http://docs-service:3000
+    routes:
+      - name: docs-route
+        paths:
+          - /docs
+        strip_path: false
+    # Gắn plugin auth chặn truy cập public vào Swagger UI
+    plugins:
+      - name: basic-auth
+        config:
+          hide_credentials: true
 
 # ========================================================
-# Cấu hình Plugins chung (Tùy chọn)
+# Cấu hình Plugins chung (Optional)
 # ========================================================
 plugins:
   - name: rate-limiting
