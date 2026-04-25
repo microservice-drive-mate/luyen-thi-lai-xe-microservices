@@ -3,7 +3,7 @@ services:
     name: identity-service
     runtime: image
     image:
-      url: ghcr.io/quangminh309/luyen-thi-lai-xe-identity-service:latest
+      url: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-identity-service:latest
     region: singapore
     plan: free
     envVars:
@@ -14,7 +14,7 @@ services:
     name: analytics-service
     runtime: image
     image:
-      url: ghcr.io/quangminh309/luyen-thi-lai-xe-analytics-service:latest
+      url: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-analytics-service:latest
     region: singapore
     plan: free
     envVars:
@@ -25,7 +25,7 @@ services:
     name: course-service
     runtime: image
     image:
-      url: ghcr.io/quangminh309/luyen-thi-lai-xe-course-service:latest
+      url: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-course-service:latest
     region: singapore
     plan: free
     envVars:
@@ -36,7 +36,7 @@ services:
     name: exam-service
     runtime: image
     image:
-      url: ghcr.io/quangminh309/luyen-thi-lai-xe-exam-service:latest
+      url: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-exam-service:latest
     region: singapore
     plan: free
     envVars:
@@ -47,7 +47,7 @@ services:
     name: notification-service
     runtime: image
     image:
-      url: ghcr.io/quangminh309/luyen-thi-lai-xe-notification-service:latest
+      url: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-notification-service:latest
     region: singapore
     plan: free
     envVars:
@@ -58,7 +58,7 @@ services:
     name: question-service
     runtime: image
     image:
-      url: ghcr.io/quangminh309/luyen-thi-lai-xe-question-service:latest
+      url: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-question-service:latest
     region: singapore
     plan: free
     envVars:
@@ -69,7 +69,7 @@ services:
     name: simulation-service
     runtime: image
     image:
-      url: ghcr.io/quangminh309/luyen-thi-lai-xe-simulation-service:latest
+      url: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-simulation-service:latest
     region: singapore
     plan: free
     envVars:
@@ -80,7 +80,7 @@ services:
     name: user-service
     runtime: image
     image:
-      url: ghcr.io/quangminh309/luyen-thi-lai-xe-user-service:latest
+      url: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-user-service:latest
     region: singapore
     plan: free
     envVars:

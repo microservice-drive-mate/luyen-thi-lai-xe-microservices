@@ -121,8 +121,8 @@ jobs:
           push: true
           # Tag cả :latest lẫn :sha để Render pull đúng image mới
           tags: |
-            ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest
-            ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+            ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest
+            ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
@@ -160,7 +160,7 @@ jobs:
           ICON="✅"
           if [ "$STATUS" != "success" ]; then ICON="❌"; fi
 
-          IMAGE="ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest"
+          IMAGE="ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest"
           docker pull "$IMAGE" 2>/dev/null || true
           SIZE=$(docker image inspect "$IMAGE" --format='{{.Size}}' 2>/dev/null | \
             awk '{printf "%.1f MB", $1/1024/1024}' || echo "N/A")
