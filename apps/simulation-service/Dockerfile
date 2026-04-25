@@ -5,7 +5,7 @@ WORKDIR /app
 COPY . .
 RUN turbo prune simulation-service --docker
 
-# Giai đoạn 2: Install dependencies
+# Giai đoạn 2: Install
 FROM node:20-alpine AS installer
 WORKDIR /app
 COPY --from=pruner /app/out/json/ .
@@ -22,12 +22,8 @@ RUN npx turbo build --filter=simulation-service
 # Giai đoạn 4: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
-
 COPY --from=builder --chown=node:node /app/apps/simulation-service/dist ./apps/simulation-service/dist
 COPY --from=builder --chown=node:node /app/apps/simulation-service/package.json ./apps/simulation-service/
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/apps/simulation-service/node_modules ./apps/simulation-service/node_modules
-
 USER node
-
 CMD ["node", "apps/simulation-service/dist/main.js"]

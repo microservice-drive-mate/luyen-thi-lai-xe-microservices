@@ -5,7 +5,7 @@ WORKDIR /app
 COPY . .
 RUN turbo prune question-service --docker
 
-# Giai đoạn 2: Install dependencies
+# Giai đoạn 2: Install
 FROM node:20-alpine AS installer
 WORKDIR /app
 COPY --from=pruner /app/out/json/ .
@@ -22,12 +22,8 @@ RUN npx turbo build --filter=question-service
 # Giai đoạn 4: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
-
 COPY --from=builder --chown=node:node /app/apps/question-service/dist ./apps/question-service/dist
 COPY --from=builder --chown=node:node /app/apps/question-service/package.json ./apps/question-service/
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/apps/question-service/node_modules ./apps/question-service/node_modules
-
 USER node
-
 CMD ["node", "apps/question-service/dist/main.js"]

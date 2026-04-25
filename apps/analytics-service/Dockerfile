@@ -5,7 +5,7 @@ WORKDIR /app
 COPY . .
 RUN turbo prune analytics-service --docker
 
-# Giai đoạn 2: Install dependencies
+# Giai đoạn 2: Install
 FROM node:20-alpine AS installer
 WORKDIR /app
 COPY --from=pruner /app/out/json/ .
@@ -22,12 +22,8 @@ RUN npx turbo build --filter=analytics-service
 # Giai đoạn 4: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
-
 COPY --from=builder --chown=node:node /app/apps/analytics-service/dist ./apps/analytics-service/dist
 COPY --from=builder --chown=node:node /app/apps/analytics-service/package.json ./apps/analytics-service/
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/apps/analytics-service/node_modules ./apps/analytics-service/node_modules
-
 USER node
-
 CMD ["node", "apps/analytics-service/dist/main.js"]

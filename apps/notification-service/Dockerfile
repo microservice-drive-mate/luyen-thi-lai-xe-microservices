@@ -5,7 +5,7 @@ WORKDIR /app
 COPY . .
 RUN turbo prune notification-service --docker
 
-# Giai đoạn 2: Install dependencies
+# Giai đoạn 2: Install
 FROM node:20-alpine AS installer
 WORKDIR /app
 COPY --from=pruner /app/out/json/ .
@@ -22,12 +22,8 @@ RUN npx turbo build --filter=notification-service
 # Giai đoạn 4: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
-
 COPY --from=builder --chown=node:node /app/apps/notification-service/dist ./apps/notification-service/dist
 COPY --from=builder --chown=node:node /app/apps/notification-service/package.json ./apps/notification-service/
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/apps/notification-service/node_modules ./apps/notification-service/node_modules
-
 USER node
-
 CMD ["node", "apps/notification-service/dist/main.js"]
