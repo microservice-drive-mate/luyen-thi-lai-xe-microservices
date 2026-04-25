@@ -19,7 +19,7 @@
     },
 
     "prisma:generate": {
-      "cache": false
+      "outputs": ["node_modules/.prisma/**"]
     },
 
     "dev": {

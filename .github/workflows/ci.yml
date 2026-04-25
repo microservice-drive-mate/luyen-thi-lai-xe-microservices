@@ -29,8 +29,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Prisma Generate (only services that have it)
-        run: npx turbo run prisma:generate
+      - name: Generate Prisma Client
+        run: |
+          npx turbo run prisma:generate --filter=...[HEAD^] || \
+          npx turbo run prisma:generate
 
       - name: Format & Basic Lint (Biome)
         run: npx @biomejs/biome ci .
