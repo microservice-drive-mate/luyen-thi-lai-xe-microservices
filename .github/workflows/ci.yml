@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI/CD Pipeline cho Microservices
 
 on:
   push:
@@ -7,35 +7,167 @@ on:
     branches: ["main"]
 
 jobs:
-  build-test:
+  # ==========================================
+  # 1: QUALITY GATE
+  # ==========================================
+  quality-gate:
+    name: Code Quality & Testing
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Quan trọng để Turbo so sánh commit
+          fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node.js 18
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      # 1. Kiểm tra Lint (ESLint) cho các phần bị thay đổi
-      - name: Lint
-        run: npx turbo run lint --filter=[origin/main]
+      - name: Format & Basic Lint (Biome)
+        run: npx @biomejs/biome ci .
 
-      # 2. Kiểm tra Type (TypeScript)
-      - name: Type Check
-        run: npx turbo run check-types --filter=[origin/main]
+      - name: Advanced Lint (ESLint)
+        run: npx turbo run lint
 
-      # 3. Chạy Unit Test
-      - name: Unit Test
-        run: npx turbo run test --filter=[origin/main]
+      - name: TypeScript Typecheck
+        run: npx turbo run typecheck
 
-      # 4. Build thử nghiệm (Quan trọng nhất)
-      - name: Build
-        run: npx turbo run build --filter=[origin/main]
+      - name: Unit & E2E Tests
+        run: npx turbo run test
+
+  # ==========================================
+  # 2: PHÁT HIỆN THAY ĐỔI
+  # ==========================================
+  detect-changes:
+    name: Detect Changed Services
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            identity-service:
+              - 'apps/identity-service/**'
+              - 'packages/**'
+            analytics-service:
+              - 'apps/analytics-service/**'
+              - 'packages/**'
+            course-service:
+              - 'apps/course-service/**'
+              - 'packages/**'
+            exam-service:
+              - 'apps/exam-service/**'
+              - 'packages/**'
+            notification-service:
+              - 'apps/notification-service/**'
+              - 'packages/**'
+            question-service:
+              - 'apps/question-service/**'
+              - 'packages/**'
+            simulation-service:
+              - 'apps/simulation-service/**'
+              - 'packages/**'
+            user-service:
+              - 'apps/user-service/**'
+              - 'packages/**'
+
+  # ==========================================
+  # 3: BUILD DOCKER & DEPLOY
+  # ==========================================
+  build-and-deploy:
+    name: Build & Deploy to Render
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}
+    strategy:
+      matrix:
+        service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/${{ matrix.service }}/Dockerfile
+          push: true
+          # Tag cả :latest lẫn :sha để Render pull đúng image mới
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest
+            ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Trigger Deploy on Render
+        run: |
+          echo "Fetching service ID for ${{ matrix.service }}..."
+
+          # Lấy service ID theo tên service
+          RESPONSE=$(curl -sf "https://api.render.com/v1/services?name=luyen-thi-lai-xe-${{ matrix.service }}&limit=1" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Accept: application/json")
+
+          SERVICE_ID=$(echo "$RESPONSE" | jq -r '.[0].service.id // empty')
+
+          if [ -z "$SERVICE_ID" ]; then
+            echo "Lỗi: Không tìm thấy service 'luyen-thi-lai-xe-${{ matrix.service }}' trên Render"
+            echo "Kiểm tra lại tên service trong render.yaml"
+            exit 1
+          fi
+
+          echo "Service ID: $SERVICE_ID"
+          echo "Triggering deploy..."
+
+          curl -sf -X POST "https://api.render.com/v1/services/$SERVICE_ID/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": "do_not_clear"}'
+
+          echo "Deploy triggered cho ${{ matrix.service }}"
+
+      - name: Build Report
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          ICON="✅"
+          if [ "$STATUS" != "success" ]; then ICON="❌"; fi
+
+          IMAGE="ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest"
+          docker pull "$IMAGE" 2>/dev/null || true
+          SIZE=$(docker image inspect "$IMAGE" --format='{{.Size}}' 2>/dev/null | \
+            awk '{printf "%.1f MB", $1/1024/1024}' || echo "N/A")
+
+          echo "## $ICON Build Report: ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | \`${{ matrix.service }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | $STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image size | $SIZE |" >> $GITHUB_STEP_SUMMARY
+          echo "| SHA tag | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Registry | \`ghcr.io\` |" >> $GITHUB_STEP_SUMMARY

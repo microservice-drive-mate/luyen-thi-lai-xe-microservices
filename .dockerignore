@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+.github
+
+# Node & Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build outputs & Cache của Turborepo
+dist
+.turbo
+coverage
+
+# Môi trường & Docs
+.env
+.env.*
+*.md
+docs/
+
+# Các file setup nội bộ
+.husky/
+biome.json
+docker-compose.yaml

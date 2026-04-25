@@ -1,0 +1,88 @@
+services:
+  - type: web
+    name: identity-service
+    runtime: image
+    image:
+      url: ghcr.io/quangminh309/luyen-thi-lai-xe-identity-service:latest
+    region: singapore
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: analytics-service
+    runtime: image
+    image:
+      url: ghcr.io/quangminh309/luyen-thi-lai-xe-analytics-service:latest
+    region: singapore
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: course-service
+    runtime: image
+    image:
+      url: ghcr.io/quangminh309/luyen-thi-lai-xe-course-service:latest
+    region: singapore
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: exam-service
+    runtime: image
+    image:
+      url: ghcr.io/quangminh309/luyen-thi-lai-xe-exam-service:latest
+    region: singapore
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: notification-service
+    runtime: image
+    image:
+      url: ghcr.io/quangminh309/luyen-thi-lai-xe-notification-service:latest
+    region: singapore
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: question-service
+    runtime: image
+    image:
+      url: ghcr.io/quangminh309/luyen-thi-lai-xe-question-service:latest
+    region: singapore
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: simulation-service
+    runtime: image
+    image:
+      url: ghcr.io/quangminh309/luyen-thi-lai-xe-simulation-service:latest
+    region: singapore
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: user-service
+    runtime: image
+    image:
+      url: ghcr.io/quangminh309/luyen-thi-lai-xe-user-service:latest
+    region: singapore
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production

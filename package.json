@@ -10,10 +10,19 @@
     "consul:seed": "tsx scripts/consul-seed.ts",
     "consul:seed:local": "tsx scripts/consul-seed.ts development-local",
     "consul:list": "tsx scripts/consul-list.ts",
-    "consul:get": "tsx scripts/consul-get.ts"
+    "consul:get": "tsx scripts/consul-get.ts",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,jsx,tsx}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.13",
     "@types/node": "^25.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.7.4",
     "tsx": "^4.7.0",
     "turbo": "^2.9.1",
