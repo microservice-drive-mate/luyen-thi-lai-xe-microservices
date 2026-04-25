@@ -92,9 +92,34 @@ jobs:
       - name: Build matrix
         id: set-matrix
         run: |
-          SERVICES=$(echo '${{ steps.filter.outputs.changes }}' | jq -c '[.[] | select(. != null)]')
+          CHANGED='${{ steps.filter.outputs.changes }}'
+          ALL_SERVICES='["identity-service","analytics-service","course-service","exam-service","notification-service","question-service","simulation-service","user-service"]'
+          
+          SERVICES="[]"
+          
+          for SERVICE in $(echo $ALL_SERVICES | jq -rc '.[]'); do
+            CHANGED_MATCH=$(echo $CHANGED | jq -rc --arg s "$SERVICE" 'map(select(. == $s)) | length')
+            if [ "$CHANGED_MATCH" -gt "0" ]; then
+              echo "$SERVICE: có thay đổi → deploy"
+              SERVICES=$(echo $SERVICES | jq -rc --arg s "$SERVICE" '. + [$s]')
+              continue
+            fi
+            
+            IMAGE="ghcr.io/nhactaohocbai/luyen-thi-lai-xe-$SERVICE:latest"
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://ghcr.io/v2/nhactaohocbai/luyen-thi-lai-xe-$SERVICE/manifests/latest")
+            
+            if [ "$HTTP_STATUS" != "200" ]; then
+              echo "$SERVICE: image chưa tồn tại (HTTP $HTTP_STATUS) → deploy"
+              SERVICES=$(echo $SERVICES | jq -rc --arg s "$SERVICE" '. + [$s]')
+            else
+              echo "$SERVICE: không thay đổi + image đã có → skip"
+            fi
+          done
+          
           echo "services=$SERVICES" >> $GITHUB_OUTPUT
-          echo "Services to deploy: $SERVICES"
+          echo "Final services to deploy: $SERVICES"
 
   # ==========================================
   # 3. BUILD & DEPLOY
