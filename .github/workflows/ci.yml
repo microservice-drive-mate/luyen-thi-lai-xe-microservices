@@ -92,41 +92,9 @@ jobs:
       - name: Build matrix
         id: set-matrix
         run: |
-          SERVICES="[]"
-
-          if [ "${{ steps.filter.outputs.identity-service }}" = "true" ]; then
-            SERVICES=$(echo $SERVICES | jq '. + ["identity-service"]')
-          fi
-
-          if [ "${{ steps.filter.outputs.analytics-service }}" = "true" ]; then
-            SERVICES=$(echo $SERVICES | jq '. + ["analytics-service"]')
-          fi
-
-          if [ "${{ steps.filter.outputs.course-service }}" = "true" ]; then
-            SERVICES=$(echo $SERVICES | jq '. + ["course-service"]')
-          fi
-
-          if [ "${{ steps.filter.outputs.exam-service }}" = "true" ]; then
-            SERVICES=$(echo $SERVICES | jq '. + ["exam-service"]')
-          fi
-
-          if [ "${{ steps.filter.outputs.notification-service }}" = "true" ]; then
-            SERVICES=$(echo $SERVICES | jq '. + ["notification-service"]')
-          fi
-
-          if [ "${{ steps.filter.outputs.question-service }}" = "true" ]; then
-            SERVICES=$(echo $SERVICES | jq '. + ["question-service"]')
-          fi
-
-          if [ "${{ steps.filter.outputs.simulation-service }}" = "true" ]; then
-            SERVICES=$(echo $SERVICES | jq '. + ["simulation-service"]')
-          fi
-
-          if [ "${{ steps.filter.outputs.user-service }}" = "true" ]; then
-            SERVICES=$(echo $SERVICES | jq '. + ["user-service"]')
-          fi
-
+          SERVICES=$(echo '${{ steps.filter.outputs.changes }}' | jq -c '[.[] | select(. != null)]')
           echo "services=$SERVICES" >> $GITHUB_OUTPUT
+          echo "Services to deploy: $SERVICES"
 
   # ==========================================
   # 3. BUILD & DEPLOY
