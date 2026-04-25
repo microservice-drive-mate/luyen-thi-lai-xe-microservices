@@ -11,13 +11,22 @@ describe("AppController", () => {
 			controllers: [AppController],
 			providers: [
 				AppService,
+
 				{
 					provide: "NOTI_SERVICE",
-					useValue: {},
+					useValue: {
+						emit: jest.fn(),
+						send: jest.fn(),
+					},
 				},
+
 				{
 					provide: PrismaService,
-					useValue: {},
+					useValue: {
+						user: {
+							findMany: jest.fn(),
+						},
+					},
 				},
 			],
 		}).compile();
