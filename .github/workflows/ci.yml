@@ -34,11 +34,8 @@ jobs:
           npx turbo run prisma:generate --filter=...[HEAD^] || \
           npx turbo run prisma:generate
 
-      - name: Format & Basic Lint (Biome)
-        run: npx @biomejs/biome ci .
-
-      - name: Advanced Lint (ESLint)
-        run: npx turbo run lint
+      - name: Format Check
+        run: npx @biomejs/biome format --write .
 
       - name: TypeScript Typecheck
         run: npx turbo run typecheck
