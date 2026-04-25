@@ -1,7 +1,6 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
-import { PrismaService } from "./prisma/prisma.service";
 
 describe("AppController", () => {
 	let appController: AppController;
@@ -21,10 +20,16 @@ describe("AppController", () => {
 				},
 
 				{
-					provide: PrismaService,
+					provide: "PrismaService",
 					useValue: {
-						user: {
-							findMany: jest.fn(),
+						$queryRaw: jest.fn().mockResolvedValue([]),
+
+						identityUser: {
+							upsert: jest.fn().mockResolvedValue({
+								id: "user-1",
+								email: "test@gmail.com",
+								name: "Test",
+							}),
 						},
 					},
 				},
