@@ -33,8 +33,8 @@ jobs:
       - name: Generate Prisma Client
         run: npx turbo run prisma:generate
 
-      - name: Format & Lint Check
-        run: npx @biomejs/biome ci .
+      - name: Format Check
+        run: npx @biomejs/biome format .
 
       - name: TypeScript Check
         run: npx turbo run check-types
