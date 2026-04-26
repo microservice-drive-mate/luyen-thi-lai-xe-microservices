@@ -1,5 +1,5 @@
 {
-  "name": "exam-service",
+  "name": "docs-service",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -13,7 +13,6 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "check-types": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -22,10 +21,12 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.1",
     "@repo/common": "^1.0.0",
+    "joi": "^17.11.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

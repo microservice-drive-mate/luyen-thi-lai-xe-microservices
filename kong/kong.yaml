@@ -17,6 +17,10 @@ services:
       - name: user-route
         paths:
           - /users
+      - name: user-swagger-route
+        paths:
+          - /user-service
+        strip_path: true
         plugins:
           - name: jwt
             config:
@@ -31,6 +35,10 @@ services:
       - name: exam-route
         paths:
           - /exams
+      - name: exam-swagger-route
+        paths:
+          - /exam-service
+        strip_path: true
         plugins:
           - name: jwt
             config:
@@ -45,6 +53,10 @@ services:
       - name: question-route
         paths:
           - /questions
+      - name: question-swagger-route
+        paths:
+          - /question-service
+        strip_path: true
         plugins:
           - name: jwt
             config:
@@ -59,6 +71,10 @@ services:
       - name: course-route
         paths:
           - /courses
+      - name: course-swagger-route
+        paths:
+          - /course-service
+        strip_path: true
         plugins:
           - name: jwt
             config:
@@ -73,6 +89,10 @@ services:
       - name: notification-route
         paths:
           - /notifications
+      - name: notification-swagger-route
+        paths:
+          - /notification-service
+        strip_path: true
         plugins:
           - name: jwt
             config:
@@ -87,6 +107,10 @@ services:
       - name: analytics-route
         paths:
           - /analytics
+      - name: analytics-swagger-route
+        paths:
+          - /analytics-service
+        strip_path: true
         plugins:
           - name: jwt
             config:
@@ -101,12 +125,29 @@ services:
       - name: simulation-route
         paths:
           - /simulations
-        plugins:
-          - name: jwt
-            config:
-              key_claim_name: iss
-              claims_to_verify:
-                - exp
+      - name: simulation-swagger-route
+        paths:
+          - /simulation-service
+        strip_path: true
+
+  # 9. Swagger UI tập trung
+  - name: docs-service
+    url: http://docs-service:3000
+    routes:
+      - name: docs-route
+        paths:
+          - /docs
+        strip_path: false
+    # Gắn plugin auth chặn truy cập public vào Swagger UI
+    plugins:
+      - name: basic-auth
+        config:
+          hide_credentials: true
+      - name: jwt
+        config:
+          key_claim_name: iss
+          claims_to_verify:
+            - exp
 
 consumers:
   - username: mobile-client
@@ -122,7 +163,7 @@ consumers:
         algorithm: HS256
 
 # ========================================================
-# Cấu hình Plugins chung (Tùy chọn)
+# Cấu hình Plugins chung (Optional)
 # ========================================================
 plugins:
   - name: rate-limiting

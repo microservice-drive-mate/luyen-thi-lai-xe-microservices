@@ -5,7 +5,7 @@ import {
   JWT_CLIENTS,
   type JwtClientName,
 } from "./auth/jwt-token.util";
-import type { PrismaService } from "./prisma/prisma.service";
+import { PrismaService } from "./prisma/prisma.service";
 
 export type LoginRequest = {
   email: string;

@@ -177,4 +177,14 @@ export class ConsulConfigService {
     this.configCache.clear();
     this.logger.log("Consul config cache cleared");
   }
+
+  async getRegisteredServices(): Promise<string[]> {
+    try {
+      const response = await this.consulClient.get('/v1/catalog/services');
+      return Object.keys(response.data);
+    } catch (error) {
+      this.logger.error('Failed to get services from Consul Catalog', this.toMessage(error));
+      return [];
+    }
+  }
 }
