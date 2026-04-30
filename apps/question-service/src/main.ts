@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { NestFactory } from '@nestjs/core';
-import { ConfigService } from '@nestjs/config';
+import { NestFactory } from "@nestjs/core";
+import { ConfigService } from "@nestjs/config";
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
   setupMicroserviceSwagger,
-} from '@repo/common';
-import { AppModule } from './app.module';
+} from "@repo/common";
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,8 +18,8 @@ async function bootstrap() {
 
   // Cấu hình Swagger
   setupMicroserviceSwagger(app, {
-    title: 'Question Service API',
-    description: 'Quản lý câu hỏi và đề thi cho dịch vụ luyện thi lái xe',
+    title: "Question Service API",
+    description: "Quản lý câu hỏi và đề thi cho dịch vụ luyện thi lái xe",
   });
 
   const configService = app.get(ConfigService);

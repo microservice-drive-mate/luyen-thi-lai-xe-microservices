@@ -3,10 +3,9 @@ import { ConfigFactory } from "@nestjs/config";
 import { ConsulConfigService } from "./consul-config.service";
 import Joi from "joi";
 
-/**
- * Consul-based configuration factory for NestJS ConfigModule
- * Loads configuration from Consul KV Store with fallback to .env file
- */
+type ConfigRecord = Record<string, unknown>;
+
+// biome-ignore lint/complexity/noStaticOnlyClass: factory pattern kept as class for NestJS compatibility
 export class ConsulConfigFactory {
   private static readonly logger = new Logger(ConsulConfigFactory.name);
 
@@ -29,7 +28,7 @@ export class ConsulConfigFactory {
       );
       ConsulConfigFactory.logger.log(`Consul URL: ${consulUrl}`);
 
-      let config: Record<string, any> = {};
+      let config: ConfigRecord = {};
 
       try {
         const consulConfig = await ConsulConfigFactory.loadFromConsul(
@@ -40,9 +39,10 @@ export class ConsulConfigFactory {
         const envConfig = ConsulConfigFactory.loadFromEnv(env);
         config = ConsulConfigFactory.mergeConfig(consulConfig, envConfig);
         ConsulConfigFactory.logger.log("Configuration loaded from Consul");
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
         ConsulConfigFactory.logger.warn(
-          `Failed to load from Consul: ${error.message}, falling back to .env`,
+          `Failed to load from Consul: ${message}, falling back to .env`,
         );
         config = ConsulConfigFactory.loadFromEnv(env);
         ConsulConfigFactory.logger.log("Configuration loaded from .env file");
@@ -72,7 +72,7 @@ export class ConsulConfigFactory {
     consulUrl: string,
     nodeEnv: string,
     serviceName?: string,
-  ): Promise<Record<string, any>> {
+  ): Promise<ConfigRecord> {
     const consul = new ConsulConfigService(consulUrl);
     const isHealthy = await consul.isHealthy();
 
@@ -80,7 +80,7 @@ export class ConsulConfigFactory {
       throw new Error("Consul server is not healthy");
     }
 
-    const config: Record<string, any> = {};
+    const config: ConfigRecord = {};
 
     const sharedPrefix = `config/${nodeEnv}/shared/`;
     const sharedConfig = await consul.getByPrefix(sharedPrefix);
@@ -101,14 +101,15 @@ export class ConsulConfigFactory {
     return config;
   }
 
-  private static loadFromEnv(env: NodeJS.ProcessEnv): Record<string, any> {
+  private static loadFromEnv(env: NodeJS.ProcessEnv): ConfigRecord {
     const consulUrl = env.CONSUL_URL || "http://localhost:8500";
 
     // Only include a value when the env var is explicitly set.
     // Returning undefined lets mergeConfig keep the Consul value instead of
     // overwriting it with a hard-coded default.
     return {
-      nodeEnv: env.NODE_ENV || this.resolveDefaultNodeEnv(consulUrl),
+      nodeEnv:
+        env.NODE_ENV || ConsulConfigFactory.resolveDefaultNodeEnv(consulUrl),
       port: env.PORT !== undefined ? parseInt(env.PORT, 10) : undefined,
       logging:
         env.LOG_LEVEL !== undefined || env.LOG_FORMAT !== undefined
@@ -146,7 +147,7 @@ export class ConsulConfigFactory {
   }
 
   private static setNestedValue(
-    target: Record<string, any>,
+    target: ConfigRecord,
     path: string,
     value: unknown,
   ): void {
@@ -162,17 +163,17 @@ export class ConsulConfigFactory {
       ) {
         current[segment] = {};
       }
-      current = current[segment] as Record<string, any>;
+      current = current[segment] as ConfigRecord;
     }
 
     current[segments[segments.length - 1]] = value;
   }
 
   private static mergeConfig(
-    base: Record<string, any>,
-    override: Record<string, any>,
-  ): Record<string, any> {
-    const result: Record<string, any> = { ...base };
+    base: ConfigRecord,
+    override: ConfigRecord,
+  ): ConfigRecord {
+    const result: ConfigRecord = { ...base };
 
     Object.entries(override).forEach(([key, value]) => {
       if (value === undefined) {
@@ -189,8 +190,8 @@ export class ConsulConfigFactory {
         !Array.isArray(value)
       ) {
         result[key] = ConsulConfigFactory.mergeConfig(
-          baseValue as Record<string, any>,
-          value as Record<string, any>,
+          baseValue as ConfigRecord,
+          value as ConfigRecord,
         );
         return;
       }

@@ -2,11 +2,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { NestFactory } from '@nestjs/core';
-import { SwaggerModule } from '@nestjs/swagger';
-import { ConfigService } from '@nestjs/config';
-import { AppModule } from './app.module';
-import { ConsulConfigService } from '@repo/common';
+import { NestFactory } from "@nestjs/core";
+import { SwaggerModule } from "@nestjs/swagger";
+import { ConfigService } from "@nestjs/config";
+import { AppModule } from "./app.module";
+import { ConsulConfigService } from "@repo/common";
 
 async function isServiceAlive(url: string): Promise<boolean> {
   try {
@@ -24,25 +24,27 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('port') ?? 3009;
-  const consulUrl = process.env.CONSUL_URL || 'http://localhost:8500';
-  const gatewayUrl = process.env.GATEWAY_URL || 'http://localhost:8000';
+  const port = configService.get<number>("port") ?? 3009;
+  const consulUrl = process.env.CONSUL_URL || "http://localhost:8500";
+  const gatewayUrl = process.env.GATEWAY_URL || "http://localhost:8000";
 
   let candidates: { name: string; url: string }[] = [];
 
   // Priority 1: swagger.services từ Consul KV — local dev, bypass Kong
   // Consul key: config/development-local/docs-service/swagger.services
   // Format: "service-name:port,service-name:port"
-  const swaggerServicesConfig = configService.get<string>('swagger.services');
+  const swaggerServicesConfig = configService.get<string>("swagger.services");
   if (swaggerServicesConfig) {
     candidates = swaggerServicesConfig
-      .split(',')
+      .split(",")
       .map((s) => s.trim())
       .filter(Boolean)
       .map((entry) => {
-        const [name, svcPort = '3000'] = entry.split(':');
+        const [name, svcPort = "3000"] = entry.split(":");
         return {
-          name: name.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+          name: name
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase()),
           url: `http://localhost:${svcPort}/docs-json`,
         };
       });
@@ -55,12 +57,12 @@ async function bootstrap() {
     candidates = registeredServices
       .filter(
         (name) =>
-          name.endsWith('-service') &&
-          name !== 'docs-service' &&
-          name !== 'identity-service',
+          name.endsWith("-service") &&
+          name !== "docs-service" &&
+          name !== "identity-service",
       )
       .map((name) => ({
-        name: name.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        name: name.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
         url: `${gatewayUrl}/${name}/docs-json`,
       }));
   }
@@ -79,13 +81,15 @@ async function bootstrap() {
 
   const dead = probeResults.filter((e) => !e.alive).map((e) => e.name);
   if (dead.length > 0) {
-    console.log(`ℹ Services not running (excluded): ${dead.join(', ')}`);
+    console.log(`ℹ Services not running (excluded): ${dead.join(", ")}`);
   }
 
   if (swaggerUrls.length === 0) {
-    console.warn('⚠ No services are currently running.');
+    console.warn("⚠ No services are currently running.");
   } else {
-    console.log(`✓ Active services: ${swaggerUrls.map((u) => u.name).join(', ')}`);
+    console.log(
+      `✓ Active services: ${swaggerUrls.map((u) => u.name).join(", ")}`,
+    );
   }
 
   const swaggerOptions = {
@@ -96,12 +100,12 @@ async function bootstrap() {
   };
 
   const dummyDocument = {
-    openapi: '3.0.0',
-    info: { title: 'Centralized API Documentation', version: '1.0.0' },
+    openapi: "3.0.0",
+    info: { title: "Centralized API Documentation", version: "1.0.0" },
     paths: {},
   };
 
-  SwaggerModule.setup('docs', app, dummyDocument, swaggerOptions);
+  SwaggerModule.setup("docs", app, dummyDocument, swaggerOptions);
 
   await app.listen(port);
   console.log(`✓ Docs Service Swagger UI: http://localhost:${port}/docs`);

@@ -86,7 +86,7 @@ export class ConsulConfigService {
       }
 
       const configMap: Record<string, string> = {};
-      response.data.forEach((kvData: any) => {
+      response.data.forEach((kvData: { Key: string; Value: string }) => {
         const key = kvData.Key;
         const value = Buffer.from(kvData.Value, "base64").toString("utf-8");
         configMap[key] = value;
@@ -180,10 +180,13 @@ export class ConsulConfigService {
 
   async getRegisteredServices(): Promise<string[]> {
     try {
-      const response = await this.consulClient.get('/v1/catalog/services');
+      const response = await this.consulClient.get("/v1/catalog/services");
       return Object.keys(response.data);
     } catch (error) {
-      this.logger.error('Failed to get services from Consul Catalog', this.toMessage(error));
+      this.logger.error(
+        "Failed to get services from Consul Catalog",
+        this.toMessage(error),
+      );
       return [];
     }
   }

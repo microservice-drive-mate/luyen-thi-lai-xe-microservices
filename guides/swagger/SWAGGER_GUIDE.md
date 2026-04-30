@@ -31,11 +31,11 @@ Prefix `/user-service/` chỉ tồn tại ở Kong routing layer, không phải 
 
 docs-service tìm service theo thứ tự ưu tiên:
 
-| Ưu tiên | Env var | URL tạo ra | Dùng khi |
-|---------|---------|------------|----------|
-| 1 | `LOCAL_SERVICES=user-service:3000` | `http://localhost:3000/docs-json` | Local dev, bypass Kong |
-| 2 | Consul catalog | `http://localhost:8000/user-service/docs-json` | Full Docker, service tự register |
-| 3 | `KNOWN_SERVICES=user-service` | `http://localhost:8000/user-service/docs-json` | Docker infra + service local qua Kong |
+| Ưu tiên | Env var                            | URL tạo ra                                     | Dùng khi                              |
+| ------- | ---------------------------------- | ---------------------------------------------- | ------------------------------------- |
+| 1       | `LOCAL_SERVICES=user-service:3000` | `http://localhost:3000/docs-json`              | Local dev, bypass Kong                |
+| 2       | Consul catalog                     | `http://localhost:8000/user-service/docs-json` | Full Docker, service tự register      |
+| 3       | `KNOWN_SERVICES=user-service`      | `http://localhost:8000/user-service/docs-json` | Docker infra + service local qua Kong |
 
 ---
 
@@ -49,6 +49,7 @@ docker compose up -d consul consul-init kong rabbitmq \
 ```
 
 Kiểm tra Consul healthy:
+
 ```bash
 curl http://localhost:8500/v1/status/leader
 ```
@@ -109,7 +110,7 @@ LOCAL_SERVICES=user-service:3000,exam-service:3001 PORT=3009 npm run start:dev
 Port mặc định cho từng service (đề xuất):
 
 | Service              | Port local |
-|----------------------|------------|
+| -------------------- | ---------- |
 | user-service         | 3000       |
 | exam-service         | 3001       |
 | question-service     | 3002       |
@@ -130,11 +131,13 @@ docker compose up -d --build
 ```
 
 Truy cập Swagger UI:
+
 ```
 http://localhost:3009/docs
 ```
 
 Hoặc qua Kong (có basic-auth):
+
 ```
 http://localhost:8000/docs
 ```
@@ -150,6 +153,7 @@ GATEWAY_URL=http://localhost:3000  ← SAI cho local dev
 ```
 
 `GATEWAY_URL` được dùng cho mode Consul/KNOWN_SERVICES, tạo URL format:
+
 ```
 {GATEWAY_URL}/{service-name}/docs-json
 = http://localhost:3000/user-service/docs-json   ← endpoint này không tồn tại!
@@ -209,13 +213,13 @@ Browser
 
 ## Biến môi trường docs-service
 
-| Biến              | Mặc định                | Mô tả |
-|-------------------|-------------------------|-------|
-| `PORT`            | `3009`                  | Port của docs-service |
-| `LOCAL_SERVICES`  | _(không set)_           | Local dev: `name:port,...` → URL `http://localhost:{port}/docs-json` |
-| `CONSUL_URL`      | `http://localhost:8500` | Consul URL để auto-discovery |
-| `GATEWAY_URL`     | `http://localhost:8000` | Base URL cho Consul/KNOWN_SERVICES mode (qua Kong) |
-| `KNOWN_SERVICES`  | _(không set)_           | Fallback: `name,...` → URL `{GATEWAY_URL}/{name}/docs-json` |
+| Biến             | Mặc định                | Mô tả                                                                |
+| ---------------- | ----------------------- | -------------------------------------------------------------------- |
+| `PORT`           | `3009`                  | Port của docs-service                                                |
+| `LOCAL_SERVICES` | _(không set)_           | Local dev: `name:port,...` → URL `http://localhost:{port}/docs-json` |
+| `CONSUL_URL`     | `http://localhost:8500` | Consul URL để auto-discovery                                         |
+| `GATEWAY_URL`    | `http://localhost:8000` | Base URL cho Consul/KNOWN_SERVICES mode (qua Kong)                   |
+| `KNOWN_SERVICES` | _(không set)_           | Fallback: `name,...` → URL `{GATEWAY_URL}/{name}/docs-json`          |
 
 ---
 
@@ -224,6 +228,7 @@ Browser
 ### Dropdown rỗng / "No operations defined in spec"
 
 docs-service không tìm thấy service nào. Kiểm tra log của docs-service, sẽ có warning:
+
 ```
 ⚠ Không tìm thấy service API nào.
   Local dev (bypass Kong): LOCAL_SERVICES=user-service:3000
@@ -249,6 +254,7 @@ User-service không cho phép cross-origin request từ docs-service.
 
 **Fix**: `setupMicroserviceSwagger()` trong `@repo/common` đã gọi `app.enableCors()`.  
 Rebuild `@repo/common` nếu cần:
+
 ```bash
 npm run build -w packages/common
 ```
@@ -258,6 +264,7 @@ npm run build -w packages/common
 ### Kong 404 khi fetch spec (KNOWN_SERVICES mode)
 
 Kiểm tra Kong config:
+
 ```bash
 curl http://localhost:8001/routes | python -m json.tool
 ```
@@ -269,6 +276,7 @@ curl http://localhost:8001/routes | python -m json.tool
 ### Service chạy nhưng spec trả về "No operations defined"
 
 Service không có controller nào annotated với `@ApiTags`. Thêm vào controller:
+
 ```typescript
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 

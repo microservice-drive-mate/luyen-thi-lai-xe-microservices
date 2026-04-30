@@ -1,5 +1,5 @@
-import { INestApplication } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { INestApplication } from "@nestjs/common";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 export interface SwaggerSetupOptions {
   title: string;
@@ -16,20 +16,22 @@ export function setupMicroserviceSwagger(
 
   const config = new DocumentBuilder()
     .setTitle(options.title)
-    .setDescription(options.description || `API Documentation for ${options.title}`)
-    .setVersion(options.version || '1.0')
+    .setDescription(
+      options.description || `API Documentation for ${options.title}`,
+    )
+    .setVersion(options.version || "1.0")
     .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
 
   // Chỉ bật Swagger UI ở môi trường phát triển
-  if (process.env.NODE_ENV !== 'production') {
-    SwaggerModule.setup('docs', app, document);
+  if (process.env.NODE_ENV !== "production") {
+    SwaggerModule.setup("docs", app, document);
   }
 
   const httpAdapter = app.getHttpAdapter();
-  httpAdapter.get('/docs-json', (req, res) => {
+  httpAdapter.get("/docs-json", (_req, res) => {
     res.json(document);
   });
 }
