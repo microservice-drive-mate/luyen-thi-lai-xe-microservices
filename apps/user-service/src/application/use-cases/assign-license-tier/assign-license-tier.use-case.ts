@@ -6,14 +6,18 @@ import { EventPublisher } from '../../ports/event-publisher.port';
 import { AssignLicenseTierCommand } from './assign-license-tier.command';
 
 @Injectable()
-export class AssignLicenseTierUseCase implements IUseCase<AssignLicenseTierCommand, void> {
+export class AssignLicenseTierUseCase
+  implements IUseCase<AssignLicenseTierCommand, void>
+{
   constructor(
     private readonly userProfileRepository: UserProfileRepository,
     private readonly eventPublisher: EventPublisher,
   ) {}
 
   async execute(command: AssignLicenseTierCommand): Promise<void> {
-    const profile = await this.userProfileRepository.findById(command.studentId);
+    const profile = await this.userProfileRepository.findById(
+      command.studentId,
+    );
     if (!profile) {
       throw new UserProfileNotFoundException(command.studentId);
     }

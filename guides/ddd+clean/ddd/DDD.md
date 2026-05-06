@@ -5,35 +5,36 @@
 **- Domain-Driven Design (DDD)** là phương pháp thiết kế phần mềm tập trung vào:
 
 > Hiểu nghiệp vụ thật sâu → rồi mới thiết kế code theo nghiệp vụ đó.
-> 
-- DDD giúp tránh tình trạng:  Code **chạy được** nhưng không phản ánh **nghiệp vụ**
+
+- DDD giúp tránh tình trạng: Code **chạy được** nhưng không phản ánh **nghiệp vụ**
 - DDD hướng tới: **Code** == **nghiệp vụ**
 
 - DDD có 2 thành phần chính:
 
 - **Strategic Design**
-    - Tìm hiểu, phân tích, design `high level - view` của domain doanh nghiệp
-    - Không có dòng code nào
-    - Dựa trên các công cụ, thuật ngữ: `subdomain`, `bounded context`, `event storming`, `context map`
+  - Tìm hiểu, phân tích, design `high level - view` của domain doanh nghiệp
+  - Không có dòng code nào
+  - Dựa trên các công cụ, thuật ngữ: `subdomain`, `bounded context`, `event storming`, `context map`
 - **Tactical Design**
-    - Dựa trên kết quả của Strategic Design ⇒ design các thứ `low-level`
-    - Design ra các `business logics`, `building blocks` như: `Value object`, `Entity`, `Aggregate`, `Service`, …
+  - Dựa trên kết quả của Strategic Design ⇒ design các thứ `low-level`
+  - Design ra các `business logics`, `building blocks` như: `Value object`, `Entity`, `Aggregate`, `Service`, …
 
 ## 2. Domain
 
 - Domain = lĩnh vực nghiệp vụ hệ thống giải quyết
 
-| System | Domain |
-| --- | --- |
-| Shopee | thương mại điện tử |
-| Galaxy Cinema | đặt vé |
-| Restaurant app | đặt món |
-| Hospital system | y tế |
+| System          | Domain             |
+| --------------- | ------------------ |
+| Shopee          | thương mại điện tử |
+| Galaxy Cinema   | đặt vé             |
+| Restaurant app  | đặt món            |
+| Hospital system | y tế               |
+
 - Một domain lớn ⇒ có thể thành các subdomain
 - Subdomain có thể chia làm 3 loại:
-    - Core subdomains
-    - Generic subdomains
-    - Supporting subdomains
+  - Core subdomains
+  - Generic subdomains
+  - Supporting subdomains
 
 ## 3. Business logic
 
@@ -50,7 +51,7 @@ Và yêu cầu của họ là tạo `một trang báo điện tử` (giống 2
 - User admin có quyền tạo thêm roles.
 - Role thì không được trùng tên (unique) với nhau.
 - Không được chỉnh sửa system role.
-- Role name chỉ được chứa ký tự a-z, A-Z, 0-9 và _.
+- Role name chỉ được chứa ký tự a-z, A-Z, 0-9 và \_.
 - Role name chỉ có độ dài tối thiểu là 3 ký tự, tối đa 100 ký tự.
 - …
 
@@ -92,7 +93,7 @@ Phân chia các domain logics, ubiquitous language thành các `context` nhỏ h
 Ví dụ: Trang báo điện tử
 
 - `User bounded context`: Nơi chứa logic nghiệp vụ liên quan tới users, các từ ngữ liên quan tới users, roles.
-- `Post bounded context`:  Chứa logic nghiệp vụ liên quan tới các bài post, …
+- `Post bounded context`: Chứa logic nghiệp vụ liên quan tới các bài post, …
 - Số lượng `user` xem bài post abc này trong một tháng 100 users. Thì ý nghĩa của `user trong post context` sẽ khác với `user trong user context`. Rõ ràng user trong user context thì nó đang đề cập tới, user admin, author, subscriber, hay có role là gì, ... Còn user trong post context đơn giản là user đã xem bài post ở ngoài thôi.
 
 ⇒ Đó chính là **`bounded context`**
@@ -160,7 +161,7 @@ public class UserDto {
 ## 10. Value Object
 
 - **`Value object`** là 1 object, dùng để chứa dữ liệu
-- **`Immutable`  -** bất biến ⇒ khởi tạo value obj thì không thể thay đổi data bên trong ⇒ dữ liệu toàn vẹn - không thay đổi trong vòng đời 1 business flow
+- **`Immutable` -** bất biến ⇒ khởi tạo value obj thì không thể thay đổi data bên trong ⇒ dữ liệu toàn vẹn - không thay đổi trong vòng đời 1 business flow
 - Không có các public **setter**, các **properties** là read-only
 - 2 value obj có dữ liệu giống nhau ⇒ bằng nhau
 - Các business logic liên quan ⇒ đặt bên trong các value obj
@@ -225,15 +226,15 @@ public class Entity<Type> {
 }
 
 // Và đây là một entity trong DDD
-// Role.java 
+// Role.java
 @Getter
 public class Role extends Entity<Id> {
     private RoleName name;
     private RoleDescription description;
 
     public Role(
-            Id id, 
-            RoleName name, 
+            Id id,
+            RoleName name,
             RoleDescription description
     ) {
         super(id);
@@ -252,8 +253,8 @@ public class Role extends Entity<Id> {
     }
 
     public static Role create(
-            Id id, 
-            RoleName name, 
+            Id id,
+            RoleName name,
             RoleDescription description
     ) {
         // Một số business logic có thể nằm ở đây
@@ -272,7 +273,7 @@ public class Role extends Entity<Id> {
 - Trong layer architecture, mỗi layer sẽ có các service của layer đó ⇒ `domain service` chứa các logic phục vụ `layer domain` ⇒ **Logic ở đây là business logic**
 - Khi các business logic không biết đặt ở đâu (value object, entity, aggregate) ⇒ đặt ở domain service
 
-Ví dụ: Use case tạo một role có 1 business logic sau:  Khi tạo mới một role, tên của role mới này bắt buộc không được trùng tên với bất kì role nào trong hệ thống.
+Ví dụ: Use case tạo một role có 1 business logic sau: Khi tạo mới một role, tên của role mới này bắt buộc không được trùng tên với bất kì role nào trong hệ thống.
 
 ```java
 
@@ -309,7 +310,7 @@ public class CreateRoleService implements CreateRoleServiceInterface{
 
 Xét usecase: **Tạo comment của 1 bài báo (post)**
 
-Một số business logic: 
+Một số business logic:
 
 - Khi tạo comment, nếu user không tồn tại thì sẽ báo lỗi cho người dùng.
 - Khi xóa bài báo thì tất cả comment sẽ bị xóa theo.
@@ -343,7 +344,7 @@ Comment comment = new CommentEntity(...);
 commentRepository.save(comment); // Lưu xuống DB
 ```
 
-Khi có 1 usecase khác `add comment` khác usecase ở trên ⇒ dev thao tác với `Post model` và quên logic ở step 3 (làm sai), `add comment` trực tiếp, lưu lại ở step 5 ⇒ vi phạm business logic 101 comment ⇒ **`data inconsistency`** 
+Khi có 1 usecase khác `add comment` khác usecase ở trên ⇒ dev thao tác với `Post model` và quên logic ở step 3 (làm sai), `add comment` trực tiếp, lưu lại ở step 5 ⇒ vi phạm business logic 101 comment ⇒ **`data inconsistency`**
 
 - Aggregate giúp cho data nhất quán. Khi 1 aggregate tạo thành công ⇒ thỏa mãn tất cả business logic liên quan tới nó ⇒ consistency
 - Aggregate ra đời ⇒ handle inconsistency data trong business flow của app
@@ -355,7 +356,7 @@ Khi có 1 usecase khác `add comment` khác usecase ở trên ⇒ dev thao tác 
 // thì tất cả phải thông qua aggregate root.
 // Ví dụ thao tác `add comment`
 public class Post extends AggregateRoot<Id> {
-    
+
     // Đây là property `comments` để chứa comment trong aggregate.
     // Nó thể hiện mối quan hệ - object relationship.
     // Mỗi post sẽ có nhiều comments ở bên trong nó.
@@ -369,19 +370,19 @@ public class Post extends AggregateRoot<Id> {
         if (this.comments.size() > MAX_COMMENT) {
             throw new CommentLimitExceededException();
         }
-   
+
         // Ví dụ còn một số business logic khác phải thỏa như:
         // Khi bài post ở trạng thái DRAFT, không thể add comment
         // Ví dụ:
         if (this.status != 'DRAFT') {
             throw new CommentPermissionException();
         }
-        
+
         // ... và nhiều logic ở đây nữa
 
         Comment comment = new Comment(
             newId(UniqueIdGenerator.create()),
-            content, 
+            content,
             new Id(userId)
         );
         this.comments.add(comment);
@@ -397,7 +398,7 @@ Post post = getPostOrError(postId); // Load aggregate
 
 // 3. Thêm comment vào post:
 post.addComment(
-    commentDto.getContent(), 
+    commentDto.getContent(),
     user.get().getId().toString()
 );
 
@@ -415,7 +416,7 @@ Các **tính chất** và **rule** của Aggregate:
 - Các aggregate giao tiếp với bên ngoài chỉ thông qua global ID.
 - Các object bên trong aggregate tuyệt được không được giao tiếp với bên ngoài. Tất cả phải thông qua aggregate root.
 - **Dữ liệu bên trong aggregate sẽ được toàn vẹn và nhất quán (consistency)**.
-- Khi save Aggregate phải  theo cơ chế Atomic: Tất cả thông tin trong aggregate phải được save xuống thành công tất cả hoặc tất cả thất bại. Và khi có các request đồng thời, phải xử lý cho chuẩn - `concurrency requests`. Chổ này liên quan tới xử lý `concurrency requests` theo các cơ chế như `optimistic locks` hay `pessimist lock` và `transaction`
+- Khi save Aggregate phải theo cơ chế Atomic: Tất cả thông tin trong aggregate phải được save xuống thành công tất cả hoặc tất cả thất bại. Và khi có các request đồng thời, phải xử lý cho chuẩn - `concurrency requests`. Chổ này liên quan tới xử lý `concurrency requests` theo các cơ chế như `optimistic locks` hay `pessimist lock` và `transaction`
 - Khi làm việc với aggregate, đừng nghĩ tới database relationship. Mà hãy nghĩ tới object relationship.
 
 ![image.png](image%201.png)
@@ -436,11 +437,11 @@ public class Post extends AggregateRoot<Id> {
     // Thật ra còn nhiều properties khác ở đây nữa
 
     public Post(
-            Id id, 
-            Title title, 
-            PostContent content, 
-            Id userId, 
-            Summary summary, 
+            Id id,
+            Title title,
+            PostContent content,
+            Id userId,
+            Summary summary,
             Slug slug
     ) {
         super(id);
@@ -464,11 +465,11 @@ public class Post extends AggregateRoot<Id> {
     }
 
     public static Post create(
-            Id id, 
-            Title title, 
-            PostContent content, 
-            Id userId, 
-            Summary summary, 
+            Id id,
+            Title title,
+            PostContent content,
+            Id userId,
+            Summary summary,
             Slug slug
         ) {
         return new Post(
@@ -483,12 +484,12 @@ public class Post extends AggregateRoot<Id> {
         if (this.comments.size() > MAX_COMMENT) {
             throw new CommentsLimitExceededException();
         }
-       
+
         // ...
 
         Comment comment = new Comment(
             new Id(UniqueIdGenerator.create()),
-            content, 
+            content,
             new Id(userId)
         );
         this.comments.add(comment);
@@ -509,10 +510,10 @@ public class Post extends AggregateRoot<Id> {
 ## 14. Domain event
 
 - Là sự thể hiện của một việc **đã xảy ra** trong Domain Layer (Ví dụ: tạo User thành công sinh ra event `UserCreatedEvent`)
-- **Cơ chế hoạt động:** Bắn  event ra và không cần quan tâm ai xử lý. Một Aggregate hoặc Bounded Context khác sẽ đóng vai trò "hứng" (Subscribe/Listen) event đó để xử lý nghiệp vụ tiếp theo.
+- **Cơ chế hoạt động:** Bắn event ra và không cần quan tâm ai xử lý. Một Aggregate hoặc Bounded Context khác sẽ đóng vai trò "hứng" (Subscribe/Listen) event đó để xử lý nghiệp vụ tiếp theo.
 - Eventual Consistency: sự đánh đổi khi dùng xử lý bất đồng bộ (async), thường thông qua **Message Queue** (như Kafka). Dữ liệu không nhất quán ngay lập tức mà sẽ "nhất quán sau một lúc nữa”
-    - **Ví dụ 1 (Xóa Bài):** Nhấn xóa `Post` -> Trả response thành công ngay lập tức -> Bắn `PostDeletedEvent` -> `Comment` aggregate hứng event và tiến hành xóa comment ngầm ở background.
-    - **Ví dụ 2 (Microservices):** `Order Service` tạo đơn thành công -> Bắn `OrderCreatedEvent` -> `Payment Service` (và các service khác) hứng event để tiếp tục quy trình.
+  - **Ví dụ 1 (Xóa Bài):** Nhấn xóa `Post` -> Trả response thành công ngay lập tức -> Bắn `PostDeletedEvent` -> `Comment` aggregate hứng event và tiến hành xóa comment ngầm ở background.
+  - **Ví dụ 2 (Microservices):** `Order Service` tạo đơn thành công -> Bắn `OrderCreatedEvent` -> `Payment Service` (và các service khác) hứng event để tiếp tục quy trình.
 - Domain Event thường được đăng ký (register) ngay bên trong **Aggregate Root**.
 - Tùy thuộc vào thiết kế cụ thể, cũng có thể đăng ký bên trong **Domain Service** miễn sao hợp lý với luồng nghiệp vụ.
 
@@ -520,25 +521,25 @@ public class Post extends AggregateRoot<Id> {
 
 // Hàm này bên trong Post.java (aggregate root)
 public static Post create(
-        Id id, 
-        Title title, 
-        PostContent content, 
-        Id userId, 
-        Summary summary, 
-        String thumbnail, 
+        Id id,
+        Title title,
+        PostContent content,
+        Id userId,
+        Summary summary,
+        String thumbnail,
         Slug slug
 ) {
     // True invariants here
     Post post = new Post(
-        id, 
-        title, 
-        content, 
-        userId, 
-        summary, 
-        thumbnail, 
+        id,
+        title,
+        content,
+        userId,
+        summary,
+        thumbnail,
         slug
     );
-    
+
     // Khi tạo post thì sẽ đăng ký một event
     post.registerEvent(new PostCreatedEvent(post));
 
@@ -548,8 +549,8 @@ public static Post create(
 // Và ở đâu đó trong layer repository
 // Khi persist DB xong event sẽ được tự động bắn đi
 // Hoặc bạn có thể bắn event trong Domain service (tùy bạn)
-// Nâng cao hơn thì việc commit DB 
-//     + publish event nó còn dính tới transaction. 
+// Nâng cao hơn thì việc commit DB
+//     + publish event nó còn dính tới transaction.
 // Bạn tự tìm hiểu thêm nha
 // Mình ví dụ nếu save DB không thành công thì không được bắn event đi nha.
 // Khi bắn event đi thất bại thì phải xử lý như thế nào?
@@ -561,7 +562,7 @@ public class PostRepository implements PostRepositoryInterface {
     @Override
     public void save(Post post) {
         // Build PostEntity here
-    
+
         this.postJpaRepository.save(postEntity);
         // Publish domain events
         user.publishEvents(domainEventPublisher);
@@ -582,9 +583,9 @@ public class PostEventHandler {
 
     private void sendMessageToKafkaBroker(DomainEventInterface event) {
         Post post = (Post) event.getEventData();
-        ProducerRecord<String, PostEventDto> record 
+        ProducerRecord<String, PostEventDto> record
             = new ProducerRecord...
-        
+
         // send data to kafka
         this.kafkaTemplate.send(record);
     }

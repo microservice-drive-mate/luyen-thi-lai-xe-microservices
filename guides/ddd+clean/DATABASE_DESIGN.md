@@ -27,17 +27,18 @@ Trường `licenseCategory` (enum) xuất hiện ở question-service, exam-serv
 > Các service khác verify JWT do Keycloak cấp (via JWKS endpoint).
 
 **Roles được cấu hình trong Keycloak:**
+
 ```
 ADMIN | CENTER_MANAGER | INSTRUCTOR | STUDENT
 ```
 
 ### Domain Events phát ra (Keycloak Event Listener / Webhook)
 
-| Event | Trigger | Payload |
-|-------|---------|---------|
-| `identity.user.created` | Admin/Center Manager tạo tài khoản mới | userId, email, fullName, role |
-| `identity.user.locked` | Brute-force lock | userId |
-| `identity.user.role-changed` | Admin đổi role | userId, oldRole, newRole |
+| Event                        | Trigger                                | Payload                       |
+| ---------------------------- | -------------------------------------- | ----------------------------- |
+| `identity.user.created`      | Admin/Center Manager tạo tài khoản mới | userId, email, fullName, role |
+| `identity.user.locked`       | Brute-force lock                       | userId                        |
+| `identity.user.role-changed` | Admin đổi role                         | userId, oldRole, newRole      |
 
 > Events được publish từ Keycloak Event Listener → RabbitMQ khi có thay đổi tài khoản.
 
@@ -106,11 +107,11 @@ license_assignment_audits
 
 ### Domain Events
 
-| Direction | Event | Trigger | Payload |
-|-----------|-------|---------|---------|
-| Subscribe | `identity.user.created` | Keycloak tạo tài khoản | Tạo UserProfile + StudentDetail (nếu role=STUDENT) |
-| Subscribe | `identity.user.role-changed` | Admin đổi role | Sync lại `role` trên UserProfile |
-| Publish | `user.student.license-assigned` | Gán/đổi hạng bằng (UC06) | studentId, oldTier, newTier, changedById |
+| Direction | Event                           | Trigger                  | Payload                                            |
+| --------- | ------------------------------- | ------------------------ | -------------------------------------------------- |
+| Subscribe | `identity.user.created`         | Keycloak tạo tài khoản   | Tạo UserProfile + StudentDetail (nếu role=STUDENT) |
+| Subscribe | `identity.user.role-changed`    | Admin đổi role           | Sync lại `role` trên UserProfile                   |
+| Publish   | `user.student.license-assigned` | Gán/đổi hạng bằng (UC06) | studentId, oldTier, newTier, changedById           |
 
 ---
 
@@ -165,10 +166,10 @@ question_options
 
 ### Domain Events phát ra
 
-| Event | Trigger | Payload |
-|-------|---------|---------|
-| `question.created` | Thêm câu hỏi mới | questionId, licenseCategory[], isCritical |
-| `question.deactivated` | Tắt câu hỏi | questionId |
+| Event                  | Trigger          | Payload                                   |
+| ---------------------- | ---------------- | ----------------------------------------- |
+| `question.created`     | Thêm câu hỏi mới | questionId, licenseCategory[], isCritical |
+| `question.deactivated` | Tắt câu hỏi      | questionId                                |
 
 ---
 
@@ -253,11 +254,11 @@ exam_schedules
 
 ### Domain Events phát ra
 
-| Event | Trigger | Payload |
-|-------|---------|---------|
+| Event                    | Trigger                  | Payload                                                |
+| ------------------------ | ------------------------ | ------------------------------------------------------ |
 | `exam.session.completed` | Thi xong (kể cả timeout) | sessionId, studentId, score, isPassed, licenseCategory |
-| `exam.session.passed` | Thi đậu | sessionId, studentId, licenseCategory |
-| `exam.session.failed` | Thi rớt | sessionId, studentId, failedByCritical |
+| `exam.session.passed`    | Thi đậu                  | sessionId, studentId, licenseCategory                  |
+| `exam.session.failed`    | Thi rớt                  | sessionId, studentId, failedByCritical                 |
 
 ---
 
@@ -335,11 +336,11 @@ lesson_progress
 
 ### Domain Events phát ra
 
-| Event | Trigger | Payload |
-|-------|---------|---------|
-| `course.enrollment.created` | Student đăng ký khóa học | enrollmentId, studentId, courseId |
-| `course.enrollment.completed` | Hoàn thành khóa học | enrollmentId, studentId, courseId |
-| `course.lesson.completed` | Hoàn thành 1 bài học | lessonId, studentId, durationMinutes |
+| Event                         | Trigger                  | Payload                              |
+| ----------------------------- | ------------------------ | ------------------------------------ |
+| `course.enrollment.created`   | Student đăng ký khóa học | enrollmentId, studentId, courseId    |
+| `course.enrollment.completed` | Hoàn thành khóa học      | enrollmentId, studentId, courseId    |
+| `course.lesson.completed`     | Hoàn thành 1 bài học     | lessonId, studentId, durationMinutes |
 
 ---
 
@@ -416,8 +417,8 @@ simulation_answers
 
 ### Domain Events phát ra
 
-| Event | Trigger | Payload |
-|-------|---------|---------|
+| Event                          | Trigger            | Payload                                                |
+| ------------------------------ | ------------------ | ------------------------------------------------------ |
 | `simulation.session.completed` | Hoàn thành sa hình | sessionId, studentId, score, isPassed, licenseCategory |
 
 ---
@@ -470,14 +471,14 @@ notification_preferences
 
 ### Domain Events subscribe
 
-| Event | Hành động |
-|-------|----------|
-| `identity.user.created` | Gửi welcome notification + tạo NotificationPreference |
-| `identity.user.locked` | Cảnh báo tài khoản bị khóa |
-| `exam.session.passed` | Thông báo đậu thi |
-| `exam.session.failed` | Thông báo rớt thi, gợi ý ôn thêm |
-| `course.enrollment.completed` | Chúc mừng hoàn thành khóa học |
-| `simulation.session.completed` | Thông báo kết quả sa hình |
+| Event                          | Hành động                                             |
+| ------------------------------ | ----------------------------------------------------- |
+| `identity.user.created`        | Gửi welcome notification + tạo NotificationPreference |
+| `identity.user.locked`         | Cảnh báo tài khoản bị khóa                            |
+| `exam.session.passed`          | Thông báo đậu thi                                     |
+| `exam.session.failed`          | Thông báo rớt thi, gợi ý ôn thêm                      |
+| `course.enrollment.completed`  | Chúc mừng hoàn thành khóa học                         |
+| `simulation.session.completed` | Thông báo kết quả sa hình                             |
 
 ---
 
@@ -557,13 +558,13 @@ weak_area_reports
 
 ### Domain Events subscribe
 
-| Event | Hành động |
-|-------|----------|
-| `identity.user.created` | Tạo StudentLearningProfile |
-| `exam.session.completed` | Update LearningProfile + DailyActivity + QuestionAccuracy |
-| `simulation.session.completed` | Update LearningProfile + DailyActivity |
-| `course.lesson.completed` | Update studyMinutes trong DailyActivity |
-| `course.enrollment.completed` | Increment coursesCompleted |
+| Event                          | Hành động                                                 |
+| ------------------------------ | --------------------------------------------------------- |
+| `identity.user.created`        | Tạo StudentLearningProfile                                |
+| `exam.session.completed`       | Update LearningProfile + DailyActivity + QuestionAccuracy |
+| `simulation.session.completed` | Update LearningProfile + DailyActivity                    |
+| `course.lesson.completed`      | Update studyMinutes trong DailyActivity                   |
+| `course.enrollment.completed`  | Increment coursesCompleted                                |
 
 ---
 
@@ -599,16 +600,16 @@ weak_area_reports
 
 ## Tóm tắt
 
-| Service | Database | Aggregate Roots | Ghi chú |
-|---------|----------|-----------------|---------|
-| identity-service | **Keycloak** | — | Không có DB riêng |
-| user-service | user_db | UserProfile | Có StudentDetail + LicenseAssignmentAudit |
-| question-service | question_db | Question, QuestionTopic | |
-| exam-service | exam_db | ExamTemplate, ExamSession, ExamSchedule | Snapshot câu hỏi |
-| course-service | course_db | Course, CourseEnrollment | |
-| simulation-service | simulation_db | Scenario, SimulationSession | 120 tình huống |
-| notification-service | notification_db | Notification, NotificationTemplate, NotificationPreference | Pure consumer |
-| analytics-service | analytics_db | StudentLearningProfile, QuestionAccuracyTracker, WeakAreaReport | Pure read model |
+| Service              | Database        | Aggregate Roots                                                 | Ghi chú                                   |
+| -------------------- | --------------- | --------------------------------------------------------------- | ----------------------------------------- |
+| identity-service     | **Keycloak**    | —                                                               | Không có DB riêng                         |
+| user-service         | user_db         | UserProfile                                                     | Có StudentDetail + LicenseAssignmentAudit |
+| question-service     | question_db     | Question, QuestionTopic                                         |                                           |
+| exam-service         | exam_db         | ExamTemplate, ExamSession, ExamSchedule                         | Snapshot câu hỏi                          |
+| course-service       | course_db       | Course, CourseEnrollment                                        |                                           |
+| simulation-service   | simulation_db   | Scenario, SimulationSession                                     | 120 tình huống                            |
+| notification-service | notification_db | Notification, NotificationTemplate, NotificationPreference      | Pure consumer                             |
+| analytics-service    | analytics_db    | StudentLearningProfile, QuestionAccuracyTracker, WeakAreaReport | Pure read model                           |
 
 ---
 

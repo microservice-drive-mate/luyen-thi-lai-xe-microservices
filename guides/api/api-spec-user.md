@@ -11,12 +11,14 @@
 Tất cả các endpoint (trừ `POST /users`) đều yêu cầu JWT hợp lệ do Keycloak phát hành.
 
 Kong gateway:
+
 1. Xác thực chữ ký JWT (`exp`, `iss`)
 2. Inject các header vào request trước khi forward xuống service:
    - `x-user-id` — `sub` claim từ JWT (Keycloak user UUID)
    - `x-user-role` — role của user (từ Keycloak token claims)
 
 **Header Authorization:**
+
 ```
 Authorization: Bearer <keycloak_access_token>
 ```
@@ -52,36 +54,39 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 ## Error Codes
 
-| HTTP Status | code                     | Nguyên nhân                                   |
-|-------------|--------------------------|-----------------------------------------------|
-| 400         | `VALIDATION_ERROR`       | Request body/query không hợp lệ               |
-| 400         | `USER_NOT_STUDENT`       | Gán license tier cho user không phải STUDENT  |
-| 401         | `UNAUTHORIZED`           | Thiếu hoặc JWT không hợp lệ                   |
-| 404         | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user profile theo ID           |
-| 409         | `USER_ALREADY_EXISTS`    | Email đã tồn tại trong hệ thống               |
-| 422         | `USER_NOT_STUDENT`       | Xem bên trên                                  |
-| 500         | `INTERNAL_ERROR`         | Lỗi server                                    |
+| HTTP Status | code                     | Nguyên nhân                                  |
+| ----------- | ------------------------ | -------------------------------------------- |
+| 400         | `VALIDATION_ERROR`       | Request body/query không hợp lệ              |
+| 400         | `USER_NOT_STUDENT`       | Gán license tier cho user không phải STUDENT |
+| 401         | `UNAUTHORIZED`           | Thiếu hoặc JWT không hợp lệ                  |
+| 404         | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user profile theo ID          |
+| 409         | `USER_ALREADY_EXISTS`    | Email đã tồn tại trong hệ thống              |
+| 422         | `USER_NOT_STUDENT`       | Xem bên trên                                 |
+| 500         | `INTERNAL_ERROR`         | Lỗi server                                   |
 
 ---
 
 ## Enums
 
 ### UserRole
+
 | Value            | Ý nghĩa           |
-|------------------|--------------------|
-| `ADMIN`          | Quản trị viên      |
-| `CENTER_MANAGER` | Quản lý trung tâm  |
-| `INSTRUCTOR`     | Giáo viên          |
-| `STUDENT`        | Học viên           |
+| ---------------- | ----------------- |
+| `ADMIN`          | Quản trị viên     |
+| `CENTER_MANAGER` | Quản lý trung tâm |
+| `INSTRUCTOR`     | Giáo viên         |
+| `STUDENT`        | Học viên          |
 
 ### Gender
+
 | Value    | Ý nghĩa |
-|----------|---------|
+| -------- | ------- |
 | `MALE`   | Nam     |
 | `FEMALE` | Nữ      |
 | `OTHER`  | Khác    |
 
 ### LicenseTier
+
 `A1` | `A2` | `B1` | `B2` | `C` | `D` | `E` | `F`
 
 ---
@@ -89,6 +94,7 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 ## Shared Types
 
 ### UserProfileResponse
+
 ```json
 {
   "id": "uuid",
@@ -109,6 +115,7 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
   }
 }
 ```
+
 > `studentDetail` là `null` nếu `role !== "STUDENT"`.
 
 ---
@@ -141,19 +148,19 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 }
 ```
 
-| Field         | Type     | Required | Validation                              |
-|---------------|----------|----------|-----------------------------------------|
-| `id`          | string   | ✅       | UUID (= Keycloak user ID)               |
-| `fullName`    | string   | ✅       | Non-empty                               |
-| `email`       | string   | ✅       | Valid email format                      |
-| `role`        | UserRole | ✅       | Một trong các giá trị UserRole          |
-| `phoneNumber` | string   | ❌       | SĐT Việt Nam: `0[3-9]XXXXXXXX` hoặc `+84...` |
-| `dateOfBirth` | string   | ❌       | ISO date string                         |
-| `gender`      | Gender   | ❌       | Một trong các giá trị Gender            |
-| `address`     | string   | ❌       |                                         |
-| `avatarUrl`   | string   | ❌       |                                         |
-| `licenseTier` | LicenseTier | ❌   | Chỉ có ý nghĩa khi `role = STUDENT`    |
-| `enrolledAt`  | string   | ❌       | ISO date string, ngày nhập học          |
+| Field         | Type        | Required | Validation                                   |
+| ------------- | ----------- | -------- | -------------------------------------------- |
+| `id`          | string      | ✅       | UUID (= Keycloak user ID)                    |
+| `fullName`    | string      | ✅       | Non-empty                                    |
+| `email`       | string      | ✅       | Valid email format                           |
+| `role`        | UserRole    | ✅       | Một trong các giá trị UserRole               |
+| `phoneNumber` | string      | ❌       | SĐT Việt Nam: `0[3-9]XXXXXXXX` hoặc `+84...` |
+| `dateOfBirth` | string      | ❌       | ISO date string                              |
+| `gender`      | Gender      | ❌       | Một trong các giá trị Gender                 |
+| `address`     | string      | ❌       |                                              |
+| `avatarUrl`   | string      | ❌       |                                              |
+| `licenseTier` | LicenseTier | ❌       | Chỉ có ý nghĩa khi `role = STUDENT`          |
+| `enrolledAt`  | string      | ❌       | ISO date string, ngày nhập học               |
 
 **Response `201` — Tạo thành công:**
 
@@ -175,10 +182,10 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 **Errors:**
 
-| Status | code                  | Nguyên nhân                |
-|--------|-----------------------|----------------------------|
-| 400    | `VALIDATION_ERROR`    | Body không hợp lệ          |
-| 409    | `USER_ALREADY_EXISTS` | Email đã tồn tại           |
+| Status | code                  | Nguyên nhân       |
+| ------ | --------------------- | ----------------- |
+| 400    | `VALIDATION_ERROR`    | Body không hợp lệ |
+| 409    | `USER_ALREADY_EXISTS` | Email đã tồn tại  |
 
 ---
 
@@ -190,13 +197,13 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 **Query Parameters:**
 
-| Param      | Type     | Default | Validation         | Mô tả                          |
-|------------|----------|---------|--------------------|--------------------------------|
-| `page`     | number   | 1       | ≥ 1                | Số trang                       |
-| `size`     | number   | 20      | ≥ 1, ≤ 100         | Số item mỗi trang              |
-| `role`     | UserRole | —       | Enum UserRole      | Lọc theo role                  |
-| `isActive` | boolean  | —       | `true` hoặc `false`| Lọc theo trạng thái hoạt động  |
-| `search`   | string   | —       |                    | Tìm theo tên, email, SĐT       |
+| Param      | Type     | Default | Validation          | Mô tả                         |
+| ---------- | -------- | ------- | ------------------- | ----------------------------- |
+| `page`     | number   | 1       | ≥ 1                 | Số trang                      |
+| `size`     | number   | 20      | ≥ 1, ≤ 100          | Số item mỗi trang             |
+| `role`     | UserRole | —       | Enum UserRole       | Lọc theo role                 |
+| `isActive` | boolean  | —       | `true` hoặc `false` | Lọc theo trạng thái hoạt động |
+| `search`   | string   | —       |                     | Tìm theo tên, email, SĐT      |
 
 **Response `200`:**
 
@@ -208,7 +215,9 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
   "timestamp": "2026-05-06T10:00:00.000Z",
   "path": "/users",
   "data": {
-    "items": [ /* UserProfileResponse[] */ ],
+    "items": [
+      /* UserProfileResponse[] */
+    ],
     "total": 42,
     "page": 1,
     "size": 20
@@ -234,14 +243,16 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
   "message": "OK",
   "timestamp": "2026-05-06T10:00:00.000Z",
   "path": "/users/me",
-  "data": { /* UserProfileResponse */ }
+  "data": {
+    /* UserProfileResponse */
+  }
 }
 ```
 
 **Errors:**
 
 | Status | code                     | Nguyên nhân                           |
-|--------|--------------------------|---------------------------------------|
+| ------ | ------------------------ | ------------------------------------- |
 | 401    | `UNAUTHORIZED`           | JWT thiếu hoặc không hợp lệ           |
 | 404    | `USER_PROFILE_NOT_FOUND` | Profile chưa được tạo cho Keycloak ID |
 
@@ -255,8 +266,8 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 **Path Params:**
 
-| Param | Type   | Mô tả               |
-|-------|--------|---------------------|
+| Param | Type   | Mô tả                 |
+| ----- | ------ | --------------------- |
 | `id`  | string | UUID của user cần lấy |
 
 **Response `200`:**
@@ -268,15 +279,17 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
   "message": "OK",
   "timestamp": "2026-05-06T10:00:00.000Z",
   "path": "/users/abc-uuid",
-  "data": { /* UserProfileResponse */ }
+  "data": {
+    /* UserProfileResponse */
+  }
 }
 ```
 
 **Errors:**
 
-| Status | code                     | Nguyên nhân          |
-|--------|--------------------------|----------------------|
-| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user  |
+| Status | code                     | Nguyên nhân         |
+| ------ | ------------------------ | ------------------- |
+| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user |
 
 ---
 
@@ -301,15 +314,15 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 }
 ```
 
-| Field         | Type     | Validation                                     |
-|---------------|----------|------------------------------------------------|
-| `fullName`    | string   | Non-empty string                               |
-| `phoneNumber` | string   | SĐT Việt Nam hợp lệ                            |
-| `dateOfBirth` | string   | ISO date string                                |
-| `gender`      | Gender   | Enum Gender                                    |
-| `address`     | string   |                                                |
-| `avatarUrl`   | string   |                                                |
-| `notes`       | string   | Chỉ áp dụng nếu `role = STUDENT`              |
+| Field         | Type   | Validation                       |
+| ------------- | ------ | -------------------------------- |
+| `fullName`    | string | Non-empty string                 |
+| `phoneNumber` | string | SĐT Việt Nam hợp lệ              |
+| `dateOfBirth` | string | ISO date string                  |
+| `gender`      | Gender | Enum Gender                      |
+| `address`     | string |                                  |
+| `avatarUrl`   | string |                                  |
+| `notes`       | string | Chỉ áp dụng nếu `role = STUDENT` |
 
 **Response `200`** — Trả về profile đã cập nhật:
 
@@ -320,16 +333,18 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
   "message": "OK",
   "timestamp": "2026-05-06T10:00:00.000Z",
   "path": "/users/me",
-  "data": { /* UserProfileResponse với data mới */ }
+  "data": {
+    /* UserProfileResponse với data mới */
+  }
 }
 ```
 
 **Errors:**
 
-| Status | code                     | Nguyên nhân         |
-|--------|--------------------------|---------------------|
-| 400    | `VALIDATION_ERROR`       | Body không hợp lệ   |
-| 404    | `USER_PROFILE_NOT_FOUND` | Profile không tồn tại|
+| Status | code                     | Nguyên nhân           |
+| ------ | ------------------------ | --------------------- |
+| 400    | `VALIDATION_ERROR`       | Body không hợp lệ     |
+| 404    | `USER_PROFILE_NOT_FOUND` | Profile không tồn tại |
 
 ---
 
@@ -341,8 +356,8 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 **Path Params:**
 
-| Param | Type   | Mô tả                  |
-|-------|--------|------------------------|
+| Param | Type   | Mô tả                    |
+| ----- | ------ | ------------------------ |
 | `id`  | string | UUID của user cần update |
 
 **Request Body:** Giống `PATCH /users/me`
@@ -356,16 +371,18 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
   "message": "OK",
   "timestamp": "2026-05-06T10:00:00.000Z",
   "path": "/users/abc-uuid",
-  "data": { /* UserProfileResponse với data mới */ }
+  "data": {
+    /* UserProfileResponse với data mới */
+  }
 }
 ```
 
 **Errors:**
 
-| Status | code                     | Nguyên nhân          |
-|--------|--------------------------|----------------------|
-| 400    | `VALIDATION_ERROR`       | Body không hợp lệ    |
-| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user  |
+| Status | code                     | Nguyên nhân         |
+| ------ | ------------------------ | ------------------- |
+| 400    | `VALIDATION_ERROR`       | Body không hợp lệ   |
+| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user |
 
 ---
 
@@ -377,8 +394,8 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 **Path Params:**
 
-| Param | Type   | Mô tả             |
-|-------|--------|-------------------|
+| Param | Type   | Mô tả                         |
+| ----- | ------ | ----------------------------- |
 | `id`  | string | UUID của user cần lock/unlock |
 
 **Request Body:**
@@ -387,18 +404,18 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 { "lock": true }
 ```
 
-| Field  | Type    | Required | Mô tả                                      |
-|--------|---------|----------|--------------------------------------------|
+| Field  | Type    | Required | Mô tả                                                 |
+| ------ | ------- | -------- | ----------------------------------------------------- |
 | `lock` | boolean | ✅       | `true` = khóa (`isActive = false`); `false` = mở khóa |
 
 **Response `204 No Content`** — Không có body.
 
 **Errors:**
 
-| Status | code                     | Nguyên nhân          |
-|--------|--------------------------|----------------------|
-| 400    | `VALIDATION_ERROR`       | Body không hợp lệ    |
-| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user  |
+| Status | code                     | Nguyên nhân         |
+| ------ | ------------------------ | ------------------- |
+| 400    | `VALIDATION_ERROR`       | Body không hợp lệ   |
+| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user |
 
 > **Lưu ý:** Khi user bị khóa (`isActive = false`), Keycloak vẫn có thể phát JWT hợp lệ cho họ. Việc kiểm tra `isActive` ở tầng nghiệp vụ là trách nhiệm của từng service khi xử lý request.
 
@@ -413,8 +430,8 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 **Path Params:**
 
-| Param | Type   | Mô tả                     |
-|-------|--------|---------------------------|
+| Param | Type   | Mô tả                          |
+| ----- | ------ | ------------------------------ |
 | `id`  | string | UUID của học viên cần gán hạng |
 
 **Request Body:**
@@ -423,21 +440,22 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 { "licenseTier": "B2" }
 ```
 
-| Field         | Type        | Required | Validation           |
-|---------------|-------------|----------|----------------------|
+| Field         | Type        | Required | Validation                        |
+| ------------- | ----------- | -------- | --------------------------------- |
 | `licenseTier` | LicenseTier | ✅       | Một trong các giá trị LicenseTier |
 
 **Response `204 No Content`** — Không có body.
 
 **Errors:**
 
-| Status | code                     | Nguyên nhân                              |
-|--------|--------------------------|------------------------------------------|
-| 400    | `VALIDATION_ERROR`       | Body không hợp lệ                        |
-| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user                      |
-| 422    | `USER_NOT_STUDENT`       | User không có role `STUDENT`             |
+| Status | code                     | Nguyên nhân                  |
+| ------ | ------------------------ | ---------------------------- |
+| 400    | `VALIDATION_ERROR`       | Body không hợp lệ            |
+| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user          |
+| 422    | `USER_NOT_STUDENT`       | User không có role `STUDENT` |
 
 > **Domain Event phát ra:**
+>
 > - Event name: `user.student.license-assigned`
 > - Payload: `{ studentId, email, fullName, oldLicenseTier, newLicenseTier, changedById, occurredAt }`
 > - Consumed bởi: `notification-service` (gửi thông báo), `analytics-service` (cập nhật scope học)
@@ -453,6 +471,7 @@ User-service lắng nghe 2 event từ RabbitMQ queue `user_service_events`:
 Phát ra bởi identity-service khi Keycloak tạo user mới.
 
 **Payload:**
+
 ```json
 {
   "userId": "keycloak-uuid",
@@ -471,6 +490,7 @@ Phát ra bởi identity-service khi Keycloak tạo user mới.
 Phát ra bởi identity-service khi admin đổi role của user trong Keycloak.
 
 **Payload:**
+
 ```json
 {
   "userId": "keycloak-uuid",
@@ -479,6 +499,7 @@ Phát ra bởi identity-service khi admin đổi role của user trong Keycloak.
 ```
 
 **Xử lý:** Gọi `UserProfile.syncRole()`:
+
 - Nếu được promote lên `STUDENT` → tạo `StudentDetail`
 - Nếu bị demote khỏi `STUDENT` → xóa `StudentDetail`
 
@@ -488,10 +509,10 @@ Phát ra bởi identity-service khi admin đổi role của user trong Keycloak.
 
 Cấu hình tại Kong (global):
 
-| Giới hạn   | Giá trị        |
-|------------|----------------|
-| Per second | 5 req/giây/IP  |
-| Per hour   | 1000 req/giờ/IP|
+| Giới hạn   | Giá trị         |
+| ---------- | --------------- |
+| Per second | 5 req/giây/IP   |
+| Per hour   | 1000 req/giờ/IP |
 
 Khi vượt quá: `429 Too Many Requests`
 
@@ -499,10 +520,10 @@ Khi vượt quá: `429 Too Many Requests`
 
 ## Swagger UI
 
-| Môi trường  | URL                                     |
-|-------------|-----------------------------------------|
-| Local       | `http://localhost:3000/docs`            |
-| Qua Kong    | `http://localhost:8000/user-service/docs` (cần JWT) |
+| Môi trường | URL                                                 |
+| ---------- | --------------------------------------------------- |
+| Local      | `http://localhost:3000/docs`                        |
+| Qua Kong   | `http://localhost:8000/user-service/docs` (cần JWT) |
 
 ---
 

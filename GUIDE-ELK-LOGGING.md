@@ -5,7 +5,9 @@ Tài liệu này hướng dẫn cách vận hành hệ thống Logging tập tru
 ---
 
 ## 1. Kiến trúc Logging
+
 Hệ thống sử dụng cơ chế **Push-based Logging**:
+
 - **Microservices**: Sử dụng `winston` và `nest-winston` để định dạng log dưới dạng JSON.
 - **Transport**: Log được gửi trực tiếp từ ứng dụng tới Logstash thông qua giao thức **HTTP** (Port 5044).
 - **Logstash**: Tiếp nhận, xử lý sơ bộ và đẩy vào Elasticsearch theo index hàng ngày (`microservices-logs-YYYY.MM.DD`).
@@ -16,12 +18,15 @@ Hệ thống sử dụng cơ chế **Push-based Logging**:
 ## 2. Cách khởi hành (Quick Start)
 
 ### Bước 1: Khởi động ELK
+
 ```bash
 docker-compose up -d elasticsearch logstash kibana
 ```
-*Đợi khoảng 1-2 phút để Elasticsearch sẵn sàng.*
+
+_Đợi khoảng 1-2 phút để Elasticsearch sẵn sàng._
 
 ### Bước 2: Truy cập Kibana
+
 - URL: [http://localhost:5601](http://localhost:5601)
 - Lần đầu sử dụng: Vào **Stack Management** > **Data Views** > Tạo mới với pattern `microservices-logs-*`.
 
@@ -32,9 +37,11 @@ docker-compose up -d elasticsearch logstash kibana
 Để tích hợp ELK cho một microservice mới trong dự án, bạn thực hiện 2 bước đơn giản:
 
 ### Bước 1: Import AppLoggerModule
+
 Trong file `app.module.ts` của service:
+
 ```typescript
-import { AppLoggerModule } from '@repo/common';
+import { AppLoggerModule } from "@repo/common";
 
 @Module({
   imports: [
@@ -46,16 +53,18 @@ export class AppModule {}
 ```
 
 ### Bước 2: Cấu hình useLogger
+
 Trong file `main.ts` của service:
+
 ```typescript
-import { WINSTON_MODULE_NEST_PROVIDER } from '@repo/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from "@repo/common";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // Ép NestJS sử dụng Winston thay cho Logger mặc định
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
-  
+
   // ... rest of bootstrap
 }
 ```
@@ -67,6 +76,7 @@ async function bootstrap() {
 Bạn nên sử dụng class `Logger` mặc định của NestJS. Nhờ bước cấu hình ở trên, NestJS sẽ tự động chuyển hướng các lệnh gọi này tới Winston để gửi lên ELK.
 
 ### Cách dùng cơ bản:
+
 ```typescript
 import { Logger } from '@nestjs/common';
 
@@ -79,13 +89,15 @@ this.logger.debug('Đây là log debug (chỉ hiện ở dev)');
 ```
 
 ### Structured Logging (Khuyên dùng):
+
 Để ELK phân tích dữ liệu tốt hơn, hãy truyền thêm object chứa thông tin chi tiết:
+
 ```typescript
 this.logger.log({
-  message: 'Người dùng đăng nhập thành công',
+  message: "Người dùng đăng nhập thành công",
   userId: user.id,
   ipAddress: req.ip,
-  action: 'USER_LOGIN'
+  action: "USER_LOGIN",
 });
 ```
 
@@ -94,6 +106,7 @@ this.logger.log({
 ## 5. Best Practices cho Logging
 
 ### ✅ Nên làm:
+
 1. **Sử dụng Log Levels đúng mục đích**:
    - `Error`: Khi có lỗi hệ thống hoặc lỗi nghiệp vụ nghiêm trọng.
    - `Warn`: Khi có điều gì đó bất thường nhưng hệ thống vẫn chạy được.
@@ -104,6 +117,7 @@ this.logger.log({
 4. **Correlation ID**: (Nâng cao) Gắn thêm `traceId` vào mỗi log trong cùng một request để theo dõi luồng dữ liệu đi qua nhiều microservices.
 
 ### ❌ Không nên làm:
+
 1. **Không log thông tin nhạy cảm**: Tuyệt đối không log Password, Token, Mã PIN, hay thông tin cá nhân khách hàng (PII) lên ELK.
 2. **Tránh Log quá nhiều trong vòng lặp**: Có thể gây nghẽn Logstash và tốn dung lượng ổ cứng.
 3. **Không dùng `console.log`**: Console log không được quản lý bởi Winston và sẽ khó thu thập/định dạng chuẩn trên ELK.
@@ -112,7 +126,7 @@ this.logger.log({
 
 ## 6. Xử lý sự cố thường gặp
 
-- **Kibana không thấy log mới**: 
+- **Kibana không thấy log mới**:
   - Kiểm tra xem service đã được build lại với `AppLoggerModule` chưa.
   - Kiểm tra log của container Logstash: `docker logs logstash`.
 - **Elasticsearch bị treo**: Thường do hết bộ nhớ. Hãy đảm bảo bạn cấp ít nhất 2GB RAM cho Docker engine.

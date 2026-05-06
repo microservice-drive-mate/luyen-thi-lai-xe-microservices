@@ -29,6 +29,7 @@ docker-compose up -d db-user rabbitmq consul consul-init
 Chờ khoảng 10-15 giây để Consul khởi động xong.
 
 **Kiểm tra Consul healthy:**
+
 ```bash
 curl http://localhost:8500/v1/status/leader
 # Kết quả mong đợi: "..." (địa chỉ leader node)
@@ -45,12 +46,14 @@ npm run consul:seed:local
 Lệnh này đọc `consul-seed-development-local.json` và đẩy config vào Consul KV store.
 
 **Kiểm tra:**
+
 ```bash
 npm run consul:list
 # Hoặc xem trực tiếp: http://localhost:8500/ui/dc1/kv
 ```
 
 Sau khi seed thành công, bạn sẽ thấy các key như:
+
 - `config/development-local/shared/log.level`
 - `config/development-local/user-service/port`
 - `config/development-local/user-service/database.url`
@@ -63,12 +66,14 @@ npx prisma migrate dev --name init
 ```
 
 Hoặc nếu migration đã tồn tại:
+
 ```bash
 cd apps/user-service
 npx prisma migrate deploy
 ```
 
 **Kiểm tra schema đã tạo:**
+
 ```bash
 npx prisma studio
 # Mở browser tại http://localhost:5555 để xem DB
@@ -86,6 +91,7 @@ npm run start:dev
 ```
 
 **Kiểm tra service đang chạy:**
+
 ```bash
 curl http://localhost:3002/docs-json
 # Kết quả: OpenAPI JSON spec
@@ -130,6 +136,7 @@ curl -s -X POST http://localhost:3002/users \
 ```
 
 **Kết quả mong đợi (201):**
+
 ```json
 {
   "success": true,
@@ -178,6 +185,7 @@ curl -s -X POST http://localhost:3002/users \
 ```
 
 **Kết quả mong đợi (201):**
+
 ```json
 {
   "success": true,
@@ -228,6 +236,7 @@ curl -s -X POST http://localhost:3002/users \
 ```
 
 **Kết quả mong đợi (409):**
+
 ```json
 {
   "success": false,
@@ -249,6 +258,7 @@ curl -s -X POST http://localhost:3002/users \
 ```
 
 **Kết quả mong đợi (400):**
+
 ```json
 {
   "success": false,
@@ -283,11 +293,14 @@ curl -s "http://localhost:3002/users" | jq .
 ```
 
 **Kết quả mong đợi (200):**
+
 ```json
 {
   "success": true,
   "data": {
-    "items": [ /* mảng UserProfileResponse */ ],
+    "items": [
+      /* mảng UserProfileResponse */
+    ],
     "total": 4,
     "page": 1,
     "size": 20
@@ -347,6 +360,7 @@ curl -s http://localhost:3002/users/me \
 ```
 
 **Kết quả mong đợi (200):**
+
 ```json
 {
   "success": true,
@@ -398,6 +412,7 @@ curl -s http://localhost:3002/users/student-uuid-0003 | jq .
 ```
 
 **So sánh studentDetail:**
+
 - User ADMIN/INSTRUCTOR: `studentDetail: null`
 - User STUDENT: `studentDetail: { licenseTier, enrolledAt, notes }`
 
@@ -427,6 +442,7 @@ curl -s -X PATCH http://localhost:3002/users/me \
 ```
 
 **Kết quả mong đợi (200)** — trả về profile đã update:
+
 ```json
 {
   "success": true,
@@ -563,6 +579,7 @@ curl -s http://localhost:3002/users/student-uuid-0003 | jq '.data.studentDetail'
 ```
 
 **Kết quả mong đợi:**
+
 ```json
 {
   "licenseTier": "B2",
@@ -592,6 +609,7 @@ curl -s -X PATCH http://localhost:3002/users/admin-uuid-0001/license-tier \
 ```
 
 **Kết quả mong đợi (422):**
+
 ```json
 {
   "success": false,
@@ -621,6 +639,7 @@ curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/license-tier \
 Username: `guest` / Password: `guest`
 
 Vào tab **Queues** để thấy:
+
 - `user_service_events` — queue user-service đang CONSUME
 - `user_service_publish` — queue user-service PUBLISH events vào
 
@@ -656,24 +675,26 @@ curl -s http://localhost:3002/users/rabbitmq-user-uuid-0005 | jq .
 
 ```javascript
 // scripts/test-rabbitmq-event.mjs
-import amqp from 'amqplib';
+import amqp from "amqplib";
 
-const conn = await amqp.connect('amqp://localhost:5672');
+const conn = await amqp.connect("amqp://localhost:5672");
 const channel = await conn.createChannel();
 
-await channel.assertQueue('user_service_events', { durable: true });
+await channel.assertQueue("user_service_events", { durable: true });
 channel.sendToQueue(
-  'user_service_events',
-  Buffer.from(JSON.stringify({
-    userId: 'rabbitmq-user-uuid-0005',
-    email: 'rabbitmq-user@example.com',
-    fullName: 'Người Dùng RabbitMQ',
-    role: 'STUDENT',
-  })),
-  { persistent: true }
+  "user_service_events",
+  Buffer.from(
+    JSON.stringify({
+      userId: "rabbitmq-user-uuid-0005",
+      email: "rabbitmq-user@example.com",
+      fullName: "Người Dùng RabbitMQ",
+      role: "STUDENT",
+    }),
+  ),
+  { persistent: true },
 );
 
-console.log('Event published!');
+console.log("Event published!");
 await conn.close();
 ```
 
@@ -685,12 +706,14 @@ node scripts/test-rabbitmq-event.mjs
 
 ```javascript
 channel.sendToQueue(
-  'user_service_events',
-  Buffer.from(JSON.stringify({
-    userId: 'student-uuid-0003',
-    newRole: 'INSTRUCTOR',
-  })),
-  { persistent: true }
+  "user_service_events",
+  Buffer.from(
+    JSON.stringify({
+      userId: "student-uuid-0003",
+      newRole: "INSTRUCTOR",
+    }),
+  ),
+  { persistent: true },
 );
 ```
 
@@ -701,6 +724,7 @@ curl -s http://localhost:3002/users/student-uuid-0003 | jq '.data | {role, stude
 ```
 
 **Kết quả mong đợi:**
+
 ```json
 {
   "role": "INSTRUCTOR",
@@ -713,10 +737,16 @@ curl -s http://localhost:3002/users/student-uuid-0003 | jq '.data | {role, stude
 **Promote trở lại STUDENT:**
 
 ```javascript
-channel.sendToQueue('user_service_events', Buffer.from(JSON.stringify({
-  userId: 'student-uuid-0003',
-  newRole: 'STUDENT',
-})), { persistent: true });
+channel.sendToQueue(
+  "user_service_events",
+  Buffer.from(
+    JSON.stringify({
+      userId: "student-uuid-0003",
+      newRole: "STUDENT",
+    }),
+  ),
+  { persistent: true },
+);
 ```
 
 **Sau khi consume:**
@@ -726,6 +756,7 @@ curl -s http://localhost:3002/users/student-uuid-0003 | jq '.data | {role, stude
 ```
 
 **Kết quả mong đợi:**
+
 ```json
 {
   "role": "STUDENT",
@@ -787,6 +818,7 @@ npx prisma studio
 ```
 
 Mở http://localhost:5555 để xem:
+
 - Table `user_profiles`
 - Table `student_details`
 - Table `license_assignment_audits` — **quan trọng để verify audit trail**
@@ -851,6 +883,7 @@ PrismaClientInitializationError: Unable to open a TLS connection
 ```
 
 → Chạy:
+
 ```bash
 cd apps/user-service
 npx prisma migrate dev
@@ -869,6 +902,7 @@ npx prisma migrate dev
 ### Response format sai (không có `success` field)
 
 → `DomainExceptionFilter` hoặc `ApiExceptionFilter` chưa được register. Kiểm tra `main.ts`:
+
 ```typescript
 app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
 ```

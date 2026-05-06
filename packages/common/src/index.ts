@@ -1,4 +1,4 @@
-export * from "./http-api";
+export * from './http-api';
 
 // ============== DDD BASE CLASSES =================
 export * from './ddd';

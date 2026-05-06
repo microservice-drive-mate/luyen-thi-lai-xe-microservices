@@ -91,40 +91,40 @@ apps/<service-name>/
 
 ### Files
 
-| Loại | Suffix | Ví dụ |
-|------|--------|-------|
-| Aggregate root | `.aggregate.ts` | `exam-session.aggregate.ts` |
-| Child entity | `.entity.ts` | `exam-answer.entity.ts` |
-| Value Object | `.vo.ts` | `score.vo.ts` |
-| Domain Event | `.event.ts` | `exam-completed.event.ts` |
-| Domain Exception | `.exception.ts` | `exam-not-found.exception.ts` |
-| Abstract Repository | `.repository.ts` | `exam-session.repository.ts` |
-| Abstract Port | `.port.ts` | `notification.port.ts` |
-| Command | `.command.ts` | `submit-exam.command.ts` |
-| Query | `.query.ts` | `get-exam-result.query.ts` |
-| Result (output của use case) | `.result.ts` | `get-exam-result.result.ts` |
-| Use Case | `.use-case.ts` | `submit-exam.use-case.ts` |
-| Mapper | `.mapper.ts` | `exam-session.mapper.ts` |
-| Request DTO | `.request.dto.ts` | `create-exam.request.dto.ts` |
-| Response DTO | `.response.dto.ts` | `exam-session.response.dto.ts` |
+| Loại                         | Suffix             | Ví dụ                          |
+| ---------------------------- | ------------------ | ------------------------------ |
+| Aggregate root               | `.aggregate.ts`    | `exam-session.aggregate.ts`    |
+| Child entity                 | `.entity.ts`       | `exam-answer.entity.ts`        |
+| Value Object                 | `.vo.ts`           | `score.vo.ts`                  |
+| Domain Event                 | `.event.ts`        | `exam-completed.event.ts`      |
+| Domain Exception             | `.exception.ts`    | `exam-not-found.exception.ts`  |
+| Abstract Repository          | `.repository.ts`   | `exam-session.repository.ts`   |
+| Abstract Port                | `.port.ts`         | `notification.port.ts`         |
+| Command                      | `.command.ts`      | `submit-exam.command.ts`       |
+| Query                        | `.query.ts`        | `get-exam-result.query.ts`     |
+| Result (output của use case) | `.result.ts`       | `get-exam-result.result.ts`    |
+| Use Case                     | `.use-case.ts`     | `submit-exam.use-case.ts`      |
+| Mapper                       | `.mapper.ts`       | `exam-session.mapper.ts`       |
+| Request DTO                  | `.request.dto.ts`  | `create-exam.request.dto.ts`   |
+| Response DTO                 | `.response.dto.ts` | `exam-session.response.dto.ts` |
 
 ### Classes
 
-| Loại | Suffix | Ví dụ |
-|------|--------|-------|
-| Aggregate | `[none]` | `ExamSession` |
-| Entity | `[none]` | `ExamAnswer` |
-| Value Object | `[none]` | `Score` |
-| Domain Event | `Event` | `ExamCompletedEvent` |
-| Exception | `Exception` | `ExamNotFoundException` |
-| Use Case | `UseCase` | `SubmitExamUseCase` |
-| Command | `Command` | `SubmitExamCommand` |
-| Query | `Query` | `GetExamResultQuery` |
-| Result | `Result` | `GetExamResultResult` |
-| Repository | `Repository` | `ExamSessionRepository` (abstract), `PrismaExamSessionRepository` (impl) |
-| Mapper | `Mapper` | `ExamSessionMapper` |
-| Request DTO | `RequestDto` | `CreateExamRequestDto` |
-| Response DTO | `ResponseDto` | `ExamSessionResponseDto` |
+| Loại         | Suffix        | Ví dụ                                                                    |
+| ------------ | ------------- | ------------------------------------------------------------------------ |
+| Aggregate    | `[none]`      | `ExamSession`                                                            |
+| Entity       | `[none]`      | `ExamAnswer`                                                             |
+| Value Object | `[none]`      | `Score`                                                                  |
+| Domain Event | `Event`       | `ExamCompletedEvent`                                                     |
+| Exception    | `Exception`   | `ExamNotFoundException`                                                  |
+| Use Case     | `UseCase`     | `SubmitExamUseCase`                                                      |
+| Command      | `Command`     | `SubmitExamCommand`                                                      |
+| Query        | `Query`       | `GetExamResultQuery`                                                     |
+| Result       | `Result`      | `GetExamResultResult`                                                    |
+| Repository   | `Repository`  | `ExamSessionRepository` (abstract), `PrismaExamSessionRepository` (impl) |
+| Mapper       | `Mapper`      | `ExamSessionMapper`                                                      |
+| Request DTO  | `RequestDto`  | `CreateExamRequestDto`                                                   |
+| Response DTO | `ResponseDto` | `ExamSessionResponseDto`                                                 |
 
 ### Domain Event names
 
@@ -183,26 +183,18 @@ grep -r "PrismaExam" apps/<service>/src/presentation/
 
 ```typescript
 // src/domain/aggregates/<name>/<name>.aggregate.ts
-import { AggregateRoot } from '@repo/common';
-import { SomeChildEntity } from './<child>.entity';
-import { SomeEvent } from '../../events/some.event';
-import { SomeException } from '../../exceptions/some.exception';
-import {
-  CreateProps,
-  ReconstituteProps,
-  UpdateProps,
-} from './<name>.types';
+import { AggregateRoot } from "@repo/common";
+import { SomeChildEntity } from "./<child>.entity";
+import { SomeEvent } from "../../events/some.event";
+import { SomeException } from "../../exceptions/some.exception";
+import { CreateProps, ReconstituteProps, UpdateProps } from "./<name>.types";
 
 export class ExamSession extends AggregateRoot<string> {
   private _status: ExamStatus;
   private _answers: ExamAnswer[];
   // ...
 
-  private constructor(
-    id: string,
-    status: ExamStatus,
-    answers: ExamAnswer[],
-  ) {
+  private constructor(id: string, status: ExamStatus, answers: ExamAnswer[]) {
     super(id);
     this._status = status;
     this._answers = answers;
@@ -211,11 +203,7 @@ export class ExamSession extends AggregateRoot<string> {
   // Factory: tạo mới từ đầu (business rules)
   static create(props: CreateExamSessionProps): ExamSession {
     // Validate invariants tại đây, throw DomainException nếu vi phạm
-    return new ExamSession(
-      props.id,
-      ExamStatus.IN_PROGRESS,
-      [],
-    );
+    return new ExamSession(props.id, ExamStatus.IN_PROGRESS, []);
   }
 
   // Factory: tái tạo từ persistence (không validate lại)
@@ -236,8 +224,12 @@ export class ExamSession extends AggregateRoot<string> {
   }
 
   // Getters — readonly access
-  get status(): ExamStatus { return this._status; }
-  get answers(): ExamAnswer[] { return [...this._answers]; }
+  get status(): ExamStatus {
+    return this._status;
+  }
+  get answers(): ExamAnswer[] {
+    return [...this._answers];
+  }
 }
 ```
 
@@ -246,9 +238,9 @@ export class ExamSession extends AggregateRoot<string> {
 ```typescript
 // src/domain/aggregates/<name>/<name>.types.ts
 export enum ExamStatus {
-  IN_PROGRESS = 'IN_PROGRESS',
-  SUBMITTED = 'SUBMITTED',
-  GRADED = 'GRADED',
+  IN_PROGRESS = "IN_PROGRESS",
+  SUBMITTED = "SUBMITTED",
+  GRADED = "GRADED",
 }
 
 // Props cho create() factory
@@ -281,7 +273,7 @@ export interface SubmitAnswerProps {
 
 ```typescript
 // src/domain/aggregates/<name>/<child>.entity.ts
-import { Entity } from '@repo/common';
+import { Entity } from "@repo/common";
 
 export class ExamAnswer extends Entity<string> {
   private _isCorrect: boolean | null;
@@ -296,10 +288,16 @@ export class ExamAnswer extends Entity<string> {
     this._isCorrect = isCorrect;
   }
 
-  markCorrect(): void { this._isCorrect = true; }
-  markIncorrect(): void { this._isCorrect = false; }
+  markCorrect(): void {
+    this._isCorrect = true;
+  }
+  markIncorrect(): void {
+    this._isCorrect = false;
+  }
 
-  get isCorrect(): boolean | null { return this._isCorrect; }
+  get isCorrect(): boolean | null {
+    return this._isCorrect;
+  }
 }
 ```
 
@@ -307,10 +305,10 @@ export class ExamAnswer extends Entity<string> {
 
 ```typescript
 // src/domain/value-objects/<name>.vo.ts
-import { ValueObject, DomainException } from '@repo/common';
+import { ValueObject, DomainException } from "@repo/common";
 
 export class InvalidScoreException extends DomainException {
-  readonly code = 'INVALID_SCORE';
+  readonly code = "INVALID_SCORE";
 }
 
 export class Score extends ValueObject<{ value: number }> {
@@ -320,14 +318,20 @@ export class Score extends ValueObject<{ value: number }> {
 
   static create(value: number): Score {
     if (value < 0 || value > 40) {
-      throw new InvalidScoreException(`Score ${value} must be between 0 and 40`);
+      throw new InvalidScoreException(
+        `Score ${value} must be between 0 and 40`,
+      );
     }
     return new Score({ value });
   }
 
-  get value(): number { return this.props.value; }
+  get value(): number {
+    return this.props.value;
+  }
 
-  isPassing(): boolean { return this.props.value >= 28; }
+  isPassing(): boolean {
+    return this.props.value >= 28;
+  }
 }
 ```
 
@@ -335,11 +339,11 @@ export class Score extends ValueObject<{ value: number }> {
 
 ```typescript
 // src/domain/events/<name>.event.ts
-import { DomainEvent } from '@repo/common';
+import { DomainEvent } from "@repo/common";
 
 export class ExamCompletedEvent extends DomainEvent {
   get eventName(): string {
-    return 'exam.session.completed';
+    return "exam.session.completed";
   }
 
   constructor(
@@ -358,10 +362,10 @@ export class ExamCompletedEvent extends DomainEvent {
 
 ```typescript
 // src/domain/exceptions/<name>.exception.ts
-import { DomainException } from '@repo/common';
+import { DomainException } from "@repo/common";
 
 export class ExamSessionNotFoundException extends DomainException {
-  readonly code = 'EXAM_SESSION_NOT_FOUND';
+  readonly code = "EXAM_SESSION_NOT_FOUND";
 
   constructor(sessionId: string) {
     super(`Exam session not found: ${sessionId}`);
@@ -369,7 +373,7 @@ export class ExamSessionNotFoundException extends DomainException {
 }
 
 export class ExamAlreadySubmittedException extends DomainException {
-  readonly code = 'EXAM_ALREADY_SUBMITTED';
+  readonly code = "EXAM_ALREADY_SUBMITTED";
 
   constructor(sessionId: string) {
     super(`Exam session ${sessionId} has already been submitted`);
@@ -381,7 +385,7 @@ export class ExamAlreadySubmittedException extends DomainException {
 
 ```typescript
 // src/domain/repositories/<name>.repository.ts
-import { ExamSession } from '../aggregates/exam-session/exam-session.aggregate';
+import { ExamSession } from "../aggregates/exam-session/exam-session.aggregate";
 
 export interface ListExamSessionsFilter {
   studentId?: string;
@@ -414,7 +418,7 @@ export abstract class ExamSessionRepository {
 export class SubmitExamCommand {
   constructor(
     readonly sessionId: string,
-    readonly studentId: string,   // từ x-user-id header
+    readonly studentId: string, // từ x-user-id header
     readonly answers: Array<{
       questionId: string;
       selectedOptionId: string;
@@ -430,7 +434,7 @@ export class SubmitExamCommand {
 export class GetExamResultQuery {
   constructor(
     readonly sessionId: string,
-    readonly requesterId: string,  // từ x-user-id header (để check ownership)
+    readonly requesterId: string, // từ x-user-id header (để check ownership)
   ) {}
 }
 ```
@@ -459,12 +463,12 @@ export class GetExamResultResult {
 
 ```typescript
 // src/application/use-cases/submit-exam/submit-exam.use-case.ts
-import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
-import { ExamSessionRepository } from '../../../domain/repositories/exam-session.repository';
-import { EventPublisher } from '../../ports/event-publisher.port';
-import { ExamSessionNotFoundException } from '../../../domain/exceptions/exam-session-not-found.exception';
-import { SubmitExamCommand } from './submit-exam.command';
+import { Injectable } from "@nestjs/common";
+import { IUseCase } from "@repo/common";
+import { ExamSessionRepository } from "../../../domain/repositories/exam-session.repository";
+import { EventPublisher } from "../../ports/event-publisher.port";
+import { ExamSessionNotFoundException } from "../../../domain/exceptions/exam-session-not-found.exception";
+import { SubmitExamCommand } from "./submit-exam.command";
 
 @Injectable()
 export class SubmitExamUseCase implements IUseCase<SubmitExamCommand, void> {
@@ -474,18 +478,20 @@ export class SubmitExamUseCase implements IUseCase<SubmitExamCommand, void> {
   ) {}
 
   async execute(command: SubmitExamCommand): Promise<void> {
-    const session = await this.examSessionRepository.findById(command.sessionId);
+    const session = await this.examSessionRepository.findById(
+      command.sessionId,
+    );
     if (!session) {
       throw new ExamSessionNotFoundException(command.sessionId);
     }
 
-    session.submit(command.answers);                    // domain logic
+    session.submit(command.answers); // domain logic
 
-    await this.examSessionRepository.save(session);    // persist
+    await this.examSessionRepository.save(session); // persist
 
     const events = session.getDomainEvents();
     session.clearDomainEvents();
-    await this.eventPublisher.publishAll(events);      // publish sau khi save thành công
+    await this.eventPublisher.publishAll(events); // publish sau khi save thành công
   }
 }
 ```
@@ -494,15 +500,18 @@ export class SubmitExamUseCase implements IUseCase<SubmitExamCommand, void> {
 
 ```typescript
 // src/application/use-cases/get-exam-result/get-exam-result.use-case.ts
-import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
-import { ExamSessionRepository } from '../../../domain/repositories/exam-session.repository';
-import { ExamSessionNotFoundException } from '../../../domain/exceptions/exam-session-not-found.exception';
-import { GetExamResultQuery } from './get-exam-result.query';
-import { GetExamResultResult } from './get-exam-result.result';
+import { Injectable } from "@nestjs/common";
+import { IUseCase } from "@repo/common";
+import { ExamSessionRepository } from "../../../domain/repositories/exam-session.repository";
+import { ExamSessionNotFoundException } from "../../../domain/exceptions/exam-session-not-found.exception";
+import { GetExamResultQuery } from "./get-exam-result.query";
+import { GetExamResultResult } from "./get-exam-result.result";
 
 @Injectable()
-export class GetExamResultUseCase implements IUseCase<GetExamResultQuery, GetExamResultResult> {
+export class GetExamResultUseCase implements IUseCase<
+  GetExamResultQuery,
+  GetExamResultResult
+> {
   constructor(private readonly examSessionRepository: ExamSessionRepository) {}
 
   async execute(query: GetExamResultQuery): Promise<GetExamResultResult> {
@@ -517,7 +526,7 @@ export class GetExamResultUseCase implements IUseCase<GetExamResultQuery, GetExa
       session.score,
       session.isPassed,
       session.submittedAt!,
-      session.answers.map(a => ({
+      session.answers.map((a) => ({
         questionId: a.questionId,
         selectedOptionId: a.selectedOptionId,
         isCorrect: a.isCorrect,
@@ -531,7 +540,7 @@ export class GetExamResultUseCase implements IUseCase<GetExamResultQuery, GetExa
 
 ```typescript
 // src/application/ports/event-publisher.port.ts
-import { DomainEvent } from '@repo/common';
+import { DomainEvent } from "@repo/common";
 
 export abstract class EventPublisher {
   abstract publish(event: DomainEvent): Promise<void>;
@@ -552,8 +561,8 @@ export abstract class EventPublisher {
 
 ```typescript
 // src/infrastructure/persistence/prisma/prisma.service.ts
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@prisma/<service>-client';
+import { Injectable, OnModuleInit } from "@nestjs/common";
+import { PrismaClient } from "@prisma/<service>-client";
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
@@ -567,7 +576,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
 ```typescript
 // src/infrastructure/persistence/mappers/exam-session.mapper.ts
-import { ExamSession } from '../../../domain/aggregates/exam-session/exam-session.aggregate';
+import { ExamSession } from "../../../domain/aggregates/exam-session/exam-session.aggregate";
 
 type PrismaExamSessionWithRelations = {
   id: string;
@@ -593,7 +602,7 @@ export class ExamSessionMapper {
       score: raw.score,
       startedAt: raw.startedAt,
       submittedAt: raw.submittedAt,
-      answers: raw.answers.map(a => ({
+      answers: raw.answers.map((a) => ({
         id: a.id,
         questionId: a.questionId,
         selectedOptionId: a.selectedOptionId,
@@ -608,11 +617,15 @@ export class ExamSessionMapper {
 
 ```typescript
 // src/infrastructure/persistence/prisma/prisma-exam-session.repository.ts
-import { Injectable } from '@nestjs/common';
-import { ExamSession } from '../../../domain/aggregates/exam-session/exam-session.aggregate';
-import { ExamSessionRepository, ListExamSessionsFilter, ListExamSessionsPage } from '../../../domain/repositories/exam-session.repository';
-import { ExamSessionMapper } from '../mappers/exam-session.mapper';
-import { PrismaService } from './prisma.service';
+import { Injectable } from "@nestjs/common";
+import { ExamSession } from "../../../domain/aggregates/exam-session/exam-session.aggregate";
+import {
+  ExamSessionRepository,
+  ListExamSessionsFilter,
+  ListExamSessionsPage,
+} from "../../../domain/repositories/exam-session.repository";
+import { ExamSessionMapper } from "../mappers/exam-session.mapper";
+import { PrismaService } from "./prisma.service";
 
 @Injectable()
 export class PrismaExamSessionRepository extends ExamSessionRepository {
@@ -682,7 +695,7 @@ export class PrismaExamSessionRepository extends ExamSessionRepository {
         include: { answers: true },
         skip,
         take: filter.size,
-        orderBy: { startedAt: 'desc' },
+        orderBy: { startedAt: "desc" },
       }),
       this.prisma.examSession.count({ where }),
     ]);
@@ -699,13 +712,13 @@ export class PrismaExamSessionRepository extends ExamSessionRepository {
 
 ```typescript
 // src/infrastructure/messaging/rabbitmq-event-publisher.service.ts
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { DomainEvent } from '@repo/common';
-import { lastValueFrom } from 'rxjs';
-import { EventPublisher } from '../../application/ports/event-publisher.port';
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { ClientProxy } from "@nestjs/microservices";
+import { DomainEvent } from "@repo/common";
+import { lastValueFrom } from "rxjs";
+import { EventPublisher } from "../../application/ports/event-publisher.port";
 
-export const RABBITMQ_CLIENT = 'RABBITMQ_CLIENT';
+export const RABBITMQ_CLIENT = "RABBITMQ_CLIENT";
 
 @Injectable()
 export class RabbitMqEventPublisher extends EventPublisher {
@@ -720,7 +733,9 @@ export class RabbitMqEventPublisher extends EventPublisher {
       await lastValueFrom(this.client.emit(event.eventName, event));
       this.logger.log(`Published event: ${event.eventName}`);
     } catch (error) {
-      this.logger.error(`Failed to publish event ${event.eventName}: ${(error as Error).message}`);
+      this.logger.error(
+        `Failed to publish event ${event.eventName}: ${(error as Error).message}`,
+      );
       throw error;
     }
   }
@@ -731,9 +746,14 @@ export class RabbitMqEventPublisher extends EventPublisher {
 
 ```typescript
 // src/infrastructure/filters/domain-exception.filter.ts
-import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus } from '@nestjs/common';
-import { DomainException } from '@repo/common';
-import { Request, Response } from 'express';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpStatus,
+} from "@nestjs/common";
+import { DomainException } from "@repo/common";
+import { Request, Response } from "express";
 
 @Catch(DomainException)
 export class DomainExceptionFilter implements ExceptionFilter {
@@ -771,8 +791,14 @@ export class DomainExceptionFilter implements ExceptionFilter {
 
 ```typescript
 // src/presentation/dtos/create-exam.request.dto.ts
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from "class-validator";
 
 export class CreateExamRequestDto {
   @ApiProperty()
@@ -790,8 +816,8 @@ export class CreateExamRequestDto {
 
 ```typescript
 // src/presentation/dtos/exam-session.response.dto.ts
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { GetExamResultResult } from '../../application/use-cases/get-exam-result/get-exam-result.result';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { GetExamResultResult } from "../../application/use-cases/get-exam-result/get-exam-result.result";
 
 export class ExamSessionResponseDto {
   @ApiProperty()
@@ -822,12 +848,19 @@ export class ExamSessionResponseDto {
 ```typescript
 // src/presentation/http/exam.controller.ts
 import {
-  Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post,
-} from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+} from "@nestjs/common";
+import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-@ApiTags('Exams')
-@Controller('exams')
+@ApiTags("Exams")
+@Controller("exams")
 export class ExamController {
   constructor(
     private readonly startExamUseCase: StartExamUseCase,
@@ -835,12 +868,15 @@ export class ExamController {
     private readonly getExamResultUseCase: GetExamResultUseCase,
   ) {}
 
-  @Post('start')
+  @Post("start")
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Start a new exam session' })
-  @ApiHeader({ name: 'x-user-id', description: 'Injected by Kong after JWT validation' })
+  @ApiOperation({ summary: "Start a new exam session" })
+  @ApiHeader({
+    name: "x-user-id",
+    description: "Injected by Kong after JWT validation",
+  })
   async startExam(
-    @Headers('x-user-id') studentId: string,
+    @Headers("x-user-id") studentId: string,
     @Body() dto: CreateExamRequestDto,
   ): Promise<ExamSessionResponseDto> {
     const result = await this.startExamUseCase.execute(
@@ -849,13 +885,16 @@ export class ExamController {
     return ExamSessionResponseDto.fromResult(result);
   }
 
-  @Post(':sessionId/submit')
+  @Post(":sessionId/submit")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Submit exam answers' })
-  @ApiHeader({ name: 'x-user-id', description: 'Injected by Kong after JWT validation' })
+  @ApiOperation({ summary: "Submit exam answers" })
+  @ApiHeader({
+    name: "x-user-id",
+    description: "Injected by Kong after JWT validation",
+  })
   async submitExam(
-    @Param('sessionId') sessionId: string,
-    @Headers('x-user-id') studentId: string,
+    @Param("sessionId") sessionId: string,
+    @Headers("x-user-id") studentId: string,
     @Body() dto: SubmitExamRequestDto,
   ): Promise<void> {
     await this.submitExamUseCase.execute(
@@ -863,10 +902,10 @@ export class ExamController {
     );
   }
 
-  @Get(':sessionId/result')
-  @ApiOperation({ summary: 'Get exam result' })
+  @Get(":sessionId/result")
+  @ApiOperation({ summary: "Get exam result" })
   async getExamResult(
-    @Param('sessionId') sessionId: string,
+    @Param("sessionId") sessionId: string,
   ): Promise<ExamSessionResponseDto> {
     const result = await this.getExamResultUseCase.execute(
       new GetExamResultQuery(sessionId),
@@ -880,8 +919,8 @@ export class ExamController {
 
 ```typescript
 // src/presentation/messaging/messaging.controller.ts
-import { Controller, Logger } from '@nestjs/common';
-import { EventPattern, Payload } from '@nestjs/microservices';
+import { Controller, Logger } from "@nestjs/common";
+import { EventPattern, Payload } from "@nestjs/microservices";
 
 interface UserLicenseTierAssignedPayload {
   studentId: string;
@@ -895,15 +934,15 @@ interface UserLicenseTierAssignedPayload {
 export class MessagingController {
   private readonly logger = new Logger(MessagingController.name);
 
-  constructor(
-    private readonly someUseCase: SomeUseCase,
-  ) {}
+  constructor(private readonly someUseCase: SomeUseCase) {}
 
-  @EventPattern('user.student.license-assigned')
+  @EventPattern("user.student.license-assigned")
   async handleLicenseTierAssigned(
     @Payload() payload: UserLicenseTierAssignedPayload,
   ): Promise<void> {
-    this.logger.log(`Received user.student.license-assigned for studentId=${payload.studentId}`);
+    this.logger.log(
+      `Received user.student.license-assigned for studentId=${payload.studentId}`,
+    );
     try {
       await this.someUseCase.execute(/* ... */);
     } catch (error) {
@@ -921,35 +960,42 @@ export class MessagingController {
 
 ```typescript
 // src/<service-name>.module.ts
-import { Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { EventPublisher } from './application/ports/event-publisher.port';
-import { RABBITMQ_CLIENT, RabbitMqEventPublisher } from './infrastructure/messaging/rabbitmq-event-publisher.service';
-import { ExamSessionRepository } from './domain/repositories/exam-session.repository';
-import { PrismaExamSessionRepository } from './infrastructure/persistence/prisma/prisma-exam-session.repository';
-import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
-import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
-import { ExamController } from './presentation/http/exam.controller';
-import { MessagingController } from './presentation/messaging/messaging.controller';
-import { StartExamUseCase } from './application/use-cases/start-exam/start-exam.use-case';
-import { SubmitExamUseCase } from './application/use-cases/submit-exam/submit-exam.use-case';
-import { GetExamResultUseCase } from './application/use-cases/get-exam-result/get-exam-result.use-case';
+import { Module } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { ClientsModule, Transport } from "@nestjs/microservices";
+import { EventPublisher } from "./application/ports/event-publisher.port";
+import {
+  RABBITMQ_CLIENT,
+  RabbitMqEventPublisher,
+} from "./infrastructure/messaging/rabbitmq-event-publisher.service";
+import { ExamSessionRepository } from "./domain/repositories/exam-session.repository";
+import { PrismaExamSessionRepository } from "./infrastructure/persistence/prisma/prisma-exam-session.repository";
+import { PrismaService } from "./infrastructure/persistence/prisma/prisma.service";
+import { DomainExceptionFilter } from "./infrastructure/filters/domain-exception.filter";
+import { ExamController } from "./presentation/http/exam.controller";
+import { MessagingController } from "./presentation/messaging/messaging.controller";
+import { StartExamUseCase } from "./application/use-cases/start-exam/start-exam.use-case";
+import { SubmitExamUseCase } from "./application/use-cases/submit-exam/submit-exam.use-case";
+import { GetExamResultUseCase } from "./application/use-cases/get-exam-result/get-exam-result.use-case";
 
 @Module({
   imports: [
-    ClientsModule.registerAsync([{
-      name: RABBITMQ_CLIENT,
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        transport: Transport.RMQ,
-        options: {
-          urls: [config.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672'],
-          queue: '<service>_service_publish',
-          queueOptions: { durable: true },
-        },
-      }),
-    }]),
+    ClientsModule.registerAsync([
+      {
+        name: RABBITMQ_CLIENT,
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              config.get<string>("rabbitmq.url") ?? "amqp://localhost:5672",
+            ],
+            queue: "<service>_service_publish",
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+    ]),
   ],
   controllers: [ExamController, MessagingController],
   providers: [
@@ -974,11 +1020,11 @@ export class ExamModule {}
 
 ```typescript
 // src/app.module.ts
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { ConsulConfigFactory } from '@repo/common';
-import Joi from 'joi';
-import { ExamModule } from './exam.module';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { ConsulConfigFactory } from "@repo/common";
+import Joi from "joi";
+import { ExamModule } from "./exam.module";
 
 @Module({
   imports: [
@@ -986,12 +1032,19 @@ import { ExamModule } from './exam.module';
       load: [
         ConsulConfigFactory.create(
           Joi.object({
-            nodeEnv: Joi.string().valid('development', 'development-local', 'staging', 'production').default('development'),
+            nodeEnv: Joi.string()
+              .valid(
+                "development",
+                "development-local",
+                "staging",
+                "production",
+              )
+              .default("development"),
             port: Joi.number().default(3000),
             database: Joi.object({ url: Joi.string().required() }).optional(),
             rabbitmq: Joi.object({ url: Joi.string().required() }).optional(),
           }).unknown(true),
-          'exam-service',
+          "exam-service",
         ),
       ],
       isGlobal: true,
@@ -1006,28 +1059,29 @@ export class AppModule {}
 
 ```typescript
 // src/main.ts
-import { NestFactory } from '@nestjs/core';
-import { ConfigService } from '@nestjs/config';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from "@nestjs/core";
+import { ConfigService } from "@nestjs/config";
+import { MicroserviceOptions, Transport } from "@nestjs/microservices";
+import { ValidationPipe } from "@nestjs/common";
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
   setupMicroserviceSwagger,
-} from '@repo/common';
-import { AppModule } from './app.module';
-import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
+} from "@repo/common";
+import { AppModule } from "./app.module";
+import { DomainExceptionFilter } from "./infrastructure/filters/domain-exception.filter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
-  const rabbitmqUrl = configService.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672';
+  const rabbitmqUrl =
+    configService.get<string>("rabbitmq.url") ?? "amqp://localhost:5672";
 
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
       urls: [rabbitmqUrl],
-      queue: '<service>_service_events',  // Queue này service CONSUME
+      queue: "<service>_service_events", // Queue này service CONSUME
       queueOptions: { durable: true },
       noAck: false,
     },
@@ -1040,11 +1094,11 @@ async function bootstrap() {
   app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
 
   setupMicroserviceSwagger(app, {
-    title: '<Service Name> API',
-    description: '...',
+    title: "<Service Name> API",
+    description: "...",
   });
 
-  const port = configService.get<number>('port') ?? 3000;
+  const port = configService.get<number>("port") ?? 3000;
   await app.startAllMicroservices();
   await app.listen(port);
   console.log(`✓ <Service> Service listening on port ${port}`);
@@ -1120,6 +1174,7 @@ model ExamAnswer {
 ```
 
 **Quy tắc Prisma:**
+
 - `output` phải là `@prisma/<service>-client` — mỗi service có Prisma client riêng
 - Không dùng FK cross-service — chỉ store UUID
 - Dùng `onDelete: Cascade` cho owned entities
@@ -1189,6 +1244,7 @@ Khi thêm một use case mới (ví dụ: `grade-exam`):
 ## 12. Những gì KHÔNG được làm
 
 ### Domain layer
+
 - ❌ Import `@nestjs/*` vào domain — domain phải framework-agnostic
 - ❌ Import `@prisma/*` vào domain — domain không biết về persistence
 - ❌ Gọi repository trực tiếp từ domain method — domain chỉ call `addDomainEvent()`
@@ -1196,21 +1252,25 @@ Khi thêm một use case mới (ví dụ: `grade-exam`):
 - ❌ Trả về mutable internal array — phải return `[...this._array]` (copy)
 
 ### Application layer
+
 - ❌ Gọi `prisma.xxx` trực tiếp từ use case — phải qua repository interface
 - ❌ Import Prisma type vào use case
 - ❌ Publish events TRƯỚC KHI save — luôn save trước, publish sau
 - ❌ Không clear domain events sau khi publish (`profile.clearDomainEvents()` bắt buộc)
 
 ### Infrastructure layer
+
 - ❌ Business logic trong repository — chỉ persistence/query
 - ❌ Business logic trong mapper — chỉ type conversion
 
 ### Presentation layer
+
 - ❌ `@ApiHeader` ở class level cho tất cả endpoints — chỉ đặt ở method cụ thể cần header đó
 - ❌ Import aggregate trực tiếp vào controller — phải qua use case result → DTO
 - ❌ Gọi 2 use case liên tiếp để workaround (double query) — use case nên trả kết quả đầy đủ
 - ❌ Business logic trong controller — controller chỉ parse request → command → use case → DTO
 
 ### Response format
+
 - ❌ Response format không nhất quán giữa `DomainExceptionFilter` và `ApiExceptionFilter`
 - ❌ Anonymous return type trong controller method — phải dùng DTO class cụ thể

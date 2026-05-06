@@ -6,13 +6,14 @@ import { GetUserProfileResult } from '../get-user-profile/get-user-profile.resul
 import { UpdateUserProfileCommand } from './update-user-profile.command';
 
 @Injectable()
-export class UpdateUserProfileUseCase implements IUseCase<
-  UpdateUserProfileCommand,
-  GetUserProfileResult
-> {
+export class UpdateUserProfileUseCase
+  implements IUseCase<UpdateUserProfileCommand, GetUserProfileResult>
+{
   constructor(private readonly userProfileRepository: UserProfileRepository) {}
 
-  async execute(command: UpdateUserProfileCommand): Promise<GetUserProfileResult> {
+  async execute(
+    command: UpdateUserProfileCommand,
+  ): Promise<GetUserProfileResult> {
     const profile = await this.userProfileRepository.findById(
       command.targetUserId,
     );

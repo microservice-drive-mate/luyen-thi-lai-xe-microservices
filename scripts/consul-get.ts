@@ -1,6 +1,6 @@
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError } from 'axios';
 
-const CONSUL_URL = process.env.CONSUL_URL || "http://localhost:8500";
+const CONSUL_URL = process.env.CONSUL_URL || 'http://localhost:8500';
 
 interface ConsulKVItem {
   Key: string;
@@ -16,7 +16,7 @@ async function getKey(key: string): Promise<void> {
       `${CONSUL_URL}/v1/kv/${key}`,
       {
         headers: {
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       },
     );
@@ -28,8 +28,8 @@ async function getKey(key: string): Promise<void> {
 
     const item = response.data[0];
     const decodedValue = item.Value
-      ? Buffer.from(item.Value, "base64").toString("utf-8")
-      : "(empty)";
+      ? Buffer.from(item.Value, 'base64').toString('utf-8')
+      : '(empty)';
 
     console.log(`✓ Key: ${item.Key}`);
     console.log(`  Value: ${decodedValue}\n`);
@@ -50,9 +50,9 @@ async function getKey(key: string): Promise<void> {
 const key = process.argv[2];
 
 if (!key) {
-  console.error("Usage: tsx scripts/consul-get.ts <key>");
+  console.error('Usage: tsx scripts/consul-get.ts <key>');
   console.error(
-    "Example: tsx scripts/consul-get.ts /config/development/identity-service/database.url",
+    'Example: tsx scripts/consul-get.ts /config/development/identity-service/database.url',
   );
   process.exit(1);
 }
@@ -62,6 +62,6 @@ getKey(key)
     process.exit(0);
   })
   .catch((error) => {
-    console.error("Error:", error.message);
+    console.error('Error:', error.message);
     process.exit(1);
   });

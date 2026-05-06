@@ -123,7 +123,9 @@ export class PrismaUserProfileRepository extends UserProfileRepository {
           data: {
             studentId: profile.id,
             oldLicenseTier: toLicenseTier(auditEntry.oldLicenseTier),
-            newLicenseTier: toLicenseTier(auditEntry.newLicenseTier)!,
+            newLicenseTier: toLicenseTier(
+              auditEntry.newLicenseTier,
+            ) as PrismaLicenseTier,
             changedById: auditEntry.changedById,
             changedAt: auditEntry.changedAt,
           },

@@ -1,6 +1,6 @@
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError } from 'axios';
 
-const CONSUL_URL = process.env.CONSUL_URL || "http://localhost:8500";
+const CONSUL_URL = process.env.CONSUL_URL || 'http://localhost:8500';
 
 interface ConsulKVItem {
   Key: string;
@@ -16,7 +16,7 @@ async function listKeys(prefix: string): Promise<void> {
       `${CONSUL_URL}/v1/kv/${prefix}?recurse`,
       {
         headers: {
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       },
     );
@@ -30,8 +30,8 @@ async function listKeys(prefix: string): Promise<void> {
 
     for (const item of response.data) {
       const decodedValue = item.Value
-        ? Buffer.from(item.Value, "base64").toString("utf-8")
-        : "(empty)";
+        ? Buffer.from(item.Value, 'base64').toString('utf-8')
+        : '(empty)';
       console.log(`  Key: ${item.Key}`);
       console.log(`  Value: ${decodedValue}\n`);
     }
@@ -52,8 +52,8 @@ async function listKeys(prefix: string): Promise<void> {
 const prefix = process.argv[2];
 
 if (!prefix) {
-  console.error("Usage: tsx scripts/consul-list.ts <prefix>");
-  console.error("Example: tsx scripts/consul-list.ts /config/development");
+  console.error('Usage: tsx scripts/consul-list.ts <prefix>');
+  console.error('Example: tsx scripts/consul-list.ts /config/development');
   process.exit(1);
 }
 
@@ -62,6 +62,6 @@ listKeys(prefix)
     process.exit(0);
   })
   .catch((error) => {
-    console.error("Error:", error.message);
+    console.error('Error:', error.message);
     process.exit(1);
   });

@@ -41,9 +41,9 @@ Ví dụ: Trong các use case, không được import các dependency ở ngoài
 
 // Ví dụ ở đây là một file Use case.
 // Các implementation của các repositories trong này thuộc về infra layer.
-// Nhưng ở đây nếu import trực tiếp implementation chi tiết của các repo 
+// Nhưng ở đây nếu import trực tiếp implementation chi tiết của các repo
 // thì sẽ vi phạm dependency rule.
-// Cho nên ở đây UserRepository phải là một interface 
+// Cho nên ở đây UserRepository phải là một interface
 // (abstraction với layer bên ngoài) mới thỏa mãn dependency rule
 public class CreateUserUseCaseImpl implements CreateUserUseCase {
     private UserRepository userRepository;
@@ -63,12 +63,12 @@ Lưu ý:
 
 - **Use case**: use case sẽ là tạo một author user. author user chính là người có thể tạo và quản lý bài post của họ. Sau khi tạo user xong, sẽ có một event UserCreatedEvent bắn và sync user qua một Redis server khác. Event này sẽ được bắn lên Kafka cluster
 - Folder structure
-    - `domain folder`: là domain layer, application chính là application layer. Hai ông này chính là core của software
-    - `controller folder`: thuộc về presentation layer
-    - `infra layer`: thuộc về infrastructure layer
-    - `dto folder` ⇒ có 2 cách đặt
-        - gom hết vào folder dto
-        - `dto` phục vụ cho layer nào thì đặt tại layer đó.
+  - `domain folder`: là domain layer, application chính là application layer. Hai ông này chính là core của software
+  - `controller folder`: thuộc về presentation layer
+  - `infra layer`: thuộc về infrastructure layer
+  - `dto folder` ⇒ có 2 cách đặt
+    - gom hết vào folder dto
+    - `dto` phục vụ cho layer nào thì đặt tại layer đó.
 
 ```
 application/
@@ -105,9 +105,9 @@ Flow của request
 
 - Request đi tới controller `UserController` - interface adapters layer hay presentation layer ⇒ data sẽ được transform sang dạng thích hợp nhất với các layer ở trong - domain layer và application layer ⇒ dùng `UserDto` để chứa dữ liệu từ request nha.
 - Request đi tiếp vào application layer thông qua use case `CreateUserUseCase` interface, chịu trách nhiệm
-    - Điều phối flow của chương trình - business flow như thao tác với `UserRepository` để kiểm tra xem email có tồn tại chưa. Thao tác với `RoleRepository` để kiểm tra role có tồn tại hay không.
-    - Sau đó sẽ tương tác với domain layer để tạo `User` entity (hay `User` aggregate).
-    - Sau đó sẽ dùng Repository để save `User` xuống database và bắn event lên Kafka.
+  - Điều phối flow của chương trình - business flow như thao tác với `UserRepository` để kiểm tra xem email có tồn tại chưa. Thao tác với `RoleRepository` để kiểm tra role có tồn tại hay không.
+  - Sau đó sẽ tương tác với domain layer để tạo `User` entity (hay `User` aggregate).
+  - Sau đó sẽ dùng Repository để save `User` xuống database và bắn event lên Kafka.
 - Khi use case thao tác với domain layer thì các business logics của use case này sẽ được đảm bảo trong domain layer (trong các model và service).
 - Và khi thao tác với các thành phần như repository, event publisher (những thành phần bên ngoài) thì use case chỉ thao tác với interface (không bao giờ use case nhìn thấy được implement chi tiết của infra).
 - Và cuối cùng các implement chi tiết của database hay event publisher sẽ nằm ở infrastructure layer.
@@ -180,7 +180,7 @@ public class User extends AggregateRoot<Id> {
 }
 ```
 
-`User` entity ⇒ entity chính, trong DDD được xem là `aggregate root` của `User aggregate` 
+`User` entity ⇒ entity chính, trong DDD được xem là `aggregate root` của `User aggregate`
 
 ```java
 
@@ -251,10 +251,10 @@ public class User extends AggregateRoot<Id> {
 
 - `User` entity chứa các public method để thao tác + các business logic
 - Các business logic có thể kể đến:
-    - Xóa user (markAsDeleted)
-    - Active hay deactive user
-    - Grant một role nào đó vào user
-    - …
+  - Xóa user (markAsDeleted)
+  - Active hay deactive user
+  - Grant một role nào đó vào user
+  - …
 
 `UserName` là value object
 
@@ -319,7 +319,7 @@ Ngoài ra, có thể dùng factory method bên trong domain object
 @Builder
 public class User extends AggregateRoot<Id> {
     // ...
-    
+
     // Có thể dùng Factory method ở đây để tạo User instance
     public static User createUser() {
          User user = User.builder()
@@ -339,7 +339,7 @@ public class User extends AggregateRoot<Id> {
 
 ### 6.2. Application
 
-Usecase `CreateUserUseCase` 
+Usecase `CreateUserUseCase`
 
 ```java
 
@@ -364,7 +364,7 @@ public class CreateUserUseCaseImpl implements CreateUserUseCase {
     }
 
     private void userDoesNotExistOrError(UserDto userDto) {
-        Optional<User> user 
+        Optional<User> user
           = userRepository.findByEmail(userDto.getEmail());
         if (user.isPresent()) {
             throw new UserAlreadyExistsException();
@@ -447,7 +447,7 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public Optional<User> findByEmail(String email) {
-        Optional<UserEntity> userEntity 
+        Optional<UserEntity> userEntity
           = userJpaRepository.findByEmail(email);
 
         return userEntity.map(UserEntity::toDomainModel);

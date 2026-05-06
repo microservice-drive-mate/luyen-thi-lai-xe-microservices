@@ -61,6 +61,7 @@ packages/
 ```
 
 **Request flow:**
+
 ```
 Client → Kong (JWT validation, inject x-user-id/x-user-role) → Service
                                                                    ↓
@@ -74,6 +75,7 @@ Client → Kong (JWT validation, inject x-user-id/x-user-role) → Service
 ```
 
 **Event flow (eventual consistency):**
+
 ```
 Keycloak → identity.user.created → user-service (create UserProfile)
                                  → notification-service (welcome email)
@@ -89,34 +91,34 @@ exam-service → exam.session.completed → notification-service
 
 ## DDD Building Blocks (từ `@repo/common`)
 
-| Class | Dùng khi | Ví dụ |
-|-------|----------|-------|
-| `AggregateRoot<string>` | Root của cluster entities, quản lý domain events | `UserProfile`, `ExamSession` |
-| `Entity<string>` | Object có ID, mutable, owned bởi aggregate | `StudentDetail`, `ExamAnswer` |
-| `ValueObject<T>` | Immutable, equality by value, validation | `PhoneNumber`, `Score` |
-| `DomainEvent` | Sự kiện đã xảy ra trong domain | `LicenseTierAssignedEvent` |
-| `DomainException` | Business rule violation (không phải technical error) | `UserNotFoundException` |
-| `IUseCase<TInput, TOutput>` | Contract chuẩn cho use cases | Tất cả use cases |
+| Class                       | Dùng khi                                             | Ví dụ                         |
+| --------------------------- | ---------------------------------------------------- | ----------------------------- |
+| `AggregateRoot<string>`     | Root của cluster entities, quản lý domain events     | `UserProfile`, `ExamSession`  |
+| `Entity<string>`            | Object có ID, mutable, owned bởi aggregate           | `StudentDetail`, `ExamAnswer` |
+| `ValueObject<T>`            | Immutable, equality by value, validation             | `PhoneNumber`, `Score`        |
+| `DomainEvent`               | Sự kiện đã xảy ra trong domain                       | `LicenseTierAssignedEvent`    |
+| `DomainException`           | Business rule violation (không phải technical error) | `UserNotFoundException`       |
+| `IUseCase<TInput, TOutput>` | Contract chuẩn cho use cases                         | Tất cả use cases              |
 
 ---
 
 ## Local Ports (development-local)
 
-| Service | Port |
-|---------|------|
-| identity-service | 3001 |
-| user-service | 3002 |
-| exam-service | 3003 |
-| course-service | 3004 |
-| question-service | 3005 |
-| notification-service | 3006 |
-| analytics-service | 3007 |
-| simulation-service | 3008 |
-| Kong (proxy) | 8000 |
-| Kong (admin) | 8001 |
-| Consul UI | 8500 |
-| RabbitMQ | 5672 / 15672 (UI) |
-| user_db | 5433 |
+| Service              | Port              |
+| -------------------- | ----------------- |
+| identity-service     | 3001              |
+| user-service         | 3002              |
+| exam-service         | 3003              |
+| course-service       | 3004              |
+| question-service     | 3005              |
+| notification-service | 3006              |
+| analytics-service    | 3007              |
+| simulation-service   | 3008              |
+| Kong (proxy)         | 8000              |
+| Kong (admin)         | 8001              |
+| Consul UI            | 8500              |
+| RabbitMQ             | 5672 / 15672 (UI) |
+| user_db              | 5433              |
 
 ---
 
@@ -138,6 +140,7 @@ exam-service → exam.session.completed → notification-service
 ## Conventions cốt lõi
 
 **Layer dependency rule** (bất khả vi phạm):
+
 ```
 domain ← không import gì ngoài @repo/common
 application ← chỉ import domain
@@ -146,6 +149,7 @@ presentation ← chỉ import application (use cases, commands, results)
 ```
 
 **Aggregate pattern:**
+
 - Constructor `private` — chỉ tạo qua `static create()` hoặc `static reconstitute()`
 - Business logic nằm trong domain method của aggregate, KHÔNG trong use case
 - `addDomainEvent()` được gọi trong domain method khi business event xảy ra
@@ -153,12 +157,14 @@ presentation ← chỉ import application (use cases, commands, results)
 - Use case publish events SAU KHI `save()` thành công, rồi `clearDomainEvents()`
 
 **Controller rules:**
+
 - `@ApiHeader` chỉ đặt ở method cụ thể dùng header, KHÔNG ở class level
 - Update endpoints trả về full object (use case trả result trực tiếp, không double-query)
 - Return type là DTO class, KHÔNG dùng anonymous type `{ id: string; name: string }`
 - `DomainExceptionFilter` và `ApiExceptionFilter` phải cùng response format
 
 **Kong headers** (inject sau JWT validation):
+
 - `x-user-id` = Keycloak `sub` claim (UUID của user)
 - `x-user-role` = role của user
 
@@ -166,21 +172,21 @@ presentation ← chỉ import application (use cases, commands, results)
 
 ## Key Files để nắm nhanh
 
-| File | Vai trò |
-|------|---------|
-| `packages/common/src/ddd/` | Tất cả DDD base classes |
-| `packages/common/src/http-api.ts` | `ApiResponseInterceptor`, `ApiExceptionFilter` |
-| `packages/common/src/consul/` | Config loading từ Consul (priority: env > consul > default) |
-| `apps/user-service/src/domain/aggregates/user-profile/user-profile.aggregate.ts` | Reference aggregate impl |
-| `apps/user-service/src/infrastructure/persistence/prisma/prisma-user-profile.repository.ts` | Reference repository impl |
-| `apps/user-service/src/infrastructure/filters/domain-exception.filter.ts` | DomainException → HTTP response |
-| `apps/user-service/src/user.module.ts` | Reference module wiring (DI bindings) |
-| `apps/user-service/src/main.ts` | Bootstrap pattern (RabbitMQ + Swagger + pipes/filters) |
-| `kong/kong.yaml` | API gateway routing + JWT plugin per route |
-| `consul-seed-development-local.json` | Local config values (ports, DB URLs, RabbitMQ) |
-| `guides/ddd+clean/CONVENTIONS.md` | Code templates + naming conventions + checklist |
-| `guides/api/api-spec-user.md` | User service API spec (template cho các service khác) |
-| `guides/testing/user-service-test-guide.md` | Step-by-step testing guide |
+| File                                                                                        | Vai trò                                                     |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `packages/common/src/ddd/`                                                                  | Tất cả DDD base classes                                     |
+| `packages/common/src/http-api.ts`                                                           | `ApiResponseInterceptor`, `ApiExceptionFilter`              |
+| `packages/common/src/consul/`                                                               | Config loading từ Consul (priority: env > consul > default) |
+| `apps/user-service/src/domain/aggregates/user-profile/user-profile.aggregate.ts`            | Reference aggregate impl                                    |
+| `apps/user-service/src/infrastructure/persistence/prisma/prisma-user-profile.repository.ts` | Reference repository impl                                   |
+| `apps/user-service/src/infrastructure/filters/domain-exception.filter.ts`                   | DomainException → HTTP response                             |
+| `apps/user-service/src/user.module.ts`                                                      | Reference module wiring (DI bindings)                       |
+| `apps/user-service/src/main.ts`                                                             | Bootstrap pattern (RabbitMQ + Swagger + pipes/filters)      |
+| `kong/kong.yaml`                                                                            | API gateway routing + JWT plugin per route                  |
+| `consul-seed-development-local.json`                                                        | Local config values (ports, DB URLs, RabbitMQ)              |
+| `guides/ddd+clean/CONVENTIONS.md`                                                           | Code templates + naming conventions + checklist             |
+| `guides/api/api-spec-user.md`                                                               | User service API spec (template cho các service khác)       |
+| `guides/testing/user-service-test-guide.md`                                                 | Step-by-step testing guide                                  |
 
 ---
 

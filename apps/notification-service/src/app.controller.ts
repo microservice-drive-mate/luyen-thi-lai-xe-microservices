@@ -1,6 +1,6 @@
-import { Controller, Get } from "@nestjs/common";
-import { AppService } from "./app.service";
-import { EventPattern } from "@nestjs/microservices";
+import { Controller, Get } from '@nestjs/common';
+import { AppService } from './app.service';
+import { EventPattern } from '@nestjs/microservices';
 
 @Controller()
 export class AppController {
@@ -11,9 +11,9 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @EventPattern("user_created") // Lắng nghe sự kiện này
+  @EventPattern('user_created') // Lắng nghe sự kiện này
   handleUserCreated(data: unknown) {
-    console.log("Nhận được sự kiện user_created:", data);
+    console.log('Nhận được sự kiện user_created:', data);
     // Logic gửi mail hoặc thông báo ở đây
   }
 }

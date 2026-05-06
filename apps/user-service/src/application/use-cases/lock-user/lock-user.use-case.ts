@@ -9,7 +9,9 @@ export class LockUserUseCase implements IUseCase<LockUserCommand, void> {
   constructor(private readonly userProfileRepository: UserProfileRepository) {}
 
   async execute(command: LockUserCommand): Promise<void> {
-    const profile = await this.userProfileRepository.findById(command.targetUserId);
+    const profile = await this.userProfileRepository.findById(
+      command.targetUserId,
+    );
     if (!profile) {
       throw new UserProfileNotFoundException(command.targetUserId);
     }

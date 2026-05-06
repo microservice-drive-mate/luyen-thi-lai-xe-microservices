@@ -21,7 +21,9 @@ export class CreateUserProfileResponseDto {
   @ApiProperty({ enum: UserRole })
   role!: UserRole;
 
-  static fromResult(result: CreateUserProfileResult): CreateUserProfileResponseDto {
+  static fromResult(
+    result: CreateUserProfileResult,
+  ): CreateUserProfileResponseDto {
     const dto = new CreateUserProfileResponseDto();
     dto.id = result.id;
     dto.fullName = result.fullName;

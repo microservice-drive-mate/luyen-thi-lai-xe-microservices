@@ -49,7 +49,8 @@ export class UserController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Create user profile (internal — triggered by identity-service via RabbitMQ)',
+    summary:
+      'Create user profile (internal — triggered by identity-service via RabbitMQ)',
   })
   async createUser(
     @Body() dto: CreateUserRequestDto,
@@ -73,7 +74,9 @@ export class UserController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List users with optional filters (admin/center manager)' })
+  @ApiOperation({
+    summary: 'List users with optional filters (admin/center manager)',
+  })
   async listUsers(
     @Query() query: ListUsersQueryDto,
   ): Promise<PaginatedUsersResponseDto> {
@@ -91,7 +94,10 @@ export class UserController {
 
   @Get('me')
   @ApiOperation({ summary: 'Get own profile' })
-  @ApiHeader({ name: 'x-user-id', description: 'Injected by Kong after JWT validation' })
+  @ApiHeader({
+    name: 'x-user-id',
+    description: 'Injected by Kong after JWT validation',
+  })
   async getMyProfile(
     @Headers('x-user-id') userId: string,
   ): Promise<UserProfileResponseDto> {
@@ -114,7 +120,10 @@ export class UserController {
 
   @Patch('me')
   @ApiOperation({ summary: 'Update own profile' })
-  @ApiHeader({ name: 'x-user-id', description: 'Injected by Kong after JWT validation' })
+  @ApiHeader({
+    name: 'x-user-id',
+    description: 'Injected by Kong after JWT validation',
+  })
   async updateMyProfile(
     @Headers('x-user-id') userId: string,
     @Body() dto: UpdateUserRequestDto,
@@ -152,7 +161,10 @@ export class UserController {
   @ApiOperation({
     summary: 'Assign license tier to a student (admin/center manager)',
   })
-  @ApiHeader({ name: 'x-user-id', description: 'Injected by Kong — used as changedById for audit trail' })
+  @ApiHeader({
+    name: 'x-user-id',
+    description: 'Injected by Kong — used as changedById for audit trail',
+  })
   async assignLicenseTier(
     @Param('id') id: string,
     @Body() dto: AssignLicenseTierRequestDto,

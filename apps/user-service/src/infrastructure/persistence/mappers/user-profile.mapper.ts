@@ -29,8 +29,8 @@ export interface RawUserProfileRow {
   studentDetail: RawStudentDetailRow | null;
 }
 
-export class UserProfileMapper {
-  static toDomain(raw: RawUserProfileRow): UserProfile {
+export const UserProfileMapper = {
+  toDomain(raw: RawUserProfileRow): UserProfile {
     return UserProfile.reconstitute({
       id: raw.id,
       fullName: raw.fullName,
@@ -52,5 +52,5 @@ export class UserProfileMapper {
           }
         : null,
     });
-  }
-}
+  },
+};
