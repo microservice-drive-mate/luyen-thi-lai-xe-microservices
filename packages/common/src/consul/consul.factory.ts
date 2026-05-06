@@ -69,37 +69,91 @@ export class ConsulConfigFactory {
   }
 
   private static async loadFromConsul(
-    consulUrl: string,
-    nodeEnv: string,
-    serviceName?: string,
-  ): Promise<ConfigRecord> {
-    const consul = new ConsulConfigService(consulUrl);
-    const isHealthy = await consul.isHealthy();
+    consulUrl: string,
+    nodeEnv: string,
+    serviceName?: string,
+  ): Promise<ConfigRecord> {
+    const consul = new ConsulConfigService(consulUrl);
+    const isHealthy = await consul.isHealthy();
 
-    if (!isHealthy) {
-      throw new Error("Consul server is not healthy");
-    }
+    if (!isHealthy) {
+      throw new Error("Consul server is not healthy");
+    }
 
-    const config: ConfigRecord = {};
+    const config: ConfigRecord = {};
 
-    const sharedPrefix = `config/${nodeEnv}/shared/`;
-    const sharedConfig = await consul.getByPrefix(sharedPrefix);
-    Object.entries(sharedConfig).forEach(([key, value]) => {
-      const configKey = key.replace(sharedPrefix, "").replace(/\//g, ".");
-      ConsulConfigFactory.setNestedValue(config, configKey, value);
-    });
+    // Helper xử lý triệt để chuỗi JSON và tự động ép kiểu sâu (deep parse)
+    const parseValue = (val: unknown): unknown => {
+      if (typeof val === 'string') {
+        try {
+          // Thử parse nếu giá trị là một chuỗi JSON hợp lệ
+          const parsed = JSON.parse(val);
+          // Nếu parse ra được object (nested JSON), gọi đệ quy để quét các node con
+          if (typeof parsed === 'object' && parsed !== null) {
+            return parseValue(parsed);
+          }
+          return parsed; // Trả về số/boolean nếu JSON.parse chuyển thành công
+        } catch (e) {
+          // Rớt xuống đây nếu là chuỗi bình thường (không phải định dạng JSON)
+          if (!isNaN(Number(val)) && val.trim() !== '') {
+            return Number(val);
+          }
+          if (val.toLowerCase() === 'true') return true;
+          if (val.toLowerCase() === 'false') return false;
+          return val;
+        }
+      }
 
-    if (serviceName) {
-      const servicePrefix = `config/${nodeEnv}/${serviceName}/`;
-      const serviceConfig = await consul.getByPrefix(servicePrefix);
-      Object.entries(serviceConfig).forEach(([key, value]) => {
-        const configKey = key.replace(servicePrefix, "").replace(/\//g, ".");
-        ConsulConfigFactory.setNestedValue(config, configKey, value);
-      });
-    }
+      if (Array.isArray(val)) {
+        return val.map((item) => parseValue(item));
+      }
 
-    return config;
-  }
+      if (typeof val === 'object' && val !== null) {
+        const result: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(val)) {
+          result[k] = parseValue(v);
+        }
+        return result;
+      }
+
+      return val;
+    };
+
+    // Gom logic xử lý config lại để không bị lặp code
+    const processConfig = (consulConfig: Record<string, unknown>, prefix: string) => {
+      Object.entries(consulConfig).forEach(([key, value]) => {
+        const configKey = key.replace(prefix, "").replace(/\//g, ".");
+        const parsedValue = parseValue(value);
+
+        // Nếu user lưu nguyên 1 cụm JSON tại key gốc (làm cho configKey bị rỗng "")
+        if (
+          configKey === "" && 
+          typeof parsedValue === 'object' && 
+          parsedValue !== null && 
+          !Array.isArray(parsedValue)
+        ) {
+          // Phải bung các key bên trong object đó ra và nạp thẳng vào root config
+          Object.entries(parsedValue).forEach(([k, v]) => {
+            ConsulConfigFactory.setNestedValue(config, k, v);
+          });
+        } else {
+          ConsulConfigFactory.setNestedValue(config, configKey, parsedValue);
+        }
+      });
+    };
+
+    const sharedPrefix = `config/${nodeEnv}/shared/`;
+    const sharedConfig = await consul.getByPrefix(sharedPrefix);
+    processConfig(sharedConfig, sharedPrefix);
+
+    if (serviceName) {
+      const servicePrefix = `config/${nodeEnv}/${serviceName}/`;
+      const serviceConfig = await consul.getByPrefix(servicePrefix);
+      processConfig(serviceConfig, servicePrefix);
+    }
+
+    return config;
+  }
 
   private static loadFromEnv(env: NodeJS.ProcessEnv): ConfigRecord {
     const consulUrl = env.CONSUL_URL || "http://localhost:8500";

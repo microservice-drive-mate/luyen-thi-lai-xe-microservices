@@ -20,6 +20,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=installer /app/node_modules ./node_modules
 COPY --from=pruner /app/out/full/ .
+RUN npx prisma generate --schema=apps/user-service/prisma/schema.prisma
 RUN npx turbo build --filter=user-service
 
 # Giai đoạn 4: Runner

@@ -1,0 +1,79 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../node_modules/@prisma/user-client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CENTER_MANAGER
+  INSTRUCTOR
+  STUDENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum LicenseTier {
+  A1
+  A2
+  B1
+  B2
+  C
+  D
+  E
+  F
+}
+
+model UserProfile {
+  id          String    @id
+  fullName    String
+  email       String    @unique
+  phoneNumber String?   @unique
+  dateOfBirth DateTime?
+  avatarUrl   String?
+  gender      Gender?
+  address     String?
+  role        Role
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  studentDetail           StudentDetail?
+  licenseAssignmentAudits LicenseAssignmentAudit[]
+
+  @@map("user_profiles")
+}
+
+model StudentDetail {
+  id          String      @id @default(uuid())
+  studentId   String      @unique
+  licenseTier LicenseTier?
+  enrolledAt  DateTime?
+  notes       String?
+
+  student UserProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_details")
+}
+
+model LicenseAssignmentAudit {
+  id             String      @id @default(uuid())
+  studentId      String
+  oldLicenseTier LicenseTier?
+  newLicenseTier LicenseTier
+  changedById    String
+  changedAt      DateTime    @default(now())
+
+  student UserProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("license_assignment_audits")
+}

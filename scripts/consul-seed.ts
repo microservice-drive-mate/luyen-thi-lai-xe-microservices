@@ -26,12 +26,23 @@ async function flatten(
     if (typeof value === "object" && value !== null && !Array.isArray(value)) {
       entries.push(...(await flatten(value as ConsulSeedConfig, fullKey)));
     } else {
-      // Consul PUT nhận plain text; API GET tự trả về base64
-      entries.push({ key: fullKey, value: String(value) });
+      entries.push({ key: fullKey, value: JSON.stringify(value) });
     }
   }
 
   return entries;
+}
+
+async function cleanConsulPrefix(prefix: string): Promise<void> {
+  try {
+    await axios.delete(`${CONSUL_URL}/v1/kv/${prefix}?recurse`);
+    console.log(`  🗑 Deleted stale keys under: ${prefix}`);
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    if (axiosError.response?.status !== 404) {
+      console.warn(`  ⚠ Could not clean prefix ${prefix}: ${axiosError.message}`);
+    }
+  }
 }
 
 async function seedConsul(env: string): Promise<void> {
@@ -55,6 +66,10 @@ async function seedConsul(env: string): Promise<void> {
     );
   }
 
+  // Clean stale keys before re-seeding to avoid leftover slash-vs-dot duplicates
+  console.log(`\n🧹 Cleaning existing keys under config/${env}/...`);
+  await cleanConsulPrefix(`config/${env}/`);
+
   // Flatten the hierarchical config (không có leading slash để khớp với ConsulConfigService)
   const entries = await flatten(envConfig, `config/${env}`);
 
@@ -71,7 +86,7 @@ async function seedConsul(env: string): Promise<void> {
         entry.value,
         {
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "text/plain",
           },
         },
       );

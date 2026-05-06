@@ -26,6 +26,15 @@ export class ConsulConfigService {
     return error instanceof Error ? error.message : String(error);
   }
 
+  private parseJsonValue(raw: string): string {
+    try {
+      const parsed = JSON.parse(raw);
+      return String(parsed);
+    } catch {
+      return raw;
+    }
+  }
+
   /**
    * Check if Consul is available
    */
@@ -56,9 +65,10 @@ export class ConsulConfigService {
       }
 
       const kvData = response.data[0];
-      const value = decodeBase64
+      const raw = decodeBase64
         ? Buffer.from(kvData.Value, "base64").toString("utf-8")
         : kvData.Value;
+      const value = this.parseJsonValue(raw);
 
       this.configCache.set(key, value);
       return value;
@@ -88,8 +98,8 @@ export class ConsulConfigService {
       const configMap: Record<string, string> = {};
       response.data.forEach((kvData: { Key: string; Value: string }) => {
         const key = kvData.Key;
-        const value = Buffer.from(kvData.Value, "base64").toString("utf-8");
-        configMap[key] = value;
+        const raw = Buffer.from(kvData.Value, "base64").toString("utf-8");
+        configMap[key] = this.parseJsonValue(raw);
       });
 
       return configMap;
