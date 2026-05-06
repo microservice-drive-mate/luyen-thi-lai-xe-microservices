@@ -1,7 +1,7 @@
-import { Logger } from "@nestjs/common";
-import { ConfigFactory } from "@nestjs/config";
-import { ConsulConfigService } from "./consul-config.service";
-import Joi from "joi";
+import { Logger } from '@nestjs/common';
+import { ConfigFactory } from '@nestjs/config';
+import { ConsulConfigService } from './consul-config.service';
+import Joi from 'joi';
 
 type ConfigRecord = Record<string, unknown>;
 
@@ -19,7 +19,7 @@ export class ConsulConfigFactory {
   ): ConfigFactory {
     return async () => {
       const env = process.env;
-      const consulUrl = env.CONSUL_URL || "http://localhost:8500";
+      const consulUrl = env.CONSUL_URL || 'http://localhost:8500';
       const nodeEnv =
         env.NODE_ENV || ConsulConfigFactory.resolveDefaultNodeEnv(consulUrl);
 
@@ -38,14 +38,14 @@ export class ConsulConfigFactory {
         );
         const envConfig = ConsulConfigFactory.loadFromEnv(env);
         config = ConsulConfigFactory.mergeConfig(consulConfig, envConfig);
-        ConsulConfigFactory.logger.log("Configuration loaded from Consul");
+        ConsulConfigFactory.logger.log('Configuration loaded from Consul');
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
         ConsulConfigFactory.logger.warn(
           `Failed to load from Consul: ${message}, falling back to .env`,
         );
         config = ConsulConfigFactory.loadFromEnv(env);
-        ConsulConfigFactory.logger.log("Configuration loaded from .env file");
+        ConsulConfigFactory.logger.log('Configuration loaded from .env file');
       }
 
       if (joiSchema) {
@@ -77,32 +77,85 @@ export class ConsulConfigFactory {
     const isHealthy = await consul.isHealthy();
 
     if (!isHealthy) {
-      throw new Error("Consul server is not healthy");
+      throw new Error('Consul server is not healthy');
     }
 
-    const config: ConfigRecord = {};
+    const config: ConfigRecord = {}; // Helper xử lý triệt để chuỗi JSON và tự động ép kiểu sâu (deep parse)
+
+    const parseValue = (val: unknown): unknown => {
+      if (typeof val === 'string') {
+        try {
+          // Thử parse nếu giá trị là một chuỗi JSON hợp lệ
+          const parsed = JSON.parse(val); // Nếu parse ra được object (nested JSON), gọi đệ quy để quét các node con
+          if (typeof parsed === 'object' && parsed !== null) {
+            return parseValue(parsed);
+          }
+          return parsed; // Trả về số/boolean nếu JSON.parse chuyển thành công
+        } catch (_e) {
+          // Rớt xuống đây nếu là chuỗi bình thường (không phải định dạng JSON)
+          if (!Number.isNaN(Number(val)) && val.trim() !== '') {
+            return Number(val);
+          }
+          if (val.toLowerCase() === 'true') return true;
+          if (val.toLowerCase() === 'false') return false;
+          return val;
+        }
+      }
+
+      if (Array.isArray(val)) {
+        return val.map((item) => parseValue(item));
+      }
+
+      if (typeof val === 'object' && val !== null) {
+        const result: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(val)) {
+          result[k] = parseValue(v);
+        }
+        return result;
+      }
+
+      return val;
+    }; // Gom logic xử lý config lại để không bị lặp code
+
+    const processConfig = (
+      consulConfig: Record<string, unknown>,
+      prefix: string,
+    ) => {
+      Object.entries(consulConfig).forEach(([key, value]) => {
+        const configKey = key.replace(prefix, '').replace(/\//g, '.');
+        const parsedValue = parseValue(value); // Nếu user lưu nguyên 1 cụm JSON tại key gốc (làm cho configKey bị rỗng "")
+
+        if (
+          configKey === '' &&
+          typeof parsedValue === 'object' &&
+          parsedValue !== null &&
+          !Array.isArray(parsedValue)
+        ) {
+          // Phải bung các key bên trong object đó ra và nạp thẳng vào root config
+          Object.entries(parsedValue).forEach(([k, v]) => {
+            ConsulConfigFactory.setNestedValue(config, k, v);
+          });
+        } else {
+          ConsulConfigFactory.setNestedValue(config, configKey, parsedValue);
+        }
+      });
+    };
 
     const sharedPrefix = `config/${nodeEnv}/shared/`;
     const sharedConfig = await consul.getByPrefix(sharedPrefix);
-    Object.entries(sharedConfig).forEach(([key, value]) => {
-      const configKey = key.replace(sharedPrefix, "").replace(/\//g, ".");
-      ConsulConfigFactory.setNestedValue(config, configKey, value);
-    });
+    processConfig(sharedConfig, sharedPrefix);
 
     if (serviceName) {
       const servicePrefix = `config/${nodeEnv}/${serviceName}/`;
       const serviceConfig = await consul.getByPrefix(servicePrefix);
-      Object.entries(serviceConfig).forEach(([key, value]) => {
-        const configKey = key.replace(servicePrefix, "").replace(/\//g, ".");
-        ConsulConfigFactory.setNestedValue(config, configKey, value);
-      });
+      processConfig(serviceConfig, servicePrefix);
     }
 
     return config;
   }
 
   private static loadFromEnv(env: NodeJS.ProcessEnv): ConfigRecord {
-    const consulUrl = env.CONSUL_URL || "http://localhost:8500";
+    const consulUrl = env.CONSUL_URL || 'http://localhost:8500';
 
     // Only include a value when the env var is explicitly set.
     // Returning undefined lets mergeConfig keep the Consul value instead of
@@ -151,13 +204,13 @@ export class ConsulConfigFactory {
     path: string,
     value: unknown,
   ): void {
-    const segments = path.split(".");
+    const segments = path.split('.');
     let current = target;
 
     for (let index = 0; index < segments.length - 1; index += 1) {
       const segment = segments[index];
       if (
-        typeof current[segment] !== "object" ||
+        typeof current[segment] !== 'object' ||
         current[segment] === null ||
         Array.isArray(current[segment])
       ) {
@@ -182,10 +235,10 @@ export class ConsulConfigFactory {
 
       const baseValue = result[key];
       if (
-        typeof baseValue === "object" &&
+        typeof baseValue === 'object' &&
         baseValue !== null &&
         !Array.isArray(baseValue) &&
-        typeof value === "object" &&
+        typeof value === 'object' &&
         value !== null &&
         !Array.isArray(value)
       ) {
@@ -205,12 +258,12 @@ export class ConsulConfigFactory {
   private static resolveDefaultNodeEnv(consulUrl: string): string {
     const normalizedUrl = consulUrl.toLowerCase();
     if (
-      normalizedUrl.includes("localhost") ||
-      normalizedUrl.includes("127.0.0.1")
+      normalizedUrl.includes('localhost') ||
+      normalizedUrl.includes('127.0.0.1')
     ) {
-      return "development-local";
+      return 'development-local';
     }
 
-    return "development";
+    return 'development';
   }
 }

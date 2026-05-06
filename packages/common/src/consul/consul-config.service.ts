@@ -1,5 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
-import axios, { AxiosInstance } from "axios";
+import { Injectable, Logger } from '@nestjs/common';
+import axios, { AxiosInstance } from 'axios';
 
 /**
  * Consul Configuration Service
@@ -13,7 +13,7 @@ export class ConsulConfigService {
   private configCache: Map<string, string> = new Map();
 
   constructor(
-    consulUrl: string = process.env.CONSUL_URL || "http://localhost:8500",
+    consulUrl: string = process.env.CONSUL_URL || 'http://localhost:8500',
   ) {
     this.consulUrl = consulUrl;
     this.consulClient = axios.create({
@@ -26,15 +26,24 @@ export class ConsulConfigService {
     return error instanceof Error ? error.message : String(error);
   }
 
+  private parseJsonValue(raw: string): string {
+    try {
+      const parsed = JSON.parse(raw);
+      return String(parsed);
+    } catch {
+      return raw;
+    }
+  }
+
   /**
    * Check if Consul is available
    */
   async isHealthy(): Promise<boolean> {
     try {
-      const response = await this.consulClient.get("/v1/status/leader");
+      const response = await this.consulClient.get('/v1/status/leader');
       return response.status === 200;
     } catch {
-      this.logger.warn("Consul health check failed");
+      this.logger.warn('Consul health check failed');
       return false;
     }
   }
@@ -56,9 +65,10 @@ export class ConsulConfigService {
       }
 
       const kvData = response.data[0];
-      const value = decodeBase64
-        ? Buffer.from(kvData.Value, "base64").toString("utf-8")
+      const raw = decodeBase64
+        ? Buffer.from(kvData.Value, 'base64').toString('utf-8')
         : kvData.Value;
+      const value = this.parseJsonValue(raw);
 
       this.configCache.set(key, value);
       return value;
@@ -88,8 +98,8 @@ export class ConsulConfigService {
       const configMap: Record<string, string> = {};
       response.data.forEach((kvData: { Key: string; Value: string }) => {
         const key = kvData.Key;
-        const value = Buffer.from(kvData.Value, "base64").toString("utf-8");
-        configMap[key] = value;
+        const raw = Buffer.from(kvData.Value, 'base64').toString('utf-8');
+        configMap[key] = this.parseJsonValue(raw);
       });
 
       return configMap;
@@ -175,16 +185,16 @@ export class ConsulConfigService {
    */
   clearCache(): void {
     this.configCache.clear();
-    this.logger.log("Consul config cache cleared");
+    this.logger.log('Consul config cache cleared');
   }
 
   async getRegisteredServices(): Promise<string[]> {
     try {
-      const response = await this.consulClient.get("/v1/catalog/services");
+      const response = await this.consulClient.get('/v1/catalog/services');
       return Object.keys(response.data);
     } catch (error) {
       this.logger.error(
-        "Failed to get services from Consul Catalog",
+        'Failed to get services from Consul Catalog',
         this.toMessage(error),
       );
       return [];

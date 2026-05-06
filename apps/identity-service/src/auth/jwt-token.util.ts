@@ -1,6 +1,6 @@
-import { createHmac } from "node:crypto";
+import { createHmac } from 'node:crypto';
 
-export type JwtClientName = "mobile-client" | "app-client";
+export type JwtClientName = 'mobile-client' | 'app-client';
 
 export type JwtClientConfig = {
   issuer: JwtClientName;
@@ -8,22 +8,22 @@ export type JwtClientConfig = {
 };
 
 export const JWT_CLIENTS: Record<JwtClientName, JwtClientConfig> = {
-  "mobile-client": {
-    issuer: "mobile-client",
-    secret: process.env.JWT_MOBILE_CLIENT_SECRET ?? "mobile-client-secret",
+  'mobile-client': {
+    issuer: 'mobile-client',
+    secret: process.env.JWT_MOBILE_CLIENT_SECRET ?? 'mobile-client-secret',
   },
-  "app-client": {
-    issuer: "app-client",
-    secret: process.env.JWT_APP_CLIENT_SECRET ?? "app-client-secret",
+  'app-client': {
+    issuer: 'app-client',
+    secret: process.env.JWT_APP_CLIENT_SECRET ?? 'app-client-secret',
   },
 };
 
 function base64UrlEncode(value: string): string {
   return Buffer.from(value)
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
 }
 
 export function createJwtAccessToken(payload: {
@@ -40,8 +40,8 @@ export function createJwtAccessToken(payload: {
   const expiresAt = new Date((issuedAt + expiresInSeconds) * 1000);
 
   const header = {
-    alg: "HS256",
-    typ: "JWT",
+    alg: 'HS256',
+    typ: 'JWT',
   };
 
   const jwtPayload = {
@@ -58,12 +58,12 @@ export function createJwtAccessToken(payload: {
   const encodedPayload = base64UrlEncode(JSON.stringify(jwtPayload));
   const signingInput = `${encodedHeader}.${encodedPayload}`;
 
-  const signature = createHmac("sha256", payload.secret)
+  const signature = createHmac('sha256', payload.secret)
     .update(signingInput)
-    .digest("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
 
   return {
     token: `${signingInput}.${signature}`,

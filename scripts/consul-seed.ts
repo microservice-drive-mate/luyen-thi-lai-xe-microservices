@@ -1,6 +1,6 @@
-import axios, { AxiosError } from "axios";
-import * as fs from "node:fs";
-import * as path from "node:path";
+import axios, { AxiosError } from 'axios';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 interface ConsulSeedConfig {
   [key: string]: string | number | boolean | ConsulSeedConfig;
@@ -11,27 +11,40 @@ interface ConsulKVEntry {
   value: string;
 }
 
-const CONSUL_URL = process.env.CONSUL_URL || "http://localhost:8500";
-const DEFAULT_ENV = process.env.ENV || "development";
+const CONSUL_URL = process.env.CONSUL_URL || 'http://localhost:8500';
+const DEFAULT_ENV = process.env.ENV || 'development';
 
 async function flatten(
   obj: ConsulSeedConfig,
-  prefix: string = "",
+  prefix: string = '',
 ): Promise<ConsulKVEntry[]> {
   const entries: ConsulKVEntry[] = [];
 
   for (const [key, value] of Object.entries(obj)) {
     const fullKey = prefix ? `${prefix}/${key}` : key;
 
-    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       entries.push(...(await flatten(value as ConsulSeedConfig, fullKey)));
     } else {
-      // Consul PUT nhận plain text; API GET tự trả về base64
-      entries.push({ key: fullKey, value: String(value) });
+      entries.push({ key: fullKey, value: JSON.stringify(value) });
     }
   }
 
   return entries;
+}
+
+async function cleanConsulPrefix(prefix: string): Promise<void> {
+  try {
+    await axios.delete(`${CONSUL_URL}/v1/kv/${prefix}?recurse`);
+    console.log(`  🗑 Deleted stale keys under: ${prefix}`);
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    if (axiosError.response?.status !== 404) {
+      console.warn(
+        `  ⚠ Could not clean prefix ${prefix}: ${axiosError.message}`,
+      );
+    }
+  }
 }
 
 async function seedConsul(env: string): Promise<void> {
@@ -45,15 +58,19 @@ async function seedConsul(env: string): Promise<void> {
   }
 
   console.log(`📂 Loading seed file: ${seedFile}`);
-  const seedData = JSON.parse(fs.readFileSync(seedFile, "utf-8"));
+  const seedData = JSON.parse(fs.readFileSync(seedFile, 'utf-8'));
 
   // Lấy config của đúng environment từ seed file
   const envConfig = seedData[env] as ConsulSeedConfig;
   if (!envConfig) {
     throw new Error(
-      `Environment "${env}" not found in seed file. Available: ${Object.keys(seedData).join(", ")}`,
+      `Environment "${env}" not found in seed file. Available: ${Object.keys(seedData).join(', ')}`,
     );
   }
+
+  // Clean stale keys before re-seeding to avoid leftover slash-vs-dot duplicates
+  console.log(`\n🧹 Cleaning existing keys under config/${env}/...`);
+  await cleanConsulPrefix(`config/${env}/`);
 
   // Flatten the hierarchical config (không có leading slash để khớp với ConsulConfigService)
   const entries = await flatten(envConfig, `config/${env}`);
@@ -71,7 +88,7 @@ async function seedConsul(env: string): Promise<void> {
         entry.value,
         {
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'text/plain',
           },
         },
       );
@@ -113,6 +130,6 @@ seedConsul(env)
     process.exit(0);
   })
   .catch((error) => {
-    console.error("\n❌ Error:", error.message);
+    console.error('\n❌ Error:', error.message);
     process.exit(1);
   });

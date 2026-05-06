@@ -1,8 +1,8 @@
-import { Test, type TestingModule } from "@nestjs/testing";
-import { AppController } from "./app.controller";
-import { AppService } from "./app.service";
+import { Test, type TestingModule } from '@nestjs/testing';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
-describe("AppController", () => {
+describe('AppController', () => {
   let appController: AppController;
 
   beforeEach(async () => {
@@ -14,7 +14,7 @@ describe("AppController", () => {
           // Mock toàn bộ AppService, không khởi tạo thật
           // → không cần NOTI_SERVICE hay PrismaService
           useValue: {
-            getHello: jest.fn().mockReturnValue("Hello World!"),
+            getHello: jest.fn().mockReturnValue('Hello World!'),
           },
         },
       ],
@@ -24,6 +24,6 @@ describe("AppController", () => {
   });
 
   it('should return "Hello World!"', () => {
-    expect(appController.getHello()).toBe("Hello World!");
+    expect(appController.getHello()).toBe('Hello World!');
   });
 });

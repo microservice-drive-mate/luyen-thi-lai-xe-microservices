@@ -1,9 +1,8 @@
-import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
-import { AppController } from "./app.controller";
-import { AppService } from "./app.service";
-import { ConsulConfigFactory } from "@repo/common";
-import Joi from "joi";
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { ConsulConfigFactory } from '@repo/common';
+import Joi from 'joi';
+import { UserModule } from './user.module';
 
 @Module({
   imports: [
@@ -13,12 +12,12 @@ import Joi from "joi";
           Joi.object({
             nodeEnv: Joi.string()
               .valid(
-                "development",
-                "development-local",
-                "staging",
-                "production",
+                'development',
+                'development-local',
+                'staging',
+                'production',
               )
-              .default("development"),
+              .default('development'),
             port: Joi.number().default(3000),
             database: Joi.object({
               url: Joi.string().required(),
@@ -27,20 +26,21 @@ import Joi from "joi";
             }).optional(),
             rabbitmq: Joi.object({
               url: Joi.string().required(),
-              username: Joi.string().default("guest"),
-              password: Joi.string().default("guest"),
-              vhost: Joi.string().default("/"),
+              username: Joi.string().default('guest'),
+              password: Joi.string().default('guest'),
+              vhost: Joi.string().default('/'),
               connectionTimeout: Joi.number().default(10000),
               heartbeat: Joi.number().default(60),
             }).optional(),
           }).unknown(true),
-          "user-service",
+          'user-service',
         ),
       ],
       isGlobal: true,
     }),
+    UserModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

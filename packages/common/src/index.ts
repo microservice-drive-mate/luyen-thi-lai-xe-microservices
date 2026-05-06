@@ -1,4 +1,7 @@
-export * from "./http-api";
+export * from './http-api';
+
+// ============== DDD BASE CLASSES =================
+export * from './ddd';
 
 /**
  * @repo/common - Shared utilities, services, and configuration

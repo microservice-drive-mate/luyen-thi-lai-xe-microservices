@@ -29,7 +29,9 @@ set_kv() {
   key="$1"
   value="$2"
   echo "[Consul] Setting: $key = $value"
-  curl -s -X PUT -d "$value" "$CONSUL_URL/v1/kv/$key" > /dev/null
+  # Store as JSON-encoded string so Consul UI JSON mode works correctly
+  json_value=$(printf '"%s"' "$(printf '%s' "$value" | sed 's/\\/\\\\/g; s/"/\\"/g')")
+  curl -s -X PUT -d "$json_value" "$CONSUL_URL/v1/kv/$key" > /dev/null
 }
 
 echo "[Consul] Loading development configuration..."
@@ -100,7 +102,7 @@ set_kv "config/development-local/simulation-service/port" "3008"
 set_kv "config/development-local/simulation-service/database.url" "postgresql://user:password@localhost:5439/simulation_db"
 set_kv "config/development-local/simulation-service/rabbitmq.url" "amqp://localhost:5672"
 set_kv "config/development-local/docs-service/port" "3009"
-set_kv "config/development-local/docs-service/swagger.services" "user-service:3002,exam-service:3003,course-service:3004,question-service:3005,notification-service:3006,analytics-service:3007,simulation-service:3008"
+set_kv "config/development-local/docs-service/swagger.services" "identity-service:3001,user-service:3002,exam-service:3003,course-service:3004,question-service:3005,notification-service:3006,analytics-service:3007,simulation-service:3008"
 
 echo "[Consul] Configuration seeding completed"
 echo "[Consul] Access Consul UI: http://localhost:8500"

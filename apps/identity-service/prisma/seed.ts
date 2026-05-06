@@ -1,14 +1,14 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
   await prisma.identityUser.upsert({
-    where: { email: "seed-admin@local.dev" },
-    update: { name: "Seed Admin" },
+    where: { email: 'seed-admin@local.dev' },
+    update: { name: 'Seed Admin' },
     create: {
-      email: "seed-admin@local.dev",
-      name: "Seed Admin",
+      email: 'seed-admin@local.dev',
+      name: 'Seed Admin',
     },
   });
 }
