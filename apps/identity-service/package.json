@@ -28,12 +28,16 @@
     "db:studio": "prisma studio --schema ./prisma/schema.prisma"
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.1",
     "@prisma/client": "^6.19.3",
     "@repo/common": "^1.0.0",
+    "axios": "^1.16.0",
+    "keycloak-connect": "^26.1.1",
+    "nest-keycloak-connect": "^1.10.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

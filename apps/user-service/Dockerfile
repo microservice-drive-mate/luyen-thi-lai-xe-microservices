@@ -28,6 +28,8 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/user-service/dist ./apps/user-service/dist
 COPY --from=builder --chown=node:node /app/apps/user-service/package.json ./apps/user-service/
+# Ensure runtime dependencies are present even if prune missed some packages
+RUN cd apps/user-service && npm install --omit=dev --no-audit --no-fund
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json
