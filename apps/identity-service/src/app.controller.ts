@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AppService } from './app.service';
-import type { LoginRequest } from './app.service';
 import { Logger } from '@nestjs/common';
+import { Public, Roles } from 'nest-keycloak-connect';
 
 @Controller()
 export class AppController {
@@ -18,19 +19,30 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Get('health')
-  async health() {
-    return this.appService.healthCheck();
-  }
-
   @Post('login')
-  async login(@Body() body: LoginRequest) {
-    return this.appService.login(body);
+  @Public()
+  async login(@Body() body: { username: string; password: string }) {
+    return this.appService.login(body.username, body.password);
   }
 
-  @Post('test-rabbitMQ')
-  async createUser(@Body() body: { email: string; name: string }) {
-    const result = await this.appService.createUser(body);
-    return result;
+  @Get('public')
+  @Public()
+  getPublic() {
+    return { message: 'Đây là API Public, ai cũng xem được!' };
+  }
+
+  // 2. API yêu cầu phải đăng nhập (Có token hợp lệ là được)
+  @Get('private')
+  getPrivate() {
+    return {
+      message: 'Chào bạn, bạn đã đăng nhập thành công!',
+    };
+  }
+
+  // 3. API yêu cầu Role cụ thể (Ví dụ: ADMIN)
+  @Get('admin')
+  @Roles({ roles: ['realm:ADMIN'] }) // Kiểm tra role ADMIN ở mức Realm
+  getAdmin() {
+    return { message: 'Chào Sếp! Chỉ ADMIN mới thấy được dòng này.' };
   }
 }
