@@ -10,21 +10,11 @@ datasource db {
 }
 
 model IdentityUser {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  name        String
-  role        UserRole @default(STUDENT)
-  isActive    Boolean  @default(true)
-  lastLoginAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("identity_users")
-}
-
-enum UserRole {
-  ADMIN
-  CENTER_MANAGER
-  INSTRUCTOR
-  STUDENT
 }

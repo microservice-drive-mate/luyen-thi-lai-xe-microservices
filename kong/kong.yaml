@@ -9,7 +9,6 @@ services:
       - name: identity-route
         paths:
           - /auth
-        strip_path: false
       - name: identity-swagger-route
         paths:
           - /identity-service
@@ -160,10 +159,18 @@ services:
           claims_to_verify:
             - exp
 
-# Note: Kong OSS jwt plugin does not support `jwks_uri`; use `key_claim_name`
-# + consumer keys/secrets (or switch to an OIDC-capable plugin) for Keycloak validation.
+consumers:
+  - username: mobile-client
+    jwt_secrets:
+      - key: mobile-client
+        secret: mobile-client-secret
+        algorithm: HS256
 
-# HS256 consumers removed: use Keycloak JWKS (RS256) validation.
+  - username: app-client
+    jwt_secrets:
+      - key: app-client
+        secret: app-client-secret
+        algorithm: HS256
 
 # ========================================================
 # Cấu hình Plugins chung (Optional)
