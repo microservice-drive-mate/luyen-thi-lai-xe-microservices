@@ -96,7 +96,8 @@ export class UserController {
   @ApiOperation({ summary: 'Get own profile' })
   @ApiHeader({
     name: 'x-user-id',
-    description: 'Injected by Kong after JWT validation',
+    description:
+      'Resolved from the bearer token by user-service auth context middleware',
   })
   async getMyProfile(
     @Headers('x-user-id') userId: string,
@@ -122,7 +123,8 @@ export class UserController {
   @ApiOperation({ summary: 'Update own profile' })
   @ApiHeader({
     name: 'x-user-id',
-    description: 'Injected by Kong after JWT validation',
+    description:
+      'Resolved from the bearer token by user-service auth context middleware',
   })
   async updateMyProfile(
     @Headers('x-user-id') userId: string,
@@ -163,7 +165,8 @@ export class UserController {
   })
   @ApiHeader({
     name: 'x-user-id',
-    description: 'Injected by Kong — used as changedById for audit trail',
+    description:
+      'Resolved from the bearer token by user-service auth context middleware and used as changedById for audit trail',
   })
   async assignLicenseTier(
     @Param('id') id: string,

@@ -9,6 +9,7 @@ RUN turbo prune course-service --docker
 
 # Giai đoạn 2: Install
 FROM node:20-alpine AS installer
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/package-lock.json ./
@@ -17,17 +18,21 @@ RUN --mount=type=cache,id=npm,target=/root/.npm,sharing=locked \
 
 # Giai đoạn 3: Build
 FROM node:20-alpine AS builder
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=installer /app/node_modules ./node_modules
 COPY --from=pruner /app/out/full/ .
+RUN npx prisma generate --schema=apps/course-service/prisma/schema.prisma
 RUN npx turbo build --filter=course-service
 
 # Giai đoạn 4: Runner
 FROM node:20-alpine AS runner
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/course-service/dist ./apps/course-service/dist
 COPY --from=builder --chown=node:node /app/apps/course-service/package.json ./apps/course-service/
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json
 USER node

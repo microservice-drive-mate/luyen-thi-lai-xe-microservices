@@ -1,99 +1,113 @@
-# Identity Service
+<p align="center">
+  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+</p>
 
-Identity service handles login against Keycloak, first-login provisioning, and internal user profile synchronization.
+[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
+[circleci-url]: https://circleci.com/gh/nestjs/nest
 
-## What changed
+  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
+    <p align="center">
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
+<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
+<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
+<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
+<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
+  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
+    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
+  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
+</p>
+  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
+  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-- Login is now handled by Keycloak direct grant through `POST /auth/login`.
-- Kong validates access tokens using Keycloak JWKS (`RS256`).
-- The service provisions a local `IdentityUser` on first login and publishes `identity.user.created`.
-- Legacy local JWT minting has been removed.
+## Description
 
-## Local setup
+[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-Start the shared infrastructure from the repo root:
+## Project setup
 
 ```bash
-docker-compose up -d db-user rabbitmq consul consul-init
-npm run consul:seed:local
+$ npm install
 ```
 
-Generate Prisma client and run the service:
+## Compile and run the project
 
 ```bash
-cd apps/identity-service
-npm run prisma:generate
-npm run start:dev
+# development
+$ npm run start
+
+# watch mode
+$ npm run start:dev
+
+# production mode
+$ npm run start:prod
 ```
 
-## Environment / Consul keys
+## Run tests
 
-Identity service expects these config values:
+```bash
+# unit tests
+$ npm run test
 
-- `keycloak.baseUrl` = `http://localhost:8080`
-- `keycloak.realm` = `dev-realm`
-- `keycloak.mobileClientId` = `mobile-client`
-- `keycloak.webClientId` = `web-client`
-- `keycloak.mobileClientSecret` = optional, stored outside git
-- `keycloak.webClientSecret` = optional, stored outside git
+# e2e tests
+$ npm run test:e2e
 
-## Login API
+# test coverage
+$ npm run test:cov
+```
 
-`POST /auth/login`
+## JWT login test
 
-Request body:
+Use the login endpoint to mint a Kong-compatible token for one of the two test consumers:
 
-```json
+```bash
+POST /auth/login
 {
-  "email": "student@example.com",
-  "password": "secret",
+  "email": "demo@example.com",
+  "name": "Demo User",
   "client": "mobile-client"
 }
 ```
 
-Response shape:
+The response returns `accessToken`, which you can send as `Authorization: Bearer <token>` to Kong-protected routes such as `/users`.
 
-```json
-{
-  "success": true,
-  "code": "SUCCESS",
-  "message": "OK",
-  "data": {
-    "message": "Login successful",
-    "tokenType": "Bearer",
-    "accessToken": "<keycloak-access-token>",
-    "expiresAt": "2026-05-07T10:00:00.000Z",
-    "user": {
-      "id": "...",
-      "email": "student@example.com",
-      "name": "Student",
-      "role": "STUDENT",
-      "isActive": true,
-      "lastLoginAt": "2026-05-07T09:00:00.000Z",
-      "createdAt": "...",
-      "updatedAt": "..."
-    }
-  }
-}
-```
+## Deployment
 
-## Tests
+When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+
+If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 
 ```bash
-npm test -- --runInBand login.use-case.spec.ts
-npm test -- --runInBand auth.controller.spec.ts
-npm run check-types
+$ npm install -g @nestjs/mau
+$ mau deploy
 ```
 
-## Rollback & hardening
+With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
 
-- If you need to roll back quickly, restore the previous `kong/kong.yaml` commit and re-enable the legacy HS256 consumer config.
-- Keep Keycloak secrets out of git; store them in Consul, environment variables, or your secret manager.
-- `POST /auth/login` is the only login entrypoint in this cutover.
-- The Kong E2E smoke test requires the shared infra stack to be running; if the stack is not up, the service-level tests above are the supported verification path.
+## Resources
 
-## Notes
+Check out a few resources that may come in handy when working with NestJS:
 
-- `AppController` now only exposes health and hello endpoints.
-- `AppService` no longer mints tokens locally.
-- If you add new roles, update the enum in `src/domain/identity-role.enum.ts` and the Prisma schema enum.
+- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
+- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
+- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
+- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
+- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
+- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
+- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
+- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+
+## Support
+
+Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+
+## Stay in touch
+
+- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
+- Website - [https://nestjs.com](https://nestjs.com/)
+- Twitter - [@nestframework](https://twitter.com/nestframework)
+
+## License
+
+Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).

@@ -30,6 +30,10 @@ export class AppController {
       }
     }
 
+    if (candidates.length === 0) {
+      candidates = this.appService.buildLocalFallbackCandidates();
+    }
+
     const urls = await this.appService.probeAlive(candidates);
 
     const dead = candidates
@@ -45,6 +49,12 @@ export class AppController {
       );
     }
 
-    return { urls, deepLinking: true };
+    return {
+      urls:
+        urls.length > 0
+          ? urls
+          : [{ name: 'No services running', url: '/docs-json' }],
+      deepLinking: true,
+    };
   }
 }

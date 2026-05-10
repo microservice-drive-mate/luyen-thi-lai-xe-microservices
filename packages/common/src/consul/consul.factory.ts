@@ -196,6 +196,18 @@ export class ConsulConfigFactory {
               : undefined,
           }
         : undefined,
+      keycloak:
+        env.KEYCLOAK_AUTH_SERVER_URL ||
+        env.KEYCLOAK_REALM ||
+        env.KEYCLOAK_CLIENT_ID ||
+        env.KEYCLOAK_CLIENT_SECRET
+          ? {
+              authServerUrl: env.KEYCLOAK_AUTH_SERVER_URL,
+              realm: env.KEYCLOAK_REALM,
+              clientId: env.KEYCLOAK_CLIENT_ID,
+              clientSecret: env.KEYCLOAK_CLIENT_SECRET,
+            }
+          : undefined,
     };
   }
 

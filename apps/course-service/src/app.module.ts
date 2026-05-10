@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { ConsulConfigFactory } from '@repo/common';
 import Joi from 'joi';
+import { CourseModule } from './course.module';
 
 @Module({
   imports: [
@@ -39,8 +38,9 @@ import Joi from 'joi';
       ],
       isGlobal: true,
     }),
+    CourseModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

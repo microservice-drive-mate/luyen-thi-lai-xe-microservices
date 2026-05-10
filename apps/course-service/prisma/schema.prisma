@@ -1,0 +1,140 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../node_modules/@prisma/course-client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LicenseCategory {
+  A1
+  A2
+  B1
+  B2
+  C
+  D
+  E
+  F
+}
+
+enum CourseStatus {
+  DRAFT
+  ACTIVE
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+}
+
+model Course {
+  id              String          @id @default(uuid())
+  title           String          @db.Text
+  description     String?         @db.Text
+  licenseCategory LicenseCategory
+  thumbnailUrl    String?
+  totalLessons    Int             @default(0)
+  duration        String?
+  tuitionFee      Decimal         @default(0) @db.Decimal(12, 2)
+  capacity        Int?
+  status          CourseStatus    @default(DRAFT)
+  createdById     String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  lessons     Lesson[]
+  instructors CourseInstructor[]
+  requirement CourseRequirement?
+  materials   CourseMaterial[]
+  enrollments CourseEnrollment[]
+
+  @@map("courses")
+}
+
+model Lesson {
+  id              String   @id @default(uuid())
+  courseId        String
+  title           String   @db.Text
+  content         String?  @db.Text
+  videoUrl        String?
+  durationMinutes Int      @default(0)
+  order           Int
+  createdAt       DateTime @default(now())
+
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonProgress LessonProgress[]
+
+  @@map("lessons")
+}
+
+model CourseInstructor {
+  id           String @id @default(uuid())
+  courseId     String
+  instructorId String
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, instructorId])
+  @@map("course_instructors")
+}
+
+model CourseRequirement {
+  id             String  @id @default(uuid())
+  courseId       String  @unique
+  minAge         Int?
+  prerequisites  String? @db.Text
+  attendanceRate Int     @default(80)
+  minPassScore   Int     @default(80)
+  requiredExams  Int     @default(0)
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("course_requirements")
+}
+
+model CourseMaterial {
+  id        String   @id @default(uuid())
+  courseId  String
+  title     String   @db.Text
+  fileUrl   String?
+  type      String?
+  createdAt DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("course_materials")
+}
+
+model CourseEnrollment {
+  id          String           @id @default(uuid())
+  courseId    String
+  studentId   String
+  status      EnrollmentStatus @default(ACTIVE)
+  progress    Int              @default(0)
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonProgress LessonProgress[]
+
+  @@unique([courseId, studentId])
+  @@map("course_enrollments")
+}
+
+model LessonProgress {
+  id             String    @id @default(uuid())
+  enrollmentId   String
+  lessonId       String
+  completedAt    DateTime?
+  watchedSeconds Int       @default(0)
+
+  enrollment CourseEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, lessonId])
+  @@map("lesson_progress")
+}

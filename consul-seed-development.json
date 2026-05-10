@@ -10,14 +10,14 @@
       "database.url": "postgresql://user:password@db-identity:5432/identity_db",
       "database.pool_size": "10",
       "database.connection_timeout": "5000",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
       "rabbitmq.url": "amqp://rabbitmq:5672",
       "rabbitmq.username": "guest",
       "rabbitmq.password": "guest",
-      "rabbitmq.vhost": "/",
-      "keycloak.baseUrl": "http://localhost:8080",
-      "keycloak.realm": "dev-realm",
-      "keycloak.mobileClientId": "mobile-client",
-      "keycloak.webClientId": "web-client"
+      "rabbitmq.vhost": "/"
     },
     "user-service": {
       "port": "3000",

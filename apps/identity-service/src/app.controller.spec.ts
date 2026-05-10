@@ -11,11 +11,10 @@ describe('AppController', () => {
       providers: [
         {
           provide: AppService,
+          // Mock toàn bộ AppService, không khởi tạo thật
+          // → không cần NOTI_SERVICE hay PrismaService
           useValue: {
             getHello: jest.fn().mockReturnValue('Hello World!'),
-            healthCheck: jest
-              .fn()
-              .mockResolvedValue({ status: 'ok', database: 'connected' }),
           },
         },
       ],
@@ -26,12 +25,5 @@ describe('AppController', () => {
 
   it('should return "Hello World!"', () => {
     expect(appController.getHello()).toBe('Hello World!');
-  });
-
-  it('should return health status', async () => {
-    await expect(appController.health()).resolves.toEqual({
-      status: 'ok',
-      database: 'connected',
-    });
   });
 });

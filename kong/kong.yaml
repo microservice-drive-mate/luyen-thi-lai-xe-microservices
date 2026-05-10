@@ -9,7 +9,6 @@ services:
       - name: identity-route
         paths:
           - /auth
-        strip_path: false
       - name: identity-swagger-route
         paths:
           - /identity-service
@@ -22,22 +21,10 @@ services:
       - name: user-route
         paths:
           - /users
-        plugins:
-          - name: jwt
-            config:
-              key_claim_name: iss
-              claims_to_verify:
-                - exp
       - name: user-swagger-route
         paths:
           - /user-service
         strip_path: true
-        plugins:
-          - name: jwt
-            config:
-              key_claim_name: iss
-              claims_to_verify:
-                - exp
 
   # 3. Quản lý các kỳ thi và kết quả sát hạch
   - name: exam-service
@@ -50,12 +37,6 @@ services:
         paths:
           - /exam-service
         strip_path: true
-        plugins:
-          - name: jwt
-            config:
-              key_claim_name: iss
-              claims_to_verify:
-                - exp
 
   # 4. Quản lý ngân hàng câu hỏi (Lý thuyết, biển báo...)
   - name: question-service
@@ -68,12 +49,6 @@ services:
         paths:
           - /question-service
         strip_path: true
-        plugins:
-          - name: jwt
-            config:
-              key_claim_name: iss
-              claims_to_verify:
-                - exp
 
   # 5. Quản lý khóa học và tài liệu ôn tập
   - name: course-service
@@ -86,12 +61,6 @@ services:
         paths:
           - /course-service
         strip_path: true
-        plugins:
-          - name: jwt
-            config:
-              key_claim_name: iss
-              claims_to_verify:
-                - exp
 
   # 6. Dịch vụ thông báo (Email, SMS, App Push)
   - name: notification-service
@@ -104,12 +73,6 @@ services:
         paths:
           - /notification-service
         strip_path: true
-        plugins:
-          - name: jwt
-            config:
-              key_claim_name: iss
-              claims_to_verify:
-                - exp
 
   # 7. Thống kê và báo cáo tiến độ luyện tập
   - name: analytics-service
@@ -122,12 +85,6 @@ services:
         paths:
           - /analytics-service
         strip_path: true
-        plugins:
-          - name: jwt
-            config:
-              key_claim_name: iss
-              claims_to_verify:
-                - exp
 
   # 8. Mô phỏng các tình huống thực tế (120 tình huống)
   - name: simulation-service
@@ -149,21 +106,6 @@ services:
         paths:
           - /docs
         strip_path: false
-    # Gắn plugin auth chặn truy cập public vào Swagger UI
-    plugins:
-      - name: basic-auth
-        config:
-          hide_credentials: true
-      - name: jwt
-        config:
-          key_claim_name: iss
-          claims_to_verify:
-            - exp
-
-# Note: Kong OSS jwt plugin does not support `jwks_uri`; use `key_claim_name`
-# + consumer keys/secrets (or switch to an OIDC-capable plugin) for Keycloak validation.
-
-# HS256 consumers removed: use Keycloak JWKS (RS256) validation.
 
 # ========================================================
 # Cấu hình Plugins chung (Optional)

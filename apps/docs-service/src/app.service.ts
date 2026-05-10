@@ -44,6 +44,20 @@ export class AppService {
       }));
   }
 
+  buildLocalFallbackCandidates(): ServiceCandidate[] {
+    // Hardcoded local dev ports (from CLAUDE.md). probeAlive() filters dead ones.
+    return [
+      { name: 'Identity Service', url: 'http://localhost:3001/docs-json' },
+      { name: 'User Service', url: 'http://localhost:3002/docs-json' },
+      { name: 'Exam Service', url: 'http://localhost:3003/docs-json' },
+      { name: 'Course Service', url: 'http://localhost:3004/docs-json' },
+      { name: 'Question Service', url: 'http://localhost:3005/docs-json' },
+      { name: 'Notification Service', url: 'http://localhost:3006/docs-json' },
+      { name: 'Analytics Service', url: 'http://localhost:3007/docs-json' },
+      { name: 'Simulation Service', url: 'http://localhost:3008/docs-json' },
+    ];
+  }
+
   async probeAlive(
     candidates: ServiceCandidate[],
   ): Promise<ServiceCandidate[]> {
