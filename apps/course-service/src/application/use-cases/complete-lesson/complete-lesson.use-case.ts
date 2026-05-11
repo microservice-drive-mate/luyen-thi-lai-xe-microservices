@@ -28,11 +28,7 @@ export class CompleteLessonUseCase
     const course = await this.courseRepository.findById(enrollment.courseId);
     if (!course) throw new CourseNotFoundException(enrollment.courseId);
 
-    enrollment.completeLesson(
-      command.lessonId,
-      command.watchedSeconds ?? 0,
-      course.totalLessons,
-    );
+    enrollment.completeLesson(command.lessonId, course.totalLessons);
 
     await this.enrollmentRepository.save(enrollment);
 

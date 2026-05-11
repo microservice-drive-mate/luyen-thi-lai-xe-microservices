@@ -18,7 +18,6 @@ export class UpdateCourseUseCase
     course.update({
       title: command.title,
       description: command.description,
-      thumbnailUrl: command.thumbnailUrl,
       duration: command.duration,
       tuitionFee: command.tuitionFee,
       capacity: command.capacity,

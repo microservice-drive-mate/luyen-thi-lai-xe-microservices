@@ -14,7 +14,6 @@ export class CreateCourseCommand {
     readonly title: string,
     readonly licenseCategory: LicenseCategory,
     readonly description?: string | null,
-    readonly thumbnailUrl?: string | null,
     readonly duration?: string | null,
     readonly tuitionFee?: number,
     readonly capacity?: number | null,

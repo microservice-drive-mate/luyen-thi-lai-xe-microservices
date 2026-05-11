@@ -8,34 +8,34 @@ Monorepo NestJS gồm 9 microservices cho hệ thống luyện thi lái xe, dùn
 ## Key Commands
 
 ```bash
-# Start infrastructure (DB, RabbitMQ, Consul)
-docker-compose up -d db-user rabbitmq consul consul-init
+# ── Hybrid dev mode (services local + infra Docker) ──
+npm run infra:up            # Khởi động toàn bộ infra (DB, RabbitMQ, Consul, Keycloak, Kong)
+npm run dev                 # Chạy tất cả services local với hot reload (turbo)
+npm run dev --filter=course-service  # Chạy 1 service cụ thể
 
-# Seed Consul config cho local dev
-npm run consul:seed:local
+# ── Full Docker (toàn bộ trong container) ────────────
+npm run docker:up           # docker compose up -d (tất cả services + infra)
+npm run docker:build        # Build images trước
 
-# Start một service cụ thể ở watch mode
-npm run dev --filter=user-service
+# ── Infrastructure chỉ ──────────────────────────────
+npm run infra:down          # Tắt infra
+npm run infra:logs          # Xem logs infra
 
-# Build toàn bộ (Turbo parallel)
-npm run build
-
-# Lint + format
-npm run lint
-npx biome check .
-
-# Type check
-npm run check-types
+# ── Config & Database ────────────────────────────────
+npm run consul:seed:local   # Seed config vào Consul (development-local)
+npm run consul:list         # Xem tất cả keys trong Consul
 
 # Prisma — chạy từ thư mục service
-cd apps/user-service
-npx prisma migrate dev
-npx prisma generate
-npx prisma studio    # GUI xem DB tại localhost:5555
+cd apps/course-service
+npx prisma migrate dev      # Tạo migration mới
+npx prisma generate         # Regenerate Prisma client
+npx prisma studio           # GUI xem DB tại localhost:5555
 
-# Seed Consul và list keys
-npm run consul:seed:local
-npm run consul:list
+# ── Code quality ─────────────────────────────────────
+npm run build               # Build toàn bộ (Turbo parallel)
+npm run lint                # Lint
+npx biome check .           # Lint + format check
+npm run check-types         # TypeScript type check
 ```
 
 ---
@@ -172,21 +172,26 @@ presentation ← chỉ import application (use cases, commands, results)
 
 ## Key Files để nắm nhanh
 
-| File                                                                                        | Vai trò                                                     |
-| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `packages/common/src/ddd/`                                                                  | Tất cả DDD base classes                                     |
-| `packages/common/src/http-api.ts`                                                           | `ApiResponseInterceptor`, `ApiExceptionFilter`              |
-| `packages/common/src/consul/`                                                               | Config loading từ Consul (priority: env > consul > default) |
-| `apps/user-service/src/domain/aggregates/user-profile/user-profile.aggregate.ts`            | Reference aggregate impl                                    |
-| `apps/user-service/src/infrastructure/persistence/prisma/prisma-user-profile.repository.ts` | Reference repository impl                                   |
-| `apps/user-service/src/infrastructure/filters/domain-exception.filter.ts`                   | DomainException → HTTP response                             |
-| `apps/user-service/src/user.module.ts`                                                      | Reference module wiring (DI bindings)                       |
-| `apps/user-service/src/main.ts`                                                             | Bootstrap pattern (RabbitMQ + Swagger + pipes/filters)      |
-| `kong/kong.yaml`                                                                            | API gateway routing + JWT plugin per route                  |
-| `consul-seed-development-local.json`                                                        | Local config values (ports, DB URLs, RabbitMQ)              |
-| `guides/ddd+clean/CONVENTIONS.md`                                                           | Code templates + naming conventions + checklist             |
-| `guides/api/api-spec-user.md`                                                               | User service API spec (template cho các service khác)       |
-| `guides/testing/user-service-test-guide.md`                                                 | Step-by-step testing guide                                  |
+| File | Vai trò |
+| ---- | ------- |
+| `packages/common/src/ddd/` | Tất cả DDD base classes |
+| `packages/common/src/http-api.ts` | `ApiResponseInterceptor`, `ApiExceptionFilter` |
+| `packages/common/src/consul/` | Config loading từ Consul (priority: env > consul > default) |
+| `apps/user-service/src/domain/aggregates/user-profile/user-profile.aggregate.ts` | Reference aggregate impl |
+| `apps/user-service/src/infrastructure/persistence/prisma/prisma-user-profile.repository.ts` | Reference repository impl |
+| `apps/user-service/src/infrastructure/filters/domain-exception.filter.ts` | DomainException → HTTP response |
+| `apps/user-service/src/user.module.ts` | Reference module wiring (DI bindings) |
+| `apps/user-service/src/main.ts` | Bootstrap pattern (RabbitMQ + Swagger + pipes/filters) |
+| `docker-compose.infra.yml` | Chỉ infra (DB, RabbitMQ, Consul, Keycloak, Kong) — hybrid dev |
+| `docker-compose.yaml` | Full stack (infra + services) — Docker deploy |
+| `kong/kong.dev.yaml` | Kong config cho hybrid dev (host.docker.internal URLs) |
+| `kong/kong.yaml` | Kong config cho full Docker (Docker DNS) |
+| `consul-seed-development-local.json` | Local config values (ports, DB URLs, RabbitMQ) |
+| `guides/ddd+clean/CONVENTIONS.md` | Code templates + naming conventions + checklist |
+| `guides/ddd+clean/DATABASE_DESIGN.md` | Schema design cho từng service |
+| `guides/api/api-spec-user.md` | User service API spec (template cho các service khác) |
+| `guides/testing/user-service-test-guide.md` | Step-by-step testing guide (user-service) |
+| `guides/testing/course-service-test-guide.md` | Step-by-step testing guide (course-service) |
 
 ---
 

@@ -274,39 +274,31 @@ courses
 ├── title            TEXT NOT NULL
 ├── description      TEXT
 ├── licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
-├── thumbnailUrl     TEXT
 ├── totalLessons     INT DEFAULT 0
-├── estimatedHours   INT
-├── isPublished      BOOLEAN DEFAULT false
-├── createdById      UUID NOT NULL  ← ref → identity_users.id (INSTRUCTOR/ADMIN)
+├── duration         TEXT NULLABLE    ← e.g. "3 tháng"
+├── tuitionFee       INT NULLABLE
+├── capacity         INT NULLABLE
+├── status           ENUM(DRAFT, ACTIVE, ARCHIVED)
+├── createdById      UUID NOT NULL    ← ref → identity_users.id (INSTRUCTOR/ADMIN)
 ├── createdAt        TIMESTAMPTZ
 └── updatedAt        TIMESTAMPTZ
 ```
 
-### Entity (thuộc Course): `CourseModule`
+> **Scope simplification:** Không có thumbnailUrl (không cần ảnh đại diện), không có video — khóa học chỉ cần text content.
 
-```
-course_modules
-├── id          UUID PK
-├── courseId    UUID NOT NULL FK → courses.id
-├── title       TEXT NOT NULL
-├── description TEXT
-└── order       INT NOT NULL
-```
-
-### Entity (thuộc CourseModule): `Lesson`
+### Entity (thuộc Course): `Lesson`
 
 ```
 lessons
-├── id              UUID PK
-├── moduleId        UUID NOT NULL FK → course_modules.id
-├── title           TEXT NOT NULL
-├── content         TEXT         ← markdown
-├── videoUrl        TEXT NULLABLE
-├── durationMinutes INT DEFAULT 0
-├── order           INT NOT NULL
-└── createdAt       TIMESTAMPTZ
+├── id        UUID PK
+├── courseId  UUID NOT NULL FK → courses.id
+├── title     TEXT NOT NULL
+├── content   TEXT NULLABLE  ← markdown text
+├── order     INT NOT NULL
+└── createdAt TIMESTAMPTZ
 ```
+
+> Lesson gắn trực tiếp vào Course (không qua CourseModule). Không có `videoUrl` hay `durationMinutes`.
 
 ### Aggregate Root: `CourseEnrollment`
 
@@ -318,29 +310,20 @@ course_enrollments
 ├── courseId    UUID NOT NULL FK → courses.id
 ├── studentId   UUID NOT NULL  ← ref → identity_users.id
 ├── status      ENUM(ACTIVE, COMPLETED, DROPPED)
-├── progress    INT DEFAULT 0  ← 0-100%
+├── progress    INT DEFAULT 0  ← 0-100%, tự tính khi completeLesson
 ├── enrolledAt  TIMESTAMPTZ
 └── completedAt TIMESTAMPTZ NULLABLE
 ```
 
-### Entity (thuộc CourseEnrollment): `LessonProgress`
-
-```
-lesson_progress
-├── id             UUID PK
-├── enrollmentId   UUID NOT NULL FK → course_enrollments.id
-├── lessonId       UUID NOT NULL FK → lessons.id
-├── completedAt    TIMESTAMPTZ NULLABLE
-└── watchedSeconds INT DEFAULT 0
-```
+> **Không có `lesson_progress` table.** Mỗi lần `completeLesson` gọi, progress tăng `100/totalLessons`. Không track per-lesson trạng thái đã hoàn thành.
 
 ### Domain Events phát ra
 
-| Event                         | Trigger                  | Payload                              |
-| ----------------------------- | ------------------------ | ------------------------------------ |
-| `course.enrollment.created`   | Student đăng ký khóa học | enrollmentId, studentId, courseId    |
-| `course.enrollment.completed` | Hoàn thành khóa học      | enrollmentId, studentId, courseId    |
-| `course.lesson.completed`     | Hoàn thành 1 bài học     | lessonId, studentId, durationMinutes |
+| Event                         | Trigger                  | Payload                           |
+| ----------------------------- | ------------------------ | --------------------------------- |
+| `course.enrollment.created`   | Student đăng ký khóa học | enrollmentId, studentId, courseId |
+| `course.enrollment.completed` | Hoàn thành khóa học      | enrollmentId, studentId, courseId |
+| `course.lesson.completed`     | Hoàn thành 1 bài học     | lessonId, studentId, courseId     |
 
 ---
 

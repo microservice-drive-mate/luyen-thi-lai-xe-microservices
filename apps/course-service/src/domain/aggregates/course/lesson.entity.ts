@@ -5,8 +5,6 @@ export class Lesson extends Entity<string> {
   private _courseId: string;
   private _title: string;
   private _content: string | null;
-  private _videoUrl: string | null;
-  private _durationMinutes: number;
   private _order: number;
   private _createdAt: Date;
 
@@ -15,8 +13,6 @@ export class Lesson extends Entity<string> {
     courseId: string,
     title: string,
     content: string | null,
-    videoUrl: string | null,
-    durationMinutes: number,
     order: number,
     createdAt: Date,
   ) {
@@ -24,8 +20,6 @@ export class Lesson extends Entity<string> {
     this._courseId = courseId;
     this._title = title;
     this._content = content;
-    this._videoUrl = videoUrl;
-    this._durationMinutes = durationMinutes;
     this._order = order;
     this._createdAt = createdAt;
   }
@@ -36,8 +30,6 @@ export class Lesson extends Entity<string> {
       props.courseId,
       props.title,
       props.content,
-      props.videoUrl,
-      props.durationMinutes,
       props.order,
       props.createdAt,
     );
@@ -46,9 +38,6 @@ export class Lesson extends Entity<string> {
   update(props: UpdateLessonProps): void {
     if (props.title !== undefined) this._title = props.title;
     if (props.content !== undefined) this._content = props.content;
-    if (props.videoUrl !== undefined) this._videoUrl = props.videoUrl;
-    if (props.durationMinutes !== undefined)
-      this._durationMinutes = props.durationMinutes;
     if (props.order !== undefined) this._order = props.order;
   }
 
@@ -60,12 +49,6 @@ export class Lesson extends Entity<string> {
   }
   get content(): string | null {
     return this._content;
-  }
-  get videoUrl(): string | null {
-    return this._videoUrl;
-  }
-  get durationMinutes(): number {
-    return this._durationMinutes;
   }
   get order(): number {
     return this._order;

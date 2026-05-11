@@ -1,14 +1,6 @@
 import { CourseEnrollment } from '../../../domain/aggregates/course-enrollment/course-enrollment.aggregate';
 import { EnrollmentStatus } from '../../../domain/aggregates/course-enrollment/course-enrollment.types';
 
-export interface LessonProgressResult {
-  id: string;
-  lessonId: string;
-  completedAt: Date | null;
-  watchedSeconds: number;
-  isCompleted: boolean;
-}
-
 export class EnrollmentResult {
   constructor(
     readonly id: string,
@@ -18,7 +10,6 @@ export class EnrollmentResult {
     readonly progress: number,
     readonly enrolledAt: Date,
     readonly completedAt: Date | null,
-    readonly lessonProgress: LessonProgressResult[],
   ) {}
 
   static fromAggregate(enrollment: CourseEnrollment): EnrollmentResult {
@@ -30,13 +21,6 @@ export class EnrollmentResult {
       enrollment.progress,
       enrollment.enrolledAt,
       enrollment.completedAt,
-      enrollment.lessonProgress.map((lp) => ({
-        id: lp.id,
-        lessonId: lp.lessonId,
-        completedAt: lp.completedAt,
-        watchedSeconds: lp.watchedSeconds,
-        isCompleted: lp.isCompleted,
-      })),
     );
   }
 }

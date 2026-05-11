@@ -23,7 +23,7 @@
 
 ```bash
 # Từ root của project
-docker-compose -f docker-compose.yaml up -d db-course rabbitmq consul consul-init
+npm run infra:up
 ```
 
 Chờ khoảng 10-15 giây để Consul khởi động và seed xong.
@@ -320,9 +320,7 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/lessons" \
   -d '{
     "title": "Bài 1 – Biển báo giao thông",
     "order": 1,
-    "content": "# Biển báo\nNội dung markdown...",
-    "videoUrl": "https://example.com/video-1.mp4",
-    "durationMinutes": 45
+    "content": "# Biển báo\nNội dung markdown..."
   }' | jq '.data | {totalLessons, lessons_count: (.lessons | length)}'
 ```
 
@@ -333,8 +331,7 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Bài 2 – Kỹ năng lái xe",
-    "order": 2,
-    "durationMinutes": 60
+    "order": 2
   }' | jq '.data.totalLessons'
 # Kết quả mong đợi: 2
 ```
@@ -474,8 +471,7 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
   "status": "ACTIVE",
   "progress": 0,
   "enrolledAt": "...",
-  "completedAt": null,
-  "lessonProgress": []
+  "completedAt": null
 }
 ```
 
@@ -583,7 +579,8 @@ curl -s "http://localhost:3004/enrollments/$ENROLLMENT_ID" | jq .data
   "studentId": "student-uuid-0002",
   "status": "ACTIVE",
   "progress": 0,
-  "lessonProgress": []
+  "enrolledAt": "...",
+  "completedAt": null
 }
 ```
 
@@ -611,8 +608,7 @@ echo "LESSON_2=$LESSON_2_ID"
 
 ```bash
 curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSON_1_ID/complete" \
-  -H "Content-Type: application/json" \
-  -d '{"watchedSeconds": 2700}' | jq '.data | {progress, status, lessonProgress}'
+  | jq '.data | {progress, status}'
 ```
 
 **Kết quả mong đợi (progress = 50% nếu có 2 bài):**
@@ -620,15 +616,7 @@ curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSO
 ```json
 {
   "progress": 50,
-  "status": "ACTIVE",
-  "lessonProgress": [
-    {
-      "lessonId": "...",
-      "completedAt": "...",
-      "watchedSeconds": 2700,
-      "isCompleted": true
-    }
-  ]
+  "status": "ACTIVE"
 }
 ```
 
@@ -636,8 +624,7 @@ curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSO
 
 ```bash
 curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSON_2_ID/complete" \
-  -H "Content-Type: application/json" \
-  -d '{"watchedSeconds": 3600}' | jq '.data | {progress, status, completedAt}'
+  | jq '.data | {progress, status, completedAt}'
 ```
 
 **Kết quả mong đợi (progress = 100%):**
@@ -650,27 +637,13 @@ curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSO
 }
 ```
 
-**Case: Hoàn thành bài học đã xong (expect 409):**
-
-```bash
-curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSON_1_ID/complete" \
-  -H "Content-Type: application/json" \
-  -d '{"watchedSeconds": 100}' | jq .
-```
-
-```json
-{
-  "success": false,
-  "code": "LESSON_ALREADY_COMPLETED"
-}
-```
+> **Lưu ý:** Không có per-lesson tracking — mỗi lần gọi `complete` tăng `progress += 100/totalLessons`. Không có `LESSON_ALREADY_COMPLETED` vì không track per-lesson state.
 
 **Case: Enrollment đã COMPLETED (expect 422):**
 
 ```bash
 curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSON_1_ID/complete" \
-  -H "Content-Type: application/json" \
-  -d '{}' | jq .
+  | jq .
 ```
 
 ```json
@@ -736,14 +709,13 @@ cd apps/course-service
 npm run db:studio
 ```
 
-Mở http://localhost:5555 để xem tất cả 7 bảng:
+Mở http://localhost:5555 để xem các bảng:
 - `courses`
 - `lessons`
 - `course_instructors`
 - `course_requirements`
 - `course_materials`
 - `course_enrollments`
-- `lesson_progress`
 
 ### Dùng psql trực tiếp
 
@@ -758,34 +730,21 @@ FROM courses
 ORDER BY "createdAt" DESC;
 
 -- Xem lessons của một course
-SELECT id, title, "order", "durationMinutes"
+SELECT id, title, "order", content
 FROM lessons
 WHERE "courseId" = '<course-uuid>'
 ORDER BY "order";
 
 -- Xem enrollments và tiến độ
 SELECT
-  e.id,
-  e."studentId",
-  e.status,
-  e.progress,
-  e."enrolledAt",
-  e."completedAt",
-  COUNT(lp.id) AS completed_lessons
-FROM course_enrollments e
-LEFT JOIN lesson_progress lp ON lp."enrollmentId" = e.id AND lp."completedAt" IS NOT NULL
-GROUP BY e.id
-ORDER BY e."enrolledAt" DESC;
-
--- Xem lesson progress của một enrollment
-SELECT
-  lp."lessonId",
-  l.title,
-  lp."completedAt",
-  lp."watchedSeconds"
-FROM lesson_progress lp
-JOIN lessons l ON l.id = lp."lessonId"
-WHERE lp."enrollmentId" = '<enrollment-uuid>';
+  id,
+  "studentId",
+  status,
+  progress,
+  "enrolledAt",
+  "completedAt"
+FROM course_enrollments
+ORDER BY "enrolledAt" DESC;
 
 -- Đếm số enrollment theo course (kiểm tra capacity)
 SELECT "courseId", COUNT(*) AS enrolled_count
@@ -807,7 +766,7 @@ PrismaClientConstructorValidationError: Invalid value undefined for datasource "
 → Consul chưa chạy hoặc chưa seed. Chạy:
 
 ```bash
-docker-compose -f docker-compose.yaml up -d consul consul-init
+npm run infra:up
 npm run consul:seed:local
 ```
 
@@ -824,7 +783,7 @@ Error: Can't reach database server at localhost:5435
 → Chạy:
 
 ```bash
-docker-compose -f docker-compose.yaml up -d db-course
+npm run infra:up
 ```
 
 ---
@@ -916,14 +875,12 @@ L2=$(curl -s "$BASE/courses/$COURSE_ID" | jq -r '.data.lessons[1].id')
 
 # 6. Complete lesson 1
 PROGRESS=$(curl -s -X POST "$BASE/enrollments/$ENROLLMENT_ID/lessons/$L1/complete" \
-  -H "Content-Type: application/json" \
-  -d '{"watchedSeconds":1800}' | jq '.data.progress')
+  | jq '.data.progress')
 echo "✓ Lesson 1 completed. Progress: $PROGRESS%"  # → 50
 
 # 7. Complete lesson 2 → enrollment COMPLETED
 FINAL=$(curl -s -X POST "$BASE/enrollments/$ENROLLMENT_ID/lessons/$L2/complete" \
-  -H "Content-Type: application/json" \
-  -d '{"watchedSeconds":2700}' | jq '{progress: .data.progress, status: .data.status}')
+  | jq '{progress: .data.progress, status: .data.status}')
 echo "✓ Lesson 2 completed: $FINAL"  # → {progress:100, status:"COMPLETED"}
 
 echo ""

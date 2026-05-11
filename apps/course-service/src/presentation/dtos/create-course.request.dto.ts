@@ -59,11 +59,6 @@ export class CreateCourseRequestDto {
   @IsString()
   description?: string | null;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  thumbnailUrl?: string | null;
-
   @ApiPropertyOptional({ example: '3 tháng' })
   @IsOptional()
   @IsString()

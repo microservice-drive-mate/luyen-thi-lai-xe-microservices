@@ -18,7 +18,6 @@ export interface CreateCourseProps {
   title: string;
   description?: string | null;
   licenseCategory: LicenseCategory;
-  thumbnailUrl?: string | null;
   duration?: string | null;
   tuitionFee?: number;
   capacity?: number | null;
@@ -32,7 +31,6 @@ export interface ReconstituteCourseProps {
   title: string;
   description: string | null;
   licenseCategory: LicenseCategory;
-  thumbnailUrl: string | null;
   totalLessons: number;
   duration: string | null;
   tuitionFee: number;
@@ -50,7 +48,6 @@ export interface ReconstituteCourseProps {
 export interface UpdateCourseProps {
   title?: string;
   description?: string | null;
-  thumbnailUrl?: string | null;
   duration?: string | null;
   tuitionFee?: number;
   capacity?: number | null;
@@ -59,8 +56,6 @@ export interface UpdateCourseProps {
 export interface CreateLessonProps {
   title: string;
   content?: string | null;
-  videoUrl?: string | null;
-  durationMinutes?: number;
   order: number;
 }
 
@@ -69,8 +64,6 @@ export interface ReconstituteLessonProps {
   courseId: string;
   title: string;
   content: string | null;
-  videoUrl: string | null;
-  durationMinutes: number;
   order: number;
   createdAt: Date;
 }
@@ -78,8 +71,6 @@ export interface ReconstituteLessonProps {
 export interface UpdateLessonProps {
   title?: string;
   content?: string | null;
-  videoUrl?: string | null;
-  durationMinutes?: number;
   order?: number;
 }
 

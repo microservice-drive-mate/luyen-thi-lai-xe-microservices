@@ -10,8 +10,6 @@ export interface RawLessonRow {
   courseId: string;
   title: string;
   content: string | null;
-  videoUrl: string | null;
-  durationMinutes: number;
   order: number;
   createdAt: Date;
 }
@@ -44,7 +42,6 @@ export interface RawCourseRow {
   title: string;
   description: string | null;
   licenseCategory: string;
-  thumbnailUrl: string | null;
   totalLessons: number;
   duration: string | null;
   tuitionFee: Decimal;
@@ -66,7 +63,6 @@ export const CourseMapper = {
       title: raw.title,
       description: raw.description,
       licenseCategory: raw.licenseCategory as LicenseCategory,
-      thumbnailUrl: raw.thumbnailUrl,
       totalLessons: raw.totalLessons,
       duration: raw.duration,
       tuitionFee: Number(raw.tuitionFee),
@@ -80,8 +76,6 @@ export const CourseMapper = {
         courseId: l.courseId,
         title: l.title,
         content: l.content,
-        videoUrl: l.videoUrl,
-        durationMinutes: l.durationMinutes,
         order: l.order,
         createdAt: l.createdAt,
       })),

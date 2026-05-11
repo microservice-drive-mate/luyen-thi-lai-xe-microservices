@@ -22,7 +22,6 @@ export class Course extends AggregateRoot<string> {
   private _title: string;
   private _description: string | null;
   private _licenseCategory: LicenseCategory;
-  private _thumbnailUrl: string | null;
   private _totalLessons: number;
   private _duration: string | null;
   private _tuitionFee: number;
@@ -41,7 +40,6 @@ export class Course extends AggregateRoot<string> {
     title: string,
     description: string | null,
     licenseCategory: LicenseCategory,
-    thumbnailUrl: string | null,
     totalLessons: number,
     duration: string | null,
     tuitionFee: number,
@@ -59,7 +57,6 @@ export class Course extends AggregateRoot<string> {
     this._title = title;
     this._description = description;
     this._licenseCategory = licenseCategory;
-    this._thumbnailUrl = thumbnailUrl;
     this._totalLessons = totalLessons;
     this._duration = duration;
     this._tuitionFee = tuitionFee;
@@ -91,7 +88,6 @@ export class Course extends AggregateRoot<string> {
       props.title,
       props.description ?? null,
       props.licenseCategory,
-      props.thumbnailUrl ?? null,
       0,
       props.duration ?? null,
       props.tuitionFee ?? 0,
@@ -124,7 +120,6 @@ export class Course extends AggregateRoot<string> {
       props.title,
       props.description,
       props.licenseCategory,
-      props.thumbnailUrl,
       props.totalLessons,
       props.duration,
       props.tuitionFee,
@@ -143,8 +138,6 @@ export class Course extends AggregateRoot<string> {
   update(props: UpdateCourseProps): void {
     if (props.title !== undefined) this._title = props.title;
     if (props.description !== undefined) this._description = props.description;
-    if (props.thumbnailUrl !== undefined)
-      this._thumbnailUrl = props.thumbnailUrl;
     if (props.duration !== undefined) this._duration = props.duration;
     if (props.tuitionFee !== undefined) this._tuitionFee = props.tuitionFee;
     if (props.capacity !== undefined) this._capacity = props.capacity;
@@ -170,8 +163,6 @@ export class Course extends AggregateRoot<string> {
       this._id,
       props.title,
       props.content ?? null,
-      props.videoUrl ?? null,
-      props.durationMinutes ?? 0,
       props.order,
       new Date(),
     );
@@ -251,9 +242,6 @@ export class Course extends AggregateRoot<string> {
   }
   get licenseCategory(): LicenseCategory {
     return this._licenseCategory;
-  }
-  get thumbnailUrl(): string | null {
-    return this._thumbnailUrl;
   }
   get totalLessons(): number {
     return this._totalLessons;

@@ -17,7 +17,6 @@ export class PrismaCourseEnrollmentRepository extends CourseEnrollmentRepository
   async findById(id: string): Promise<CourseEnrollment | null> {
     const raw = await this.prisma.courseEnrollment.findUnique({
       where: { id },
-      include: { lessonProgress: true },
     });
     return raw ? CourseEnrollmentMapper.toDomain(raw) : null;
   }
@@ -28,7 +27,6 @@ export class PrismaCourseEnrollmentRepository extends CourseEnrollmentRepository
   ): Promise<CourseEnrollment | null> {
     const raw = await this.prisma.courseEnrollment.findUnique({
       where: { courseId_studentId: { courseId, studentId } },
-      include: { lessonProgress: true },
     });
     return raw ? CourseEnrollmentMapper.toDomain(raw) : null;
   }
@@ -49,7 +47,6 @@ export class PrismaCourseEnrollmentRepository extends CourseEnrollmentRepository
         skip,
         take: filter.size,
         orderBy: { enrolledAt: 'desc' },
-        include: { lessonProgress: true },
       }),
       this.prisma.courseEnrollment.count({ where }),
     ]);
@@ -61,46 +58,22 @@ export class PrismaCourseEnrollmentRepository extends CourseEnrollmentRepository
   }
 
   async save(enrollment: CourseEnrollment): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.courseEnrollment.upsert({
-        where: { id: enrollment.id },
-        create: {
-          id: enrollment.id,
-          courseId: enrollment.courseId,
-          studentId: enrollment.studentId,
-          status: enrollment.status,
-          progress: enrollment.progress,
-          enrolledAt: enrollment.enrolledAt,
-          completedAt: enrollment.completedAt,
-        },
-        update: {
-          status: enrollment.status,
-          progress: enrollment.progress,
-          completedAt: enrollment.completedAt,
-        },
-      });
-
-      for (const lp of enrollment.lessonProgress) {
-        await tx.lessonProgress.upsert({
-          where: {
-            enrollmentId_lessonId: {
-              enrollmentId: lp.enrollmentId,
-              lessonId: lp.lessonId,
-            },
-          },
-          create: {
-            id: lp.id,
-            enrollmentId: lp.enrollmentId,
-            lessonId: lp.lessonId,
-            completedAt: lp.completedAt,
-            watchedSeconds: lp.watchedSeconds,
-          },
-          update: {
-            completedAt: lp.completedAt,
-            watchedSeconds: lp.watchedSeconds,
-          },
-        });
-      }
+    await this.prisma.courseEnrollment.upsert({
+      where: { id: enrollment.id },
+      create: {
+        id: enrollment.id,
+        courseId: enrollment.courseId,
+        studentId: enrollment.studentId,
+        status: enrollment.status,
+        progress: enrollment.progress,
+        enrolledAt: enrollment.enrolledAt,
+        completedAt: enrollment.completedAt,
+      },
+      update: {
+        status: enrollment.status,
+        progress: enrollment.progress,
+        completedAt: enrollment.completedAt,
+      },
     });
   }
 }

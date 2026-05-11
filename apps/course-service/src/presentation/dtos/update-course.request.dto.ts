@@ -20,11 +20,6 @@ export class UpdateCourseRequestDto {
   @IsString()
   description?: string | null;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  thumbnailUrl?: string | null;
-
   @ApiPropertyOptional({ example: '4 tháng' })
   @IsOptional()
   @IsString()

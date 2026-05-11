@@ -1,0 +1,195 @@
+version: '3.8'
+
+# Chỉ chứa infrastructure — dùng khi chạy services local (hybrid dev mode)
+# Khởi động: docker compose -f docker-compose.infra.yml up -d
+
+services:
+  # ── Databases ──────────────────────────────────────────────
+  db-identity:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: identity_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_identity_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d identity_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-user:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_user_data:/var/lib/postgresql/data
+
+  db-exam:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: exam_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5434:5432"
+    volumes:
+      - db_exam_data:/var/lib/postgresql/data
+
+  db-course:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: course_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5435:5432"
+    volumes:
+      - db_course_data:/var/lib/postgresql/data
+
+  db-question:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: question_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5436:5432"
+    volumes:
+      - db_question_data:/var/lib/postgresql/data
+
+  db-notification:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5437:5432"
+    volumes:
+      - db_notification_data:/var/lib/postgresql/data
+
+  db-analytics:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: analytics_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5438:5432"
+    volumes:
+      - db_analytics_data:/var/lib/postgresql/data
+
+  db-simulation:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: simulation_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5439:5432"
+    volumes:
+      - db_simulation_data:/var/lib/postgresql/data
+
+  # ── Message Broker ─────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  # ── Config Server ──────────────────────────────────────────
+  consul:
+    image: hashicorp/consul:1.19
+    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
+    ports:
+      - "8500:8500"
+      - "8600:8600"
+      - "8600:8600/udp"
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    volumes:
+      - consul_data:/consul/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8500/v1/status/leader"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  consul-init:
+    image: curlimages/curl:latest
+    volumes:
+      - ./docker/consul/init.sh:/consul/init.sh:ro
+    environment:
+      CONSUL_URL: http://consul:8500
+    depends_on:
+      consul:
+        condition: service_healthy
+    command: sh /consul/init.sh
+    restart: "no"
+
+  # ── Identity Provider ──────────────────────────────────────
+  db-keycloak:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: keycloak_db
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    volumes:
+      - db_keycloak_data:/var/lib/postgresql/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db-keycloak:5432/keycloak_db
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db-keycloak
+
+  # ── API Gateway (trỏ vào localhost của máy host) ───────────
+  kong-dev:
+    image: kong:latest
+    user: "root"
+    # host.docker.internal cho phép Kong trong Docker reach services chạy local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./kong/kong.dev.yaml:/usr/local/kong/declarative/kong.yaml
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yaml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+
+volumes:
+  db_identity_data:
+  db_user_data:
+  db_exam_data:
+  db_course_data:
+  db_question_data:
+  db_notification_data:
+  db_analytics_data:
+  db_simulation_data:
+  consul_data:
+  db_keycloak_data:

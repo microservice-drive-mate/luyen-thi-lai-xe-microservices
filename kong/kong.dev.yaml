@@ -1,0 +1,101 @@
+_format_version: "3.0"
+_transform: true
+
+# Kong config cho hybrid dev mode
+# Services chạy local, Kong trong Docker dùng host.docker.internal để reach chúng
+
+services:
+  - name: identity-service
+    url: http://host.docker.internal:3001
+    routes:
+      - name: identity-route
+        paths:
+          - /auth
+      - name: identity-swagger-route
+        paths:
+          - /identity-service
+        strip_path: true
+
+  - name: user-service
+    url: http://host.docker.internal:3002
+    routes:
+      - name: user-route
+        paths:
+          - /users
+      - name: user-swagger-route
+        paths:
+          - /user-service
+        strip_path: true
+
+  - name: exam-service
+    url: http://host.docker.internal:3003
+    routes:
+      - name: exam-route
+        paths:
+          - /exams
+      - name: exam-swagger-route
+        paths:
+          - /exam-service
+        strip_path: true
+
+  - name: course-service
+    url: http://host.docker.internal:3004
+    routes:
+      - name: course-route
+        paths:
+          - /courses
+      - name: course-swagger-route
+        paths:
+          - /course-service
+        strip_path: true
+
+  - name: question-service
+    url: http://host.docker.internal:3005
+    routes:
+      - name: question-route
+        paths:
+          - /questions
+      - name: question-swagger-route
+        paths:
+          - /question-service
+        strip_path: true
+
+  - name: notification-service
+    url: http://host.docker.internal:3006
+    routes:
+      - name: notification-route
+        paths:
+          - /notifications
+      - name: notification-swagger-route
+        paths:
+          - /notification-service
+        strip_path: true
+
+  - name: analytics-service
+    url: http://host.docker.internal:3007
+    routes:
+      - name: analytics-route
+        paths:
+          - /analytics
+      - name: analytics-swagger-route
+        paths:
+          - /analytics-service
+        strip_path: true
+
+  - name: simulation-service
+    url: http://host.docker.internal:3008
+    routes:
+      - name: simulation-route
+        paths:
+          - /simulations
+      - name: simulation-swagger-route
+        paths:
+          - /simulation-service
+        strip_path: true
+
+plugins:
+  - name: rate-limiting
+    config:
+      second: 100
+      hour: 10000
+      policy: local

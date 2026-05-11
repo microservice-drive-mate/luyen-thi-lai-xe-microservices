@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   Get,
   Headers,
@@ -16,7 +15,6 @@ import { GetEnrollmentQuery } from '../../application/use-cases/get-enrollment/g
 import { GetEnrollmentUseCase } from '../../application/use-cases/get-enrollment/get-enrollment.use-case';
 import { ListStudentEnrollmentsQuery } from '../../application/use-cases/list-student-enrollments/list-student-enrollments.query';
 import { ListStudentEnrollmentsUseCase } from '../../application/use-cases/list-student-enrollments/list-student-enrollments.use-case';
-import { CompleteLessonRequestDto } from '../dtos/complete-lesson.request.dto';
 import {
   EnrollmentResponseDto,
   ListEnrollmentsResponseDto,
@@ -69,10 +67,9 @@ export class EnrollmentController {
   async completeLesson(
     @Param('id') enrollmentId: string,
     @Param('lessonId') lessonId: string,
-    @Body() dto: CompleteLessonRequestDto,
   ): Promise<EnrollmentResponseDto> {
     const result = await this.completeLessonUseCase.execute(
-      new CompleteLessonCommand(enrollmentId, lessonId, dto.watchedSeconds),
+      new CompleteLessonCommand(enrollmentId, lessonId),
     );
     return EnrollmentResponseDto.fromResult(result);
   }

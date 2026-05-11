@@ -16,7 +16,6 @@ export class CreateCourseUseCase
       title: command.title,
       description: command.description,
       licenseCategory: command.licenseCategory,
-      thumbnailUrl: command.thumbnailUrl,
       duration: command.duration,
       tuitionFee: command.tuitionFee,
       capacity: command.capacity,

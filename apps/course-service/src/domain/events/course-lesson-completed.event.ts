@@ -5,7 +5,6 @@ export class CourseLessonCompletedEvent extends DomainEvent {
     readonly lessonId: string,
     readonly studentId: string,
     readonly courseId: string,
-    readonly watchedSeconds: number,
   ) {
     super();
   }

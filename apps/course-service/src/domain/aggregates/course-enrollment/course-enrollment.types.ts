@@ -17,13 +17,4 @@ export interface ReconstituteEnrollmentProps {
   progress: number;
   enrolledAt: Date;
   completedAt: Date | null;
-  lessonProgress: ReconstituteLessonProgressProps[];
-}
-
-export interface ReconstituteLessonProgressProps {
-  id: string;
-  enrollmentId: string;
-  lessonId: string;
-  completedAt: Date | null;
-  watchedSeconds: number;
 }

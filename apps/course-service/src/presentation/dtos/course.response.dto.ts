@@ -16,8 +16,6 @@ export class LessonResponseDto {
   @ApiProperty() courseId: string;
   @ApiProperty() title: string;
   @ApiPropertyOptional() content: string | null;
-  @ApiPropertyOptional() videoUrl: string | null;
-  @ApiProperty() durationMinutes: number;
   @ApiProperty() order: number;
   @ApiProperty() createdAt: Date;
 
@@ -62,7 +60,6 @@ export class CourseResponseDto {
   @ApiProperty() title: string;
   @ApiPropertyOptional() description: string | null;
   @ApiProperty({ enum: LicenseCategory }) licenseCategory: LicenseCategory;
-  @ApiPropertyOptional() thumbnailUrl: string | null;
   @ApiProperty() totalLessons: number;
   @ApiPropertyOptional() duration: string | null;
   @ApiProperty() tuitionFee: number;
@@ -84,7 +81,6 @@ export class CourseResponseDto {
     dto.title = result.title;
     dto.description = result.description;
     dto.licenseCategory = result.licenseCategory;
-    dto.thumbnailUrl = result.thumbnailUrl;
     dto.totalLessons = result.totalLessons;
     dto.duration = result.duration;
     dto.tuitionFee = result.tuitionFee;

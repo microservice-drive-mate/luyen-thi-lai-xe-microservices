@@ -74,7 +74,6 @@ export class CourseController {
         dto.title,
         dto.licenseCategory,
         dto.description,
-        dto.thumbnailUrl,
         dto.duration,
         dto.tuitionFee,
         dto.capacity,
@@ -119,7 +118,6 @@ export class CourseController {
         id,
         dto.title,
         dto.description,
-        dto.thumbnailUrl,
         dto.duration,
         dto.tuitionFee,
         dto.capacity,
@@ -146,14 +144,7 @@ export class CourseController {
     @Body() dto: AddLessonRequestDto,
   ): Promise<CourseResponseDto> {
     const result = await this.addLessonUseCase.execute(
-      new AddLessonCommand(
-        courseId,
-        dto.title,
-        dto.order,
-        dto.content,
-        dto.videoUrl,
-        dto.durationMinutes,
-      ),
+      new AddLessonCommand(courseId, dto.title, dto.order, dto.content),
     );
     return CourseResponseDto.fromResult(result);
   }

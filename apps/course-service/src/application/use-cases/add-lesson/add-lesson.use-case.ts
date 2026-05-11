@@ -18,8 +18,6 @@ export class AddLessonUseCase
     course.addLesson({
       title: command.title,
       content: command.content,
-      videoUrl: command.videoUrl,
-      durationMinutes: command.durationMinutes,
       order: command.order,
     });
 

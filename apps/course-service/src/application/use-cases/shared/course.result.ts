@@ -9,8 +9,6 @@ export interface LessonResult {
   courseId: string;
   title: string;
   content: string | null;
-  videoUrl: string | null;
-  durationMinutes: number;
   order: number;
   createdAt: Date;
 }
@@ -38,7 +36,6 @@ export class CourseResult {
     readonly title: string,
     readonly description: string | null,
     readonly licenseCategory: LicenseCategory,
-    readonly thumbnailUrl: string | null,
     readonly totalLessons: number,
     readonly duration: string | null,
     readonly tuitionFee: number,
@@ -59,7 +56,6 @@ export class CourseResult {
       course.title,
       course.description,
       course.licenseCategory,
-      course.thumbnailUrl,
       course.totalLessons,
       course.duration,
       course.tuitionFee,
@@ -73,8 +69,6 @@ export class CourseResult {
         courseId: l.courseId,
         title: l.title,
         content: l.content,
-        videoUrl: l.videoUrl,
-        durationMinutes: l.durationMinutes,
         order: l.order,
         createdAt: l.createdAt,
       })),
