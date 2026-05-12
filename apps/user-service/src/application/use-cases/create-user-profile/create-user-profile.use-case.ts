@@ -41,6 +41,7 @@ export class CreateUserProfileUseCase
       gender: command.gender,
       address: command.address,
       avatarUrl: command.avatarUrl,
+      mediaFileId: command.mediaFileId,
       enrolledAt: command.enrolledAt,
     });
 

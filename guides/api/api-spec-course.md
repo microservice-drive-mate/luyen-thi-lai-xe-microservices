@@ -5,6 +5,8 @@
 **Port local:** `3004`
 **Version:** 1.0.0
 
+> **Upload tài liệu khóa học:** Xem [frontend-integration-guide.md](./frontend-integration-guide.md) để biết flow đầy đủ (media-service → course-service).
+
 ---
 
 ## Tổng quan xác thực

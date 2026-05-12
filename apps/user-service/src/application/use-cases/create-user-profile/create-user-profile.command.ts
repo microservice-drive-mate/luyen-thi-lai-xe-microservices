@@ -17,5 +17,6 @@ export class CreateUserProfileCommand {
     readonly avatarUrl?: string,
     readonly licenseTier?: LicenseTier,
     readonly enrolledAt?: Date,
+    readonly mediaFileId?: string,
   ) {}
 }

@@ -63,6 +63,9 @@ export class UserProfileResponseDto {
   @ApiPropertyOptional()
   avatarUrl!: string | null;
 
+  @ApiPropertyOptional()
+  mediaFileId!: string | null;
+
   @ApiPropertyOptional({ enum: Gender })
   gender!: Gender | null;
 
@@ -89,6 +92,7 @@ export class UserProfileResponseDto {
     dto.phoneNumber = result.phoneNumber;
     dto.dateOfBirth = result.dateOfBirth;
     dto.avatarUrl = result.avatarUrl;
+    dto.mediaFileId = result.mediaFileId;
     dto.gender = result.gender;
     dto.address = result.address;
     dto.role = result.role;

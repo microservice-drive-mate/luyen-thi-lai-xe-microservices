@@ -169,7 +169,13 @@ export class CourseController {
     @Body() dto: AddCourseMaterialRequestDto,
   ): Promise<CourseResponseDto> {
     const result = await this.addCourseMaterialUseCase.execute(
-      new AddCourseMaterialCommand(courseId, dto.title, dto.fileUrl, dto.type),
+      new AddCourseMaterialCommand(
+        courseId,
+        dto.title,
+        dto.fileUrl,
+        dto.mediaFileId,
+        dto.type,
+      ),
     );
     return CourseResponseDto.fromResult(result);
   }

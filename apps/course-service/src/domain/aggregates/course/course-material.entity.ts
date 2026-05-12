@@ -5,6 +5,7 @@ export class CourseMaterial extends Entity<string> {
   private _courseId: string;
   private _title: string;
   private _fileUrl: string | null;
+  private _mediaFileId: string | null;
   private _type: string | null;
   private _createdAt: Date;
 
@@ -13,6 +14,7 @@ export class CourseMaterial extends Entity<string> {
     courseId: string,
     title: string,
     fileUrl: string | null,
+    mediaFileId: string | null,
     type: string | null,
     createdAt: Date,
   ) {
@@ -20,6 +22,7 @@ export class CourseMaterial extends Entity<string> {
     this._courseId = courseId;
     this._title = title;
     this._fileUrl = fileUrl;
+    this._mediaFileId = mediaFileId;
     this._type = type;
     this._createdAt = createdAt;
   }
@@ -30,6 +33,7 @@ export class CourseMaterial extends Entity<string> {
       props.courseId,
       props.title,
       props.fileUrl,
+      props.mediaFileId,
       props.type,
       props.createdAt,
     );
@@ -43,6 +47,9 @@ export class CourseMaterial extends Entity<string> {
   }
   get fileUrl(): string | null {
     return this._fileUrl;
+  }
+  get mediaFileId(): string | null {
+    return this._mediaFileId;
   }
   get type(): string | null {
     return this._type;

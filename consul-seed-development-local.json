@@ -7,57 +7,57 @@
     },
     "identity-service": {
       "port": "3001",
-      "database.url": "postgresql://user:password@localhost:5432/identity_db",
+      "database.url": "postgresql://user:password@127.0.0.1:5432/identity_db",
       "database.pool_size": "10",
       "database.connection_timeout": "5000",
-      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.authServerUrl": "http://127.0.0.1:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
       "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
-      "rabbitmq.url": "amqp://localhost:5672",
+      "rabbitmq.url": "amqp://127.0.0.1:5672",
       "rabbitmq.username": "guest",
       "rabbitmq.password": "guest",
       "rabbitmq.vhost": "/"
     },
     "user-service": {
       "port": "3002",
-      "database.url": "postgresql://user:password@localhost:5433/user_db",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@127.0.0.1:5433/user_db",
+      "rabbitmq.url": "amqp://127.0.0.1:5672"
     },
     "exam-service": {
       "port": "3003",
-      "database.url": "postgresql://user:password@localhost:5434/exam_db",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@127.0.0.1:5434/exam_db",
+      "rabbitmq.url": "amqp://127.0.0.1:5672"
     },
     "question-service": {
       "port": "3005",
-      "database.url": "postgresql://user:password@localhost:5436/question_db",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@127.0.0.1:5436/question_db",
+      "rabbitmq.url": "amqp://127.0.0.1:5672"
     },
     "course-service": {
       "port": "3004",
-      "database.url": "postgresql://user:password@localhost:5435/course_db",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@127.0.0.1:5435/course_db",
+      "rabbitmq.url": "amqp://127.0.0.1:5672"
     },
     "notification-service": {
       "port": "3006",
-      "database.url": "postgresql://user:password@localhost:5437/notification_db",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@127.0.0.1:5437/notification_db",
+      "rabbitmq.url": "amqp://127.0.0.1:5672"
     },
     "analytics-service": {
       "port": "3007",
-      "database.url": "postgresql://user:password@localhost:5438/analytics_db",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@127.0.0.1:5438/analytics_db",
+      "rabbitmq.url": "amqp://127.0.0.1:5672"
     },
     "simulation-service": {
       "port": "3008",
-      "database.url": "postgresql://user:password@localhost:5439/simulation_db",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@127.0.0.1:5439/simulation_db",
+      "rabbitmq.url": "amqp://127.0.0.1:5672"
     },
     "media-service": {
       "port": "3010",
-      "database.url": "postgresql://user:password@localhost:5440/media_db",
-      "rabbitmq.url": "amqp://localhost:5672",
+      "database.url": "postgresql://user:password@127.0.0.1:5440/media_db",
+      "rabbitmq.url": "amqp://127.0.0.1:5672",
       "storage.accountName": "mediasvdev2026",
       "storage.accountKey": "YOUR_AZURE_STORAGE_ACCOUNT_KEY",
       "storage.containerName": "media",

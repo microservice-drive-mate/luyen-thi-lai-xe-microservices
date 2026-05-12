@@ -57,6 +57,14 @@ export class PrismaUserProfileRepository extends UserProfileRepository {
     return raw ? UserProfileMapper.toDomain(raw) : null;
   }
 
+  async findByMediaFileId(mediaFileId: string): Promise<UserProfile | null> {
+    const raw = await this.prisma.userProfile.findFirst({
+      where: { mediaFileId },
+      include: { studentDetail: true },
+    });
+    return raw ? UserProfileMapper.toDomain(raw) : null;
+  }
+
   async existsById(id: string): Promise<boolean> {
     const count = await this.prisma.userProfile.count({ where: { id } });
     return count > 0;
@@ -80,6 +88,7 @@ export class PrismaUserProfileRepository extends UserProfileRepository {
           phoneNumber: profile.phoneNumber,
           dateOfBirth: profile.dateOfBirth,
           avatarUrl: profile.avatarUrl,
+          mediaFileId: profile.mediaFileId,
           gender: toGender(profile.gender),
           address: profile.address,
           role: toRole(profile.role),
@@ -91,6 +100,7 @@ export class PrismaUserProfileRepository extends UserProfileRepository {
           phoneNumber: profile.phoneNumber,
           dateOfBirth: profile.dateOfBirth,
           avatarUrl: profile.avatarUrl,
+          mediaFileId: profile.mediaFileId,
           gender: toGender(profile.gender),
           address: profile.address,
           role: toRole(profile.role),

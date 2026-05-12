@@ -12,6 +12,7 @@ export class GetUserProfileResult {
     readonly phoneNumber: string | null,
     readonly dateOfBirth: Date | null,
     readonly avatarUrl: string | null,
+    readonly mediaFileId: string | null,
     readonly gender: Gender | null,
     readonly address: string | null,
     readonly role: UserRole,

@@ -24,6 +24,7 @@ export class GetUserProfileUseCase
       profile.phoneNumber,
       profile.dateOfBirth,
       profile.avatarUrl,
+      profile.mediaFileId,
       profile.gender,
       profile.address,
       profile.role,

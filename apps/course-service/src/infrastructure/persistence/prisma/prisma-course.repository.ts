@@ -158,6 +158,7 @@ export class PrismaCourseRepository extends CourseRepository {
             courseId: m.courseId,
             title: m.title,
             fileUrl: m.fileUrl,
+            mediaFileId: m.mediaFileId,
             type: m.type,
             createdAt: m.createdAt,
           })),

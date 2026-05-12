@@ -5,6 +5,7 @@ import { FileDeletedEvent } from '../../events/file-deleted.event';
 import { FileUploadedEvent } from '../../events/file-uploaded.event';
 import {
   CreateFileObjectProps,
+  FileStatus,
   ReconstituteFileObjectProps,
 } from './file-object.types';
 
@@ -16,6 +17,7 @@ export class FileObject extends AggregateRoot<string> {
   private _bucketName: string;
   private _uploadedById: string;
   private _isPublic: boolean;
+  private _status: FileStatus;
   private _createdAt: Date;
 
   private constructor(
@@ -27,6 +29,7 @@ export class FileObject extends AggregateRoot<string> {
     bucketName: string,
     uploadedById: string,
     isPublic: boolean,
+    status: FileStatus,
     createdAt: Date,
   ) {
     super(id);
@@ -37,6 +40,7 @@ export class FileObject extends AggregateRoot<string> {
     this._bucketName = bucketName;
     this._uploadedById = uploadedById;
     this._isPublic = isPublic;
+    this._status = status;
     this._createdAt = createdAt;
   }
 
@@ -53,19 +57,22 @@ export class FileObject extends AggregateRoot<string> {
       props.bucketName,
       props.uploadedById,
       props.isPublic ?? false,
+      props.status ?? FileStatus.LINKED,
       new Date(),
     );
 
-    fileObject.addDomainEvent(
-      new FileUploadedEvent(
-        props.id,
-        props.storageKey,
-        props.originalName,
-        mimeType.value,
-        fileSize.value,
-        props.uploadedById,
-      ),
-    );
+    if (props.status !== FileStatus.UNLINKED) {
+      fileObject.addDomainEvent(
+        new FileUploadedEvent(
+          props.id,
+          props.storageKey,
+          props.originalName,
+          mimeType.value,
+          fileSize.value,
+          props.uploadedById,
+        ),
+      );
+    }
 
     return fileObject;
   }
@@ -80,6 +87,7 @@ export class FileObject extends AggregateRoot<string> {
       props.bucketName,
       props.uploadedById,
       props.isPublic,
+      props.status,
       props.createdAt,
     );
   }
@@ -88,6 +96,10 @@ export class FileObject extends AggregateRoot<string> {
     this.addDomainEvent(
       new FileDeletedEvent(this.id, this._storageKey, deletedById),
     );
+  }
+
+  link(): void {
+    this._status = FileStatus.LINKED;
   }
 
   get storageKey(): string {
@@ -110,6 +122,9 @@ export class FileObject extends AggregateRoot<string> {
   }
   get isPublic(): boolean {
     return this._isPublic;
+  }
+  get status(): FileStatus {
+    return this._status;
   }
   get createdAt(): Date {
     return this._createdAt;

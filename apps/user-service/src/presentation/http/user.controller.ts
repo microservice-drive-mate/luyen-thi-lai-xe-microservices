@@ -68,6 +68,7 @@ export class UserController {
         dto.avatarUrl,
         dto.licenseTier,
         dto.enrolledAt,
+        dto.mediaFileId,
       ),
     );
     return CreateUserProfileResponseDto.fromResult(result);

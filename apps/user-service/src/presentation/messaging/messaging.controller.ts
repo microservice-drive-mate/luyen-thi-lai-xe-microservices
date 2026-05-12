@@ -4,7 +4,10 @@ import { CreateUserProfileCommand } from '../../application/use-cases/create-use
 import { CreateUserProfileUseCase } from '../../application/use-cases/create-user-profile/create-user-profile.use-case';
 import { SyncUserRoleCommand } from '../../application/use-cases/sync-user-role/sync-user-role.command';
 import { SyncUserRoleUseCase } from '../../application/use-cases/sync-user-role/sync-user-role.use-case';
+import { UpdateUserProfileCommand } from '../../application/use-cases/update-user-profile/update-user-profile.command';
+import { UpdateUserProfileUseCase } from '../../application/use-cases/update-user-profile/update-user-profile.use-case';
 import { UserRole } from '../../domain/aggregates/user-profile/user-profile.types';
+import { UserProfileRepository } from '../../domain/repositories/user-profile.repository';
 
 interface IdentityUserCreatedPayload {
   userId: string;
@@ -18,6 +21,12 @@ interface IdentityUserRoleChangedPayload {
   newRole: UserRole;
 }
 
+interface MediaFileDeletedPayload {
+  fileId: string;
+  storageKey: string;
+  deletedById: string;
+}
+
 @Controller()
 export class MessagingController {
   private readonly logger = new Logger(MessagingController.name);
@@ -25,6 +34,8 @@ export class MessagingController {
   constructor(
     private readonly createUserProfileUseCase: CreateUserProfileUseCase,
     private readonly syncUserRoleUseCase: SyncUserRoleUseCase,
+    private readonly updateUserProfileUseCase: UpdateUserProfileUseCase,
+    private readonly userProfileRepository: UserProfileRepository,
   ) {}
 
   @EventPattern('identity.user.created')
@@ -64,6 +75,33 @@ export class MessagingController {
     } catch (error) {
       this.logger.error(
         `Failed to handle identity.user.role-changed: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  @EventPattern('media.file.deleted')
+  async handleMediaFileDeleted(
+    @Payload() payload: MediaFileDeletedPayload,
+  ): Promise<void> {
+    this.logger.log(`Received media.file.deleted for fileId=${payload.fileId}`);
+    try {
+      const profile = await this.userProfileRepository.findByMediaFileId(
+        payload.fileId,
+      );
+      if (!profile) return;
+
+      await this.updateUserProfileUseCase.execute(
+        new UpdateUserProfileCommand(profile.id, {
+          avatarUrl: null,
+          mediaFileId: null,
+        }),
+      );
+      this.logger.log(
+        `Cleared avatarUrl for userId=${profile.id} after file deletion`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to handle media.file.deleted: ${(error as Error).message}`,
       );
     }
   }

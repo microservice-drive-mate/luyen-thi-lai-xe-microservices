@@ -12,6 +12,7 @@ import { UpdateUserProfileUseCase } from './application/use-cases/update-user-pr
 import { UserProfileRepository } from './domain/repositories/user-profile.repository';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 import {
+  MEDIA_SERVICE_CLIENT,
   RABBITMQ_CLIENT,
   RabbitMqEventPublisher,
 } from './infrastructure/messaging/rabbitmq-event-publisher.service';
@@ -31,9 +32,23 @@ import { MessagingController } from './presentation/messaging/messaging.controll
           transport: Transport.RMQ,
           options: {
             urls: [
-              config.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672',
+              config.get<string>('rabbitmq.url') ?? 'amqp://127.0.0.1:5672',
             ],
             queue: 'user_service_publish',
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+      {
+        name: MEDIA_SERVICE_CLIENT,
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              config.get<string>('rabbitmq.url') ?? 'amqp://127.0.0.1:5672',
+            ],
+            queue: 'media_service_events',
             queueOptions: { durable: true },
           },
         }),
@@ -42,17 +57,12 @@ import { MessagingController } from './presentation/messaging/messaging.controll
   ],
   controllers: [UserController, MessagingController],
   providers: [
-    // Infrastructure
     PrismaService,
     DomainExceptionFilter,
 
-    // Repository binding
     { provide: UserProfileRepository, useClass: PrismaUserProfileRepository },
-
-    // EventPublisher binding
     { provide: EventPublisher, useClass: RabbitMqEventPublisher },
 
-    // Use cases
     CreateUserProfileUseCase,
     UpdateUserProfileUseCase,
     GetUserProfileUseCase,

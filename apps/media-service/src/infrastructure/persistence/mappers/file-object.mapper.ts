@@ -1,4 +1,5 @@
 import { FileObject } from '../../../domain/aggregates/file-object/file-object.aggregate';
+import { FileStatus } from '../../../domain/aggregates/file-object/file-object.types';
 
 export interface RawFileObjectRow {
   id: string;
@@ -9,6 +10,7 @@ export interface RawFileObjectRow {
   bucketName: string;
   uploadedById: string;
   isPublic: boolean;
+  status: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +26,7 @@ export const FileObjectMapper = {
       bucketName: raw.bucketName,
       uploadedById: raw.uploadedById,
       isPublic: raw.isPublic,
+      status: raw.status as FileStatus,
       createdAt: raw.createdAt,
     });
   },

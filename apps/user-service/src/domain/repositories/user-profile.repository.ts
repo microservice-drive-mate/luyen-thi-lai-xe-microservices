@@ -17,6 +17,7 @@ export interface ListUsersPage {
 export abstract class UserProfileRepository {
   abstract findById(id: string): Promise<UserProfile | null>;
   abstract findByEmail(email: string): Promise<UserProfile | null>;
+  abstract findByMediaFileId(mediaFileId: string): Promise<UserProfile | null>;
   abstract existsById(id: string): Promise<boolean>;
   abstract existsByEmail(email: string): Promise<boolean>;
   abstract save(profile: UserProfile): Promise<void>;

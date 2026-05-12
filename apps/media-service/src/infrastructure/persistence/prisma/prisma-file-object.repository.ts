@@ -32,10 +32,12 @@ export class PrismaFileObjectRepository extends FileObjectRepository {
         bucketName: fileObject.bucketName,
         uploadedById: fileObject.uploadedById,
         isPublic: fileObject.isPublic,
+        status: fileObject.status,
         createdAt: fileObject.createdAt,
       },
       update: {
         isPublic: fileObject.isPublic,
+        status: fileObject.status,
       },
     });
   }

@@ -17,6 +17,7 @@ import {
 import { CourseHasNoLessonException } from '../../exceptions/course-has-no-lesson.exception';
 import { InstructorAlreadyAssignedException } from '../../exceptions/instructor-already-assigned.exception';
 import { LessonNotFoundException } from '../../exceptions/lesson-not-found.exception';
+import { CourseMaterialLinkedEvent } from '../../events/course-material-linked.event';
 
 export class Course extends AggregateRoot<string> {
   private _title: string;
@@ -221,11 +222,19 @@ export class Course extends AggregateRoot<string> {
       this._id,
       props.title,
       props.fileUrl ?? null,
+      props.mediaFileId ?? null,
       props.type ?? null,
       new Date(),
     );
     this._materials.push(material);
     this._updatedAt = new Date();
+
+    if (props.mediaFileId) {
+      this.addDomainEvent(
+        new CourseMaterialLinkedEvent(this._id, material.id, props.mediaFileId),
+      );
+    }
+
     return material;
   }
 

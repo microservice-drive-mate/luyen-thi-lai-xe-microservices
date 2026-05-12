@@ -1,3 +1,8 @@
+export enum FileStatus {
+  UNLINKED = 'UNLINKED',
+  LINKED = 'LINKED',
+}
+
 export interface CreateFileObjectProps {
   id: string;
   storageKey: string;
@@ -7,6 +12,7 @@ export interface CreateFileObjectProps {
   bucketName: string;
   uploadedById: string;
   isPublic?: boolean;
+  status?: FileStatus;
 }
 
 export interface ReconstituteFileObjectProps {
@@ -18,5 +24,6 @@ export interface ReconstituteFileObjectProps {
   bucketName: string;
   uploadedById: string;
   isPublic: boolean;
+  status: FileStatus;
   createdAt: Date;
 }

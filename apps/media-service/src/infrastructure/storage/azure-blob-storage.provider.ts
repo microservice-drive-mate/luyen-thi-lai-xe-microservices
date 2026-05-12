@@ -91,4 +91,31 @@ export class AzureBlobStorageProvider
 
     return `${blockBlobClient.url}?${sasToken}`;
   }
+
+  async generateUploadSasUrl(
+    key: string,
+    mimeType: string,
+    expiresIn?: number,
+  ): Promise<{ uploadUrl: string; publicUrl: string }> {
+    const ttl = expiresIn ?? this.defaultPresignedUrlExpiry;
+    const blockBlobClient = this.client
+      .getContainerClient(this.containerName)
+      .getBlockBlobClient(key);
+
+    const sasToken = generateBlobSASQueryParameters(
+      {
+        containerName: this.containerName,
+        blobName: key,
+        permissions: BlobSASPermissions.parse('cw'),
+        expiresOn: new Date(Date.now() + ttl * 1000),
+        contentType: mimeType,
+      },
+      this.credential,
+    ).toString();
+
+    return {
+      uploadUrl: `${blockBlobClient.url}?${sasToken}`,
+      publicUrl: blockBlobClient.url,
+    };
+  }
 }

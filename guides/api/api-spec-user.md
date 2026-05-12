@@ -4,6 +4,8 @@
 **Service path:** `/users`
 **Version:** 1.0.0
 
+> **Upload avatar:** Xem [frontend-integration-guide.md](./frontend-integration-guide.md) để biết flow đầy đủ (media-service → user-service).
+
 ---
 
 ## Tổng quan xác thực
@@ -102,7 +104,8 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
   "email": "a@example.com",
   "phoneNumber": "0912345678",
   "dateOfBirth": "2000-01-15T00:00:00.000Z",
-  "avatarUrl": "https://...",
+  "avatarUrl": "https://mediasvdev2026.blob.core.windows.net/media/uploads/2026/05/abc.jpg",
+  "mediaFileId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "gender": "MALE",
   "address": "123 Đường ABC, TP.HCM",
   "role": "STUDENT",
@@ -117,6 +120,8 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 ```
 
 > `studentDetail` là `null` nếu `role !== "STUDENT"`.
+
+> `avatarUrl` và `mediaFileId` được set cùng nhau khi upload avatar qua media-service. Xem [frontend-integration-guide.md](./frontend-integration-guide.md).
 
 ---
 

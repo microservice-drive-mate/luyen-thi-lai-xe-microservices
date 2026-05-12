@@ -1,6 +1,7 @@
 import { AggregateRoot } from '@repo/common';
 import { StudentDetail } from './student-detail.entity';
 import { LicenseTierAssignedEvent } from '../../events/license-tier-assigned.event';
+import { UserAvatarLinkedEvent } from '../../events/user-avatar-linked.event';
 import { UserNotStudentException } from '../../exceptions/user-not-student.exception';
 import {
   CreateUserProfileProps,
@@ -18,6 +19,7 @@ export class UserProfile extends AggregateRoot<string> {
   private _phoneNumber: string | null;
   private _dateOfBirth: Date | null;
   private _avatarUrl: string | null;
+  private _mediaFileId: string | null;
   private _gender: Gender | null;
   private _address: string | null;
   private _role: UserRole;
@@ -33,6 +35,7 @@ export class UserProfile extends AggregateRoot<string> {
     phoneNumber: string | null,
     dateOfBirth: Date | null,
     avatarUrl: string | null,
+    mediaFileId: string | null,
     gender: Gender | null,
     address: string | null,
     role: UserRole,
@@ -46,6 +49,7 @@ export class UserProfile extends AggregateRoot<string> {
     this._phoneNumber = phoneNumber;
     this._dateOfBirth = dateOfBirth;
     this._avatarUrl = avatarUrl;
+    this._mediaFileId = mediaFileId;
     this._gender = gender;
     this._address = address;
     this._role = role;
@@ -72,6 +76,7 @@ export class UserProfile extends AggregateRoot<string> {
       props.phoneNumber ?? null,
       props.dateOfBirth ?? null,
       props.avatarUrl ?? null,
+      props.mediaFileId ?? null,
       props.gender ?? null,
       props.address ?? null,
       props.role,
@@ -98,6 +103,7 @@ export class UserProfile extends AggregateRoot<string> {
       props.phoneNumber,
       props.dateOfBirth,
       props.avatarUrl,
+      props.mediaFileId,
       props.gender,
       props.address,
       props.role,
@@ -112,6 +118,14 @@ export class UserProfile extends AggregateRoot<string> {
     if (props.phoneNumber !== undefined) this._phoneNumber = props.phoneNumber;
     if (props.dateOfBirth !== undefined) this._dateOfBirth = props.dateOfBirth;
     if (props.avatarUrl !== undefined) this._avatarUrl = props.avatarUrl;
+    if (props.mediaFileId !== undefined) {
+      this._mediaFileId = props.mediaFileId;
+      if (props.mediaFileId) {
+        this.addDomainEvent(
+          new UserAvatarLinkedEvent(this.id, props.mediaFileId),
+        );
+      }
+    }
     if (props.gender !== undefined) this._gender = props.gender;
     if (props.address !== undefined) this._address = props.address;
     if (props.notes !== undefined && this._studentDetail) {
@@ -194,6 +208,9 @@ export class UserProfile extends AggregateRoot<string> {
   }
   get avatarUrl(): string | null {
     return this._avatarUrl;
+  }
+  get mediaFileId(): string | null {
+    return this._mediaFileId;
   }
   get gender(): Gender | null {
     return this._gender;

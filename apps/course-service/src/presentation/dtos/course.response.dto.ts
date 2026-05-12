@@ -45,6 +45,7 @@ export class CourseMaterialResponseDto {
   @ApiProperty() id: string;
   @ApiProperty() title: string;
   @ApiPropertyOptional() fileUrl: string | null;
+  @ApiPropertyOptional() mediaFileId: string | null;
   @ApiPropertyOptional() type: string | null;
   @ApiProperty() createdAt: Date;
 

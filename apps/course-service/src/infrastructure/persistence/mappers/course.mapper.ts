@@ -33,6 +33,7 @@ export interface RawCourseMaterialRow {
   courseId: string;
   title: string;
   fileUrl: string | null;
+  mediaFileId: string | null;
   type: string | null;
   createdAt: Date;
 }
@@ -96,6 +97,7 @@ export const CourseMapper = {
         courseId: m.courseId,
         title: m.title,
         fileUrl: m.fileUrl,
+        mediaFileId: m.mediaFileId,
         type: m.type,
         createdAt: m.createdAt,
       })),
