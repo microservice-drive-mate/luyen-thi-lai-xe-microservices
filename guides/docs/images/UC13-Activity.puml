@@ -1,0 +1,41 @@
+@startuml UC13-Activity
+title UC13 - Submit Exam
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Student|
+start
+:(1) Click [btnSubmitExam];
+:(2) Confirm submission;
+
+|System|
+:(3) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(4) Check [Submit_Exam] permission;
+  if (Has permission?) then (Yes)
+    :(5) Validate attempt status and anti-double-submit;
+    if (Valid?) then (Yes)
+      :(6) Load active attempt and answer snapshot;
+      if (Attempt exists?) then (Yes)
+        :(7) Lock all answers and finalize attempt;
+        :(8) Queue grading workflow;
+        :(9) Return MSG48 (HTTP 200);
+      else (No)
+        :(10) Return MSG47 (HTTP 404);
+      endif
+    else (No)
+      :(11) Return MSG46 (HTTP 400);
+    endif
+  else (No)
+    :(12) Return MSG45 (HTTP 403);
+  endif
+else (No)
+  :(13) Return MSG45 (HTTP 403);
+endif
+
+|Student|
+:(14) See submission confirmation;
+stop
+@enduml

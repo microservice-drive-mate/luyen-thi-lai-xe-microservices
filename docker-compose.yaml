@@ -172,6 +172,8 @@ services:
       - DATABASE_URL=postgresql://user:password@db-identity:5432/identity_db
       - CONSUL_URL=http://consul:8500
       - LOGSTASH_HOST=logstash
+    ports:
+      - "3001:3000"
     depends_on:
       db-identity:
         condition: service_healthy
@@ -187,6 +189,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-user:5432/user_db
       - CONSUL_URL=http://consul:8500
+    ports:
+      - "3002:3000"
     depends_on:
       - db-user
       - consul
@@ -198,6 +202,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-exam:5432/exam_db
       - CONSUL_URL=http://consul:8500
+    ports:
+      - "3003:3000"
     depends_on:
       - db-exam
       - consul
@@ -209,6 +215,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-course:5432/course_db
       - CONSUL_URL=http://consul:8500
+    ports:
+      - "3004:3000"
     depends_on:
       - db-course
       - consul
@@ -220,6 +228,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-question:5432/question_db
       - CONSUL_URL=http://consul:8500
+    ports:
+      - "3005:3000"
     depends_on:
       - db-question
       - consul
@@ -231,6 +241,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-notification:5432/notification_db
       - CONSUL_URL=http://consul:8500
+    ports:
+      - "3006:3000"
     depends_on:
       - db-notification
       - consul
@@ -242,6 +254,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-analytics:5432/analytics_db
       - CONSUL_URL=http://consul:8500
+    ports:
+      - "3007:3000"
     depends_on:
       - db-analytics
       - consul
@@ -253,6 +267,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-simulation:5432/simulation_db
       - CONSUL_URL=http://consul:8500
+    ports:
+      - "3008:3000"
     depends_on:
       - db-simulation
       - consul
@@ -349,6 +365,22 @@ services:
       - "8080:8080"
     depends_on:
       - db-keycloak
+
+  # ========================================================
+  # 6. TOKEN BLACKLIST CACHE (Redis)
+  # ========================================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_data:/data
+
 volumes:
   db_identity_data:
   db_user_data:
@@ -362,3 +394,4 @@ volumes:
   consul_data:
   elasticsearch_data:
   db_keycloak_data:
+  redis_data:

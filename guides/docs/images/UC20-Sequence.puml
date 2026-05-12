@@ -1,0 +1,66 @@
+@startuml UC20-Sequence
+title UC20 - Delete Question
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Admin/Manager" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "QuestionController" as QuestionController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorAdmin -> Client: Click Delete Question
+Client -> APIGateway: DELETE /api/v1/questions/{questionId}
+APIGateway -> QuestionController: Forward request
+activate QuestionController
+QuestionController -> AuthService: Validate JWT + permission
+AuthService --> QuestionController: Valid/Invalid
+
+alt JWT invalid
+  QuestionController --> APIGateway: 403 Error\n(MSG76)
+  deactivate QuestionController
+  APIGateway --> Client: Error Response
+else JWT valid
+  QuestionController -> QuestionController: Validate delete policy
+  
+  alt policy not satisfied
+    QuestionController --> APIGateway: 400 Error\n(MSG75)
+    deactivate QuestionController
+    APIGateway --> Client: Error Response
+  else policy ok
+    QuestionController -> Database: Load question
+    Database --> QuestionController: Question or null
+    
+    alt not found
+      QuestionController --> APIGateway: 404 Error\n(MSG73)
+      deactivate QuestionController
+      APIGateway --> Client: Error Response
+    else found
+      QuestionController -> Database: Soft delete
+      Database --> QuestionController: Committed
+      QuestionController --> APIGateway: 200 OK\n(MSG77)
+      deactivate QuestionController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { EventPublisher } from './application/ports/event-publisher.port';
@@ -18,7 +18,6 @@ import {
 } from './infrastructure/messaging/rabbitmq-event-publisher.service';
 import { PrismaUserProfileRepository } from './infrastructure/persistence/prisma/prisma-user-profile.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
-import { AuthContextMiddleware } from './infrastructure/middleware/auth-context.middleware';
 import { UserController } from './presentation/http/user.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';
 
@@ -72,8 +71,4 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     SyncUserRoleUseCase,
   ],
 })
-export class UserModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(AuthContextMiddleware).forRoutes(UserController);
-  }
-}
+export class UserModule {}

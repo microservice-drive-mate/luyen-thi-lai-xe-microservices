@@ -3,12 +3,15 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { LoginResponseDto } from './login.response.dto';
+import { LogoutResponseDto } from './logout.response.dto';
+import { TokenBlacklistService } from './infrastructure/token-blacklist/token-blacklist.service';
 
 @Injectable()
 export class AppService {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly tokenBlacklistService: TokenBlacklistService,
   ) {}
 
   getHello(): string {
@@ -53,6 +56,83 @@ export class AppService {
       throw new UnauthorizedException(
         'Tài khoản hoặc mật khẩu không chính xác',
       );
+    }
+  }
+
+  /**
+   * UC33: Logout - Xóa token khỏi hệ thống
+   * @param token JWT token từ Authorization header
+   * @returns LogoutResponseDto với thông báo logout thành công
+   */
+  async logout(token: string): Promise<LogoutResponseDto> {
+    if (!token) {
+      throw new UnauthorizedException(
+        'Authentication token is missing or invalid. (MSG129)',
+      );
+    }
+
+    try {
+      // Decode JWT token để lấy thông tin exp (expiration time)
+      const decoded = this.decodeToken(token);
+
+      if (!decoded || typeof decoded.exp !== 'number') {
+        throw new UnauthorizedException(
+          'Authentication token is missing or invalid. (MSG129)',
+        );
+      }
+
+      // Kiểm tra token đã hết hạn hay chưa
+      const now = Math.floor(Date.now() / 1000);
+      if (decoded.exp <= now) {
+        throw new UnauthorizedException(
+          'Authentication token is missing or invalid. (MSG129)',
+        );
+      }
+
+      // Thêm token vào blacklist với TTL = exp - now
+      this.tokenBlacklistService.addToBlacklist(token, decoded.exp);
+
+      return {
+        success: true,
+        message: 'You have been logged out successfully. (MSG130)',
+        instruction: 'Please delete your token from LocalStorage or Cookie',
+      };
+    } catch (e) {
+      if (e instanceof UnauthorizedException) {
+        throw e;
+      }
+      throw new UnauthorizedException(
+        'Authentication token is missing or invalid. (MSG129)',
+      );
+    }
+  }
+
+  /**
+   * Decode JWT token (không verify signature, chỉ extract payload)
+   * JWT format: header.payload.signature
+   */
+  /* eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access */
+  private decodeToken(token: string): Record<string, number | string> | null {
+    try {
+      // Remove 'Bearer ' prefix nếu có
+      const bearerToken = token.startsWith('Bearer ') ? token.slice(7) : token;
+
+      const parts = bearerToken.split('.');
+      if (parts.length !== 3) {
+        return null;
+      }
+
+      // Decode payload (phần thứ 2)
+      const payload = parts[1];
+      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
+      const decoded = JSON.parse(
+        Buffer.from(payload, 'base64').toString('utf-8'),
+      );
+
+      return decoded as Record<string, number | string>;
+    } catch {
+      // JWT decode failed, return null
+      return null;
     }
   }
 }

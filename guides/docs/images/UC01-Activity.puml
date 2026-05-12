@@ -1,0 +1,44 @@
+@startuml UC01-Activity
+title UC01 - Log in
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|User|
+start
+:(1) Enter [email] and [password];
+:(2) Click [btnLogin];
+
+|System|
+:(3) Validate required input;
+:(4) Validate [email] format;
+if (Input valid?) then (Yes)
+  :(5) Load account by [email];
+  if (Account locked?) then (Yes)
+    :(6) Return MSG02 (HTTP 401);
+  else (No)
+    :(7) Verify password hash;
+    if (Password matched?) then (Yes)
+      :(8) Reset failedLoginCount = 0;
+      :(9) Generate signed JWT;
+      :(10) Return token + redirect info (HTTP 200);
+    else (No)
+      :(11) Increment failedLoginCount;
+      if (failedLoginCount > 5 / 15m?) then (Yes)
+        :(12) Lock account;
+        :(13) Return MSG03 (HTTP 401);
+      else (No)
+        :(14) Return MSG03 (HTTP 401);
+      endif
+    endif
+  endif
+
+  |User|
+  :(15) See login result;
+else (No)
+  :(16) Return MSG01 (HTTP 400);
+endif
+
+stop
+@enduml

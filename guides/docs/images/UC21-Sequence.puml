@@ -1,0 +1,66 @@
+@startuml UC21-Sequence
+title UC21 - Create Exam Template
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Admin" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "TemplateController" as TemplateController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorAdmin -> Client: Submit create template form
+Client -> APIGateway: POST /api/v1/exam-templates
+APIGateway -> TemplateController: Forward request
+activate TemplateController
+TemplateController -> AuthService: Validate JWT + permission
+AuthService --> TemplateController: Valid/Invalid
+
+alt JWT invalid
+  TemplateController --> APIGateway: 403 Error\n(MSG79)
+  deactivate TemplateController
+  APIGateway --> Client: Error Response
+else JWT valid
+  TemplateController -> TemplateController: Validate structure
+  
+  alt invalid
+    TemplateController --> APIGateway: 400 Error\n(MSG78)
+    deactivate TemplateController
+    APIGateway --> Client: Error Response
+  else valid
+    TemplateController -> Database: Load license tier
+    Database --> TemplateController: Tier or null
+    
+    alt not found
+      TemplateController --> APIGateway: 404 Error\n(MSG80)
+      deactivate TemplateController
+      APIGateway --> Client: Error Response
+    else found
+      TemplateController -> Database: Insert template
+      Database --> TemplateController: Created
+      TemplateController --> APIGateway: 201 Created\n(MSG81)
+      deactivate TemplateController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

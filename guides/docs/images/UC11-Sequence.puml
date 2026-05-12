@@ -1,0 +1,71 @@
+@startuml UC11-Sequence
+title UC11 - Take Theory Exam
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Student" as ActorStudent
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "ExamController" as ExamController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+participant "Question Service" as QuestionService
+
+ActorStudent -> Client: Click Start Exam
+Client -> APIGateway: POST /api/v1/exams/start
+APIGateway -> ExamController: Forward request
+activate ExamController
+ExamController -> AuthService: Validate JWT + check [Take_Exam]
+AuthService --> ExamController: Valid/Invalid
+
+alt JWT invalid or no permission
+  ExamController --> APIGateway: 403 Error\n(MSG38)
+  deactivate ExamController
+  APIGateway --> Client: Error Response
+else JWT valid and authorized
+  ExamController -> ExamController: Validate templateId, licenseTierId
+  
+  alt invalid payload
+    ExamController --> APIGateway: 400 Error\n(MSG37)
+    deactivate ExamController
+    APIGateway --> Client: Error Response
+  else valid payload
+    ExamController -> Database: Load student profile, template, config
+    Database --> ExamController: Records or null
+    
+    alt missing resources
+      ExamController --> APIGateway: 404 Error\n(MSG39)
+      deactivate ExamController
+      APIGateway --> Client: Error Response
+    else resources found
+      ExamController -> QuestionService: Generate randomized question set
+      QuestionService --> ExamController: Question set
+      ExamController -> Database: Create attempt record
+      Database --> ExamController: Attempt created
+      ExamController -> ExamController: Serialize questions (exclude correctAnswer)
+      ExamController --> APIGateway: 201 Created\n(MSG40 + attemptId)
+      deactivate ExamController
+      APIGateway --> Client: Success Response
+      Client --> ActorStudent: Load exam with questions
+    end
+  end
+end
+
+@enduml

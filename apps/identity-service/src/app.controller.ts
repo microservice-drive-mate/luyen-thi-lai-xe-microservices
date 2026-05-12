@@ -1,10 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiBody, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, Headers } from '@nestjs/common';
+import {
+  ApiBody,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { Public, Roles } from 'nest-keycloak-connect';
 import { LoginRequestDto } from './login.request.dto';
 import { LoginResponseDto } from './login.response.dto';
+import { LogoutResponseDto } from './logout.response.dto';
+import { LogoutRequestDto } from './logout.request.dto';
 
 @ApiTags('auth')
 @Controller()
@@ -22,6 +29,19 @@ export class AppController {
   @ApiOkResponse({ type: LoginResponseDto })
   async login(@Body() body: LoginRequestDto): Promise<LoginResponseDto> {
     return this.appService.login(body.username, body.password);
+  }
+
+  @Public()
+  @Post('logout')
+  @ApiBody({ type: LogoutRequestDto })
+  @ApiOkResponse({ type: LogoutResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Token missing or invalid (MSG129)' })
+  async logout(
+    @Headers('authorization') authHeader: string,
+  ): Promise<LogoutResponseDto> {
+    // Extract token từ Authorization header (format: "Bearer <token>")
+    const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '') : '';
+    return this.appService.logout(token);
   }
 
   @Get('public')

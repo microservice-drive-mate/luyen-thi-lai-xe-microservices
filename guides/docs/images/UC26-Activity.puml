@@ -1,0 +1,39 @@
+@startuml UC26-Activity
+title UC26 - Track Learning Progress
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Instructor/Admin|
+start
+:(1) Open progress dashboard;
+
+|System|
+:(2) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(3) Check [Track_LearningProgress] permission;
+  if (Has permission?) then (Yes)
+    :(4) Validate period filters;
+    if (Valid?) then (Yes)
+      :(5) Load student metrics and history;
+      if (Metrics exist?) then (Yes)
+        :(6) Calculate trendline and risk score;
+        :(7) Return MSG100 (HTTP 200);
+      else (No)
+        :(8) Return MSG99 (HTTP 404);
+      endif
+    else (No)
+      :(9) Return MSG97 (HTTP 400);
+    endif
+  else (No)
+    :(10) Return MSG98 (HTTP 403);
+  endif
+else (No)
+  :(11) Return MSG98 (HTTP 403);
+endif
+
+|Instructor/Admin|
+:(12) View dashboard;
+stop
+@enduml

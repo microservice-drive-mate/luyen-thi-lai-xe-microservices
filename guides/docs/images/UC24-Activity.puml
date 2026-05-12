@@ -1,0 +1,33 @@
+@startuml UC24-Activity
+title UC24 - Auto-generate Exam Papers
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/System|
+start
+:(1) Trigger generation job;
+
+|System|
+:(2) Validate JWT and [Generate_ExamPapers] permission;
+if (Permission valid?) then (Yes)
+  :(3) Validate template id, amount, quota;
+  if (Valid?) then (Yes)
+    :(4) Load template, question pool, exclusion set;
+    if (All exist?) then (Yes)
+      :(5) Build randomized papers;
+      :(6) Persist output;
+      :(7) Return MSG92 (HTTP 201);
+    else (No)
+      :(8) Return MSG91 (HTTP 404);
+    endif
+  else (No)
+    :(9) Return MSG89 (HTTP 400);
+  endif
+else (No)
+  :(10) Return MSG90 (HTTP 403);
+endif
+
+stop
+@enduml

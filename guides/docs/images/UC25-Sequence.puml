@@ -1,0 +1,64 @@
+@startuml UC25-Sequence
+title UC25 - View Student List
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Instructor/Admin" as ActorInstructor
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "StudentController" as StudentController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorInstructor -> Client: Open student roster
+Client -> APIGateway: GET /api/v1/students
+APIGateway -> StudentController: Forward request
+activate StudentController
+StudentController -> AuthService: Validate JWT + permission
+AuthService --> StudentController: Valid/Invalid
+
+alt JWT invalid
+  StudentController --> APIGateway: 403 Error\n(MSG94)
+  deactivate StudentController
+  APIGateway --> Client: Error Response
+else JWT valid
+  StudentController -> StudentController: Validate filters
+  
+  alt invalid
+    StudentController --> APIGateway: 400 Error\n(MSG93)
+    deactivate StudentController
+    APIGateway --> Client: Error Response
+  else valid
+    StudentController -> Database: Load roster
+    Database --> StudentController: Results or empty
+    
+    alt empty
+      StudentController --> APIGateway: 404 Error\n(MSG95)
+      deactivate StudentController
+      APIGateway --> Client: Error Response
+    else found
+      StudentController --> APIGateway: 200 OK\n(MSG96)
+      deactivate StudentController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

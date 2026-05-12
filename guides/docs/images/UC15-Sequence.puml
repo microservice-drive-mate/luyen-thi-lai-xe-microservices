@@ -1,0 +1,65 @@
+@startuml UC15-Sequence
+title UC15 - View Exam Results
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Student" as ActorStudent
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "ResultController" as ResultController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorStudent -> Client: Click view result
+Client -> APIGateway: GET /api/v1/exams/{attemptId}/result
+APIGateway -> ResultController: Forward request
+activate ResultController
+ResultController -> AuthService: Validate JWT + check permission
+AuthService --> ResultController: Valid/Invalid
+
+alt JWT invalid
+  ResultController --> APIGateway: 403 Error\n(MSG54)
+  deactivate ResultController
+  APIGateway --> Client: Error Response
+else JWT valid
+  ResultController -> ResultController: Validate query params + ownership
+  
+  alt invalid
+    ResultController --> APIGateway: 400 Error\n(MSG53)
+    deactivate ResultController
+    APIGateway --> Client: Error Response
+  else valid
+    ResultController -> Database: Load graded result
+    Database --> ResultController: Result or null
+    
+    alt not found
+      ResultController --> APIGateway: 404 Error\n(MSG55)
+      deactivate ResultController
+      APIGateway --> Client: Error Response
+    else found
+      ResultController -> ResultController: Build response payload
+      ResultController --> APIGateway: 200 OK\n(MSG56)
+      deactivate ResultController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

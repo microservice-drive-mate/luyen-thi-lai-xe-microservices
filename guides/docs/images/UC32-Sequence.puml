@@ -1,0 +1,65 @@
+@startuml UC32-Sequence
+title UC32 - Review Frequently Missed Questions
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Student" as ActorStudent
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "ReviewController" as ReviewController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorStudent -> Client: Request review
+Client -> APIGateway: POST /api/v1/review
+APIGateway -> ReviewController: Forward request
+activate ReviewController
+ReviewController -> AuthService: Validate JWT + permission
+AuthService --> ReviewController: Valid/Invalid
+
+alt JWT invalid
+  ReviewController --> APIGateway: 403 Error\n(MSG122)
+  deactivate ReviewController
+  APIGateway --> Client: Error Response
+else JWT valid
+  ReviewController -> ReviewController: Validate filters
+  
+  alt invalid
+    ReviewController --> APIGateway: 400 Error\n(MSG121)
+    deactivate ReviewController
+    APIGateway --> Client: Error Response
+  else valid
+    ReviewController -> Database: Load answer history
+    Database --> ReviewController: History or empty
+    
+    alt empty
+      ReviewController --> APIGateway: 404 Error\n(MSG123)
+      deactivate ReviewController
+      APIGateway --> Client: Error Response
+    else found
+      ReviewController -> ReviewController: Score & generate
+      ReviewController --> APIGateway: 200 OK\n(MSG124)
+      deactivate ReviewController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

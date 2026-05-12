@@ -1,0 +1,78 @@
+@startuml UC10-Sequence
+title UC10 - Delete Course
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Admin/Manager" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "CourseController" as CourseController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+participant "Audit Service" as AuditService
+
+ActorAdmin -> Client: Click Delete Course + confirm
+Client -> APIGateway: DELETE /api/v1/courses/{courseId}
+APIGateway -> CourseController: Forward request
+activate CourseController
+CourseController -> AuthService: Validate JWT
+AuthService --> CourseController: Token valid/invalid
+
+alt JWT invalid
+  CourseController --> APIGateway: 403 Forbidden\n(MSG34)
+  deactivate CourseController
+  APIGateway --> Client: Error Response
+else JWT valid
+  AuthService -> CourseController: Check RBAC permission
+  
+  alt RBAC denied
+    CourseController --> APIGateway: 403 Forbidden\n(MSG34)
+    deactivate CourseController
+    APIGateway --> Client: Error Response
+  else RBAC granted
+    CourseController -> Database: Query course by courseId where isDeleted=false
+    Database --> CourseController: Course record or null
+    
+    alt course not found
+      CourseController --> APIGateway: 404 Not Found\n(MSG23)
+      deactivate CourseController
+      APIGateway --> Client: Error Response
+    else course found
+      CourseController -> Database: Check dependencies (enrollments/exams/refs)
+      Database --> CourseController: Dependencies exist? (yes/no)
+      
+      alt dependencies exist
+        CourseController --> APIGateway: 409 Conflict\n(MSG35)
+        deactivate CourseController
+        APIGateway --> Client: Error Response
+      else no dependencies
+        CourseController -> Database: Soft delete (set isDeleted=true, deletedAt, deletedBy)
+        Database --> CourseController: Commit success
+        CourseController -> AuditService: Write delete audit
+        AuditService --> CourseController: Stored
+        CourseController --> APIGateway: 200 OK\n(MSG36)
+        deactivate CourseController
+        APIGateway --> Client: Success Response
+      end
+    end
+  end
+end
+
+@enduml

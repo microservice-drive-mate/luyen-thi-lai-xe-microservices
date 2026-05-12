@@ -1,0 +1,43 @@
+@startuml UC06-Activity
+title UC06 - Assign License Categories To Students
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/Manager|
+start
+:(1) Select student from list;
+:(2) Choose [licenseTierId];
+:(3) Click [btnAssignLicense];
+
+|System|
+:(4) Validate JWT token;
+if (JWT valid?) then (Yes)
+  :(5) Check RBAC permission;
+  if (Has assignment permission?) then (Yes)
+    :(6) Query student by [studentId];
+    if (Student exists?) then (Yes)
+      :(7) Validate [licenseTierId] against active tiers;
+      if (Tier valid?) then (Yes)
+        :(8) Update student.licenseTierId = [licenseTierId];
+        :(9) Write audit {changedBy, oldValue, newValue, changedAt};
+        :(10) Persist changes;
+        :(11) Return MSG17 (HTTP 200);
+      else (No)
+        :(12) Return MSG15 (HTTP 400);
+      endif
+    else (No)
+      :(13) Return MSG12 (HTTP 404);
+    endif
+  else (No)
+    :(14) Return MSG19 (HTTP 403);
+  endif
+else (No)
+  :(15) Return MSG19 (HTTP 403);
+endif
+
+|Admin/Manager|
+:(16) See result;
+stop
+@enduml

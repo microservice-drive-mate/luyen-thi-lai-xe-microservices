@@ -1,0 +1,39 @@
+@startuml UC16-Activity
+title UC16 - Review Exams
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Student|
+start
+:(1) Open exam review module;
+
+|System|
+:(2) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(4) Check [Review_Exams] permission;
+  if (Has permission?) then (Yes)
+    :(5) Validate pagination and filters;
+    if (Valid?) then (Yes)
+      :(6) Load exam review history;
+      if (History exists?) then (Yes)
+        :(7) Build review timeline with score summary;
+        :(8) Return MSG60 (HTTP 200);
+      else (No)
+        :(9) Return MSG59 (HTTP 404);
+      endif
+    else (No)
+      :(10) Return MSG57 (HTTP 400);
+    endif
+  else (No)
+    :(11) Return MSG58 (HTTP 403);
+  endif
+else (No)
+  :(12) Return MSG58 (HTTP 403);
+endif
+
+|Student|
+:(13) View review list;
+stop
+@enduml

@@ -1,0 +1,37 @@
+@startuml UC07-Activity
+title UC07 - View Detailed Course List
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|User|
+start
+:(1) Navigate to Course List page;
+:(2) Optionally enter keyword/filters;
+:(3) Click [Search] or load page;
+
+|System|
+:(4) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(5) Determine user's licenseCategory from token;
+  :(6) Resolve cache key [licenseCategory,page,size];
+  if (Cache hit?) then (Yes)
+    :(7) Return paginated course list from cache (HTTP 200);
+  else (No)
+    :(8) Query database with license-based filter + pagination;
+    if (No matches?) then (Yes)
+      :(9) Return MSG25 (HTTP 200) - empty result;
+    else (No)
+      :(10) Populate cache;
+      :(11) Return paginated course list (HTTP 200);
+    endif
+  endif
+else (No)
+  :(12) Return MSG21 (HTTP 401);
+endif
+
+|User|
+:(13) View list and navigate to course detail;
+stop
+@enduml

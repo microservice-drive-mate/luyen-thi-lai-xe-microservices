@@ -1,0 +1,66 @@
+@startuml UC23-Sequence
+title UC23 - Delete Exam Template
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Admin" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "TemplateController" as TemplateController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorAdmin -> Client: Click Delete Template
+Client -> APIGateway: DELETE /api/v1/exam-templates/{templateId}
+APIGateway -> TemplateController: Forward request
+activate TemplateController
+TemplateController -> AuthService: Validate JWT + permission
+AuthService --> TemplateController: Valid/Invalid
+
+alt JWT invalid
+  TemplateController --> APIGateway: 403 Error\n(MSG79)
+  deactivate TemplateController
+  APIGateway --> Client: Error Response
+else JWT valid
+  TemplateController -> TemplateController: Validate safe-delete policy
+  
+  alt policy not satisfied
+    TemplateController --> APIGateway: 400 Error\n(MSG86)
+    deactivate TemplateController
+    APIGateway --> Client: Error Response
+  else policy ok
+    TemplateController -> Database: Load template
+    Database --> TemplateController: Template or null
+    
+    alt not found
+      TemplateController --> APIGateway: 404 Error\n(MSG84)
+      deactivate TemplateController
+      APIGateway --> Client: Error Response
+    else found
+      TemplateController -> Database: Soft delete
+      Database --> TemplateController: Committed
+      TemplateController --> APIGateway: 200 OK\n(MSG87)
+      deactivate TemplateController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

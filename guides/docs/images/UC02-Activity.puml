@@ -1,0 +1,61 @@
+@startuml UC02-Activity
+title UC02 - Forgot Password
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|User|
+start
+:(1) Enter [email];
+:(2) Click [btnForgotPassword];
+
+|System|
+:(3) Validate [email] format;
+if (Email valid?) then (Yes)
+  :(4) Query account by [email];
+  if (Account exists?) then (Yes)
+    :(5) Generate reset token;
+    :(6) Set expiration (24h);
+    :(7) Persist token in database;
+    :(8) Send reset email link;
+    :(9) Return confirmation (HTTP 200);
+  else (No)
+    :(10) Return MSG05 (HTTP 404);
+  endif
+
+  |User|
+  :(11) Click reset link in email;
+
+  |System|
+  :(12) Validate token;
+  if (Token valid & not expired?) then (Yes)
+    :(13) Show password form;
+    
+    |User|
+    :(14) Enter new [password];
+    :(15) Submit reset form;
+
+    |System|
+    :(16) Validate password policy;
+    if (Password meets policy?) then (Yes)
+      :(17) Hash new password;
+      :(18) Update account password;
+      :(19) Mark token as used;
+      :(20) Return success (HTTP 200);
+      :(21) Redirect to login;
+    else (No)
+      :(22) Return MSG07 (HTTP 422);
+    endif
+  else (No)
+    :(23) Return MSG06 (HTTP 400);
+  endif
+
+  |User|
+  :(24) See result;
+else (No)
+  :(25) Return MSG04 (HTTP 400);
+endif
+
+stop
+@enduml

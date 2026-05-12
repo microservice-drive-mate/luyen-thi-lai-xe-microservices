@@ -1,0 +1,41 @@
+@startuml UC22-Activity
+title UC22 - Update Exam Template
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin|
+start
+:(1) Edit template form;
+:(2) Click [btnUpdateExamTemplate];
+
+|System|
+:(3) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(4) Check [Manage_ExamConfig] permission;
+  if (Has permission?) then (Yes)
+    :(5) Validate fields and version;
+    if (Version mismatch?) then (Yes)
+      :(6) Return MSG83 (HTTP 409);
+    else (No)
+      :(7) Load target template;
+      if (Exists?) then (Yes)
+        :(8) Update template;
+        :(9) Recalculate impacts;
+        :(10) Return MSG85 (HTTP 200);
+      else (No)
+        :(11) Return MSG84 (HTTP 404);
+      endif
+    endif
+  else (No)
+    :(12) Return MSG79 (HTTP 403);
+  endif
+else (No)
+  :(13) Return MSG79 (HTTP 403);
+endif
+
+|Admin|
+:(14) See result;
+stop
+@enduml

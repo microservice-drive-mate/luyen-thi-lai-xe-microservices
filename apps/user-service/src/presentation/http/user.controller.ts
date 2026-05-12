@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -10,7 +9,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedUser, Roles, Public } from 'nest-keycloak-connect';
 import { AssignLicenseTierCommand } from '../../application/use-cases/assign-license-tier/assign-license-tier.command';
 import { AssignLicenseTierUseCase } from '../../application/use-cases/assign-license-tier/assign-license-tier.use-case';
 import { CreateUserProfileCommand } from '../../application/use-cases/create-user-profile/create-user-profile.command';
@@ -36,6 +36,7 @@ import {
 
 @ApiTags('Users')
 @Controller('users')
+@ApiBearerAuth()
 export class UserController {
   constructor(
     private readonly createUserProfileUseCase: CreateUserProfileUseCase,
@@ -47,6 +48,7 @@ export class UserController {
   ) {}
 
   @Post()
+  @Public() // Allow identity-service to call this, or use a specific service-to-service auth
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary:
@@ -75,6 +77,7 @@ export class UserController {
   }
 
   @Get()
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @ApiOperation({
     summary: 'List users with optional filters (admin/center manager)',
   })
@@ -95,14 +98,10 @@ export class UserController {
 
   @Get('me')
   @ApiOperation({ summary: 'Get own profile' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description:
-      'Resolved from the bearer token by user-service auth context middleware',
-  })
   async getMyProfile(
-    @Headers('x-user-id') userId: string,
+    @AuthenticatedUser() user: any,
   ): Promise<UserProfileResponseDto> {
+    const userId = user.sub;
     const result = await this.getUserProfileUseCase.execute(
       new GetUserProfileQuery(userId),
     );
@@ -110,6 +109,7 @@ export class UserController {
   }
 
   @Get(':id')
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @ApiOperation({ summary: 'Get user profile by ID (admin/center manager)' })
   async getUserProfile(
     @Param('id') id: string,
@@ -122,15 +122,11 @@ export class UserController {
 
   @Patch('me')
   @ApiOperation({ summary: 'Update own profile' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description:
-      'Resolved from the bearer token by user-service auth context middleware',
-  })
   async updateMyProfile(
-    @Headers('x-user-id') userId: string,
+    @AuthenticatedUser() user: any,
     @Body() dto: UpdateUserRequestDto,
   ): Promise<UserProfileResponseDto> {
+    const userId = user.sub;
     const result = await this.updateUserProfileUseCase.execute(
       new UpdateUserProfileCommand(userId, dto),
     );
@@ -138,6 +134,7 @@ export class UserController {
   }
 
   @Patch(':id')
+  @Roles({ roles: ['realm:ADMIN'] })
   @ApiOperation({ summary: 'Update user profile by ID (admin)' })
   async updateUserProfile(
     @Param('id') id: string,
@@ -150,6 +147,7 @@ export class UserController {
   }
 
   @Patch(':id/lock')
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Lock or unlock a user (admin/center manager)' })
   async lockUser(
@@ -160,20 +158,17 @@ export class UserController {
   }
 
   @Patch(':id/license-tier')
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Assign license tier to a student (admin/center manager)',
   })
-  @ApiHeader({
-    name: 'x-user-id',
-    description:
-      'Resolved from the bearer token by user-service auth context middleware and used as changedById for audit trail',
-  })
   async assignLicenseTier(
     @Param('id') id: string,
     @Body() dto: AssignLicenseTierRequestDto,
-    @Headers('x-user-id') changedById: string,
+    @AuthenticatedUser() user: any,
   ): Promise<void> {
+    const changedById = user.sub;
     await this.assignLicenseTierUseCase.execute(
       new AssignLicenseTierCommand(id, dto.licenseTier, changedById),
     );

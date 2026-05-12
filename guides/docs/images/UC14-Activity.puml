@@ -1,0 +1,35 @@
+@startuml UC14-Activity
+title UC14 - Grade Exam
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|System|
+start
+:(1) Trigger grading workflow;
+:(2) Load attempt answers and answer key;
+
+:(3) Validate JWT and [Grade_Exam] permission;
+if (Permission valid?) then (Yes)
+  :(4) Validate attempt status and prerequisites;
+  if (Valid?) then (Yes)
+    :(5) Load answers, answer key, fatal questions;
+    if (All exist?) then (Yes)
+      :(6) Compute score and evaluate pass threshold;
+      :(7) Apply fatal question override rules;
+      :(8) Generate final grade;
+      :(9) Persist grading result;
+      :(10) Return MSG52 (HTTP 200);
+    else (No)
+      :(11) Return MSG51 (HTTP 404);
+    endif
+  else (No)
+    :(12) Return MSG50 (HTTP 400);
+  endif
+else (No)
+  :(13) Return MSG49 (HTTP 403);
+endif
+
+stop
+@enduml

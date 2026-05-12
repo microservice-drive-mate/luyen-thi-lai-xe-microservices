@@ -21,6 +21,7 @@ services:
       - name: user-route
         paths:
           - /users
+        strip_path: false
       - name: user-swagger-route
         paths:
           - /user-service

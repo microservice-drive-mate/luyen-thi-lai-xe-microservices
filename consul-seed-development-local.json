@@ -17,12 +17,17 @@
       "rabbitmq.url": "amqp://127.0.0.1:5672",
       "rabbitmq.username": "guest",
       "rabbitmq.password": "guest",
-      "rabbitmq.vhost": "/"
+      "rabbitmq.vhost": "/",
+      "redis.url": "redis://localhost:6379"
     },
     "user-service": {
       "port": "3002",
-      "database.url": "postgresql://user:password@127.0.0.1:5433/user_db",
-      "rabbitmq.url": "amqp://127.0.0.1:5672"
+      "database.url": "postgresql://user:password@localhost:5433/user_db",
+      "rabbitmq.url": "amqp://localhost:5672",
+      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     },
     "exam-service": {
       "port": "3003",

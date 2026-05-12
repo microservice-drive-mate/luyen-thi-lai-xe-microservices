@@ -1,0 +1,46 @@
+@startuml UC03-Activity
+title UC03 - Create Student Account
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/Manager|
+start
+:(1) Fill account form;
+:(2) Enter [fullName], [email], [role];
+:(3) Click [btnCreateAccount];
+
+|System|
+:(4) Validate JWT token;
+if (JWT valid?) then (Yes)
+  :(5) Check RBAC permission;
+  if (Can create account?) then (Yes)
+    :(6) Validate required fields;
+    if (All fields valid?) then (Yes)
+      :(7) Check email uniqueness;
+      if (Email already exists?) then (Yes)
+        :(8) Return MSG10 (HTTP 409);
+      else (No)
+        :(9) Generate temporary password;
+        :(10) Hash temporary password;
+        :(11) Create account record;
+        :(12) Set [isActive] = true;
+        :(13) Store in database;
+        :(14) Send credentials email;
+        :(15) Return MSG11 (HTTP 201);
+      endif
+    else (No)
+      :(16) Return MSG08 (HTTP 400);
+    endif
+  else (No)
+    :(17) Return MSG09 (HTTP 403);
+  endif
+else (No)
+  :(18) Return MSG09 (HTTP 403);
+endif
+
+|Admin/Manager|
+:(19) See result;
+stop
+@enduml

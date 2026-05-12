@@ -1,0 +1,41 @@
+@startuml UC21-Activity
+title UC21 - Create Exam Template
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin|
+start
+:(1) Fill template form;
+:(2) Click [btnCreateExamTemplate];
+
+|System|
+:(3) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(4) Check [Manage_ExamConfig] permission;
+  if (Has permission?) then (Yes)
+    :(5) Validate template structure and rules;
+    if (Valid?) then (Yes)
+      :(6) Load license tier and constraints;
+      if (Context exists?) then (Yes)
+        :(7) Persist template record;
+        :(8) Set default grading settings;
+        :(9) Return MSG81 (HTTP 201);
+      else (No)
+        :(10) Return MSG80 (HTTP 404);
+      endif
+    else (No)
+      :(11) Return MSG78 (HTTP 400);
+    endif
+  else (No)
+    :(12) Return MSG79 (HTTP 403);
+  endif
+else (No)
+  :(13) Return MSG79 (HTTP 403);
+endif
+
+|Admin|
+:(14) See result;
+stop
+@enduml

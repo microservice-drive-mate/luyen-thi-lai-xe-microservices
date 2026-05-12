@@ -1,0 +1,44 @@
+@startuml UC34-Activity
+title UC34 - View my Learning Progress
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Student|
+start
+:(1) Click [My Progress] menu;
+
+|System|
+:(2) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(3) Check [Student] role in JWT;
+  if (Is Student?) then (Yes)
+    :(4) Extract studentId from claims;
+    :(5) Cache-first query progress;
+    if (Cache hit?) then (Yes)
+      :(6) Unpack cached metrics;
+    else (No)
+      :(7) Query database;
+      if (Metrics exist?) then (Yes)
+        :(8) Cache metrics;
+      else (No)
+        :(9) Return MSG132 (HTTP 404);
+      endif
+    endif
+    if (Cache hit? or DB hit?) then (Yes)
+      :(10) Project payload (completion%, pass-rate, weak-topics);
+      :(11) Enforce strict scope (studentId match);
+      :(12) Return MSG133 (HTTP 200);
+    endif
+  else (No)
+    :(13) Return MSG130 (HTTP 403);
+  endif
+else (No)
+  :(14) Return MSG130 (HTTP 403);
+endif
+
+|Student|
+:(15) View progress metrics;
+stop
+@enduml

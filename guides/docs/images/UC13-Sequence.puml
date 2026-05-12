@@ -1,0 +1,69 @@
+@startuml UC13-Sequence
+title UC13 - Submit Exam
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Student" as ActorStudent
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "ExamController" as ExamController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+participant "Grading Queue" as GradingQueue
+
+ActorStudent -> Client: Click Submit Exam
+Client -> APIGateway: POST /api/v1/exams/{attemptId}/submit
+APIGateway -> ExamController: Forward request
+activate ExamController
+ExamController -> AuthService: Validate JWT + check permission
+AuthService --> ExamController: Valid/Invalid
+
+alt JWT invalid
+  ExamController --> APIGateway: 403 Error\n(MSG45)
+  deactivate ExamController
+  APIGateway --> Client: Error Response
+else JWT valid
+  ExamController -> ExamController: Validate attempt status
+  
+  alt invalid/conflict
+    ExamController --> APIGateway: 400 Error\n(MSG46)
+    deactivate ExamController
+    APIGateway --> Client: Error Response
+  else valid
+    ExamController -> Database: Load attempt + answers
+    Database --> ExamController: Attempt or null
+    
+    alt not found
+      ExamController --> APIGateway: 404 Error\n(MSG47)
+      deactivate ExamController
+      APIGateway --> Client: Error Response
+    else found
+      ExamController -> Database: Finalize attempt (lock answers)
+      Database --> ExamController: Committed
+      ExamController -> GradingQueue: Queue grading job
+      GradingQueue --> ExamController: Queued
+      ExamController --> APIGateway: 200 OK\n(MSG48)
+      deactivate ExamController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

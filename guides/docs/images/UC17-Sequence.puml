@@ -1,0 +1,64 @@
+@startuml UC17-Sequence
+title UC17 - Search Question Bank
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Admin/Manager" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "QuestionController" as QuestionController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorAdmin -> Client: Enter search criteria
+Client -> APIGateway: GET /api/v1/questions/search
+APIGateway -> QuestionController: Forward request
+activate QuestionController
+QuestionController -> AuthService: Validate JWT + permission
+AuthService --> QuestionController: Valid/Invalid
+
+alt JWT invalid
+  QuestionController --> APIGateway: 403 Error\n(MSG62)
+  deactivate QuestionController
+  APIGateway --> Client: Error Response
+else JWT valid
+  QuestionController -> QuestionController: Validate query
+  
+  alt invalid
+    QuestionController --> APIGateway: 400 Error\n(MSG61)
+    deactivate QuestionController
+    APIGateway --> Client: Error Response
+  else valid
+    QuestionController -> Database: Execute indexed search
+    Database --> QuestionController: Results or empty
+    
+    alt no results
+      QuestionController --> APIGateway: 404 Error\n(MSG63)
+      deactivate QuestionController
+      APIGateway --> Client: Error Response
+    else found
+      QuestionController --> APIGateway: 200 OK\n(MSG64)
+      deactivate QuestionController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

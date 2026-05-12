@@ -1,0 +1,67 @@
+@startuml UC14-Sequence
+title UC14 - Grade Exam
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+participant "Grading Worker" as Worker
+participant "API Gateway" as APIGateway
+participant "GradingController" as GradingController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+participant "Grading Engine" as GradingEngine
+
+Worker -> APIGateway: POST /api/v1/exams/grade (internal)
+APIGateway -> GradingController: Forward request
+activate GradingController
+GradingController -> AuthService: Validate JWT + permission
+AuthService --> GradingController: Valid/Invalid
+
+alt JWT invalid
+  GradingController --> APIGateway: 403 Error\n(MSG49)
+  deactivate GradingController
+  APIGateway --> Worker: Error Response
+else JWT valid
+  GradingController -> GradingController: Validate attempt status
+  
+  alt invalid
+    GradingController --> APIGateway: 400 Error\n(MSG50)
+    deactivate GradingController
+    APIGateway --> Worker: Error Response
+  else valid
+    GradingController -> Database: Load attempt, answers, key, fatal rules
+    Database --> GradingController: Records or null
+    
+    alt missing
+      GradingController --> APIGateway: 404 Error\n(MSG51)
+      deactivate GradingController
+      APIGateway --> Worker: Error Response
+    else found
+      GradingController -> GradingEngine: Compute score + apply rules
+      GradingEngine --> GradingController: Final grade
+      GradingController -> Database: Persist grading result
+      Database --> GradingController: Committed
+      GradingController --> APIGateway: 200 OK\n(MSG52)
+      deactivate GradingController
+      APIGateway --> Worker: Success Response
+    end
+  end
+end
+
+@enduml
