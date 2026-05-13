@@ -11,6 +11,12 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles, Public } from 'nest-keycloak-connect';
+
+interface JwtPayload {
+  sub: string;
+  email?: string;
+  realm_access?: { roles: string[] };
+}
 import { AssignLicenseTierCommand } from '../../application/use-cases/assign-license-tier/assign-license-tier.command';
 import { AssignLicenseTierUseCase } from '../../application/use-cases/assign-license-tier/assign-license-tier.use-case';
 import { CreateUserProfileCommand } from '../../application/use-cases/create-user-profile/create-user-profile.command';
@@ -99,7 +105,7 @@ export class UserController {
   @Get('me')
   @ApiOperation({ summary: 'Get own profile' })
   async getMyProfile(
-    @AuthenticatedUser() user: any,
+    @AuthenticatedUser() user: JwtPayload,
   ): Promise<UserProfileResponseDto> {
     const userId = user.sub;
     const result = await this.getUserProfileUseCase.execute(
@@ -123,7 +129,7 @@ export class UserController {
   @Patch('me')
   @ApiOperation({ summary: 'Update own profile' })
   async updateMyProfile(
-    @AuthenticatedUser() user: any,
+    @AuthenticatedUser() user: JwtPayload,
     @Body() dto: UpdateUserRequestDto,
   ): Promise<UserProfileResponseDto> {
     const userId = user.sub;
@@ -166,7 +172,7 @@ export class UserController {
   async assignLicenseTier(
     @Param('id') id: string,
     @Body() dto: AssignLicenseTierRequestDto,
-    @AuthenticatedUser() user: any,
+    @AuthenticatedUser() user: JwtPayload,
   ): Promise<void> {
     const changedById = user.sub;
     await this.assignLicenseTierUseCase.execute(
