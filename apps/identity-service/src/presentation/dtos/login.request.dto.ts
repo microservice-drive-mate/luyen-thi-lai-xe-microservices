@@ -1,15 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
 
 export class LoginRequestDto {
-  @ApiProperty({ example: 'demo@example.com' })
+  @ApiProperty({ example: 'admin@gmail.com' })
   @IsString()
   @IsNotEmpty()
-  username: string;
+  username!: string;
 
-  @ApiProperty({ example: 'Password123!' })
+  @ApiProperty({ example: '123456' })
   @IsString()
   @IsNotEmpty()
-  password: string;
+  password!: string;
 }

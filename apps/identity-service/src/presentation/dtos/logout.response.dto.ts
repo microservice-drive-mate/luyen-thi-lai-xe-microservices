@@ -2,13 +2,13 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class LogoutResponseDto {
   @ApiProperty({ example: true })
-  success: boolean;
+  success!: boolean;
 
   @ApiProperty({ example: 'You have been logged out successfully.' })
-  message: string;
+  message!: string;
 
   @ApiProperty({
-    example: 'You should clear your token from LocalStorage or Cookie',
+    example: 'Please delete your token from LocalStorage or Cookie',
   })
-  instruction: string;
+  instruction!: string;
 }

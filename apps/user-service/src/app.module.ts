@@ -65,7 +65,7 @@ import { UserModule } from './user.module';
         clientId: configService.getOrThrow<string>('keycloak.clientId'),
         secret: configService.get<string>('keycloak.clientSecret') ?? '',
         policyEnforcement: PolicyEnforcementMode.PERMISSIVE,
-        tokenValidation: TokenValidation.ONLINE,
+        tokenValidation: TokenValidation.OFFLINE,
       }),
     }),
     UserModule,

@@ -171,7 +171,9 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
-    command: start-dev
+    # --import-realm: tự động import tất cả *.json trong /opt/keycloak/data/import/
+    # khi realm chưa tồn tại (idempotent – restart an toàn)
+    command: start-dev --import-realm
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://db-keycloak:5432/keycloak_db
@@ -181,8 +183,11 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_URL: "http://localhost:8080"
     ports:
       - "8080:8080"
+    volumes:
+      - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     depends_on:
       - db-keycloak
 

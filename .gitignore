@@ -12,6 +12,7 @@ build/
 .next/
 out/
 .turbo
+**/*.tsbuildinfo
 
 # Local env files (Chặn file môi trường ở mọi nơi)
 .env

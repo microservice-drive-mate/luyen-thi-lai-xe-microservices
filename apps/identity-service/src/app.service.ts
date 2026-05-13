@@ -1,22 +1,27 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AxiosError } from 'axios';
+import * as jwt from 'jsonwebtoken';
 import { lastValueFrom } from 'rxjs';
-import { LoginResponseDto } from './login.response.dto';
-import { LogoutResponseDto } from './logout.response.dto';
+import { LoginResponseDto } from './presentation/dtos/login.response.dto';
+import { LogoutResponseDto } from './presentation/dtos/logout.response.dto';
 import { TokenBlacklistService } from './infrastructure/token-blacklist/token-blacklist.service';
 
 @Injectable()
 export class AppService {
+  private readonly logger = new Logger(AppService.name);
+
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly tokenBlacklistService: TokenBlacklistService,
   ) {}
-
-  getHello(): string {
-    return 'Hello World!';
-  }
 
   async login(username: string, password: string): Promise<LoginResponseDto> {
     const authServerUrl = this.configService.getOrThrow<string>(
@@ -52,9 +57,23 @@ export class AppService {
         tokenType: response.data.token_type,
         scope: response.data.scope,
       };
-    } catch (e) {
-      throw new UnauthorizedException(
-        'Tài khoản hoặc mật khẩu không chính xác',
+    } catch (error) {
+      const axiosError = error as AxiosError<{ error_description?: string }>;
+      const status = axiosError.response?.status;
+      const detail =
+        axiosError.response?.data?.error_description ?? axiosError.message;
+      this.logger.error(
+        `Login failed [${status ?? 'NO_RESPONSE'}] → ${detail} | url=${url}`,
+      );
+
+      // 401 = sai username/password; mọi lỗi khác (404 realm, 503 Keycloak down...) expose rõ hơn
+      if (status === 401) {
+        throw new UnauthorizedException(
+          'Tài khoản hoặc mật khẩu không chính xác',
+        );
+      }
+      throw new InternalServerErrorException(
+        `Keycloak login error [${status ?? 'NO_RESPONSE'}]: ${detail}`,
       );
     }
   }
@@ -64,74 +83,120 @@ export class AppService {
    * @param token JWT token từ Authorization header
    * @returns LogoutResponseDto với thông báo logout thành công
    */
-  async logout(token: string): Promise<LogoutResponseDto> {
-    if (!token) {
+  async logout(
+    accessToken: string,
+    refreshToken: string,
+  ): Promise<LogoutResponseDto> {
+    if (!accessToken) {
       throw new UnauthorizedException(
         'Authentication token is missing or invalid. (MSG129)',
       );
     }
 
-    try {
-      // Decode JWT token để lấy thông tin exp (expiration time)
-      const decoded = this.decodeToken(token);
-
-      if (!decoded || typeof decoded.exp !== 'number') {
-        throw new UnauthorizedException(
-          'Authentication token is missing or invalid. (MSG129)',
-        );
-      }
-
-      // Kiểm tra token đã hết hạn hay chưa
-      const now = Math.floor(Date.now() / 1000);
-      if (decoded.exp <= now) {
-        throw new UnauthorizedException(
-          'Authentication token is missing or invalid. (MSG129)',
-        );
-      }
-
-      // Thêm token vào blacklist với TTL = exp - now
-      this.tokenBlacklistService.addToBlacklist(token, decoded.exp);
-
-      return {
-        success: true,
-        message: 'You have been logged out successfully. (MSG130)',
-        instruction: 'Please delete your token from LocalStorage or Cookie',
-      };
-    } catch (e) {
-      if (e instanceof UnauthorizedException) {
-        throw e;
-      }
+    const decoded = this.decodeToken(accessToken);
+    if (!decoded || typeof decoded.exp !== 'number') {
       throw new UnauthorizedException(
         'Authentication token is missing or invalid. (MSG129)',
+      );
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (decoded.exp <= now) {
+      throw new UnauthorizedException(
+        'Authentication token is missing or invalid. (MSG129)',
+      );
+    }
+
+    // Revoke session trên Keycloak (vô hiệu hóa cả refresh token)
+    await this.revokeKeycloakSession(refreshToken);
+
+    // Blacklist access token trong Redis cho đến khi hết hạn
+    await this.tokenBlacklistService.addToBlacklist(accessToken, decoded.exp);
+
+    return {
+      success: true,
+      message: 'You have been logged out successfully. (MSG130)',
+      instruction: 'Please delete your token from LocalStorage or Cookie',
+    };
+  }
+
+  private async revokeKeycloakSession(refreshToken: string): Promise<void> {
+    const authServerUrl = this.configService.getOrThrow<string>(
+      'keycloak.authServerUrl',
+    );
+    const realm = this.configService.getOrThrow<string>('keycloak.realm');
+    const clientId = this.configService.getOrThrow<string>('keycloak.clientId');
+    const clientSecret = this.configService.getOrThrow<string>(
+      'keycloak.clientSecret',
+    );
+
+    const url = `${authServerUrl}/realms/${realm}/protocol/openid-connect/logout`;
+    const params = new URLSearchParams();
+    params.append('client_id', clientId);
+    params.append('client_secret', clientSecret);
+    params.append('refresh_token', refreshToken);
+
+    try {
+      await lastValueFrom(
+        this.httpService.post(url, params.toString(), {
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        }),
+      );
+    } catch (error) {
+      const status = (error as AxiosError).response?.status;
+      // 400 = refresh token đã bị revoke trước đó hoặc không hợp lệ — vẫn tiếp tục logout
+      if (status !== 400) {
+        this.logger.warn(
+          `Keycloak session revocation failed [${status ?? 'NO_RESPONSE'}]`,
+        );
+      }
+    }
+  }
+
+  async refreshToken(refreshToken: string): Promise<LoginResponseDto> {
+    const authServerUrl = this.configService.getOrThrow<string>(
+      'keycloak.authServerUrl',
+    );
+    const realm = this.configService.getOrThrow<string>('keycloak.realm');
+    const clientId = this.configService.getOrThrow<string>('keycloak.clientId');
+    const clientSecret = this.configService.getOrThrow<string>(
+      'keycloak.clientSecret',
+    );
+
+    const url = `${authServerUrl}/realms/${realm}/protocol/openid-connect/token`;
+    const params = new URLSearchParams();
+    params.append('grant_type', 'refresh_token');
+    params.append('client_id', clientId);
+    params.append('client_secret', clientSecret);
+    params.append('refresh_token', refreshToken);
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(url, params.toString(), {
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        }),
+      );
+      return {
+        accessToken: response.data.access_token,
+        refreshToken: response.data.refresh_token,
+        expiresIn: response.data.expires_in,
+        refreshExpiresIn: response.data.refresh_expires_in,
+        tokenType: response.data.token_type,
+        scope: response.data.scope,
+      };
+    } catch {
+      throw new UnauthorizedException(
+        'Refresh token không hợp lệ hoặc đã hết hạn',
       );
     }
   }
 
-  /**
-   * Decode JWT token (không verify signature, chỉ extract payload)
-   * JWT format: header.payload.signature
-   */
-  /* eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access */
-  private decodeToken(token: string): Record<string, number | string> | null {
+  private decodeToken(token: string): jwt.JwtPayload | null {
     try {
-      // Remove 'Bearer ' prefix nếu có
-      const bearerToken = token.startsWith('Bearer ') ? token.slice(7) : token;
-
-      const parts = bearerToken.split('.');
-      if (parts.length !== 3) {
-        return null;
-      }
-
-      // Decode payload (phần thứ 2)
-      const payload = parts[1];
-      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
-      const decoded = JSON.parse(
-        Buffer.from(payload, 'base64').toString('utf-8'),
-      );
-
-      return decoded as Record<string, number | string>;
+      const decoded = jwt.decode(token);
+      if (!decoded || typeof decoded === 'string') return null;
+      return decoded;
     } catch {
-      // JWT decode failed, return null
       return null;
     }
   }
