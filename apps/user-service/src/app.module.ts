@@ -30,6 +30,7 @@ import { UserModule } from './user.module';
               )
               .default('development'),
             database: Joi.object({
+              url: Joi.string().required(),
               connectionTimeout: Joi.number().default(5000),
             }).optional(),
             rabbitmq: Joi.object({

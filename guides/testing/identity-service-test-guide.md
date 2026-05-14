@@ -142,6 +142,9 @@ curl -X POST http://localhost:3001/login \
 {
   "success": true,
   "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/login",
   "data": {
     "accessToken": "eyJhbGciOi...",
     "refreshToken": "eyJhbGciOi...",
@@ -172,6 +175,10 @@ curl http://localhost:3001/private \
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "...",
+  "path": "/private",
   "data": { "message": "Chào bạn, bạn đã đăng nhập thành công!" }
 }
 ```
@@ -204,6 +211,10 @@ curl -X POST http://localhost:3001/logout \
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "...",
+  "path": "/logout",
   "data": {
     "success": true,
     "message": "You have been logged out successfully. (MSG130)",
@@ -225,7 +236,9 @@ curl http://localhost:3001/private \
 {
   "success": false,
   "code": "UNAUTHORIZED",
-  "message": "Token has been revoked. Please log in again. (MSG131)"
+  "message": "Token has been revoked. Please log in again. (MSG131)",
+  "timestamp": "...",
+  "path": "/private"
 }
 ```
 
@@ -243,7 +256,9 @@ curl -X POST http://localhost:3001/auth/refresh \
 {
   "success": false,
   "code": "UNAUTHORIZED",
-  "message": "Refresh token không hợp lệ hoặc đã hết hạn"
+  "message": "Refresh token không hợp lệ hoặc đã hết hạn",
+  "timestamp": "...",
+  "path": "/auth/refresh"
 }
 ```
 
@@ -281,6 +296,9 @@ curl -X POST http://localhost:3001/admin/users \
 {
   "success": true,
   "code": "SUCCESS",
+  "message": "Created",
+  "timestamp": "...",
+  "path": "/admin/users",
   "data": {
     "userId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "email": "student1@gm.uit.edu.vn",
@@ -315,8 +333,10 @@ curl -X POST http://localhost:3001/admin/users \
 ```json
 {
   "success": false,
-  "code": "BAD_REQUEST",
-  "message": "User with this email already exists in Keycloak"
+  "code": "VALIDATION_ERROR",
+  "message": "User with this email already exists in Keycloak",
+  "timestamp": "...",
+  "path": "/admin/users"
 }
 ```
 
@@ -335,6 +355,9 @@ curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/role" \
 {
   "success": true,
   "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "...",
+  "path": "/admin/users/.../role",
   "data": { "userId": "...", "role": "INSTRUCTOR" }
 }
 ```
@@ -354,6 +377,9 @@ curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/lock" \
 {
   "success": true,
   "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "...",
+  "path": "/admin/users/.../lock",
   "data": { "userId": "...", "locked": true }
 }
 ```
@@ -384,6 +410,9 @@ curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/lock" \
 {
   "success": true,
   "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "...",
+  "path": "/admin/users/.../lock",
   "data": { "userId": "...", "locked": false }
 }
 ```
@@ -426,6 +455,10 @@ curl "http://localhost:3002/users/$USER_ID" \
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "...",
+  "path": "/users/...",
   "data": {
     "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "fullName": "Nguyễn Văn A",

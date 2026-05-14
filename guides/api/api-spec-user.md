@@ -1,54 +1,55 @@
 # User Service API Specification
 
-**Base URL (qua Kong):** `http://localhost:8000`
-**Service path:** `/users`
+**Base URL qua Kong:** `http://localhost:8000`  
+**Service path:** `/users`  
+**Direct local:** `http://localhost:3002`  
+**Swagger UI:** `http://localhost:3002/docs`  
+**OpenAPI JSON:** `http://localhost:3002/docs-json`  
 **Version:** 1.0.0
-
-> **Upload avatar:** Xem [frontend-integration-guide.md](./frontend-integration-guide.md) để biết flow đầy đủ (media-service → user-service).
 
 ---
 
-## Tổng quan xác thực
+## Tổng Quan Xác Thực
 
-Tất cả các endpoint (trừ `POST /users`) đều yêu cầu JWT hợp lệ do Keycloak phát hành.
+User-service dùng `nest-keycloak-connect`.
 
-Kong gateway:
+| Endpoint | Auth hiện tại trong code |
+|---|---|
+| `POST /users` | `@Public()` |
+| `GET /users` | `ADMIN`, `CENTER_MANAGER` |
+| `GET /users/me` | JWT hợp lệ |
+| `GET /users/:id` | `ADMIN`, `CENTER_MANAGER` |
+| `PATCH /users/me` | JWT hợp lệ |
+| `PATCH /users/:id` | `ADMIN` |
+| `PATCH /users/:id/lock` | `ADMIN`, `CENTER_MANAGER` |
+| `PATCH /users/:id/license-tier` | `ADMIN`, `CENTER_MANAGER` |
 
-1. Xác thực chữ ký JWT (`exp`, `iss`)
-2. Inject các header vào request trước khi forward xuống service:
-   - `x-user-id` — `sub` claim từ JWT (Keycloak user UUID)
-   - `x-user-role` — role của user (từ Keycloak token claims)
-
-**Header Authorization:**
-
-```
-Authorization: Bearer <keycloak_access_token>
-```
+Các endpoint `me` và `license-tier` lấy user hiện tại từ `@AuthenticatedUser()` (`sub` trong JWT), không đọc trực tiếp `x-user-id`.
 
 ---
 
 ## Response Format
 
-Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
-
 ```json
-// Thành công
 {
   "success": true,
   "code": "SUCCESS",
   "message": "OK",
-  "timestamp": "2026-05-06T10:00:00.000Z",
+  "timestamp": "2026-05-14T10:00:00.000Z",
   "path": "/users/me",
-  "data": { ... }
+  "data": {}
 }
+```
 
-// Lỗi
+Lỗi domain:
+
+```json
 {
   "success": false,
   "code": "USER_PROFILE_NOT_FOUND",
-  "message": "User profile not found: abc-123",
-  "timestamp": "2026-05-06T10:00:00.000Z",
-  "path": "/users/abc-123"
+  "message": "User profile not found: abc",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/users/abc"
 }
 ```
 
@@ -56,15 +57,14 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 ## Error Codes
 
-| HTTP Status | code                     | Nguyên nhân                                  |
-| ----------- | ------------------------ | -------------------------------------------- |
-| 400         | `VALIDATION_ERROR`       | Request body/query không hợp lệ              |
-| 400         | `USER_NOT_STUDENT`       | Gán license tier cho user không phải STUDENT |
-| 401         | `UNAUTHORIZED`           | Thiếu hoặc JWT không hợp lệ                  |
-| 404         | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user profile theo ID          |
-| 409         | `USER_ALREADY_EXISTS`    | Email đã tồn tại trong hệ thống              |
-| 422         | `USER_NOT_STUDENT`       | Xem bên trên                                 |
-| 500         | `INTERNAL_ERROR`         | Lỗi server                                   |
+| HTTP | Code | Nguyên nhân |
+|---:|---|---|
+| 400 | `VALIDATION_ERROR` | Body/query không hợp lệ |
+| 401 | `UNAUTHORIZED` | Thiếu hoặc sai JWT |
+| 403 | `FORBIDDEN` | Role không đủ quyền |
+| 404 | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user profile |
+| 409 | `USER_ALREADY_EXISTS` | User/email đã tồn tại |
+| 422 | `USER_NOT_STUDENT` | Thao tác chỉ áp dụng cho user role `STUDENT` |
 
 ---
 
@@ -72,20 +72,11 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 ### UserRole
 
-| Value            | Ý nghĩa           |
-| ---------------- | ----------------- |
-| `ADMIN`          | Quản trị viên     |
-| `CENTER_MANAGER` | Quản lý trung tâm |
-| `INSTRUCTOR`     | Giáo viên         |
-| `STUDENT`        | Học viên          |
+`ADMIN` | `CENTER_MANAGER` | `INSTRUCTOR` | `STUDENT`
 
 ### Gender
 
-| Value    | Ý nghĩa |
-| -------- | ------- |
-| `MALE`   | Nam     |
-| `FEMALE` | Nữ      |
-| `OTHER`  | Khác    |
+`MALE` | `FEMALE` | `OTHER`
 
 ### LicenseTier
 
@@ -99,43 +90,37 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 ```json
 {
-  "id": "uuid",
+  "id": "keycloak-user-uuid",
   "fullName": "Nguyễn Văn A",
   "email": "a@example.com",
   "phoneNumber": "0912345678",
   "dateOfBirth": "2000-01-15T00:00:00.000Z",
-  "avatarUrl": "https://mediasvdev2026.blob.core.windows.net/media/uploads/2026/05/abc.jpg",
+  "avatarUrl": "https://storage.blob.core.windows.net/media/uploads/2026/05/avatar.jpg",
   "mediaFileId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "gender": "MALE",
-  "address": "123 Đường ABC, TP.HCM",
+  "address": "TP.HCM",
   "role": "STUDENT",
   "isActive": true,
-  "createdAt": "2026-01-01T00:00:00.000Z",
+  "createdAt": "2026-05-14T10:00:00.000Z",
   "studentDetail": {
     "licenseTier": "B2",
-    "enrolledAt": "2026-01-01T00:00:00.000Z",
-    "notes": "Học viên cần ôn thêm phần biển báo"
+    "enrolledAt": "2026-05-14T10:00:00.000Z",
+    "notes": "Ghi chú"
   }
 }
 ```
 
-> `studentDetail` là `null` nếu `role !== "STUDENT"`.
-
-> `avatarUrl` và `mediaFileId` được set cùng nhau khi upload avatar qua media-service. Xem [frontend-integration-guide.md](./frontend-integration-guide.md).
+`studentDetail` là `null` nếu user không có role `STUDENT`.
 
 ---
 
 ## Endpoints
 
----
+### POST `/users`
 
-### POST /users
+Tạo user profile. Endpoint đang `@Public()` để identity-service/RabbitMQ flow có thể tái sử dụng logic hoặc dùng cho test nội bộ.
 
-> **Nội bộ** — Tạo user profile. Thường được gọi tự động bởi `MessagingController` khi nhận event `identity.user.created` từ RabbitMQ (do identity-service/Keycloak emit). Endpoint HTTP này chỉ dùng cho testing hoặc trường hợp tạo thủ công.
-
-**Auth:** Yêu cầu JWT (Kong JWT plugin)
-
-**Request Body:**
+**Body**
 
 ```json
 {
@@ -146,36 +131,36 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
   "phoneNumber": "0912345678",
   "dateOfBirth": "2000-01-15",
   "gender": "MALE",
-  "address": "123 Đường ABC, TP.HCM",
-  "avatarUrl": "https://...",
+  "address": "TP.HCM",
+  "avatarUrl": "https://storage.blob.core.windows.net/media/uploads/2026/05/avatar.jpg",
+  "mediaFileId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "licenseTier": "B2",
-  "enrolledAt": "2026-01-01"
+  "enrolledAt": "2026-05-14"
 }
 ```
 
-| Field         | Type        | Required | Validation                                   |
-| ------------- | ----------- | -------- | -------------------------------------------- |
-| `id`          | string      | ✅       | UUID (= Keycloak user ID)                    |
-| `fullName`    | string      | ✅       | Non-empty                                    |
-| `email`       | string      | ✅       | Valid email format                           |
-| `role`        | UserRole    | ✅       | Một trong các giá trị UserRole               |
-| `phoneNumber` | string      | ❌       | SĐT Việt Nam: `0[3-9]XXXXXXXX` hoặc `+84...` |
-| `dateOfBirth` | string      | ❌       | ISO date string                              |
-| `gender`      | Gender      | ❌       | Một trong các giá trị Gender                 |
-| `address`     | string      | ❌       |                                              |
-| `avatarUrl`   | string      | ❌       |                                              |
-| `licenseTier` | LicenseTier | ❌       | Chỉ có ý nghĩa khi `role = STUDENT`          |
-| `enrolledAt`  | string      | ❌       | ISO date string, ngày nhập học               |
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| `id` | string | Yes | Non-empty string |
+| `fullName` | string | Yes | Non-empty |
+| `email` | string | Yes | Email |
+| `role` | UserRole | Yes | Enum |
+| `phoneNumber` | string | No | Regex `^(0|\+84)[3-9]\d{8}$` |
+| `dateOfBirth` | date | No | Converted by `class-transformer` |
+| `gender` | Gender | No | Enum |
+| `address` | string | No | - |
+| `avatarUrl` | string | No | URL |
+| `mediaFileId` | string | No | UUID |
+| `licenseTier` | LicenseTier | No | Enum |
+| `enrolledAt` | date | No | Converted by `class-transformer` |
 
-**Response `201` — Tạo thành công:**
+**Response `201 Created`**
 
 ```json
 {
   "success": true,
   "code": "SUCCESS",
-  "message": "OK",
-  "timestamp": "2026-05-06T10:00:00.000Z",
-  "path": "/users",
+  "message": "Created",
   "data": {
     "id": "keycloak-user-uuid",
     "fullName": "Nguyễn Văn A",
@@ -185,45 +170,33 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 }
 ```
 
-**Errors:**
-
-| Status | code                  | Nguyên nhân       |
-| ------ | --------------------- | ----------------- |
-| 400    | `VALIDATION_ERROR`    | Body không hợp lệ |
-| 409    | `USER_ALREADY_EXISTS` | Email đã tồn tại  |
-
 ---
 
-### GET /users
+### GET `/users`
 
-> Lấy danh sách user có phân trang và lọc. Dành cho admin và center manager.
+Danh sách user có phân trang và filter.
 
-**Auth:** Yêu cầu JWT
+**Auth:** `ADMIN`, `CENTER_MANAGER`
 
-**Query Parameters:**
+**Query**
 
-| Param      | Type     | Default | Validation          | Mô tả                         |
-| ---------- | -------- | ------- | ------------------- | ----------------------------- |
-| `page`     | number   | 1       | ≥ 1                 | Số trang                      |
-| `size`     | number   | 20      | ≥ 1, ≤ 100          | Số item mỗi trang             |
-| `role`     | UserRole | —       | Enum UserRole       | Lọc theo role                 |
-| `isActive` | boolean  | —       | `true` hoặc `false` | Lọc theo trạng thái hoạt động |
-| `search`   | string   | —       |                     | Tìm theo tên, email, SĐT      |
+| Param | Type | Default | Validation |
+|---|---|---:|---|
+| `page` | number | 1 | integer, `>= 1` |
+| `size` | number | 20 | integer, `1..100` |
+| `role` | UserRole | - | enum |
+| `isActive` | boolean | - | boolean |
+| `search` | string | - | optional |
 
-**Response `200`:**
+**Response `200 OK`**
 
 ```json
 {
   "success": true,
   "code": "SUCCESS",
-  "message": "OK",
-  "timestamp": "2026-05-06T10:00:00.000Z",
-  "path": "/users",
   "data": {
-    "items": [
-      /* UserProfileResponse[] */
-    ],
-    "total": 42,
+    "items": [],
+    "total": 0,
     "page": 1,
     "size": 20
   }
@@ -232,80 +205,31 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 ---
 
-### GET /users/me
+### GET `/users/me`
 
-> Lấy profile của chính user đang đăng nhập. Kong inject `x-user-id` từ JWT sub claim.
+Lấy profile của user đang đăng nhập. `userId = JWT.sub`.
 
-**Auth:** Yêu cầu JWT  
-**Kong header:** `x-user-id` (auto-injected)
+**Auth:** JWT hợp lệ.
 
-**Response `200`:**
-
-```json
-{
-  "success": true,
-  "code": "SUCCESS",
-  "message": "OK",
-  "timestamp": "2026-05-06T10:00:00.000Z",
-  "path": "/users/me",
-  "data": {
-    /* UserProfileResponse */
-  }
-}
-```
-
-**Errors:**
-
-| Status | code                     | Nguyên nhân                           |
-| ------ | ------------------------ | ------------------------------------- |
-| 401    | `UNAUTHORIZED`           | JWT thiếu hoặc không hợp lệ           |
-| 404    | `USER_PROFILE_NOT_FOUND` | Profile chưa được tạo cho Keycloak ID |
+**Response `200 OK`:** `data` là `UserProfileResponse`.
 
 ---
 
-### GET /users/:id
+### GET `/users/:id`
 
-> Lấy profile của bất kỳ user nào theo ID. Dành cho admin và center manager.
+Lấy profile theo id.
 
-**Auth:** Yêu cầu JWT
+**Auth:** `ADMIN`, `CENTER_MANAGER`.
 
-**Path Params:**
-
-| Param | Type   | Mô tả                 |
-| ----- | ------ | --------------------- |
-| `id`  | string | UUID của user cần lấy |
-
-**Response `200`:**
-
-```json
-{
-  "success": true,
-  "code": "SUCCESS",
-  "message": "OK",
-  "timestamp": "2026-05-06T10:00:00.000Z",
-  "path": "/users/abc-uuid",
-  "data": {
-    /* UserProfileResponse */
-  }
-}
-```
-
-**Errors:**
-
-| Status | code                     | Nguyên nhân         |
-| ------ | ------------------------ | ------------------- |
-| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user |
+**Response `200 OK`:** `data` là `UserProfileResponse`.
 
 ---
 
-### PATCH /users/me
+### PATCH `/users/me`
 
-> Cập nhật profile của chính user đang đăng nhập. Kong inject `x-user-id`.
+Cập nhật profile của user đang đăng nhập. `userId = JWT.sub`.
 
-**Auth:** Yêu cầu JWT  
-**Kong header:** `x-user-id` (auto-injected)
-
-**Request Body** (tất cả optional — chỉ gửi field cần thay đổi):
+**Body**: tất cả field đều optional.
 
 ```json
 {
@@ -313,172 +237,104 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
   "phoneNumber": "0987654321",
   "dateOfBirth": "2000-05-20",
   "gender": "FEMALE",
-  "address": "456 Đường XYZ, Hà Nội",
-  "avatarUrl": "https://...",
-  "notes": "Ghi chú của học viên"
+  "address": "Hà Nội",
+  "avatarUrl": "https://storage.blob.core.windows.net/media/uploads/2026/05/avatar.jpg",
+  "mediaFileId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "notes": "Ghi chú mới"
 }
 ```
 
-| Field         | Type   | Validation                       |
-| ------------- | ------ | -------------------------------- |
-| `fullName`    | string | Non-empty string                 |
-| `phoneNumber` | string | SĐT Việt Nam hợp lệ              |
-| `dateOfBirth` | string | ISO date string                  |
-| `gender`      | Gender | Enum Gender                      |
-| `address`     | string |                                  |
-| `avatarUrl`   | string |                                  |
-| `notes`       | string | Chỉ áp dụng nếu `role = STUDENT` |
+| Field | Type | Validation |
+|---|---|---|
+| `fullName` | string | optional |
+| `phoneNumber` | string | Regex `^(0|\+84)[3-9]\d{8}$` |
+| `dateOfBirth` | date | converted |
+| `gender` | Gender | enum |
+| `address` | string | optional |
+| `avatarUrl` | string | URL |
+| `mediaFileId` | string | UUID |
+| `notes` | string | optional |
 
-**Response `200`** — Trả về profile đã cập nhật:
+**Response `200 OK`:** `data` là profile sau khi cập nhật.
 
-```json
-{
-  "success": true,
-  "code": "SUCCESS",
-  "message": "OK",
-  "timestamp": "2026-05-06T10:00:00.000Z",
-  "path": "/users/me",
-  "data": {
-    /* UserProfileResponse với data mới */
-  }
-}
-```
-
-**Errors:**
-
-| Status | code                     | Nguyên nhân           |
-| ------ | ------------------------ | --------------------- |
-| 400    | `VALIDATION_ERROR`       | Body không hợp lệ     |
-| 404    | `USER_PROFILE_NOT_FOUND` | Profile không tồn tại |
+Nếu body có `mediaFileId`, user-service phát event `user.avatar.linked`.
 
 ---
 
-### PATCH /users/:id
+### PATCH `/users/:id`
 
-> Cập nhật profile của bất kỳ user nào. Dành cho admin.
+Cập nhật profile theo id.
 
-**Auth:** Yêu cầu JWT
+**Auth:** `ADMIN`.
 
-**Path Params:**
-
-| Param | Type   | Mô tả                    |
-| ----- | ------ | ------------------------ |
-| `id`  | string | UUID của user cần update |
-
-**Request Body:** Giống `PATCH /users/me`
-
-**Response `200`** — Trả về profile đã cập nhật:
-
-```json
-{
-  "success": true,
-  "code": "SUCCESS",
-  "message": "OK",
-  "timestamp": "2026-05-06T10:00:00.000Z",
-  "path": "/users/abc-uuid",
-  "data": {
-    /* UserProfileResponse với data mới */
-  }
-}
-```
-
-**Errors:**
-
-| Status | code                     | Nguyên nhân         |
-| ------ | ------------------------ | ------------------- |
-| 400    | `VALIDATION_ERROR`       | Body không hợp lệ   |
-| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user |
+**Body:** giống `PATCH /users/me`.  
+**Response `200 OK`:** `data` là profile sau khi cập nhật.
 
 ---
 
-### PATCH /users/:id/lock
+### PATCH `/users/:id/lock`
 
-> Khóa hoặc mở khóa một tài khoản user. Dành cho admin và center manager.
+Khóa hoặc mở khóa user profile trong user-service.
 
-**Auth:** Yêu cầu JWT
+**Auth:** `ADMIN`, `CENTER_MANAGER`.
 
-**Path Params:**
-
-| Param | Type   | Mô tả                         |
-| ----- | ------ | ----------------------------- |
-| `id`  | string | UUID của user cần lock/unlock |
-
-**Request Body:**
+**Body**
 
 ```json
 { "lock": true }
 ```
 
-| Field  | Type    | Required | Mô tả                                                 |
-| ------ | ------- | -------- | ----------------------------------------------------- |
-| `lock` | boolean | ✅       | `true` = khóa (`isActive = false`); `false` = mở khóa |
+| Field | Type | Required | Mô tả |
+|---|---|---|---|
+| `lock` | boolean | Yes | `true` = khóa/deactivate, `false` = mở khóa/activate |
 
-**Response `204 No Content`** — Không có body.
+**Response `204 No Content`**
 
-**Errors:**
-
-| Status | code                     | Nguyên nhân         |
-| ------ | ------------------------ | ------------------- |
-| 400    | `VALIDATION_ERROR`       | Body không hợp lệ   |
-| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user |
-
-> **Lưu ý:** Khi user bị khóa (`isActive = false`), Keycloak vẫn có thể phát JWT hợp lệ cho họ. Việc kiểm tra `isActive` ở tầng nghiệp vụ là trách nhiệm của từng service khi xử lý request.
+Không có body.
 
 ---
 
-### PATCH /users/:id/license-tier
+### PATCH `/users/:id/license-tier`
 
-> Gán hạng bằng lái cho một học viên. Ghi nhận audit trail (ai đổi, đổi từ hạng nào sang hạng nào, lúc nào). Emit domain event `user.student.license-assigned` lên RabbitMQ.
+Gán hạng giấy phép cho học viên và ghi audit trail. `changedById = JWT.sub`.
 
-**Auth:** Yêu cầu JWT  
-**Kong header:** `x-user-id` (auto-injected — dùng làm `changedById` trong audit log)
+**Auth:** `ADMIN`, `CENTER_MANAGER`.
 
-**Path Params:**
-
-| Param | Type   | Mô tả                          |
-| ----- | ------ | ------------------------------ |
-| `id`  | string | UUID của học viên cần gán hạng |
-
-**Request Body:**
+**Body**
 
 ```json
 { "licenseTier": "B2" }
 ```
 
-| Field         | Type        | Required | Validation                        |
-| ------------- | ----------- | -------- | --------------------------------- |
-| `licenseTier` | LicenseTier | ✅       | Một trong các giá trị LicenseTier |
+**Response `204 No Content`**
 
-**Response `204 No Content`** — Không có body.
+Không có body.
 
-**Errors:**
-
-| Status | code                     | Nguyên nhân                  |
-| ------ | ------------------------ | ---------------------------- |
-| 400    | `VALIDATION_ERROR`       | Body không hợp lệ            |
-| 404    | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user          |
-| 422    | `USER_NOT_STUDENT`       | User không có role `STUDENT` |
-
-> **Domain Event phát ra:**
->
-> - Event name: `user.student.license-assigned`
-> - Payload: `{ studentId, email, fullName, oldLicenseTier, newLicenseTier, changedById, occurredAt }`
-> - Consumed bởi: `notification-service` (gửi thông báo), `analytics-service` (cập nhật scope học)
-
----
-
-## Luồng event từ identity-service
-
-User-service lắng nghe 2 event từ RabbitMQ queue `user_service_events`:
-
-### `identity.user.created`
-
-Phát ra bởi identity-service khi Keycloak tạo user mới.
-
-**Payload:**
+**Event published:** `user.student.license-assigned`.
 
 ```json
 {
+  "eventName": "user.student.license-assigned",
+  "studentId": "student-uuid",
+  "studentEmail": "a@example.com",
+  "studentFullName": "Nguyễn Văn A",
+  "oldLicenseTier": null,
+  "newLicenseTier": "B2",
+  "changedById": "admin-uuid"
+}
+```
+
+---
+
+## Events Consumed
+
+User-service consume queue `user_service_events`.
+
+### `identity.user.created`
+
+```json
+{
+  "eventName": "identity.user.created",
   "userId": "keycloak-uuid",
   "email": "a@example.com",
   "fullName": "Nguyễn Văn A",
@@ -486,64 +342,49 @@ Phát ra bởi identity-service khi Keycloak tạo user mới.
 }
 ```
 
-**Xử lý:** Tạo `UserProfile` (và `StudentDetail` nếu `role = STUDENT`) trong DB.
-
----
+Tạo `UserProfile`; nếu role là `STUDENT` thì tạo `StudentDetail`.
 
 ### `identity.user.role-changed`
 
-Phát ra bởi identity-service khi admin đổi role của user trong Keycloak.
-
-**Payload:**
-
 ```json
 {
+  "eventName": "identity.user.role-changed",
   "userId": "keycloak-uuid",
   "newRole": "INSTRUCTOR"
 }
 ```
 
-**Xử lý:** Gọi `UserProfile.syncRole()`:
+Đồng bộ role cho `UserProfile`; tạo hoặc xóa `StudentDetail` tùy role mới.
 
-- Nếu được promote lên `STUDENT` → tạo `StudentDetail`
-- Nếu bị demote khỏi `STUDENT` → xóa `StudentDetail`
+### `media.file.deleted`
 
----
-
-## Rate Limiting
-
-Cấu hình tại Kong (global):
-
-| Giới hạn   | Giá trị         |
-| ---------- | --------------- |
-| Per second | 5 req/giây/IP   |
-| Per hour   | 1000 req/giờ/IP |
-
-Khi vượt quá: `429 Too Many Requests`
-
----
-
-## Swagger UI
-
-| Môi trường | URL                                                 |
-| ---------- | --------------------------------------------------- |
-| Local      | `http://localhost:3000/docs`                        |
-| Qua Kong   | `http://localhost:8000/user-service/docs` (cần JWT) |
-
----
-
-## Audit Trail
-
-Mỗi lần gán/thay đổi `licenseTier`, hệ thống tạo một bản ghi `LicenseAssignmentAudit`:
-
-```
-LicenseAssignmentAudit
-├── id: UUID
-├── studentId: UUID (→ user_profiles)
-├── oldLicenseTier: LicenseTier | null
-├── newLicenseTier: LicenseTier
-├── changedById: UUID (Keycloak ID của người thực hiện)
-└── changedAt: TIMESTAMPTZ
+```json
+{
+  "eventName": "media.file.deleted",
+  "fileId": "media-file-uuid",
+  "storageKey": "uploads/2026/05/avatar.jpg",
+  "deletedById": "user-uuid"
+}
 ```
 
-Audit được ghi trong cùng một Prisma transaction với việc update `StudentDetail`, đảm bảo tính nhất quán.
+Nếu profile nào đang dùng `mediaFileId = fileId`, user-service set `avatarUrl = null` và `mediaFileId = null`.
+
+---
+
+## Events Published
+
+### `user.avatar.linked`
+
+```json
+{
+  "eventName": "user.avatar.linked",
+  "userId": "user-uuid",
+  "mediaFileId": "media-file-uuid"
+}
+```
+
+Media-service dùng event này để mark file `LINKED`.
+
+### `user.student.license-assigned`
+
+Payload xem endpoint `PATCH /users/:id/license-tier`.

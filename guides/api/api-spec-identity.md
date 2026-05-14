@@ -1,51 +1,54 @@
 # Identity Service API Specification
 
-**Base URL (direct):** `http://localhost:3001`
-**Base URL (qua Kong):** `http://localhost:8000` _(auth endpoints không yêu cầu JWT có thể gọi trực tiếp)_
+**Base URL qua Kong:** `http://localhost:8000`  
+**Direct local:** `http://localhost:3001`  
+**Swagger UI:** `http://localhost:3001/docs`  
+**OpenAPI JSON:** `http://localhost:3001/docs-json`  
 **Version:** 1.0.0
 
 ---
 
-## Tổng quan xác thực
+## Tổng Quan Xác Thực
 
-### Auth endpoints (`/login`, `/logout`, `/auth/refresh`)
+Identity-service tích hợp Keycloak.
 
-Không cần JWT — dùng `@Public()`.
-
-### Admin endpoints (`/admin/*`)
-
-Yêu cầu JWT hợp lệ với role **ADMIN** hoặc **CENTER_MANAGER** (tùy endpoint).
-Kong inject header:
-- `x-user-id` — Keycloak `sub` claim
-- `x-user-role` — role của user
-
-```
-Authorization: Bearer <keycloak_access_token>
-```
+| Endpoint | Auth hiện tại |
+|---|---|
+| `POST /login` | Public |
+| `POST /logout` | Public, nhưng cần access token trong `Authorization` header |
+| `POST /auth/refresh` | Public |
+| `GET /public` | Public, endpoint demo |
+| `GET /private` | JWT hợp lệ, endpoint demo |
+| `GET /admin-check` | `ADMIN`, endpoint demo |
+| `POST /admin/users` | `ADMIN`, `CENTER_MANAGER` |
+| `PATCH /admin/users/:id/role` | `ADMIN` |
+| `PATCH /admin/users/:id/lock` | `ADMIN`, `CENTER_MANAGER` |
 
 ---
 
 ## Response Format
 
-Tất cả response đều qua `ApiResponseInterceptor` và `ApiExceptionFilter` từ `@repo/common`:
+HTTP response được bọc bởi `ApiResponseInterceptor`.
 
 ```json
-// Thành công
 {
   "success": true,
   "code": "SUCCESS",
   "message": "OK",
-  "timestamp": "2026-05-06T10:00:00.000Z",
+  "timestamp": "2026-05-14T10:00:00.000Z",
   "path": "/login",
-  "data": { ... }
+  "data": {}
 }
+```
 
-// Lỗi
+Lỗi:
+
+```json
 {
   "success": false,
   "code": "UNAUTHORIZED",
   "message": "Tài khoản hoặc mật khẩu không chính xác",
-  "timestamp": "2026-05-06T10:00:00.000Z",
+  "timestamp": "2026-05-14T10:00:00.000Z",
   "path": "/login"
 }
 ```
@@ -54,13 +57,15 @@ Tất cả response đều qua `ApiResponseInterceptor` và `ApiExceptionFilter`
 
 ## Error Codes
 
-| HTTP Status | code                | Nguyên nhân                                         |
-| ----------- | ------------------- | --------------------------------------------------- |
-| 400         | `VALIDATION_ERROR`  | Request body không hợp lệ (class-validator)         |
-| 400         | `BAD_REQUEST`       | User đã tồn tại trong Keycloak / role không tồn tại |
-| 401         | `UNAUTHORIZED`      | Sai username/password, token hết hạn, bị revoke     |
-| 403         | `FORBIDDEN`         | Không đủ quyền (role không phù hợp)                 |
-| 500         | `INTERNAL_ERROR`    | Lỗi kết nối Keycloak Admin API                      |
+| HTTP | Code | Nguyên nhân |
+|---:|---|---|
+| 400 | `VALIDATION_ERROR` | Body không hợp lệ |
+| 400 | `BAD_REQUEST` | Keycloak/Admin operation bị từ chối dạng bad request |
+| 401 | `UNAUTHORIZED` | Sai credentials, token thiếu/hết hạn/không hợp lệ |
+| 403 | `FORBIDDEN` | Role không đủ quyền |
+| 404 | `IDENTITY_USER_NOT_FOUND` | Không tìm thấy identity user |
+| 409 | `IDENTITY_USER_ALREADY_EXISTS` | Identity user đã tồn tại |
+| 500 | `INTERNAL_ERROR` | Lỗi Keycloak hoặc lỗi server |
 
 ---
 
@@ -68,38 +73,17 @@ Tất cả response đều qua `ApiResponseInterceptor` và `ApiExceptionFilter`
 
 ### UserRole
 
-| Value            | Ý nghĩa                     |
-| ---------------- | --------------------------- |
-| `ADMIN`          | Quản trị viên hệ thống      |
-| `CENTER_MANAGER` | Quản lý trung tâm đào tạo   |
-| `INSTRUCTOR`     | Giáo viên / huấn luyện viên |
-| `STUDENT`        | Học viên                    |
-
----
-
-## Events Phát Sinh
-
-Identity-service publish các event sau lên RabbitMQ sau khi admin operations thành công:
-
-| Event                      | Queue đích            | Trigger                            |
-| -------------------------- | --------------------- | ---------------------------------- |
-| `identity.user.created`    | `user_service_events` + `notification_queue` | `POST /admin/users`         |
-| `identity.user.role-changed` | `user_service_events` | `PATCH /admin/users/:id/role`    |
-| `identity.user.locked`     | `notification_queue`  | `PATCH /admin/users/:id/lock`     |
+`ADMIN` | `CENTER_MANAGER` | `INSTRUCTOR` | `STUDENT`
 
 ---
 
 ## Endpoints
 
----
+### POST `/login`
 
-### POST /login
+Đăng nhập bằng username/password. Service gọi Keycloak token endpoint với grant type `password`.
 
-Đăng nhập bằng username/password, trả về JWT token từ Keycloak.
-
-**Auth:** Không yêu cầu (`@Public`)
-
-**Request Body:**
+**Body**
 
 ```json
 {
@@ -108,21 +92,20 @@ Identity-service publish các event sau lên RabbitMQ sau khi admin operations t
 }
 ```
 
-| Field      | Type   | Required | Mô tả                     |
-| ---------- | ------ | -------- | ------------------------- |
-| `username` | string | ✅       | Email hoặc username Keycloak |
-| `password` | string | ✅       | Mật khẩu                  |
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| `username` | string | Yes | Non-empty |
+| `password` | string | Yes | Non-empty |
 
-**Response `200`:**
+**Response `200 OK`**
 
 ```json
 {
   "success": true,
   "code": "SUCCESS",
-  "message": "OK",
   "data": {
-    "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "accessToken": "eyJhbGciOi...",
+    "refreshToken": "eyJhbGciOi...",
     "expiresIn": 300,
     "refreshExpiresIn": 1800,
     "tokenType": "Bearer",
@@ -131,43 +114,27 @@ Identity-service publish các event sau lên RabbitMQ sau khi admin operations t
 }
 ```
 
-**Response `401` — Sai credentials:**
-
-```json
-{
-  "success": false,
-  "code": "UNAUTHORIZED",
-  "message": "Tài khoản hoặc mật khẩu không chính xác"
-}
-```
-
 ---
 
-### POST /logout
+### POST `/logout`
 
-Revoke session trên Keycloak (vô hiệu hóa cả refresh token) và đưa access token vào Redis blacklist.
+Revoke refresh token trên Keycloak và đưa access token vào Redis blacklist đến khi token hết hạn.
 
-**Auth:** Không yêu cầu (`@Public`) — access token lấy từ `Authorization` header
+**Headers**
 
-**Headers:**
+```http
+Authorization: Bearer <access_token>
+```
 
-| Header          | Required | Mô tả                   |
-| --------------- | -------- | ----------------------- |
-| `Authorization` | ✅       | `Bearer <access_token>` |
-
-**Request Body:**
+**Body**
 
 ```json
 {
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "refreshToken": "eyJhbGciOi..."
 }
 ```
 
-| Field          | Type   | Required | Mô tả                          |
-| -------------- | ------ | -------- | ------------------------------ |
-| `refreshToken` | string | ✅       | Refresh token nhận từ `/login` |
-
-**Response `200`:**
+**Response `200 OK`**
 
 ```json
 {
@@ -181,7 +148,7 @@ Revoke session trên Keycloak (vô hiệu hóa cả refresh token) và đưa acc
 }
 ```
 
-**Response `401` — Token không hợp lệ:**
+Nếu thiếu/sai access token:
 
 ```json
 {
@@ -193,42 +160,23 @@ Revoke session trên Keycloak (vô hiệu hóa cả refresh token) và đưa acc
 
 ---
 
-### POST /auth/refresh
+### POST `/auth/refresh`
 
-Lấy access token mới bằng refresh token (không cần đăng nhập lại).
+Lấy token mới bằng refresh token.
 
-**Auth:** Không yêu cầu (`@Public`)
-
-**Request Body:**
+**Body**
 
 ```json
 {
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "refreshToken": "eyJhbGciOi..."
 }
 ```
 
-| Field          | Type   | Required | Mô tả                            |
-| -------------- | ------ | -------- | -------------------------------- |
-| `refreshToken` | string | ✅       | Refresh token nhận từ `/login`   |
+**Response `200 OK`**
 
-**Response `200` — Token mới (cùng cấu trúc với `/login`):**
+`data` có cùng cấu trúc với `/login`.
 
-```json
-{
-  "success": true,
-  "code": "SUCCESS",
-  "data": {
-    "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expiresIn": 300,
-    "refreshExpiresIn": 1800,
-    "tokenType": "Bearer",
-    "scope": "openid profile email"
-  }
-}
-```
-
-**Response `401` — Refresh token hết hạn hoặc không hợp lệ:**
+**Response `401 Unauthorized`**
 
 ```json
 {
@@ -240,19 +188,13 @@ Lấy access token mới bằng refresh token (không cần đăng nhập lại)
 
 ---
 
-### POST /admin/users
+### POST `/admin/users`
 
-Tạo user mới trong Keycloak và phát sinh event `identity.user.created`.
+Tạo user trong Keycloak, assign realm role, lưu record vào `identity_users`, rồi publish event.
 
-**Auth:** Yêu cầu role `ADMIN` hoặc `CENTER_MANAGER`
+**Auth:** `ADMIN`, `CENTER_MANAGER`
 
-**Headers:**
-
-| Header          | Required | Mô tả                   |
-| --------------- | -------- | ----------------------- |
-| `Authorization` | ✅       | `Bearer <access_token>` |
-
-**Request Body:**
+**Body**
 
 ```json
 {
@@ -263,19 +205,20 @@ Tạo user mới trong Keycloak và phát sinh event `identity.user.created`.
 }
 ```
 
-| Field               | Type     | Required | Validation                            |
-| ------------------- | -------- | -------- | ------------------------------------- |
-| `email`             | string   | ✅       | Email hợp lệ (dùng làm Keycloak username) |
-| `fullName`          | string   | ✅       | Non-empty                             |
-| `role`              | UserRole | ✅       | Một trong các giá trị `UserRole`      |
-| `temporaryPassword` | string   | ✅       | Tối thiểu 8 ký tự, user phải đổi lần đầu đăng nhập |
+| Field | Type | Required | Validation |
+|---|---|---|---|
+| `email` | string | Yes | Email |
+| `fullName` | string | Yes | Non-empty |
+| `role` | UserRole | Yes | Enum |
+| `temporaryPassword` | string | Yes | Min length 8 |
 
-**Response `201`:**
+**Response `201 Created`**
 
 ```json
 {
   "success": true,
   "code": "SUCCESS",
+  "message": "Created",
   "data": {
     "userId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "email": "nguyenvana@gm.uit.edu.vn",
@@ -285,42 +228,17 @@ Tạo user mới trong Keycloak và phát sinh event `identity.user.created`.
 }
 ```
 
-**Response `400` — Email đã tồn tại:**
-
-```json
-{
-  "success": false,
-  "code": "BAD_REQUEST",
-  "message": "User with this email already exists in Keycloak"
-}
-```
-
-**Side effect:**
-- Record được lưu vào bảng `identity_users` trong `identity_db` (id = Keycloak UUID)
-- user-service tự động nhận event và tạo `UserProfile` + `StudentDetail` (nếu role = STUDENT)
-- notification-service nhận event để gửi email chào mừng
+**Event published:** `identity.user.created`.
 
 ---
 
-### PATCH /admin/users/:id/role
+### PATCH `/admin/users/:id/role`
 
-Đổi realm role của user trong Keycloak và phát sinh event `identity.user.role-changed`.
+Đổi realm role của user trên Keycloak.
 
-**Auth:** Yêu cầu role `ADMIN`
+**Auth:** `ADMIN`
 
-**Headers:**
-
-| Header          | Required | Mô tả                   |
-| --------------- | -------- | ----------------------- |
-| `Authorization` | ✅       | `Bearer <access_token>` |
-
-**Path Params:**
-
-| Param | Type   | Mô tả                   |
-| ----- | ------ | ----------------------- |
-| `id`  | string | Keycloak user UUID      |
-
-**Request Body:**
+**Body**
 
 ```json
 {
@@ -328,7 +246,7 @@ Tạo user mới trong Keycloak và phát sinh event `identity.user.created`.
 }
 ```
 
-**Response `200`:**
+**Response `200 OK`**
 
 ```json
 {
@@ -341,30 +259,17 @@ Tạo user mới trong Keycloak và phát sinh event `identity.user.created`.
 }
 ```
 
-**Side effect:**
-- user-service cập nhật role trên `UserProfile`, tạo hoặc xóa `StudentDetail` tùy role mới
+**Event published:** `identity.user.role-changed`.
 
 ---
 
-### PATCH /admin/users/:id/lock
+### PATCH `/admin/users/:id/lock`
 
-Khoá hoặc mở khoá tài khoản trong Keycloak và phát sinh event `identity.user.locked`.
+Khóa/mở khóa tài khoản trong Keycloak bằng cách set `enabled = !locked`.
 
-**Auth:** Yêu cầu role `ADMIN` hoặc `CENTER_MANAGER`
+**Auth:** `ADMIN`, `CENTER_MANAGER`
 
-**Headers:**
-
-| Header          | Required | Mô tả                   |
-| --------------- | -------- | ----------------------- |
-| `Authorization` | ✅       | `Bearer <access_token>` |
-
-**Path Params:**
-
-| Param | Type   | Mô tả              |
-| ----- | ------ | ------------------ |
-| `id`  | string | Keycloak user UUID |
-
-**Request Body:**
+**Body**
 
 ```json
 {
@@ -372,11 +277,11 @@ Khoá hoặc mở khoá tài khoản trong Keycloak và phát sinh event `identi
 }
 ```
 
-| Field    | Type    | Mô tả                                   |
-| -------- | ------- | --------------------------------------- |
-| `locked` | boolean | `true` = khoá tài khoản, `false` = mở khoá |
+| Field | Type | Required |
+|---|---|---|
+| `locked` | boolean | Yes |
 
-**Response `200`:**
+**Response `200 OK`**
 
 ```json
 {
@@ -389,36 +294,72 @@ Khoá hoặc mở khoá tài khoản trong Keycloak và phát sinh event `identi
 }
 ```
 
-**Side effect:**
-- notification-service nhận event để gửi thông báo khoá tài khoản cho user
+**Event published:** `identity.user.locked`.
 
 ---
 
-## Luồng Tạo User Đầy Đủ
+## Demo Endpoints
 
+Các endpoint sau đang tồn tại trong `AuthController`, chủ yếu dùng để kiểm thử guard:
+
+| Method | Path | Auth | Response |
+|---|---|---|---|
+| `GET` | `/public` | Public | `{ "message": "..." }` |
+| `GET` | `/private` | JWT | `{ "message": "..." }` |
+| `GET` | `/admin-check` | `ADMIN` | `{ "message": "..." }` |
+
+---
+
+## Domain Events
+
+### Published
+
+| Event | Destination | Trigger |
+|---|---|---|
+| `identity.user.created` | user-service + notification-service | `POST /admin/users` |
+| `identity.user.role-changed` | user-service | `PATCH /admin/users/:id/role` |
+| `identity.user.locked` | notification-service | `PATCH /admin/users/:id/lock` |
+
+#### `identity.user.created`
+
+```json
+{
+  "eventName": "identity.user.created",
+  "userId": "keycloak-uuid",
+  "email": "a@example.com",
+  "fullName": "Nguyễn Văn A",
+  "role": "STUDENT"
+}
 ```
-Admin                identity-service          Keycloak          RabbitMQ
-  │                        │                      │                  │
-  │──POST /admin/users────►│                      │                  │
-  │                        │──POST /admin/realms/{realm}/users──────►│
-  │                        │◄──201 + Location ────│                  │
-  │                        │──POST /users/{id}/role-mappings/realm──►│
-  │                        │◄──204 ───────────────│                  │
-  │                        │──emit identity.user.created────────────►│
-  │◄──201 CreateUserResponse│                      │                  │
-  │                        │                      │                  │
-  │                 user_service_events queue (user-service consumes) │
-  │                 notification_queue (notification-service consumes)│
+
+#### `identity.user.role-changed`
+
+```json
+{
+  "eventName": "identity.user.role-changed",
+  "userId": "keycloak-uuid",
+  "newRole": "INSTRUCTOR"
+}
+```
+
+#### `identity.user.locked`
+
+```json
+{
+  "eventName": "identity.user.locked",
+  "userId": "keycloak-uuid",
+  "locked": true
+}
 ```
 
 ---
 
 ## Keycloak Client Prerequisites
 
-Trước khi dùng admin endpoints, đảm bảo Keycloak client `nestjs-backend` được cấu hình:
+Client backend cần có:
 
-1. **Service Accounts Enabled:** `ON`
-2. **Service Account Roles** → tab `realm-management`:
-   - `manage-users` ✅
-   - `view-realm` ✅
-3. **Realm Roles** đã tạo: `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
+| Cấu hình | Giá trị |
+|---|---|
+| Service accounts | Enabled |
+| Realm management roles | `manage-users`, `view-realm` |
+| Realm roles | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |

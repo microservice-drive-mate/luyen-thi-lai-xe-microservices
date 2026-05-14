@@ -3,24 +3,27 @@
 ## Overview
 
 UC33 Logout đã được triển khai tại `identity-service` với các thành phần:
-- Endpoint: `POST /auth/logout`
-- Yêu cầu: JWT token hợp lệ từ Authorization header
+
+- Endpoint: `POST /logout`
+- Yêu cầu: JWT access token (Authorization header) + refresh token (request body)
 - Response: Thông báo logout thành công với hướng dẫn xóa token
-- Backend: In-memory blacklist (sẵn sàng upgrade sang Redis)
+- Backend: Revoke session trên Keycloak + in-memory blacklist (sẵn sàng upgrade sang Redis)
 
 ## Architecture
 
 ```
-Client → POST /auth/logout (header: Authorization: Bearer <token>)
+Client → POST /logout
+           Authorization: Bearer <access_token>
+           Body: { "refreshToken": "<refresh_token>" }
            ↓
          Kong Gateway (truyền token qua)
            ↓
-         identity-service: AppController.logout()
+         identity-service: AuthController.logout()
            ↓
-         AppService.logout(token)
+         AppService.logout(token, refreshToken)
            • Decode JWT → lấy exp claim
-           • Validate token chưa hết hạn
-           • Thêm vào blacklist với TTL
+           • Revoke session trên Keycloak (dùng refreshToken)
+           • Thêm access token vào blacklist với TTL
            ↓
          TokenBlacklistService
            • Lưu token vào in-memory Map
@@ -34,14 +37,16 @@ Client → POST /auth/logout (header: Authorization: Bearer <token>)
 ## Files Changed
 
 ### Core Implementation
-- `apps/identity-service/src/logout.response.dto.ts` — Response DTO
-- `apps/identity-service/src/logout.request.dto.ts` — Request DTO (cho documentation)
+
+- `apps/identity-service/src/presentation/dtos/logout.response.dto.ts` — Response DTO
+- `apps/identity-service/src/presentation/dtos/logout.request.dto.ts` — Request DTO
 - `apps/identity-service/src/infrastructure/token-blacklist/token-blacklist.service.ts` — Blacklist service
 - `apps/identity-service/src/app.service.ts` — Logout business logic + JWT decode
-- `apps/identity-service/src/app.controller.ts` — Logout endpoint
+- `apps/identity-service/src/presentation/http/auth.controller.ts` — Logout endpoint
 - `apps/identity-service/src/app.module.ts` — DI wiring
 
 ### Infrastructure
+
 - `docker-compose.infra.yml` — Thêm Redis service
 - `docker-compose.yaml` — Thêm Redis service
 - `consul-seed-development-local.json` — Thêm redis.url config
@@ -50,55 +55,74 @@ Client → POST /auth/logout (header: Authorization: Bearer <token>)
 ## Behavior
 
 ### Success Case: 200 OK
+
 ```http
-POST /auth/logout
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI...
+POST /logout
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{ "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
 ```
 
 Response:
+
 ```json
 {
   "success": true,
-  "message": "You have been logged out successfully. (MSG130)",
-  "instruction": "Please delete your token from LocalStorage or Cookie"
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/logout",
+  "data": {
+    "success": true,
+    "message": "You have been logged out successfully. (MSG130)",
+    "instruction": "Please delete your token from LocalStorage or Cookie"
+  }
 }
 ```
 
 ### Error Cases
 
 #### 1. Token Missing (401)
+
 ```json
 {
   "success": false,
   "code": "UNAUTHORIZED",
   "message": "Authentication token is missing or invalid. (MSG129)",
-  "statusCode": 401
+  "timestamp": "...",
+  "path": "/logout"
 }
 ```
 
 #### 2. Token Invalid/Malformed (401)
+
 ```json
 {
   "success": false,
   "code": "UNAUTHORIZED",
   "message": "Authentication token is missing or invalid. (MSG129)",
-  "statusCode": 401
+  "timestamp": "...",
+  "path": "/logout"
 }
 ```
 
 #### 3. Token Expired (401)
+
 ```json
 {
   "success": false,
   "code": "UNAUTHORIZED",
   "message": "Authentication token is missing or invalid. (MSG129)",
-  "statusCode": 401
+  "timestamp": "...",
+  "path": "/logout"
 }
 ```
 
 ## Manual Testing Steps
 
 ### 1. Khởi động Infrastructure
+
 ```bash
 # Terminal 1: Khởi động infra (PostgreSQL, RabbitMQ, Consul, Keycloak, Redis)
 npm run infra:up
@@ -107,12 +131,14 @@ npm run infra:up
 ```
 
 ### 2. Khởi động Services
+
 ```bash
 # Terminal 2: Khởi động identity-service local
 npm run dev --filter=identity-service
 ```
 
 ### 3. Test Login
+
 ```bash
 # Lấy access token từ Keycloak
 curl -X POST http://localhost:8080/realms/luyen-thi-lai-xe-realm/protocol/openid-connect/token \
@@ -128,41 +154,61 @@ curl -X POST http://localhost:3001/login \
   -H "Content-Type: application/json" \
   -d '{"username": "demo", "password": "demo"}'
 
-# Lưu lại accessToken từ response
+# Lưu lại accessToken và refreshToken từ response
 TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+REFRESH_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
 ### 4. Test Logout — Success Case
+
 ```bash
-curl -X POST http://localhost:3001/auth/logout \
-  -H "Authorization: Bearer $TOKEN"
+curl -X POST http://localhost:3001/logout \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
 
 # Expected response: 200 OK
 # {
 #   "success": true,
-#   "message": "You have been logged out successfully. (MSG130)",
-#   "instruction": "Please delete your token from LocalStorage or Cookie"
+#   "code": "SUCCESS",
+#   "message": "OK",
+#   "timestamp": "...",
+#   "path": "/logout",
+#   "data": {
+#     "success": true,
+#     "message": "You have been logged out successfully. (MSG130)",
+#     "instruction": "Please delete your token from LocalStorage or Cookie"
+#   }
 # }
 ```
 
 ### 5. Test Logout — Missing Token
+
 ```bash
-curl -X POST http://localhost:3001/auth/logout
+curl -X POST http://localhost:3001/logout \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken": "any-value"}'
 # Expected: 401 Unauthorized
 ```
 
 ### 6. Test Logout — Invalid Token
+
 ```bash
-curl -X POST http://localhost:3001/auth/logout \
-  -H "Authorization: Bearer invalid.token.here"
+curl -X POST http://localhost:3001/logout \
+  -H "Authorization: Bearer invalid.token.here" \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken": "any-value"}'
 # Expected: 401 Unauthorized
 ```
 
 ### 7. Test Blacklist Enforcement (After Logout)
+
 ```bash
 # Logout thành công → Token vào blacklist
-curl -X POST http://localhost:3001/auth/logout \
-  -H "Authorization: Bearer $TOKEN"
+curl -X POST http://localhost:3001/logout \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
 
 # Lúc này, token vẫn hợp lệ về cấu trúc, nhưng đã bị blacklist
 # Khi gọi API private endpoint, gateway sẽ check blacklist
@@ -173,25 +219,31 @@ curl -X POST http://localhost:3001/auth/logout \
 ## Integration Points
 
 ### Kong Gateway (Chưa implement)
+
 Khi Kong được cấu hình đầy đủ:
+
 1. Kong JWT plugin sẽ validate JWT trên mọi request
 2. Kong Redis plugin sẽ check token blacklist O(1)
 3. Nếu token bị blacklist → Kong trả 401, không forward tới backend
 
 **Files to update khi integrate Kong**:
+
 - `kong/kong.dev.yaml` — Thêm Redis plugin config
 - `kong/kong.yaml` — Thêm Redis plugin config
 - `identity-service` → Publish logout event tới Redis (global blacklist)
 
 ### Redis Integration (In Progress)
+
 Hiện tại: In-memory Map trong TokenBlacklistService
 Tiếp theo: Thay bằng Redis ioredis client
 
 **Files to create**:
+
 - `apps/identity-service/src/infrastructure/redis/redis.module.ts`
 - `apps/identity-service/src/infrastructure/redis/redis.service.ts`
 
 **Cấu hình**:
+
 ```typescript
 // In AppModule
 RedisModule.forRootAsync({
@@ -207,7 +259,7 @@ RedisModule.forRootAsync({
 **UC33: Logout**
 
 | BR | Mô tả | Status |
-|--|--|--|
+| -- | -- | -- |
 | BR01 | JWT Validation: Extract từ header, validate | ✅ Implemented |
 | BR02 | Token Blacklisting: Add to blacklist với TTL | ✅ Implemented (in-memory) |
 | BR03 | Client-Side Cleanup: Return instruction | ✅ Implemented |
@@ -215,7 +267,7 @@ RedisModule.forRootAsync({
 | BR05 | Success Response: Return MSG130 | ✅ Implemented |
 
 | Message | Use Case | Status |
-|--|--|--|
+| -- | -- | -- |
 | MSG129 | Token missing/invalid | ✅ Implemented |
 | MSG130 | Logout success | ✅ Implemented |
 
@@ -247,23 +299,27 @@ RedisModule.forRootAsync({
 ## Swagger Documentation
 
 Endpoint tự động được documented ở:
+
 - Swagger UI: `http://localhost:3001/swagger`
-- Endpoint: `POST /auth/logout`
-- Auth: JWT Bearer token trong Authorization header
+- Endpoint: `POST /logout`
+- Auth: JWT Bearer token trong Authorization header + refreshToken trong body
 
 ## Troubleshooting
 
 ### Token TTL not working
+
 - Check system clock is synchronized
 - Verify `exp` claim is present in JWT
 - Check TTL calculation: `exp - now` should be positive
 
 ### Blacklist not persisting across restarts
+
 - Current: In-memory only (by design, services restart often)
 - Fix: Migrate to Redis for persistence
 
 ### CORS issues with logout
-- Ensure Kong/Gateway allows POST requests to /auth/logout
+
+- Ensure Kong/Gateway allows POST requests to /logout
 - Check CORS headers in response
 - Verify client sends Authorization header correctly
 

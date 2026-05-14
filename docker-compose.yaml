@@ -21,15 +21,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    ports:
-      - "5432:5432"
-    volumes:
-      - db_identity_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d identity_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   # Database cho User Service (Quản lý profile, thông tin người dùng)
   db-user:
@@ -38,10 +29,6 @@ services:
       POSTGRES_DB: user_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-    ports:
-      - "5433:5432"
-    volumes:
-      - db_user_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
     volumes:
@@ -58,10 +45,6 @@ services:
       - "5434:5432"
     volumes:
       - db_exam_data:/var/lib/postgresql/data
-    ports:
-      - "5434:5432"
-    volumes:
-      - db_exam_data:/var/lib/postgresql/data
 
   # Database cho Course Service (Quản lý khóa học, bài học)
   db-course:
@@ -70,10 +53,6 @@ services:
       POSTGRES_DB: course_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-    ports:
-      - "5435:5432"
-    volumes:
-      - db_course_data:/var/lib/postgresql/data
     ports:
       - "5435:5432"
     volumes:
@@ -90,10 +69,6 @@ services:
       - "5436:5432"
     volumes:
       - db_question_data:/var/lib/postgresql/data
-    ports:
-      - "5436:5432"
-    volumes:
-      - db_question_data:/var/lib/postgresql/data
 
   # Database cho Notification Service (Lưu lịch sử thông báo)
   db-notification:
@@ -106,10 +81,6 @@ services:
       - "5437:5432"
     volumes:
       - db_notification_data:/var/lib/postgresql/data
-    ports:
-      - "5437:5432"
-    volumes:
-      - db_notification_data:/var/lib/postgresql/data
 
   # Database cho Analytics Service (Thống kê, báo cáo dữ liệu)
   db-analytics:
@@ -118,10 +89,6 @@ services:
       POSTGRES_DB: analytics_db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-    ports:
-      - "5438:5432"
-    volumes:
-      - db_analytics_data:/var/lib/postgresql/data
     ports:
       - "5438:5432"
     volumes:
@@ -159,40 +126,6 @@ services:
     ports:
       - "5672:5672"   # Port cho ứng dụng kết nối
       - "15672:15672" # Port cho giao diện quản lý (Web UI)
-
-  # ========================================================
-  # 2.5 CONFIG SERVER (CONSUL)
-  # ========================================================
-  consul:
-    image: hashicorp/consul:1.19
-    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
-    ports:
-      - "8500:8500"   # HTTP API & UI
-      - "8600:8600"   # DNS
-      - "8600:8600/udp"
-    environment:
-      CONSUL_BIND_INTERFACE: eth0
-    volumes:
-      - consul_data:/consul/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8500/v1/status/leader"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Sidecar chạy init.sh sau khi Consul healthy để seed cấu hình vào KV Store
-  consul-init:
-    image: curlimages/curl:latest
-    volumes:
-      - ./docker/consul/init.sh:/consul/init.sh:ro
-    environment:
-      CONSUL_URL: http://consul:8500
-    depends_on:
-      consul:
-        condition: service_healthy
-    command: sh /consul/init.sh
-    restart: "no"
-
   # ========================================================
   # 2.5 CONFIG SERVER (CONSUL)
   # ========================================================
@@ -247,13 +180,6 @@ services:
         condition: service_healthy
       consul-init:
         condition: service_completed_successfully
-      db-identity:
-        condition: service_healthy
-      consul:
-        condition: service_healthy
-      consul-init:
-        condition: service_completed_successfully
-
   user-service:
     build:
       context: .
@@ -265,7 +191,6 @@ services:
       - "3002:3000"
     depends_on:
       - db-user
-      - consul
       - consul
 
   exam-service:
@@ -280,7 +205,6 @@ services:
     depends_on:
       - db-exam
       - consul
-      - consul
 
   course-service:
     build:
@@ -293,7 +217,6 @@ services:
       - "3004:3000"
     depends_on:
       - db-course
-      - consul
       - consul
 
   question-service:
@@ -308,7 +231,6 @@ services:
     depends_on:
       - db-question
       - consul
-      - consul
 
   notification-service:
     build:
@@ -321,7 +243,6 @@ services:
       - "3006:3000"
     depends_on:
       - db-notification
-      - consul
       - consul
 
   analytics-service:
@@ -336,8 +257,6 @@ services:
     depends_on:
       - db-analytics
       - consul
-      - consul
-
   simulation-service:
     build:
       context: .

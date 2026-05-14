@@ -141,7 +141,7 @@ curl -s -X POST http://localhost:3002/users \
 {
   "success": true,
   "code": "SUCCESS",
-  "message": "OK",
+  "message": "Created",
   "timestamp": "2026-05-06T10:00:00.000Z",
   "path": "/users",
   "data": {
@@ -189,6 +189,10 @@ curl -s -X POST http://localhost:3002/users \
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "Created",
+  "timestamp": "2026-05-06T10:00:00.000Z",
+  "path": "/users",
   "data": {
     "id": "student-uuid-0003",
     "fullName": "Lê Học Viên",
@@ -263,7 +267,9 @@ curl -s -X POST http://localhost:3002/users \
 {
   "success": false,
   "code": "VALIDATION_ERROR",
-  "message": "...",
+  "message": "Validation failed",
+  "timestamp": "...",
+  "path": "/users",
   "errors": ["email must be an email", "id must be a string"]
 }
 ```
@@ -297,6 +303,10 @@ curl -s "http://localhost:3002/users" | jq .
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-06T10:00:00.000Z",
+  "path": "/users",
   "data": {
     "items": [
       /* mảng UserProfileResponse */
@@ -364,6 +374,10 @@ curl -s http://localhost:3002/users/me \
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-06T10:00:00.000Z",
+  "path": "/users/me",
   "data": {
     "id": "student-uuid-0003",
     "fullName": "Lê Học Viên",
@@ -396,7 +410,9 @@ curl -s http://localhost:3002/users/me \
 {
   "success": false,
   "code": "USER_PROFILE_NOT_FOUND",
-  "message": "User profile not found: non-existent-uuid"
+  "message": "User profile not found: non-existent-uuid",
+  "timestamp": "...",
+  "path": "/users/me"
 }
 ```
 
@@ -446,6 +462,10 @@ curl -s -X PATCH http://localhost:3002/users/me \
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "...",
+  "path": "/users/me",
   "data": {
     "fullName": "Lê Học Viên (Updated)",
     "address": "456 Đường Mới, Hà Nội",

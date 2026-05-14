@@ -159,18 +159,28 @@ curl -s -X POST http://localhost:3004/courses \
 {
   "success": true,
   "code": "SUCCESS",
+  "message": "Created",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/courses",
   "data": {
     "id": "<course-uuid>",
     "title": "Khóa học B2 – Cơ bản",
+    "description": "Khóa học lý thuyết và thực hành thi bằng B2",
     "licenseCategory": "B2",
     "status": "DRAFT",
     "totalLessons": 0,
+    "duration": "3 tháng",
     "tuitionFee": 5000000,
     "capacity": 30,
+    "createdById": "instructor-uuid-0001",
+    "createdAt": "2026-05-14T10:00:00.000Z",
+    "updatedAt": "2026-05-14T10:00:00.000Z",
     "lessons": [],
     "instructorIds": ["instructor-uuid-0001"],
     "requirement": {
+      "id": "<requirement-uuid>",
       "minAge": 18,
+      "prerequisites": "Có giấy phép B1",
       "attendanceRate": 80,
       "minPassScore": 80,
       "requiredExams": 2
@@ -217,7 +227,11 @@ curl -s -X POST http://localhost:3004/courses \
 ```json
 {
   "success": false,
-  "code": "VALIDATION_ERROR"
+  "code": "VALIDATION_ERROR",
+  "message": "Validation failed",
+  "timestamp": "...",
+  "path": "/courses",
+  "errors": ["licenseCategory should not be empty"]
 }
 ```
 
@@ -273,7 +287,10 @@ curl -s "http://localhost:3004/courses/non-existent-uuid" | jq .
 ```json
 {
   "success": false,
-  "code": "COURSE_NOT_FOUND"
+  "code": "COURSE_NOT_FOUND",
+  "message": "Course with id non-existent-uuid not found",
+  "timestamp": "...",
+  "path": "/courses/non-existent-uuid"
 }
 ```
 
@@ -377,7 +394,9 @@ curl -s -X PATCH "http://localhost:3004/courses/$EMPTY_COURSE_ID/activate" | jq 
 {
   "success": false,
   "code": "COURSE_HAS_NO_LESSON",
-  "message": "Course must have at least one lesson before activation"
+  "message": "Course must have at least one lesson before activation",
+  "timestamp": "...",
+  "path": "/courses/.../activate"
 }
 ```
 
@@ -416,7 +435,10 @@ curl -s -X DELETE "http://localhost:3004/courses/$COURSE_ID/lessons/non-existent
 ```json
 {
   "success": false,
-  "code": "LESSON_NOT_FOUND"
+  "code": "LESSON_NOT_FOUND",
+  "message": "Lesson with id non-existent-lesson-id not found",
+  "timestamp": "...",
+  "path": "/courses/.../lessons/non-existent-lesson-id"
 }
 ```
 
@@ -491,7 +513,10 @@ curl -s -X POST "http://localhost:3004/courses/$EMPTY_COURSE_ID/enroll" \
 ```json
 {
   "success": false,
-  "code": "COURSE_NOT_ACTIVE"
+  "code": "COURSE_NOT_ACTIVE",
+  "message": "Course is not active",
+  "timestamp": "...",
+  "path": "/courses/.../enroll"
 }
 ```
 
@@ -505,7 +530,10 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
 ```json
 {
   "success": false,
-  "code": "ENROLLMENT_ALREADY_EXISTS"
+  "code": "ENROLLMENT_ALREADY_EXISTS",
+  "message": "Student is already enrolled in this course",
+  "timestamp": "...",
+  "path": "/courses/.../enroll"
 }
 ```
 
@@ -536,7 +564,10 @@ curl -s -X POST "http://localhost:3004/courses/$SMALL_COURSE_ID/enroll" \
 ```json
 {
   "success": false,
-  "code": "COURSE_CAPACITY_EXCEEDED"
+  "code": "COURSE_CAPACITY_EXCEEDED",
+  "message": "Course capacity has been exceeded",
+  "timestamp": "...",
+  "path": "/courses/.../enroll"
 }
 ```
 
@@ -649,7 +680,10 @@ curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSO
 ```json
 {
   "success": false,
-  "code": "ENROLLMENT_ALREADY_COMPLETED"
+  "code": "ENROLLMENT_ALREADY_COMPLETED",
+  "message": "Enrollment is already completed",
+  "timestamp": "...",
+  "path": "/enrollments/.../lessons/.../complete"
 }
 ```
 
