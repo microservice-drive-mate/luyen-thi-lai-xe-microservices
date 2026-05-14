@@ -1,0 +1,88 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../node_modules/@prisma/question-client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LicenseCategory {
+  A1
+  A2
+  B1
+  B2
+  C
+  D
+  E
+  F
+}
+
+enum QuestionType {
+  THEORY
+  TRAFFIC_SIGN
+  SCENARIO_RELATED
+}
+
+enum QuestionDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model QuestionTopic {
+  id          String   @id @default(uuid())
+  name        String   @db.Text
+  description String?  @db.Text
+  parentId    String?
+  createdAt   DateTime @default(now())
+
+  parent    QuestionTopic?  @relation("TopicHierarchy", fields: [parentId], references: [id])
+  children  QuestionTopic[] @relation("TopicHierarchy")
+  questions Question[]
+
+  @@map("question_topics")
+}
+
+model Question {
+  id                String             @id @default(uuid())
+  content           String             @db.Text
+  type              QuestionType
+  licenseCategories LicenseCategory[]
+  difficulty        QuestionDifficulty
+  explanation       String             @db.Text
+  imageUrl          String?
+  mediaFileId       String?            @map("media_file_id")
+  isCritical        Boolean            @default(false)
+  isActive          Boolean            @default(true)
+  isDeleted         Boolean            @default(false)
+  topicId           String
+  createdById       String
+  version           Int                @default(1)
+  deletedById       String?
+  deletedAt         DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  topic   QuestionTopic    @relation(fields: [topicId], references: [id])
+  options QuestionOption[]
+
+  @@index([topicId])
+  @@index([isActive, isDeleted])
+  @@map("questions")
+}
+
+model QuestionOption {
+  id           String  @id @default(uuid())
+  questionId   String
+  content      String  @db.Text
+  isCorrect    Boolean
+  displayOrder Int
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, displayOrder])
+  @@map("question_options")
+}

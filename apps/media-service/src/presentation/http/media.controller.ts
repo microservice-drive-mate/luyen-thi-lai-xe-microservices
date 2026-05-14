@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -11,38 +12,47 @@ import {
   Query,
   UploadedFile,
   UseInterceptors,
-  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  ApiBearerAuth,
   ApiBody,
   ApiConsumes,
-  ApiHeader,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { UploadFileCommand } from '../../application/use-cases/upload-file/upload-file.command';
-import { UploadFileUseCase } from '../../application/use-cases/upload-file/upload-file.use-case';
-import { InitiateUploadCommand } from '../../application/use-cases/initiate-upload/initiate-upload.command';
-import { InitiateUploadUseCase } from '../../application/use-cases/initiate-upload/initiate-upload.use-case';
+import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
+import { DeleteFileCommand } from '../../application/use-cases/delete-file/delete-file.command';
+import { DeleteFileUseCase } from '../../application/use-cases/delete-file/delete-file.use-case';
 import { GetFileMetadataQuery } from '../../application/use-cases/get-file-metadata/get-file-metadata.query';
 import { GetFileMetadataUseCase } from '../../application/use-cases/get-file-metadata/get-file-metadata.use-case';
 import { GetPresignedUrlQuery } from '../../application/use-cases/get-presigned-url/get-presigned-url.query';
 import { GetPresignedUrlUseCase } from '../../application/use-cases/get-presigned-url/get-presigned-url.use-case';
-import { DeleteFileCommand } from '../../application/use-cases/delete-file/delete-file.command';
-import { DeleteFileUseCase } from '../../application/use-cases/delete-file/delete-file.use-case';
+import { InitiateUploadCommand } from '../../application/use-cases/initiate-upload/initiate-upload.command';
+import { InitiateUploadUseCase } from '../../application/use-cases/initiate-upload/initiate-upload.use-case';
 import { ListFilesQuery } from '../../application/use-cases/list-files/list-files.query';
 import { ListFilesUseCase } from '../../application/use-cases/list-files/list-files.use-case';
+import { UploadFileCommand } from '../../application/use-cases/upload-file/upload-file.command';
+import { UploadFileUseCase } from '../../application/use-cases/upload-file/upload-file.use-case';
 import {
   FileObjectResponseDto,
   PaginatedFileObjectsResponseDto,
 } from '../dtos/file-object.response.dto';
-import { PresignedUrlResponseDto } from '../dtos/presigned-url.response.dto';
-import { ListFilesQueryDto } from '../dtos/list-files.query.dto';
 import { InitiateUploadRequestDto } from '../dtos/initiate-upload.request.dto';
 import { InitiateUploadResponseDto } from '../dtos/initiate-upload.response.dto';
+import { ListFilesQueryDto } from '../dtos/list-files.query.dto';
+import { PresignedUrlResponseDto } from '../dtos/presigned-url.response.dto';
+
+interface JwtPayload {
+  sub?: string;
+}
+
+function resolveActorId(user: JwtPayload | undefined, headerUserId?: string) {
+  return user?.sub ?? headerUserId ?? '';
+}
 
 @ApiTags('Media')
+@ApiBearerAuth()
 @Controller('media/files')
 export class MediaController {
   constructor(
@@ -65,25 +75,21 @@ export class MediaController {
       required: ['file'],
     },
   })
-  @ApiOperation({
-    summary: 'Upload file trực tiếp lên server (file bytes đi qua server)',
-  })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'Injected by Kong after JWT validation',
-  })
+  @ApiOperation({ summary: 'Upload file through media-service' })
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
-    @Headers('x-user-id') uploadedById: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
   ): Promise<FileObjectResponseDto> {
     if (!file) throw new BadRequestException('No file provided');
+
     const result = await this.uploadFileUseCase.execute(
       new UploadFileCommand(
         file.buffer,
         file.originalname,
         file.mimetype,
         file.size,
-        uploadedById,
+        resolveActorId(user, headerUserId),
       ),
     );
     return FileObjectResponseDto.fromResult(result);
@@ -91,21 +97,10 @@ export class MediaController {
 
   @Post('init')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary:
-      'Khởi tạo direct upload — trả về SAS URL để client PUT file thẳng lên Azure (file không đi qua server)',
-    description:
-      'Flow:\n' +
-      '1. Gọi endpoint này → nhận `{ mediaFileId, uploadUrl, publicUrl, expiresAt }`\n' +
-      '2. Client PUT file lên `uploadUrl` với header `x-ms-blob-type: BlockBlob`\n' +
-      '3. Gọi user-service / course-service với `mediaFileId` và `publicUrl` (làm avatarUrl / fileUrl)',
-  })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'Injected by Kong after JWT validation',
-  })
+  @ApiOperation({ summary: 'Initiate direct upload and return Azure SAS URL' })
   async initiateUpload(
-    @Headers('x-user-id') uploadedById: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
     @Body() dto: InitiateUploadRequestDto,
   ): Promise<InitiateUploadResponseDto> {
     const result = await this.initiateUploadUseCase.execute(
@@ -113,18 +108,15 @@ export class MediaController {
         dto.originalName,
         dto.mimeType,
         dto.fileSize,
-        uploadedById,
+        resolveActorId(user, headerUserId),
       ),
     );
     return InitiateUploadResponseDto.fromResult(result);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Danh sách file đã upload (có filter)' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'Injected by Kong after JWT validation',
-  })
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
+  @ApiOperation({ summary: 'List uploaded files' })
   async listFiles(
     @Query() query: ListFilesQueryDto,
   ): Promise<PaginatedFileObjectsResponseDto> {
@@ -140,7 +132,7 @@ export class MediaController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Lấy metadata của file theo ID' })
+  @ApiOperation({ summary: 'Get file metadata' })
   async getFileMetadata(
     @Param('id') id: string,
   ): Promise<FileObjectResponseDto> {
@@ -151,7 +143,7 @@ export class MediaController {
   }
 
   @Get(':id/url')
-  @ApiOperation({ summary: 'Lấy presigned download URL (hết hạn sau 1 giờ)' })
+  @ApiOperation({ summary: 'Get short-lived download URL' })
   async getPresignedUrl(
     @Param('id') id: string,
   ): Promise<PresignedUrlResponseDto> {
@@ -162,18 +154,16 @@ export class MediaController {
   }
 
   @Delete(':id')
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Xóa file khỏi storage và database' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'Injected by Kong after JWT validation',
-  })
+  @ApiOperation({ summary: 'Delete file from storage and database' })
   async deleteFile(
     @Param('id') id: string,
-    @Headers('x-user-id') deletedById: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
   ): Promise<void> {
     await this.deleteFileUseCase.execute(
-      new DeleteFileCommand(id, deletedById),
+      new DeleteFileCommand(id, resolveActorId(user, headerUserId)),
     );
   }
 }

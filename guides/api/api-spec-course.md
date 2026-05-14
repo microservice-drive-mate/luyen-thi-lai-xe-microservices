@@ -4,29 +4,24 @@
 **Service paths:** `/courses`, `/enrollments`  
 **Direct local:** `http://localhost:3004`  
 **Swagger UI:** `http://localhost:3004/docs`  
+**Swagger UI qua Kong:** `http://localhost:8000/course-service/docs`  
 **OpenAPI JSON:** `http://localhost:3004/docs-json`  
+**OpenAPI JSON qua Kong:** `http://localhost:8000/course-service/docs-json`  
 **Version:** 1.0.0
 
----
+## Auth Update
 
-## Tổng Quan Xác Thực
+Course-service hien validate JWT/RBAC tai service bang Keycloak guard. Frontend goi qua Kong va gui `Authorization: Bearer <access_token>`; Kong forward header nay vao service. Service lay actor id tu `JWT.sub`, con `x-user-id` chi la fallback cho debug/local script cu.
 
-Course-service hiện đọc `x-user-id` ở các endpoint cần owner/student id. Controller chưa gắn `@Roles()` trực tiếp, nên phân quyền thực tế phụ thuộc cấu hình gateway/Keycloak guard toàn cục nếu có.
+| Endpoint                                                                                                                                   | Role                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| `POST /courses`, `PATCH /courses/:id`, `POST /courses/:id/lessons`, `DELETE /courses/:id/lessons/:lessonId`, `POST /courses/:id/materials` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `PATCH /courses/:id/activate`                                                                                                              | `ADMIN`, `CENTER_MANAGER`               |
+| `POST /courses/:id/enroll`, `GET /enrollments`, `POST /enrollments/:id/lessons/:lessonId/complete`                                         | `STUDENT`                               |
+| `GET /enrollments/:id`                                                                                                                     | `STUDENT`, `ADMIN`, `CENTER_MANAGER`    |
+| `GET /courses`, `GET /courses/:id`                                                                                                         | JWT hop le                              |
 
-| Endpoint | Auth/identity theo code hiện tại |
-|---|---|
-| `POST /courses` | Cần header `x-user-id` để tạo `createdById` |
-| `GET /courses` | Không đọc user context |
-| `GET /courses/:id` | Không đọc user context |
-| `PATCH /courses/:id` | Không đọc user context |
-| `PATCH /courses/:id/activate` | Không đọc user context |
-| `POST /courses/:id/lessons` | Không đọc user context |
-| `DELETE /courses/:id/lessons/:lessonId` | Không đọc user context |
-| `POST /courses/:id/materials` | Không đọc user context |
-| `POST /courses/:id/enroll` | Cần header `x-user-id` để tạo `studentId` |
-| `GET /enrollments` | Cần header `x-user-id` để lọc enrollment của student hiện tại |
-| `GET /enrollments/:id` | Không đọc user context |
-| `POST /enrollments/:id/lessons/:lessonId/complete` | Không có request body |
+Kong routes ca `/courses` va `/enrollments` vao course-service. Business API paths la `/courses/*` va `/enrollments/*`; Swagger/docs path la `/course-service/docs`.
 
 ---
 
@@ -59,19 +54,19 @@ Lỗi domain:
 
 ## Error Codes
 
-| HTTP | Code | Nguyên nhân |
-|---:|---|---|
-| 400 | `VALIDATION_ERROR` | Body/query không hợp lệ |
-| 404 | `COURSE_NOT_FOUND` | Không tìm thấy khóa học |
-| 404 | `LESSON_NOT_FOUND` | Không tìm thấy bài học |
-| 404 | `ENROLLMENT_NOT_FOUND` | Không tìm thấy enrollment |
-| 409 | `ENROLLMENT_ALREADY_EXISTS` | Student đã đăng ký khóa học |
-| 409 | `LESSON_ALREADY_COMPLETED` | Bài học đã hoàn thành trước đó _(chưa implement — hiện tại không có per-lesson tracking)_ |
-| 409 | `INSTRUCTOR_ALREADY_ASSIGNED` | Instructor đã được gán |
-| 422 | `COURSE_NOT_ACTIVE` | Khóa học chưa active |
-| 422 | `COURSE_HAS_NO_LESSON` | Khóa học chưa có bài học |
-| 422 | `ENROLLMENT_ALREADY_COMPLETED` | Enrollment đã completed |
-| 422 | `COURSE_CAPACITY_EXCEEDED` | Vượt quá sức chứa khóa học |
+| HTTP | Code                           | Nguyên nhân                                                                               |
+| ---: | ------------------------------ | ----------------------------------------------------------------------------------------- |
+|  400 | `VALIDATION_ERROR`             | Body/query không hợp lệ                                                                   |
+|  404 | `COURSE_NOT_FOUND`             | Không tìm thấy khóa học                                                                   |
+|  404 | `LESSON_NOT_FOUND`             | Không tìm thấy bài học                                                                    |
+|  404 | `ENROLLMENT_NOT_FOUND`         | Không tìm thấy enrollment                                                                 |
+|  409 | `ENROLLMENT_ALREADY_EXISTS`    | Student đã đăng ký khóa học                                                               |
+|  409 | `LESSON_ALREADY_COMPLETED`     | Bài học đã hoàn thành trước đó _(chưa implement — hiện tại không có per-lesson tracking)_ |
+|  409 | `INSTRUCTOR_ALREADY_ASSIGNED`  | Instructor đã được gán                                                                    |
+|  422 | `COURSE_NOT_ACTIVE`            | Khóa học chưa active                                                                      |
+|  422 | `COURSE_HAS_NO_LESSON`         | Khóa học chưa có bài học                                                                  |
+|  422 | `ENROLLMENT_ALREADY_COMPLETED` | Enrollment đã completed                                                                   |
+|  422 | `COURSE_CAPACITY_EXCEEDED`     | Vượt quá sức chứa khóa học                                                                |
 
 ---
 
@@ -165,14 +160,7 @@ DTO hiện tại **không trả `lessonProgress`**.
 
 ### POST `/courses`
 
-Tạo khóa học mới. `createdById` lấy từ header `x-user-id`.
-
-**Headers**
-
-```http
-x-user-id: <creator-user-id>
-Content-Type: application/json
-```
+Tao khoa hoc moi. `createdById` lay tu `sub` trong JWT cua caller.
 
 **Body**
 
@@ -195,26 +183,26 @@ Content-Type: application/json
 }
 ```
 
-| Field | Type | Required | Validation |
-|---|---|---|---|
-| `title` | string | Yes | Non-empty |
-| `licenseCategory` | LicenseCategory | Yes | Enum |
-| `description` | string | No | optional |
-| `duration` | string | No | optional |
-| `tuitionFee` | number | No | `>= 0` |
-| `capacity` | number | No | `>= 1`, nullable |
-| `instructorIds` | string[] | No | UUID v4 each |
-| `requirement` | object | No | nested validation |
+| Field             | Type            | Required | Validation        |
+| ----------------- | --------------- | -------- | ----------------- |
+| `title`           | string          | Yes      | Non-empty         |
+| `licenseCategory` | LicenseCategory | Yes      | Enum              |
+| `description`     | string          | No       | optional          |
+| `duration`        | string          | No       | optional          |
+| `tuitionFee`      | number          | No       | `>= 0`            |
+| `capacity`        | number          | No       | `>= 1`, nullable  |
+| `instructorIds`   | string[]        | No       | UUID v4 each      |
+| `requirement`     | object          | No       | nested validation |
 
 **CourseRequirement**
 
-| Field | Type | Default | Validation |
-|---|---|---:|---|
-| `minAge` | number | `null` | `>= 0` |
-| `prerequisites` | string | `null` | optional |
-| `attendanceRate` | number | 80 | `>= 0` |
-| `minPassScore` | number | 80 | `>= 0` |
-| `requiredExams` | number | 0 | `>= 0` |
+| Field            | Type   | Default | Validation |
+| ---------------- | ------ | ------: | ---------- |
+| `minAge`         | number |  `null` | `>= 0`     |
+| `prerequisites`  | string |  `null` | optional   |
+| `attendanceRate` | number |      80 | `>= 0`     |
+| `minPassScore`   | number |      80 | `>= 0`     |
+| `requiredExams`  | number |       0 | `>= 0`     |
 
 **Response `201 Created`:** `data` là `CourseResponse`.
 
@@ -226,12 +214,12 @@ Danh sách khóa học có phân trang và filter.
 
 **Query**
 
-| Param | Type | Default | Validation |
-|---|---|---:|---|
-| `page` | number | 1 | integer, `>= 1` |
-| `size` | number | 20 | integer, `>= 1` |
-| `licenseCategory` | LicenseCategory | - | enum |
-| `status` | CourseStatus | - | enum |
+| Param             | Type            | Default | Validation      |
+| ----------------- | --------------- | ------: | --------------- |
+| `page`            | number          |       1 | integer, `>= 1` |
+| `size`            | number          |      20 | integer, `>= 1` |
+| `licenseCategory` | LicenseCategory |       - | enum            |
+| `status`          | CourseStatus    |       - | enum            |
 
 **Response `200 OK`**
 
@@ -306,11 +294,11 @@ Thêm bài học vào khóa học. DTO hiện tại **không nhận `videoUrl` h
 }
 ```
 
-| Field | Type | Required | Validation |
-|---|---|---|---|
-| `title` | string | Yes | Non-empty |
-| `order` | number | Yes | integer, `>= 1` |
-| `content` | string | No | optional, nullable |
+| Field     | Type   | Required | Validation         |
+| --------- | ------ | -------- | ------------------ |
+| `title`   | string | Yes      | Non-empty          |
+| `order`   | number | Yes      | integer, `>= 1`    |
+| `content` | string | No       | optional, nullable |
 
 **Response `201 Created`:** `data` là `CourseResponse`.
 
@@ -339,12 +327,12 @@ Thêm tài liệu học tập. Nếu có `mediaFileId`, course-service phát eve
 }
 ```
 
-| Field | Type | Required | Validation |
-|---|---|---|---|
-| `title` | string | Yes | Non-empty |
-| `fileUrl` | string | No | URL, nullable |
-| `mediaFileId` | string | No | UUID, nullable |
-| `type` | string | No | optional, nullable |
+| Field         | Type   | Required | Validation         |
+| ------------- | ------ | -------- | ------------------ |
+| `title`       | string | Yes      | Non-empty          |
+| `fileUrl`     | string | No       | URL, nullable      |
+| `mediaFileId` | string | No       | UUID, nullable     |
+| `type`        | string | No       | optional, nullable |
 
 **Response `201 Created`:** `data` là `CourseResponse`.
 
@@ -354,13 +342,7 @@ Thêm tài liệu học tập. Nếu có `mediaFileId`, course-service phát eve
 
 ### POST `/courses/:id/enroll`
 
-Đăng ký khóa học. `studentId` lấy từ header `x-user-id`; endpoint không cần request body.
-
-**Headers**
-
-```http
-x-user-id: <student-user-id>
-```
+Dang ky khoa hoc. `studentId` lay tu `sub` trong JWT cua caller; endpoint khong can request body.
 
 **Response `201 Created`:** `data` là `EnrollmentResponse`.
 
@@ -372,21 +354,15 @@ x-user-id: <student-user-id>
 
 ### GET `/enrollments`
 
-Danh sách enrollment của student hiện tại. `studentId` lấy từ header `x-user-id`.
-
-**Headers**
-
-```http
-x-user-id: <student-user-id>
-```
+Danh sach enrollment cua student hien tai. `studentId` lay tu `sub` trong JWT cua caller.
 
 **Query**
 
-| Param | Type | Default | Validation |
-|---|---|---:|---|
-| `page` | number | 1 | integer, `>= 1` |
-| `size` | number | 20 | integer, `>= 1` |
-| `status` | EnrollmentStatus | - | enum |
+| Param    | Type             | Default | Validation      |
+| -------- | ---------------- | ------: | --------------- |
+| `page`   | number           |       1 | integer, `>= 1` |
+| `size`   | number           |      20 | integer, `>= 1` |
+| `status` | EnrollmentStatus |       - | enum            |
 
 **Response `200 OK`**
 
@@ -423,10 +399,10 @@ Lấy chi tiết enrollment.
 
 **Events published:**
 
-| Event | Khi nào |
-|---|---|
-| `course.lesson.completed` | Khi hoàn thành một lesson |
-| `course.enrollment.completed` | Khi progress đạt 100% |
+| Event                         | Khi nào                   |
+| ----------------------------- | ------------------------- |
+| `course.lesson.completed`     | Khi hoàn thành một lesson |
+| `course.enrollment.completed` | Khi progress đạt 100%     |
 
 ---
 

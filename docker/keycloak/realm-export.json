@@ -480,7 +480,7 @@
       "enabled": true,
       "emailVerified": true,
       "credentials": [
-        { "type": "password", "value": "Admin@123", "temporary": false }
+        { "type": "password", "value": "123456", "temporary": false }
       ],
       "realmRoles": ["ADMIN"]
     },

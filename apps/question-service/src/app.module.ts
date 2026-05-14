@@ -1,9 +1,18 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { ConsulConfigFactory } from '@repo/common';
 import Joi from 'joi';
+import {
+  AuthGuard,
+  KeycloakConnectModule,
+  KeycloakConnectOptions,
+  PolicyEnforcementMode,
+  ResourceGuard,
+  RoleGuard,
+  TokenValidation,
+} from 'nest-keycloak-connect';
+import { QuestionModule } from './question.module';
 
 @Module({
   imports: [
@@ -33,14 +42,38 @@ import Joi from 'joi';
               connectionTimeout: Joi.number().default(10000),
               heartbeat: Joi.number().default(60),
             }).optional(),
+            keycloak: Joi.object({
+              authServerUrl: Joi.string().required(),
+              realm: Joi.string().required(),
+              clientId: Joi.string().required(),
+              clientSecret: Joi.string().optional(),
+            }).required(),
           }).unknown(true),
           'question-service',
         ),
       ],
       isGlobal: true,
     }),
+    KeycloakConnectModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService): KeycloakConnectOptions => ({
+        authServerUrl: configService.getOrThrow<string>(
+          'keycloak.authServerUrl',
+        ),
+        realm: configService.getOrThrow<string>('keycloak.realm'),
+        clientId: configService.getOrThrow<string>('keycloak.clientId'),
+        secret: configService.get<string>('keycloak.clientSecret') ?? '',
+        policyEnforcement: PolicyEnforcementMode.PERMISSIVE,
+        tokenValidation: TokenValidation.OFFLINE,
+      }),
+    }),
+    QuestionModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RoleGuard },
+    { provide: APP_GUARD, useClass: ResourceGuard },
+  ],
 })
 export class AppModule {}

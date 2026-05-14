@@ -22,9 +22,11 @@ Trường `licenseCategory` (enum) xuất hiện ở question-service, exam-serv
 
 **Bounded Context:** Authentication & Authorization
 
-> Hệ thống sử dụng **Keycloak** làm Identity Provider. Không có `identity_db` riêng.
+> Hệ thống sử dụng **Keycloak** làm Identity Provider. Không có `identity_db` riêng dùng cho business logic.
 > Keycloak quản lý: credentials, login/logout, forgot password, JWT issuance, brute-force lock.
 > Các service khác verify JWT do Keycloak cấp (via JWKS endpoint).
+>
+> **Lưu ý:** `apps/identity-service/prisma/schema.prisma` hiện có model placeholder `IdentityUser` (id, email, name) — đây là artifact tooling, **không dùng** cho business logic. Keycloak vẫn là nguồn dữ liệu thật.
 
 **Roles được cấu hình trong Keycloak:**
 
@@ -64,6 +66,7 @@ user_profiles
 ├── phoneNumber     TEXT UNIQUE NULLABLE
 ├── dateOfBirth     DATE NULLABLE
 ├── avatarUrl       TEXT NULLABLE
+├── mediaFileId     UUID NULLABLE    ← ref → media-service FileObject (UUID only, không có FK)
 ├── gender          ENUM(MALE, FEMALE, OTHER) NULLABLE
 ├── address         TEXT NULLABLE
 ├── role            ENUM(ADMIN, CENTER_MANAGER, INSTRUCTOR, STUDENT) NOT NULL  ← sync từ Keycloak
@@ -115,7 +118,43 @@ license_assignment_audits
 
 ---
 
-## Service 3: question-service → `question_db`
+## Service 2.5: media-service → `media_db`
+
+**Bounded Context:** File Storage & Media Management
+
+> Service lưu trữ metadata file sau khi upload lên Azure Blob Storage. Các service khác (user, course) tham chiếu `mediaFileId` để hiển thị file mà không gọi cross-service.
+
+### Aggregate Root: `FileObject`
+
+```
+file_objects
+├── id            UUID PK
+├── storage_key   TEXT NOT NULL UNIQUE  ← đường dẫn trong Azure Blob (e.g. uploads/2026/05/file.jpg)
+├── original_name TEXT NOT NULL
+├── mime_type     TEXT NOT NULL
+├── file_size     INT NOT NULL          ← bytes
+├── bucket_name   TEXT NOT NULL
+├── uploaded_by_id UUID NOT NULL        ← ref → Keycloak userId (UUID only, không có FK)
+├── is_public     BOOLEAN DEFAULT false
+├── status        ENUM(UNLINKED, LINKED) DEFAULT UNLINKED
+├── created_at    TIMESTAMPTZ
+└── updated_at    TIMESTAMPTZ
+```
+
+> **`status`**: `UNLINKED` — file vừa upload, chưa được gắn vào entity nào. `LINKED` — đã được user/course xác nhận dùng (qua event `user.avatar.linked` hoặc `course.material.linked`).
+
+### Domain Events
+
+| Direction | Event | Trigger | Payload |
+| --------- | --- | --- | --- |
+| Publish | `media.file.uploaded` | Upload file thành công | fileId, storageKey, originalName, mimeType, fileSize, uploadedById |
+| Publish | `media.file.deleted` | Xóa file | fileId, storageKey, deletedById |
+| Subscribe | `user.avatar.linked` | User gắn avatar | mediaFileId → mark LINKED |
+| Subscribe | `course.material.linked` | Course gắn tài liệu | mediaFileId → mark LINKED |
+
+---
+
+## Service 3: question-service → `question_db` ⏳ (chưa implement)
 
 **Bounded Context:** Question Bank Management
 
@@ -173,7 +212,7 @@ question_options
 
 ---
 
-## Service 4: exam-service → `exam_db`
+## Service 4: exam-service → `exam_db` ⏳ (chưa implement)
 
 **Bounded Context:** Exam Scheduling & Session Management
 
@@ -272,26 +311,26 @@ exam_schedules
 courses
 ├── id               UUID PK
 ├── title            TEXT NOT NULL
-├── description      TEXT
+├── description      TEXT NULLABLE
 ├── licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
 ├── totalLessons     INT DEFAULT 0
 ├── duration         TEXT NULLABLE    ← e.g. "3 tháng"
-├── tuitionFee       INT NULLABLE
+├── tuitionFee       DECIMAL(12,2) DEFAULT 0
 ├── capacity         INT NULLABLE
-├── status           ENUM(DRAFT, ACTIVE, ARCHIVED)
-├── createdById      UUID NOT NULL    ← ref → identity_users.id (INSTRUCTOR/ADMIN)
+├── status           ENUM(DRAFT, ACTIVE) DEFAULT DRAFT
+├── createdById      UUID NOT NULL    ← ref → Keycloak userId (INSTRUCTOR/ADMIN)
 ├── createdAt        TIMESTAMPTZ
 └── updatedAt        TIMESTAMPTZ
 ```
 
-> **Scope simplification:** Không có thumbnailUrl (không cần ảnh đại diện), không có video — khóa học chỉ cần text content.
+> **Scope simplification:** Không có thumbnailUrl, không có video — khóa học chỉ cần text content. `ARCHIVED` không có trong enum hiện tại.
 
 ### Entity (thuộc Course): `Lesson`
 
 ```
 lessons
 ├── id        UUID PK
-├── courseId  UUID NOT NULL FK → courses.id
+├── courseId  UUID NOT NULL FK → courses.id (onDelete: Cascade)
 ├── title     TEXT NOT NULL
 ├── content   TEXT NULLABLE  ← markdown text
 ├── order     INT NOT NULL
@@ -300,6 +339,48 @@ lessons
 
 > Lesson gắn trực tiếp vào Course (không qua CourseModule). Không có `videoUrl` hay `durationMinutes`.
 
+### Entity (thuộc Course): `CourseInstructor`
+
+> Junction table cho quan hệ many-to-many giữa Course và Instructor.
+
+```
+course_instructors
+├── id           UUID PK
+├── courseId     UUID NOT NULL FK → courses.id (onDelete: Cascade)
+└── instructorId UUID NOT NULL    ← ref → Keycloak userId
+    UNIQUE(courseId, instructorId)
+```
+
+### Entity (thuộc Course): `CourseRequirement`
+
+> Điều kiện tham gia khóa học — quan hệ 1-1 với Course.
+
+```
+course_requirements
+├── id             UUID PK
+├── courseId       UUID NOT NULL UNIQUE FK → courses.id (onDelete: Cascade)
+├── minAge         INT NULLABLE
+├── prerequisites  TEXT NULLABLE
+├── attendanceRate INT DEFAULT 80
+├── minPassScore   INT DEFAULT 80
+└── requiredExams  INT DEFAULT 0
+```
+
+### Entity (thuộc Course): `CourseMaterial`
+
+> Tài liệu đính kèm khóa học (PDF, video, link...).
+
+```
+course_materials
+├── id          UUID PK
+├── courseId    UUID NOT NULL FK → courses.id (onDelete: Cascade)
+├── title       TEXT NOT NULL
+├── fileUrl     TEXT NULLABLE    ← URL trực tiếp (nếu không dùng media-service)
+├── mediaFileId UUID NULLABLE    ← ref → media-service FileObject (UUID only, không có FK)
+├── type        TEXT NULLABLE    ← e.g. "PDF", "VIDEO", "LINK"
+└── createdAt   TIMESTAMPTZ
+```
+
 ### Aggregate Root: `CourseEnrollment`
 
 > Quản lý tiến trình học của 1 student trong 1 khóa học.
@@ -307,12 +388,13 @@ lessons
 ```
 course_enrollments
 ├── id          UUID PK
-├── courseId    UUID NOT NULL FK → courses.id
-├── studentId   UUID NOT NULL  ← ref → identity_users.id
-├── status      ENUM(ACTIVE, COMPLETED, DROPPED)
+├── courseId    UUID NOT NULL FK → courses.id (onDelete: Cascade)
+├── studentId   UUID NOT NULL  ← ref → Keycloak userId
+├── status      ENUM(ACTIVE, COMPLETED, DROPPED) DEFAULT ACTIVE
 ├── progress    INT DEFAULT 0  ← 0-100%, tự tính khi completeLesson
 ├── enrolledAt  TIMESTAMPTZ
 └── completedAt TIMESTAMPTZ NULLABLE
+    UNIQUE(courseId, studentId)
 ```
 
 > **Không có `lesson_progress` table.** Mỗi lần `completeLesson` gọi, progress tăng `100/totalLessons`. Không track per-lesson trạng thái đã hoàn thành.
@@ -327,7 +409,7 @@ course_enrollments
 
 ---
 
-## Service 6: simulation-service → `simulation_db`
+## Service 6: simulation-service → `simulation_db` ⏳ (chưa implement)
 
 **Bounded Context:** Driving Scenario Simulation (Sa hình)
 
@@ -406,7 +488,7 @@ simulation_answers
 
 ---
 
-## Service 7: notification-service → `notification_db`
+## Service 7: notification-service → `notification_db` ⏳ (chưa implement)
 
 **Bounded Context:** Notification Delivery
 
@@ -465,7 +547,7 @@ notification_preferences
 
 ---
 
-## Service 8: analytics-service → `analytics_db`
+## Service 8: analytics-service → `analytics_db` ⏳ (chưa implement)
 
 **Bounded Context:** Learning Analytics & Progress Tracking
 
@@ -583,16 +665,17 @@ weak_area_reports
 
 ## Tóm tắt
 
-| Service              | Database        | Aggregate Roots                                                 | Ghi chú                                   |
-| -------------------- | --------------- | --------------------------------------------------------------- | ----------------------------------------- |
-| identity-service     | **Keycloak**    | —                                                               | Không có DB riêng                         |
-| user-service         | user_db         | UserProfile                                                     | Có StudentDetail + LicenseAssignmentAudit |
-| question-service     | question_db     | Question, QuestionTopic                                         |                                           |
-| exam-service         | exam_db         | ExamTemplate, ExamSession, ExamSchedule                         | Snapshot câu hỏi                          |
-| course-service       | course_db       | Course, CourseEnrollment                                        |                                           |
-| simulation-service   | simulation_db   | Scenario, SimulationSession                                     | 120 tình huống                            |
-| notification-service | notification_db | Notification, NotificationTemplate, NotificationPreference      | Pure consumer                             |
-| analytics-service    | analytics_db    | StudentLearningProfile, QuestionAccuracyTracker, WeakAreaReport | Pure read model                           |
+| Service | Database | Aggregate Roots | Ghi chú |
+| --- | --- | --- | --- |
+| identity-service | **Keycloak** | — | Placeholder schema tồn tại nhưng không dùng cho business |
+| user-service | user_db | UserProfile | ✅ Có StudentDetail + LicenseAssignmentAudit |
+| media-service | media_db | FileObject | ✅ Azure Blob metadata, UNLINKED/LINKED status |
+| question-service | question_db | Question, QuestionTopic | ⏳ Chưa implement |
+| exam-service | exam_db | ExamTemplate, ExamSession, ExamSchedule | ⏳ Chưa implement — snapshot câu hỏi |
+| course-service | course_db | Course, CourseEnrollment | ✅ Có CourseInstructor, CourseRequirement, CourseMaterial |
+| simulation-service | simulation_db | Scenario, SimulationSession | ⏳ Chưa implement — 120 tình huống |
+| notification-service | notification_db | Notification, NotificationTemplate, NotificationPreference | ⏳ Chưa implement — pure consumer |
+| analytics-service | analytics_db | StudentLearningProfile, QuestionAccuracyTracker, WeakAreaReport | ⏳ Chưa implement — pure read model |
 
 ---
 

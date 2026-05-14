@@ -1,5 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
+import { Public } from 'nest-keycloak-connect';
 import { PrismaService } from '../../infrastructure/persistence/prisma/prisma.service';
 
 interface StudentLicenseAssignedPayload {
@@ -15,6 +16,7 @@ interface MediaFileDeletedPayload {
 }
 
 @Controller()
+@Public()
 export class MessagingController {
   private readonly logger = new Logger(MessagingController.name);
 

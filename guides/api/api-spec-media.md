@@ -4,8 +4,21 @@
 **Service path:** `/media`  
 **Direct local:** `http://localhost:3010`  
 **Swagger UI:** `http://localhost:3010/docs`  
+**Swagger UI qua Kong:** `http://localhost:8000/media-service/docs`  
 **OpenAPI JSON:** `http://localhost:3010/docs-json`  
+**OpenAPI JSON qua Kong:** `http://localhost:8000/media-service/docs-json`  
 **Version:** 1.0.0
+
+## Auth Update
+
+Media-service hien validate JWT/RBAC tai service bang Keycloak guard. Frontend goi qua Kong va gui `Authorization: Bearer <access_token>`; Kong forward header nay vao service. Upload/init upload lay `uploadedById` tu `JWT.sub`, con `x-user-id` chi la fallback cho debug/local script cu.
+
+| Endpoint                                                                                          | Role                      |
+| ------------------------------------------------------------------------------------------------- | ------------------------- |
+| `POST /media/files`, `POST /media/files/init`, `GET /media/files/:id`, `GET /media/files/:id/url` | JWT hop le                |
+| `GET /media/files`, `DELETE /media/files/:id`                                                     | `ADMIN`, `CENTER_MANAGER` |
+
+Business API path la `/media/*`; Swagger/docs path la `/media-service/docs`.
 
 ---
 
@@ -13,10 +26,10 @@
 
 `media-service` quản lý metadata file và lưu file thật trên Azure Blob Storage. Service hỗ trợ 2 luồng upload:
 
-| Luồng | Endpoint | File bytes đi qua media-service? | Ghi chú |
-|---|---|---:|---|
-| Server upload | `POST /media/files` | Có | Upload đơn giản, service nhận multipart rồi đẩy lên Azure |
-| Direct upload | `POST /media/files/init` + `PUT uploadUrl` | Không | Client PUT trực tiếp lên Azure bằng SAS URL |
+| Luồng         | Endpoint                                   | File bytes đi qua media-service? | Ghi chú                                                   |
+| ------------- | ------------------------------------------ | -------------------------------: | --------------------------------------------------------- |
+| Server upload | `POST /media/files`                        |                               Có | Upload đơn giản, service nhận multipart rồi đẩy lên Azure |
+| Direct upload | `POST /media/files/init` + `PUT uploadUrl` |                            Không | Client PUT trực tiếp lên Azure bằng SAS URL               |
 
 `storageKey` có dạng: `uploads/YYYY/MM/<uuid>.<ext>`.
 
@@ -53,14 +66,14 @@ Lỗi domain được trả theo format:
 
 ## Error Codes
 
-| HTTP | Code | Nguyên nhân |
-|---:|---|---|
-| 400 | `VALIDATION_ERROR` | Body/query không hợp lệ |
-| 400 | `BAD_REQUEST` | Multipart request không có field `file` |
-| 404 | `FILE_NOT_FOUND` | Không tìm thấy file |
-| 422 | `FILE_TOO_LARGE` | File vượt quá giới hạn domain |
-| 422 | `INVALID_MIME_TYPE` | MIME type không được chấp nhận |
-| 502 | `FILE_UPLOAD_FAILED` | Lỗi upload/giao tiếp với storage |
+| HTTP | Code                 | Nguyên nhân                             |
+| ---: | -------------------- | --------------------------------------- |
+|  400 | `VALIDATION_ERROR`   | Body/query không hợp lệ                 |
+|  400 | `BAD_REQUEST`        | Multipart request không có field `file` |
+|  404 | `FILE_NOT_FOUND`     | Không tìm thấy file                     |
+|  422 | `FILE_TOO_LARGE`     | File vượt quá giới hạn domain           |
+|  422 | `INVALID_MIME_TYPE`  | MIME type không được chấp nhận          |
+|  502 | `FILE_UPLOAD_FAILED` | Lỗi upload/giao tiếp với storage        |
 
 ---
 
@@ -86,10 +99,10 @@ Response DTO hiện tại **không trả `status`**, dù domain vẫn có `FileS
 
 ### FileStatus Trong Domain
 
-| Giá trị | Ý nghĩa |
-|---|---|
-| `LINKED` | File server-upload hoặc file đã được service khác xác nhận đang dùng |
-| `UNLINKED` | Metadata được tạo cho direct upload nhưng chưa nhận event confirm |
+| Giá trị    | Ý nghĩa                                                              |
+| ---------- | -------------------------------------------------------------------- |
+| `LINKED`   | File server-upload hoặc file đã được service khác xác nhận đang dùng |
+| `UNLINKED` | Metadata được tạo cho direct upload nhưng chưa nhận event confirm    |
 
 ---
 
@@ -97,20 +110,13 @@ Response DTO hiện tại **không trả `status`**, dù domain vẫn có `FileS
 
 ### POST `/media/files`
 
-Upload file bằng `multipart/form-data`. Endpoint đọc uploader từ header `x-user-id`.
-
-**Headers**
-
-```http
-x-user-id: <keycloak-user-id>
-Content-Type: multipart/form-data
-```
+Upload file bang `multipart/form-data`. `uploadedById` lay tu `sub` trong JWT cua caller.
 
 **Body**
 
-| Field | Type | Required |
-|---|---|---|
-| `file` | binary | Yes |
+| Field  | Type   | Required |
+| ------ | ------ | -------- |
+| `file` | binary | Yes      |
 
 **Response `201 Created`**
 
@@ -141,13 +147,6 @@ Content-Type: multipart/form-data
 
 Tạo metadata và SAS URL để client upload trực tiếp lên Azure Blob Storage.
 
-**Headers**
-
-```http
-x-user-id: <keycloak-user-id>
-Content-Type: application/json
-```
-
 **Body**
 
 ```json
@@ -158,11 +157,11 @@ Content-Type: application/json
 }
 ```
 
-| Field | Type | Required | Validation |
-|---|---|---|---|
-| `originalName` | string | Yes | Non-empty |
-| `mimeType` | string | Yes | Non-empty, kiểm tra ở domain |
-| `fileSize` | number | Yes | Integer, `>= 1`, kiểm tra giới hạn ở domain |
+| Field          | Type   | Required | Validation                                  |
+| -------------- | ------ | -------- | ------------------------------------------- |
+| `originalName` | string | Yes      | Non-empty                                   |
+| `mimeType`     | string | Yes      | Non-empty, kiểm tra ở domain                |
+| `fileSize`     | number | Yes      | Integer, `>= 1`, kiểm tra giới hạn ở domain |
 
 **Response `201 Created`**
 
@@ -190,7 +189,7 @@ x-ms-blob-type: BlockBlob
 <file bytes>
 ```
 
-Khi entity khác đã lưu `mediaFileId`, service đó phát event `user.avatar.linked` hoặc `course.material.linked`; media-service sẽ chuyển file sang trạng thái `LINKED`.
+Khi entity khác đã lưu `mediaFileId`, service đó phát event `user.avatar.linked`, `course.material.linked`, hoặc `question.image.linked`; media-service sẽ chuyển file sang trạng thái `LINKED`.
 
 ---
 
@@ -200,12 +199,12 @@ Liệt kê metadata file.
 
 **Query**
 
-| Param | Type | Default | Validation | Mô tả |
-|---|---|---:|---|---|
-| `page` | number | 1 | integer, `>= 1` | Trang |
-| `size` | number | 20 | integer, `>= 1` | Số item mỗi trang |
-| `uploadedById` | string | - | optional | Lọc theo uploader |
-| `mimeType` | string | - | optional | Lọc theo prefix/type, ví dụ `image/` |
+| Param          | Type   | Default | Validation      | Mô tả                                |
+| -------------- | ------ | ------: | --------------- | ------------------------------------ |
+| `page`         | number |       1 | integer, `>= 1` | Trang                                |
+| `size`         | number |      20 | integer, `>= 1` | Số item mỗi trang                    |
+| `uploadedById` | string |       - | optional        | Lọc theo uploader                    |
+| `mimeType`     | string |       - | optional        | Lọc theo prefix/type, ví dụ `image/` |
 
 **Response `200 OK`**
 
@@ -253,13 +252,7 @@ Tạo presigned download URL.
 
 ### DELETE `/media/files/:id`
 
-Xóa file khỏi storage và database. Endpoint đọc người xóa từ header `x-user-id`.
-
-**Headers**
-
-```http
-x-user-id: <keycloak-user-id>
-```
+Xoa file khoi storage va database. `deletedById` lay tu `sub` trong JWT cua caller.
 
 **Response `204 No Content`**
 
@@ -305,18 +298,17 @@ Media-service lắng nghe trên 2 queue riêng biệt:
 - `user_service_events` — nhận events từ user-service
 - `course_service_events` — nhận events từ course-service
 
-| Event | Source queue | Payload tối thiểu | Xử lý |
-| --- | --- | --- | --- |
-| `user.avatar.linked` | `user_service_events` | `{ "mediaFileId": "uuid" }` | Mark file `LINKED` |
+| Event                    | Source queue            | Payload tối thiểu           | Xử lý              |
+| ------------------------ | ----------------------- | --------------------------- | ------------------ |
+| `user.avatar.linked`     | `user_service_events`   | `{ "mediaFileId": "uuid" }` | Mark file `LINKED` |
 | `course.material.linked` | `course_service_events` | `{ "mediaFileId": "uuid" }` | Mark file `LINKED` |
+| `question.image.linked`  | `media_service_events`  | `{ "mediaFileId": "uuid" }` | Mark file `LINKED` |
 
 ---
 
 ## Quick Test
 
 ```bash
-curl -X POST http://localhost:3010/media/files/init \
-  -H "x-user-id: 00000000-0000-0000-0000-000000000001" \
-  -H "Content-Type: application/json" \
+curl -X POST http://localhost:3010/media/files/init \  -H "Content-Type: application/json" \
   -d '{"originalName":"avatar.jpg","mimeType":"image/jpeg","fileSize":204800}'
 ```
