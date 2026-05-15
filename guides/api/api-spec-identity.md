@@ -8,7 +8,7 @@
 **OpenAPI JSON qua Kong:** `http://localhost:8000/identity-service/docs-json`  
 **Version:** 1.0.0
 
-Qua Kong, auth business APIs dung prefix `/auth/*` cho login/logout/refresh va `/admin/*` cho admin APIs. Swagger/docs path la `/identity-service/docs`.
+Qua Kong, auth business APIs dùng prefix `/auth/*` cho login/logout/refresh và `/admin/*` cho admin APIs. Swagger/docs path là `/identity-service/docs`.
 
 | Direct local path             | Kong public path              |
 | ----------------------------- | ----------------------------- |
@@ -211,7 +211,7 @@ Lấy token mới bằng refresh token.
 
 ### POST `/admin/users`
 
-Account Keycloak duoc tao voi password permanent, `enabled=true`, `emailVerified=true`, va khong co required action, nen user co the login ngay bang `POST /auth/login`.
+Account Keycloak được tạo với password permanent, `enabled=true`, `emailVerified=true`, và không có required action, nên user có thể login ngay bằng `POST /auth/login`.
 
 Tạo user trong Keycloak, assign realm role, lưu record vào `identity_users`, rồi publish event.
 
@@ -263,23 +263,23 @@ List identity users trong `identity_db`.
 
 **Query:** `page`, `size`, `role`, `isActive`, `includeDeleted`, `search`.
 
-**Response `200 OK`:** `data` gom `{ items, total, page, size }`.
+**Response `200 OK`:** `data` gồm `{ items, total, page, size }`.
 
 ---
 
 ### GET `/admin/users/:id`
 
-Lay chi tiet identity user.
+Lấy chi tiết identity user.
 
 **Auth:** `ADMIN`, `CENTER_MANAGER`
 
-**Response `200 OK`:** `data` la `IdentityUserResponse`.
+**Response `200 OK`:** `data` là `IdentityUserResponse`.
 
 ---
 
 ### PATCH `/admin/users/:id`
 
-Cap nhat identity user tren Keycloak va `identity_db`.
+Cập nhật identity user trên Keycloak và `identity_db`.
 
 **Auth:** `ADMIN`
 
@@ -362,7 +362,7 @@ Khóa/mở khóa tài khoản trong Keycloak bằng cách set `enabled = !locked
 
 ### DELETE `/admin/users/:id`
 
-Soft delete identity user: disable account tren Keycloak, set `isDeleted=true`, `isActive=false`, `deletedAt` trong `identity_db`.
+Soft delete identity user: disable account trên Keycloak, set `isDeleted=true`, `isActive=false`, `deletedAt` trong `identity_db`.
 
 **Auth:** `ADMIN`
 

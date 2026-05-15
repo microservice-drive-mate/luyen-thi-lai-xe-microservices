@@ -9,11 +9,11 @@
 **OpenAPI JSON qua Kong:** `http://localhost:8000/exam-service/docs-json`  
 **Version:** 1.0.0
 
-Business API path la `/exams/*`; Swagger/docs path la `/exam-service/docs`.
+Business API path là `/exams/*`; Swagger/docs path là `/exam-service/docs`.
 
 ## Authentication
 
-Exam-service validate JWT/RBAC tai service bang `nest-keycloak-connect`. Frontend goi qua Kong va gui `Authorization: Bearer <access_token>`.
+Exam-service validate JWT/RBAC tại service bằng `nest-keycloak-connect`. Frontend gọi qua Kong và gửi `Authorization: Bearer <access_token>`.
 
 | Endpoint | Role |
 | --- | --- |
@@ -29,7 +29,7 @@ Exam-service validate JWT/RBAC tai service bang `nest-keycloak-connect`. Fronten
 | `POST /exams/sessions/:id/submit` | `STUDENT`, owner only |
 | `GET /exams/sessions/:id/result` | `STUDENT`, owner only |
 
-Exam-service goi noi bo `question-service /questions/pool` bang Keycloak client-credentials token. Khong expose endpoint pool truc tiep cho student.
+Exam-service gọi nội bộ `question-service /questions/pool` bằng Keycloak client-credentials token. Không expose endpoint pool trực tiếp cho student.
 
 ## Error Codes
 
@@ -53,10 +53,10 @@ Student-facing question payload intentionally excludes `correctOptionId`, `optio
 ```json
 {
   "questionId": "question-uuid",
-  "content": "Khi gap den do, nguoi lai xe phai lam gi?",
+  "content": "Khi gặp đèn đỏ, người lái xe phải làm gì?",
   "options": [
-    { "id": "option-1", "content": "Dung lai", "displayOrder": 1 },
-    { "id": "option-2", "content": "Di tiep", "displayOrder": 2 }
+    { "id": "option-1", "content": "Dừng lại", "displayOrder": 1 },
+    { "id": "option-2", "content": "Đi tiếp", "displayOrder": 2 }
   ],
   "displayOrder": 1,
   "isCritical": false,
@@ -71,7 +71,7 @@ Student-facing question payload intentionally excludes `correctOptionId`, `optio
 
 ```json
 {
-  "name": "De thi B2 co ban",
+  "name": "Đề thi B2 cơ bản",
   "licenseCategory": "B2",
   "totalQuestions": 30,
   "passingScore": 26,
@@ -96,7 +96,7 @@ Optimistic concurrency uses `version`.
 ```json
 {
   "version": 1,
-  "name": "De thi B2 cap nhat",
+  "name": "Đề thi B2 cập nhật",
   "totalQuestions": 30,
   "passingScore": 26,
   "durationMinutes": 20,

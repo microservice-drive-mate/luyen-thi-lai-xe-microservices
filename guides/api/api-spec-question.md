@@ -11,7 +11,7 @@
 
 ## Auth Update
 
-Question-service hien validate JWT/RBAC tai service bang Keycloak guard. Frontend goi qua Kong va gui `Authorization: Bearer <access_token>`; Kong forward header nay vao service. Service lay actor id tu `JWT.sub`, con `x-user-id` chi la fallback cho debug/local script cu.
+Question-service hiện validate JWT/RBAC tại service bằng Keycloak guard. Frontend gọi qua Kong và gửi `Authorization: Bearer <access_token>`; Kong forward header này vào service. Service lấy actor id từ `JWT.sub`, còn `x-user-id` chỉ là fallback cho debug/local script cũ.
 
 | Endpoint                                                                                                      | Role                                    |
 | ------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
@@ -19,15 +19,15 @@ Question-service hien validate JWT/RBAC tai service bang Keycloak guard. Fronten
 | `POST /questions/topics`, `GET /questions/topics`, `GET /questions/topics/:id`, `PATCH /questions/topics/:id` | `ADMIN`, `CENTER_MANAGER`               |
 | `POST /questions/pool`                                                                                        | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 
-Kong OSS trong repo dang dung routing, CORS va rate-limiting. OIDC plugin khong co san trong image OSS; service-level Keycloak guard la diem enforce auth hien tai.
+Kong OSS trong repo đang dùng routing, CORS và rate-limiting. OIDC plugin không có sẵn trong image OSS; service-level Keycloak guard là điểm enforce auth hiện tại.
 
-Business API path la `/questions/*`; Swagger/docs path la `/question-service/docs`.
+Business API path là `/questions/*`; Swagger/docs path là `/question-service/docs`.
 
 ---
 
 ## Gateway / Kong
 
-Question-service da co route trong `kong/kong.dev.yaml`:
+Question-service đã có route trong `kong/kong.dev.yaml`:
 
 | Public path qua Kong                               | Upstream local service                       |
 | -------------------------------------------------- | -------------------------------------------- |
@@ -35,14 +35,14 @@ Question-service da co route trong `kong/kong.dev.yaml`:
 | `http://localhost:8000/question-service/docs`      | `http://host.docker.internal:3005/docs`      |
 | `http://localhost:8000/question-service/docs-json` | `http://host.docker.internal:3005/docs-json` |
 
-Khi test direct local, goi `http://localhost:3005`. Khi test dung kien truc gateway, goi `http://localhost:8000/questions`.
+Khi test direct local, gọi `http://localhost:3005`. Khi test dùng kiến trúc gateway, gọi `http://localhost:8000/questions`.
 
 ```bash
 curl -s http://localhost:8000/questions | jq .
 curl -s http://localhost:8000/question-service/docs-json | jq '.info.title'
 ```
 
-Kong OSS trong repo dang dung routing, CORS va rate-limiting. JWT/RBAC duoc enforce tai question-service bang Keycloak guard.
+Kong OSS trong repo đang dùng routing, CORS và rate-limiting. JWT/RBAC được enforce tại question-service bằng Keycloak guard.
 
 ---
 
@@ -59,7 +59,7 @@ Kong OSS trong repo dang dung routing, CORS va rate-limiting. JWT/RBAC duoc enfo
 }
 ```
 
-Loi domain:
+Lỗi domain:
 
 ```json
 {
@@ -75,15 +75,15 @@ Loi domain:
 
 ## Error Codes
 
-| HTTP | Code                        | Nguyen nhan                                         |
+| HTTP | Code                        | Nguyên nhân                                         |
 | ---: | --------------------------- | --------------------------------------------------- |
-|  400 | `VALIDATION_ERROR`          | Body/query khong hop le                             |
-|  400 | `INVALID_QUESTION`          | Vi pham invariant cua question/topic                |
-|  404 | `QUESTION_NOT_FOUND`        | Khong tim thay question                             |
-|  404 | `QUESTION_TOPIC_NOT_FOUND`  | Khong tim thay topic                                |
-|  409 | `QUESTION_DUPLICATE`        | Question cung normalized content + topic da ton tai |
+|  400 | `VALIDATION_ERROR`          | Body/query không hợp lệ                             |
+|  400 | `INVALID_QUESTION`          | Vi phạm invariant của question/topic                |
+|  404 | `QUESTION_NOT_FOUND`        | Không tìm thấy question                             |
+|  404 | `QUESTION_TOPIC_NOT_FOUND`  | Không tìm thấy topic                                |
+|  409 | `QUESTION_DUPLICATE`        | Question cùng normalized content + topic đã tồn tại |
 |  409 | `QUESTION_VERSION_CONFLICT` | Optimistic concurrency conflict                     |
-|  422 | `QUESTION_ALREADY_DELETED`  | Thao tac tren question da soft-delete               |
+|  422 | `QUESTION_ALREADY_DELETED`  | Thao tác trên question đã soft-delete               |
 
 ---
 
@@ -107,18 +107,18 @@ Loi domain:
 
 ### QuestionResponse
 
-Admin/detail response co `options[].isCorrect`. Field nay phuc vu quan tri va endpoint noi bo; cac API client-facing cua exam-service sau nay phai loai bo dap an dung.
+Admin/detail response có `options[].isCorrect`. Field này phục vụ quản trị và endpoint nội bộ; các API client-facing của exam-service sau này phải loại bỏ đáp án đúng.
 
-Anh cau hoi nen dung `mediaFileId` de reference `media-service` FileObject. `imageUrl` chi la URL hien thi/denormalized neu client da co URL truc tiep; question-service khong upload file va khong quan ly Azure Blob.
+Ảnh câu hỏi nên dùng `mediaFileId` để reference `media-service` FileObject. `imageUrl` chỉ là URL hiển thị/denormalized nếu client đã có URL trực tiếp; question-service không upload file và không quản lý Azure Blob.
 
 ```json
 {
   "id": "question-uuid",
-  "content": "Khi gap den do, nguoi lai xe phai lam gi?",
+  "content": "Khi gặp đèn đỏ, người lái xe phải làm gì?",
   "type": "THEORY",
   "licenseCategories": ["B2"],
   "difficulty": "EASY",
-  "explanation": "Den do yeu cau dung lai truoc vach dung.",
+  "explanation": "Đèn đỏ yêu cầu dừng lại trước vạch dừng.",
   "imageUrl": null,
   "mediaFileId": "media-file-uuid",
   "isCritical": false,
@@ -134,7 +134,7 @@ Anh cau hoi nen dung `mediaFileId` de reference `media-service` FileObject. `ima
   "options": [
     {
       "id": "option-uuid",
-      "content": "Dung lai",
+      "content": "Dừng lại",
       "isCorrect": true,
       "displayOrder": 1
     }
@@ -147,8 +147,8 @@ Anh cau hoi nen dung `mediaFileId` de reference `media-service` FileObject. `ima
 ```json
 {
   "id": "topic-uuid",
-  "name": "Bien bao giao thong",
-  "description": "Nhom cau hoi ve bien bao",
+  "name": "Biển báo giao thông",
+  "description": "Nhóm câu hỏi về biển báo",
   "parentId": null,
   "createdAt": "2026-05-14T10:00:00.000Z"
 }
@@ -160,21 +160,21 @@ Anh cau hoi nen dung `mediaFileId` de reference `media-service` FileObject. `ima
 
 ### POST `/questions/topics`
 
-Tao topic moi.
+Tạo topic mới.
 
 ```json
 {
-  "name": "Bien bao giao thong",
-  "description": "Nhom cau hoi ve bien bao",
+  "name": "Biển báo giao thông",
+  "description": "Nhóm câu hỏi về biển báo",
   "parentId": null
 }
 ```
 
-**Response `201 Created`:** `data` la `TopicResponse`.
+**Response `201 Created`:** `data` là `TopicResponse`.
 
 ### GET `/questions/topics`
 
-List topic co phan trang.
+List topic có phân trang.
 
 | Param      | Type   | Default |
 | ---------- | ------ | ------: |
@@ -184,11 +184,11 @@ List topic co phan trang.
 
 ### GET `/questions/topics/:id`
 
-Lay chi tiet topic.
+Lấy chi tiết topic.
 
 ### PATCH `/questions/topics/:id`
 
-Cap nhat `name`, `description`, hoac `parentId`.
+Cập nhật `name`, `description`, hoặc `parentId`.
 
 ---
 
@@ -196,7 +196,7 @@ Cap nhat `name`, `description`, hoac `parentId`.
 
 ### POST `/questions`
 
-Tao question moi. `createdById` lay tu `sub` trong JWT cua caller.
+Tạo question mới. `createdById` lấy từ `sub` trong JWT của caller.
 
 **Headers**
 
@@ -209,24 +209,24 @@ Content-Type: application/json
 
 ```json
 {
-  "content": "Khi gap den do, nguoi lai xe phai lam gi?",
+  "content": "Khi gặp đèn đỏ, người lái xe phải làm gì?",
   "type": "THEORY",
   "licenseCategories": ["B2"],
   "difficulty": "EASY",
-  "explanation": "Den do yeu cau dung lai truoc vach dung.",
+  "explanation": "Đèn đỏ yêu cầu dừng lại trước vạch dừng.",
   "imageUrl": null,
   "mediaFileId": "media-file-uuid",
   "isCritical": false,
   "isActive": true,
   "topicId": "topic-uuid",
   "options": [
-    { "content": "Dung lai", "isCorrect": true, "displayOrder": 1 },
-    { "content": "Di tiep", "isCorrect": false, "displayOrder": 2 }
+    { "content": "Dừng lại", "isCorrect": true, "displayOrder": 1 },
+    { "content": "Đi tiếp", "isCorrect": false, "displayOrder": 2 }
   ]
 }
 ```
 
-Validation chinh:
+Validation chính:
 
 | Field                    | Rule                                  |
 | ------------------------ | ------------------------------------- |
@@ -237,19 +237,19 @@ Validation chinh:
 | `options[].isCorrect`    | exactly one correct option            |
 | `options[].displayOrder` | positive integer, unique per question |
 
-Neu body co `mediaFileId`, question-service publish event `question.image.linked` sang `media-service` de mark file `LINKED`.
+Nếu body có `mediaFileId`, question-service publish event `question.image.linked` sang `media-service` để mark file `LINKED`.
 
-**Response `201 Created`:** `data` la `QuestionResponse`.
+**Response `201 Created`:** `data` là `QuestionResponse`.
 
 **Event published:** `question.created`.
 
 **Event published when `mediaFileId` is present:** `question.image.linked`.
 
-Media integration dung event-driven pattern: question-service chi luu UUID reference va publish `question.image.linked`; media-service consume event de mark FileObject thanh `LINKED`. Question-service khong goi truc tiep Azure Blob va khong truy cap DB cua media-service.
+Media integration dùng event-driven pattern: question-service chỉ lưu UUID reference và publish `question.image.linked`; media-service consume event để mark FileObject thành `LINKED`. Question-service không gọi trực tiếp Azure Blob và không truy cập DB của media-service.
 
 ### GET `/questions`
 
-Search question bank co filter va pagination.
+Search question bank có filter và pagination.
 
 | Param             | Type               | Default |
 | ----------------- | ------------------ | ------: |
@@ -281,37 +281,37 @@ Search question bank co filter va pagination.
 
 ### GET `/questions/:id`
 
-Lay chi tiet question. Response co `options[].isCorrect`.
+Lấy chi tiết question. Response có `options[].isCorrect`.
 
 ### PATCH `/questions/:id`
 
-Cap nhat question. Bat buoc gui `version`.
+Cập nhật question. Bắt buộc gửi `version`.
 
 ```json
 {
   "version": 1,
-  "content": "Noi dung moi",
+  "content": "Nội dung mới",
   "isActive": false
 }
 ```
 
-Neu `version` khong khop, response `409 QUESTION_VERSION_CONFLICT`. Neu `isActive` chuyen tu `true` sang `false`, publish `question.deactivated`.
+Nếu `version` không khớp, response `409 QUESTION_VERSION_CONFLICT`. Nếu `isActive` chuyển từ `true` sang `false`, publish `question.deactivated`.
 
 ### DELETE `/questions/:id`
 
-Soft delete question. `deletedById` lay tu `sub` trong JWT cua caller.
+Soft delete question. `deletedById` lấy từ `sub` trong JWT của caller.
 
 ```json
 { "version": 2 }
 ```
 
-Response `200 OK`: `QuestionResponse` voi `isDeleted=true`, `isActive=false`.
+Response `200 OK`: `QuestionResponse` với `isDeleted=true`, `isActive=false`.
 
 **Event published:** `question.deactivated`.
 
 ### POST `/questions/pool`
 
-Endpoint noi bo cho exam-service lay question pool active va chua soft-delete.
+Endpoint nội bộ cho exam-service lấy question pool active và chưa soft-delete.
 
 ```json
 {
@@ -346,7 +346,7 @@ Response:
 }
 ```
 
-Note: pool response co dap an dung de exam-service snapshot/grade noi bo. Khong expose response nay truc tiep cho student client.
+Note: pool response có đáp án đúng để exam-service snapshot/grade nội bộ. Không expose response này trực tiếp cho student client.
 
 ---
 

@@ -1,26 +1,26 @@
 # Kong + Frontend Integration Guide
 
-## Muc Tieu
+## Mục Tiêu
 
-Frontend khong nen goi tung service port nhu `3001`, `3002`, `3005` trong flow binh thuong. O local dev, frontend goi mot gateway duy nhat:
+Frontend không nên gọi từng service port như `3001`, `3002`, `3005` trong flow bình thường. Ở local dev, frontend gọi một gateway duy nhất:
 
 ```text
 http://localhost:8000
 ```
 
-Kong route request vao service phu hop, sau do service tu validate JWT/RBAC bang Keycloak guard.
+Kong route request vào service phù hợp, sau đó service tự validate JWT/RBAC bằng Keycloak guard.
 
 ## Path Convention
 
-Tach ro 2 loai path:
+Tách rõ 2 loại path:
 
-| Loai path         | Muc dich                            | Vi du question-service        |
+| Loại path         | Mục đích                            | Ví dụ question-service        |
 | ----------------- | ----------------------------------- | ----------------------------- |
-| Business API path | Frontend goi API nghiep vu          | `/questions/*`                |
-| Swagger/docs path | Dev mo Swagger cua service qua Kong | `/question-service/docs`      |
-| OpenAPI JSON path | Docs-service/tooling lay spec       | `/question-service/docs-json` |
+| Business API path | Frontend gọi API nghiệp vụ          | `/questions/*`                |
+| Swagger/docs path | Dev mở Swagger của service qua Kong | `/question-service/docs`      |
+| OpenAPI JSON path | Docs-service/tooling lấy spec       | `/question-service/docs-json` |
 
-Mapping hien tai:
+Mapping hiện tại:
 
 | Service          | Business API path qua Kong     | Swagger/docs path qua Kong |
 | ---------------- | ------------------------------ | -------------------------- |
@@ -30,7 +30,7 @@ Mapping hien tai:
 | question-service | `/questions/*`                 | `/question-service/docs`   |
 | media-service    | `/media/*`                     | `/media-service/docs`      |
 
-Vi du tao cau hoi:
+Ví dụ tạo câu hỏi:
 
 ```http
 POST http://localhost:8000/questions
@@ -38,7 +38,7 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-Vi du mo Swagger cua question-service:
+Ví dụ mở Swagger của question-service:
 
 ```text
 http://localhost:8000/question-service/docs
@@ -46,25 +46,25 @@ http://localhost:8000/question-service/docs
 
 ## Setup Local
 
-1. Chay infra:
+1. Chạy infra:
 
 ```bash
 npm run infra:up
 ```
 
-2. Seed Consul neu config chua co:
+2. Seed Consul nếu config chưa có:
 
 ```bash
 npm run consul:seed:local
 ```
 
-3. Chay services bang Turbo:
+3. Chạy services bằng Turbo:
 
 ```bash
 npm run dev
 ```
 
-4. Kiem tra Kong:
+4. Kiểm tra Kong:
 
 ```bash
 curl http://localhost:8001/services
@@ -73,21 +73,21 @@ curl http://localhost:8000/question-service/docs-json
 
 ## Auth Model
 
-Hien tai repo dang dung mo hinh:
+Hiện tại repo đang dùng mô hình:
 
-1. Kong OSS lam API Gateway: routing, CORS, rate limit.
-2. Frontend gui `Authorization: Bearer <access_token>` den Kong.
-3. Kong forward header do vao upstream service.
-4. Service validate JWT bang Keycloak guard.
-5. Service doc user hien tai tu claim `sub` trong JWT.
+1. Kong OSS làm API Gateway: routing, CORS, rate limit.
+2. Frontend gửi `Authorization: Bearer <access_token>` đến Kong.
+3. Kong forward header đó vào upstream service.
+4. Service validate JWT bằng Keycloak guard.
+5. Service đọc user hiện tại từ claim `sub` trong JWT.
 
-Khong can tu gui `x-user-id` tu frontend. Cac service da uu tien `sub` trong JWT; `x-user-id` chi con la fallback cho debug/local script cu.
+Không cần tự gửi `x-user-id` từ frontend. Các service đã ưu tiên `sub` trong JWT; `x-user-id` chỉ còn là fallback cho debug/local script cũ.
 
-Luu y: image `kong:latest` OSS khong co OIDC plugin mac dinh. Vi vay auth enforcement hien tai nam o service. Neu production muon auth tai gateway, dung Kong Enterprise OIDC plugin hoac custom Kong image co OIDC plugin phu hop Keycloak/JWKS.
+Lưu ý: image `kong:latest` OSS không có OIDC plugin mặc định. Vì vậy auth enforcement hiện tại nằm ở service. Nếu production muốn auth tại gateway, dùng Kong Enterprise OIDC plugin hoặc custom Kong image có OIDC plugin phù hợp Keycloak/JWKS.
 
 ## Frontend Environment
 
-Vi du `.env.local` cho Vite/React:
+Ví dụ `.env.local` cho Vite/React:
 
 ```bash
 VITE_API_BASE_URL=http://localhost:8000
@@ -96,7 +96,7 @@ VITE_KEYCLOAK_REALM=luyen-thi-lai-xe-realm
 VITE_KEYCLOAK_CLIENT_ID=frontend
 ```
 
-Neu frontend dang dung Next.js:
+Nếu frontend đang dùng Next.js:
 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
@@ -107,9 +107,9 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=frontend
 
 ## Response Structure
 
-Tat ca service HTTP response duoc boc boi shared response envelope.
+Tất cả service HTTP response được bọc bởi shared response envelope.
 
-Thanh cong:
+Thành công:
 
 ```json
 {
@@ -122,7 +122,7 @@ Thanh cong:
 }
 ```
 
-Loi:
+Lỗi:
 
 ```json
 {
@@ -134,13 +134,13 @@ Loi:
 }
 ```
 
-Frontend nen xu ly theo `success` va `code`, khong parse message text de ra logic nghiep vu.
+Frontend nên xử lý theo `success` và `code`, không parse message text để ra logic nghiệp vụ.
 
 ## Token Flow
 
 ### Login
 
-Identity-service direct local path la `POST /login`. Qua Kong, frontend goi:
+Identity-service direct local path là `POST /login`. Qua Kong, frontend gọi:
 
 ```http
 POST http://localhost:8000/auth/login
@@ -172,7 +172,7 @@ Response:
 
 ### Refresh Token
 
-Identity-service expose direct local path `POST /refresh`. Do Kong route `/auth/*` strip prefix `/auth`, public path qua Kong la:
+Identity-service expose direct local path `POST /refresh`. Do Kong route `/auth/*` strip prefix `/auth`, public path qua Kong là:
 
 ```http
 POST http://localhost:8000/auth/refresh
@@ -185,9 +185,9 @@ Content-Type: application/json
 }
 ```
 
-Response tra ve cap token moi cung shape voi login. Neu refresh token het han/bi revoke, service tra `401`, frontend nen logout local va dieu huong ve man login.
+Response trả về cặp token mới cùng shape với login. Nếu refresh token hết hạn/bị revoke, service trả `401`, frontend nên logout local và điều hướng về màn login.
 
-Goi y interceptor:
+Gợi ý interceptor:
 
 ```ts
 const api = axios.create({
@@ -246,44 +246,44 @@ Content-Type: application/json
 }
 ```
 
-Sau khi logout thanh cong, frontend xoa token local storage/memory va dieu huong ve login.
+Sau khi logout thành công, frontend xóa token local storage/memory và điều hướng về login.
 
-Auto logout nen xay ra khi:
+Auto logout nên xảy ra khi:
 
-| Truong hop                           | Frontend behavior                            |
+| Trường hợp                           | Frontend behavior                            |
 | ------------------------------------ | -------------------------------------------- |
-| Refresh token bi tu choi `401`       | Clear token va redirect `/login`             |
-| Access token bi blacklist sau logout | Clear token va redirect `/login`             |
-| User khong du role `403`             | Hien man hinh forbidden, khong refresh token |
+| Refresh token bị từ chối `401`       | Clear token và redirect `/login`             |
+| Access token bị blacklist sau logout | Clear token và redirect `/login`             |
+| User không đủ role `403`             | Hiện màn hình forbidden, không refresh token |
 
 ## Swagger Testing
 
-1. Mo Swagger qua Kong, vi du:
+1. Mở Swagger qua Kong, ví dụ:
 
 ```text
 http://localhost:8000/question-service/docs
 ```
 
-2. Bam `Authorize`.
-3. Dien access token theo dang:
+2. Bấm `Authorize`.
+3. Điền access token theo dạng:
 
 ```text
 Bearer eyJ...
 ```
 
-4. Test endpoint nhu `POST /questions`.
+4. Test endpoint như `POST /questions`.
 
-Neu test direct local, van dung:
+Nếu test direct local, vẫn dùng:
 
 ```text
 http://localhost:3005/docs
 ```
 
-Nhung nen uu tien Swagger qua Kong de gan voi frontend path thuc te.
+Nhưng nên ưu tiên Swagger qua Kong để gắn với frontend path thực tế.
 
 ## Example Flow Cho Question
 
-Dang nhap qua identity-service:
+Đăng nhập qua identity-service:
 
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
@@ -291,38 +291,38 @@ TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
   -d '{"username":"admin@example.com","password":"Pass@123"}' | jq -r '.data.accessToken')
 ```
 
-Tao topic:
+Tạo topic:
 
 ```bash
 curl -X POST http://localhost:8000/questions/topics \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"Bien bao","description":"Cau hoi ve bien bao"}'
+  -d '{"name":"Biển báo","description":"Câu hỏi về biển báo"}'
 ```
 
-Tao question:
+Tạo question:
 
 ```bash
 curl -X POST http://localhost:8000/questions \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "content": "Gap bien STOP, nguoi lai xe phai lam gi?",
+    "content": "Gặp biển STOP, người lái xe phải làm gì?",
     "type": "THEORY",
     "licenseCategories": ["B2"],
     "difficulty": "EASY",
-    "explanation": "Bien STOP yeu cau dung han.",
+    "explanation": "Biển STOP yêu cầu dừng hẳn.",
     "topicId": "<topic-id>",
     "options": [
-      { "content": "Dung lai", "isCorrect": true, "displayOrder": 1 },
-      { "content": "Tang toc di qua", "isCorrect": false, "displayOrder": 2 }
+      { "content": "Dừng lại", "isCorrect": true, "displayOrder": 1 },
+      { "content": "Tăng tốc đi qua", "isCorrect": false, "displayOrder": 2 }
     ]
   }'
 ```
 
 ## CORS
 
-`kong/kong.dev.yaml` va `kong/kong.yaml` da bat CORS global cho:
+`kong/kong.dev.yaml` và `kong/kong.yaml` đã bật CORS global cho:
 
 ```text
 http://localhost:3000
@@ -331,7 +331,7 @@ http://127.0.0.1:3000
 http://127.0.0.1:5173
 ```
 
-Neu frontend chay port khac, them origin vao plugin `cors`, sau do restart Kong:
+Nếu frontend chạy port khác, thêm origin vào plugin `cors`, sau đó restart Kong:
 
 ```bash
 docker compose -f docker-compose.infra.yml restart kong-dev
@@ -339,10 +339,10 @@ docker compose -f docker-compose.infra.yml restart kong-dev
 
 ## Troubleshooting
 
-| Loi                         | Cach check                                                                      |
+| Lỗi                         | Cách check                                                                      |
 | --------------------------- | ------------------------------------------------------------------------------- |
-| `401 Unauthorized`          | Kiem tra header `Authorization: Bearer <token>` va token con han                |
-| `403 Forbidden`             | Token hop le nhung role khong dung, vi du `STUDENT` goi API admin               |
-| `502 Bad Gateway`           | Service upstream chua chay, check `npm run dev` va port service                 |
-| CORS error tren browser     | Kiem tra origin frontend da nam trong `kong/kong.dev.yaml`                      |
-| Swagger qua Kong khong load | Goi `http://localhost:8000/<service-name>/docs-json` de xem route co dung khong |
+| `401 Unauthorized`          | Kiểm tra header `Authorization: Bearer <token>` và token còn hạn                |
+| `403 Forbidden`             | Token hợp lệ nhưng role không đúng, ví dụ `STUDENT` gọi API admin               |
+| `502 Bad Gateway`           | Service upstream chưa chạy, check `npm run dev` và port service                 |
+| CORS error trên browser     | Kiểm tra origin frontend đã nằm trong `kong/kong.dev.yaml`                      |
+| Swagger qua Kong không load | Gọi `http://localhost:8000/<service-name>/docs-json` để xem route có đúng không |

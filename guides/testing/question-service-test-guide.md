@@ -1,10 +1,10 @@
-# Question Service - Huong Dan Test API Chi Tiet
+# Question Service - Hướng Dẫn Test API Chi Tiết
 
-> Tai lieu nay huong dan test API cua `question-service` khi goi truc tiep local port 3005 va khi goi qua Kong.
+> Tài liệu này hướng dẫn test API của `question-service` khi gọi trực tiếp local port 3005 và khi gọi qua Kong.
 
 ---
 
-## 1. Khoi dong moi truong
+## 1. Khởi động môi trường
 
 ### 1.1 Start infra
 
@@ -13,13 +13,13 @@ npm run infra:up
 npm run consul:seed:local
 ```
 
-Kiem tra Consul:
+Kiểm tra Consul:
 
 ```bash
 curl http://localhost:8500/v1/status/leader
 ```
 
-`npm run infra:up` dung `docker-compose.infra.yml` cho hybrid mode, gom:
+`npm run infra:up` dùng `docker-compose.infra.yml` cho hybrid mode, gồm:
 
 - PostgreSQL databases: `5432..5440`
 - RabbitMQ: `5672`, UI `15672`
@@ -29,7 +29,7 @@ curl http://localhost:8500/v1/status/leader
 - Kong dev gateway: proxy `8000`, admin `8001`
 - ELK: Elasticsearch `9200`, Logstash `5044`, Kibana `5601`
 
-Kiem tra nhanh:
+Kiểm tra nhanh:
 
 ```bash
 docker compose -f docker-compose.infra.yml ps
@@ -38,13 +38,13 @@ curl -s http://localhost:9200/_cluster/health | jq .
 curl -I http://localhost:5601
 ```
 
-Neu chi muon bat rieng ELK:
+Nếu chỉ muốn bật riêng ELK:
 
 ```bash
 docker compose -f docker-compose.infra.yml up -d elasticsearch logstash kibana
 ```
 
-### 1.2 Generate va migrate database
+### 1.2 Generate và migrate database
 
 ```bash
 cd apps/question-service
@@ -52,7 +52,7 @@ npm run db:generate
 npm run db:migrate
 ```
 
-Neu migration da ton tai:
+Nếu migration đã tồn tại:
 
 ```bash
 cd apps/question-service
@@ -65,7 +65,7 @@ npm run db:deploy
 npm run dev --filter=question-service
 ```
 
-Kiem tra:
+Kiểm tra:
 
 ```bash
 curl http://localhost:3005/docs-json
@@ -80,45 +80,45 @@ Swagger UI: http://localhost:3005/docs
 ```
 Client
   |-- DIRECT --> http://localhost:3005
-  |              Tu set x-user-id khi can audit user
+  |              Tự set x-user-id khi cần audit user
   |
   |-- KONG ----> http://localhost:8000/questions
-                 Kong validate JWT va inject x-user-id/x-user-role
+                 Kong validate JWT và inject x-user-id/x-user-role
 ```
 
-Trong local hybrid mode, Kong container `kong-dev` doc `kong/kong.dev.yaml` va forward `/questions` ve `host.docker.internal:3005`. Vi vay frontend/Postman nen test qua `http://localhost:8000` de giong production path hon.
+Trong local hybrid mode, Kong container `kong-dev` đọc `kong/kong.dev.yaml` và forward `/questions` về `host.docker.internal:3005`. Vì vậy frontend/Postman nên test qua `http://localhost:8000` để giống production path hơn.
 
-Kiem tra Kong da nap route:
+Kiểm tra Kong đã nạp route:
 
 ```bash
 curl -s http://localhost:8001/routes | jq '.data[] | {name, paths}'
 curl -s http://localhost:8001/services/question-service | jq .
 ```
 
-Kiem tra Swagger qua Kong:
+Kiểm tra Swagger qua Kong:
 
 ```bash
 curl -s http://localhost:8000/question-service/docs-json | jq '.info.title'
 ```
 
-Kiem tra API qua Kong:
+Kiểm tra API qua Kong:
 
 ```bash
 curl -s "http://localhost:8000/questions?page=1&size=5" | jq .
 ```
 
-Neu goi qua Kong bi `502`, thu:
+Nếu gọi qua Kong bị `502`, thử:
 
 ```bash
 curl -s http://localhost:3005/docs-json | jq '.info.title'
 docker logs luyen-thi-lai-xe-microservices-kong-dev-1 --tail 100
 ```
 
-`502` thuong co nghia question-service local chua chay o port 3005 hoac Kong container khong reach duoc `host.docker.internal`.
+`502` thường có nghĩa question-service local chưa chạy ở port 3005 hoặc Kong container không reach được `host.docker.internal`.
 
 ---
 
-## 3. Bien moi truong test
+## 3. Biến môi trường test
 
 ```bash
 BASE="http://localhost:3005"
@@ -130,22 +130,22 @@ ADMIN_ID="550e8400-e29b-41d4-a716-446655440000"
 
 ## 4. Test Topic Endpoints
 
-### 4.1 Tao topic
+### 4.1 Tạo topic
 
 ```bash
 TOPIC_ID=$(curl -s -X POST "$BASE/questions/topics" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Bien bao giao thong",
-    "description": "Cau hoi ve bien bao"
+    "name": "Biển báo giao thông",
+    "description": "Câu hỏi về biển báo"
   }' | jq -r '.data.id')
 
 echo "TOPIC_ID=$TOPIC_ID"
 ```
 
-Expect `201 Created`, response co `data.id`.
+Expect `201 Created`, response có `data.id`.
 
-Qua Kong thi doi `$BASE` thanh `$KONG_BASE`:
+Qua Kong thì đổi `$BASE` thành `$KONG_BASE`:
 
 ```bash
 curl -s -X POST "$KONG_BASE/questions/topics" \
@@ -170,38 +170,38 @@ curl -s "$BASE/questions/topics/$TOPIC_ID" | jq .data
 ```bash
 curl -s -X PATCH "$BASE/questions/topics/$TOPIC_ID" \
   -H "Content-Type: application/json" \
-  -d '{"description":"Mo ta moi"}' | jq '.data.description'
+  -d '{"description":"Mô tả mới"}' | jq '.data.description'
 ```
 
 ---
 
 ## 5. Test Question Endpoints
 
-### 5.1 Tao question
+### 5.1 Tạo question
 
 ```bash
 QUESTION_ID=$(curl -s -X POST "$BASE/questions" \
   -H "Content-Type: application/json" \
   -H "x-user-id: $ADMIN_ID" \
   -d "{
-    \"content\": \"Khi gap den do, nguoi lai xe phai lam gi?\",
+    \"content\": \"Khi gặp đèn đỏ, người lái xe phải làm gì?\",
     \"type\": \"THEORY\",
     \"licenseCategories\": [\"B2\"],
     \"difficulty\": \"EASY\",
-    \"explanation\": \"Den do yeu cau dung lai truoc vach dung.\",
+    \"explanation\": \"Đèn đỏ yêu cầu dừng lại trước vạch dừng.\",
     \"mediaFileId\": null,
     \"isCritical\": false,
     \"topicId\": \"$TOPIC_ID\",
     \"options\": [
-      { \"content\": \"Dung lai\", \"isCorrect\": true, \"displayOrder\": 1 },
-      { \"content\": \"Di tiep\", \"isCorrect\": false, \"displayOrder\": 2 }
+      { \"content\": \"Dừng lại\", \"isCorrect\": true, \"displayOrder\": 1 },
+      { \"content\": \"Đi tiếp\", \"isCorrect\": false, \"displayOrder\": 2 }
     ]
   }" | jq -r '.data.id')
 
 echo "QUESTION_ID=$QUESTION_ID"
 ```
 
-Tao question qua Kong:
+Tạo question qua Kong:
 
 ```bash
 curl -s -X POST "$KONG_BASE/questions" \
@@ -227,7 +227,7 @@ Expect:
 curl -s "$BASE/questions/$QUESTION_ID" | jq '.data | {id, version, isActive, isDeleted, correct: [.options[] | select(.isCorrect == true)]}'
 ```
 
-### 5.2 Validation: khong co dung 1 dap an dung
+### 5.2 Validation: không có đúng 1 đáp án đúng
 
 ```bash
 curl -s -X POST "$BASE/questions" \
@@ -268,7 +268,7 @@ curl -s "$BASE/questions?isActive=true&isCritical=false" | jq '.data.items | map
 curl -s "$BASE/questions/$QUESTION_ID" | jq .data
 ```
 
-### 5.5 Update question voi version dung
+### 5.5 Update question với version đúng
 
 ```bash
 VERSION=$(curl -s "$BASE/questions/$QUESTION_ID" | jq -r '.data.version')
@@ -278,11 +278,11 @@ curl -s -X PATCH "$BASE/questions/$QUESTION_ID" \
   -d "{
     \"version\": $VERSION,
     \"difficulty\": \"MEDIUM\",
-    \"explanation\": \"Giai thich da cap nhat\"
+    \"explanation\": \"Giải thích đã cập nhật\"
   }" | jq '.data | {difficulty, explanation, version}'
 ```
 
-Expect `version` tang len 1.
+Expect `version` tăng lên 1.
 
 ### 5.6 Version conflict
 
@@ -291,7 +291,7 @@ curl -s -X PATCH "$BASE/questions/$QUESTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "version": 1,
-    "content": "Update bang version cu"
+    "content": "Update bằng version cũ"
   }' | jq .
 ```
 
@@ -310,11 +310,11 @@ curl -s -X PATCH "$BASE/questions/$QUESTION_ID" \
   }" | jq '.data | {isActive, version}'
 ```
 
-Kiem tra RabbitMQ queue `question_service_publish` co event `question.deactivated`.
+Kiểm tra RabbitMQ queue `question_service_publish` có event `question.deactivated`.
 
-### 5.8 Gan anh tu media-service
+### 5.8 Gắn ảnh từ media-service
 
-Upload/initiate file qua media-service truoc de lay `mediaFileId`, sau do tao hoac update question voi `mediaFileId`.
+Upload/initiate file qua media-service trước để lấy `mediaFileId`, sau đó tạo hoặc update question với `mediaFileId`.
 
 ```bash
 MEDIA_FILE_ID="550e8400-e29b-41d4-a716-446655440001"
@@ -328,11 +328,11 @@ curl -s -X PATCH "$BASE/questions/$QUESTION_ID" \
   }" | jq '.data | {mediaFileId, version}'
 ```
 
-Expect question-service publish event `question.image.linked` vao queue `media_service_events`; media-service consume event va mark FileObject `LINKED`. Question-service chi luu UUID reference, khong goi truc tiep Azure Blob.
+Expect question-service publish event `question.image.linked` vào queue `media_service_events`; media-service consume event và mark FileObject `LINKED`. Question-service chỉ lưu UUID reference, không gọi trực tiếp Azure Blob.
 
 ### 5.9 Question pool
 
-Tao them question active neu question tren da deactivate, sau do:
+Tạo thêm question active nếu question trên đã deactivate, sau đó:
 
 ```bash
 curl -s -X POST "$BASE/questions/pool" \
@@ -344,7 +344,7 @@ curl -s -X POST "$BASE/questions/pool" \
   }' | jq '.data.items | map({id, isActive, isDeleted, options})'
 ```
 
-Expect chi tra ve question `isActive=true`, `isDeleted=false`. Pool response co `options[].isCorrect` de exam-service snapshot/grade noi bo.
+Expect chỉ trả về question `isActive=true`, `isDeleted=false`. Pool response có `options[].isCorrect` để exam-service snapshot/grade nội bộ.
 
 Qua Kong:
 
@@ -367,13 +367,13 @@ curl -s -X DELETE "$BASE/questions/$QUESTION_ID" \
 
 Expect `isDeleted=true`, `isActive=false`.
 
-Mac dinh list khong tra ve question da xoa:
+Mặc định list không trả về question đã xóa:
 
 ```bash
 curl -s "$BASE/questions" | jq ".data.items | map(select(.id == \"$QUESTION_ID\"))"
 ```
 
-Neu can debug:
+Nếu cần debug:
 
 ```bash
 curl -s "$BASE/questions?includeDeleted=true" | jq ".data.items | map(select(.id == \"$QUESTION_ID\"))"
@@ -386,20 +386,20 @@ curl -s "$BASE/questions?includeDeleted=true" | jq ".data.items | map(select(.id
 RabbitMQ UI: http://localhost:15672  
 Username/password: `guest` / `guest`
 
-Queues lien quan:
+Queues liên quan:
 
-- `question_service_events`: queue consume cua question-service
+- `question_service_events`: queue consume của question-service
 - `question_service_publish`: queue publish domain events
 
-Sau `POST /questions`, kiem tra `question.created`.
+Sau `POST /questions`, kiểm tra `question.created`.
 
-Sau deactivate hoac delete, kiem tra `question.deactivated`.
+Sau deactivate hoặc delete, kiểm tra `question.deactivated`.
 
-Sau create/update co `mediaFileId`, kiem tra event `question.image.linked` trong `media_service_events` va FileObject chuyen sang `LINKED`.
+Sau create/update có `mediaFileId`, kiểm tra event `question.image.linked` trong `media_service_events` và FileObject chuyển sang `LINKED`.
 
 ---
 
-## 7. Kiem tra Database
+## 7. Kiểm tra Database
 
 ### Prisma Studio
 
@@ -408,7 +408,7 @@ cd apps/question-service
 npm run db:studio
 ```
 
-Mo http://localhost:5555 va xem:
+Mở http://localhost:5555 và xem:
 
 - `QuestionTopic`
 - `Question`
@@ -434,14 +434,14 @@ ORDER BY "questionId", "displayOrder";
 
 ## 8. Troubleshooting
 
-### Prisma client chua generate
+### Prisma client chưa generate
 
 ```bash
 cd apps/question-service
 npm run db:generate
 ```
 
-### Database chua san sang
+### Database chưa sẵn sàng
 
 ```bash
 npm run infra:up
@@ -450,20 +450,20 @@ npm run consul:seed:local
 
 ### `QUESTION_TOPIC_NOT_FOUND`
 
-Tao topic truoc khi tao question, hoac kiem tra `topicId`.
+Tạo topic trước khi tạo question, hoặc kiểm tra `topicId`.
 
 ### `QUESTION_VERSION_CONFLICT`
 
-Client dang gui version cu. Goi `GET /questions/:id` de lay version moi nhat roi retry.
+Client đang gửi version cũ. Gọi `GET /questions/:id` để lấy version mới nhất rồi retry.
 
-### Pool khong co items
+### Pool không có items
 
-Kiem tra question phai:
+Kiểm tra question phải:
 
 - `isActive=true`
 - `isDeleted=false`
-- co `licenseCategories` chua license dang query
-- khop `type`, `difficulty`, `topicId` neu co filter
+- có `licenseCategories` chứa license đang query
+- khớp `type`, `difficulty`, `topicId` nếu có filter
 
 ---
 

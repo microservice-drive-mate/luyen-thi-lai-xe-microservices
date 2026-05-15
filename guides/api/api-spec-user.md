@@ -9,7 +9,7 @@
 **OpenAPI JSON qua Kong:** `http://localhost:8000/user-service/docs-json`  
 **Version:** 1.0.0
 
-Business API path la `/users/*`; Swagger/docs path la `/user-service/docs`.
+Business API path là `/users/*`; Swagger/docs path là `/user-service/docs`.
 
 ---
 
@@ -29,15 +29,15 @@ User-service dùng `nest-keycloak-connect`.
 | `PATCH /users/:id/license-tier` | `ADMIN`, `CENTER_MANAGER` |
 
 Các endpoint `me` và `license-tier` lấy user hiện tại từ `@AuthenticatedUser()` (`sub` trong JWT), không đọc trực tiếp `x-user-id`.
-Production flow nen tao account bang identity-service `POST /admin/users`, sau do identity-service publish event de user-service tao profile toi thieu. `POST /users` cua user-service danh cho admin/backfill profile khi da co Keycloak user id.
+Production flow nên tạo account bằng identity-service `POST /admin/users`, sau đó identity-service publish event để user-service tạo profile tối thiểu. `POST /users` của user-service dành cho admin/backfill profile khi đã có Keycloak user id.
 
 | Event                        | User-service behavior                              |
 | ---------------------------- | -------------------------------------------------- |
-| `identity.user.created`      | Tao `UserProfile` idempotent theo Keycloak user id |
-| `identity.user.updated`      | Dong bo `email`, `fullName`                        |
-| `identity.user.role-changed` | Dong bo role va tao/xoa `StudentDetail` neu can    |
+| `identity.user.created`      | Tạo `UserProfile` idempotent theo Keycloak user id |
+| `identity.user.updated`      | Đồng bộ `email`, `fullName`                        |
+| `identity.user.role-changed` | Đồng bộ role và tạo/xóa `StudentDetail` nếu cần    |
 | `identity.user.locked`       | Set `isActive = !locked`                           |
-| `identity.user.deleted`      | Soft-deactivate profile bang `isActive = false`    |
+| `identity.user.deleted`      | Soft-deactivate profile bằng `isActive = false`    |
 
 ---
 
@@ -131,9 +131,9 @@ Lỗi domain:
 
 ### POST `/users`
 
-Tao user profile cho mot identity user da ton tai trong Keycloak/identity-service. Endpoint nay can `ADMIN` hoac `CENTER_MANAGER`.
+Tạo user profile cho một identity user đã tồn tại trong Keycloak/identity-service. Endpoint này cần `ADMIN` hoặc `CENTER_MANAGER`.
 
-Best practice: khong dung endpoint nay de tao account dang nhap. Tao account qua identity-service truoc, lay `userId`, roi dung id do lam `id` trong body neu can tao profile truc tiep. Neu profile da duoc tao boi event, dung `PATCH /users/:id` va `PATCH /users/:id/license-tier` de bo sung thong tin.
+Best practice: không dùng endpoint này để tạo account đăng nhập. Tạo account qua identity-service trước, lấy `userId`, rồi dùng id đó làm `id` trong body nếu cần tạo profile trực tiếp. Nếu profile đã được tạo bởi event, dùng `PATCH /users/:id` và `PATCH /users/:id/license-tier` để bổ sung thông tin.
 
 **Body**
 
@@ -382,7 +382,7 @@ Tạo `UserProfile`; nếu role là `STUDENT` thì tạo `StudentDetail`.
 }
 ```
 
-Dong bo `email` va `fullName` cho `UserProfile`.
+Đồng bộ `email` và `fullName` cho `UserProfile`.
 
 ### `identity.user.locked`
 
@@ -406,7 +406,7 @@ Set `isActive = !locked`.
 }
 ```
 
-Soft-deactivate profile bang `isActive = false`.
+Soft-deactivate profile bằng `isActive = false`.
 
 ### `media.file.deleted`
 

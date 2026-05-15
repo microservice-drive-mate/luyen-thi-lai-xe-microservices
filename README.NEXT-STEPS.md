@@ -1,14 +1,14 @@
-# Roadmap Hoan Thien Kien Truc Microservices
+# Roadmap Hoàn Thiện Kiến Trúc Microservices
 
-Tai lieu nay la plan hanh dong cho repo hien tai de dat muc microservices chuan. Thu tu duoi day duoc xep theo uu tien thuc thi, lam tu tren xuong duoi.
+Tài liệu này là plan hành động cho repo hiện tại để đạt mức microservices chuẩn. Thứ tự dưới đây được xếp theo ưu tiên thực thi, làm từ trên xuống dưới.
 
-Muc tieu chung:
+Mục tiêu chung:
 
-- Moi service doc lap, de scale, de deploy.
-- He thong co kha nang phuc hoi, de quan sat, de van hanh.
-- Team co quy trinh ro rang de phat trien lau dai.
+- Mỗi service độc lập, dễ scale, dễ deploy.
+- Hệ thống có khả năng phục hồi, dễ quan sát, dễ vận hành.
+- Team có quy trình rõ ràng để phát triển lâu dài.
 
-## Thu tu uu tien tong quan
+## Thứ tự ưu tiên tổng quan
 
 1. P0: Core Service Foundation
 2. P0: Infrastructure Foundation
@@ -21,76 +21,76 @@ Muc tieu chung:
 
 ## 1) Core Service Foundation (P0)
 
-Day la nen tang cua tung service, phai xong truoc khi mo rong tinh nang.
+Đây là nền tảng của từng service, phải xong trước khi mở rộng tính năng.
 
 ### 1.1 Database per Service
 
-Muc tieu:
+Mục tiêu:
 
-- Moi service quan ly DB rieng, khong chia se schema.
+- Mỗi service quản lý DB riêng, không chia sẻ schema.
 
-Viec can lam:
+Việc cần làm:
 
-1. Chot ORM chung cho repo (de xuat Prisma).
-2. Tao migration cho tung service theo thu tu: identity -> user -> notification -> cac service con lai.
-3. Them seed script cho du lieu toi thieu de test local.
-4. Them volume cho cac DB trong [docker-compose.yaml](docker-compose.yaml) de tranh mat du lieu.
+1. Chốt ORM chung cho repo (đề xuất Prisma).
+2. Tạo migration cho từng service theo thứ tự: identity -> user -> notification -> các service còn lại.
+3. Thêm seed script cho dữ liệu tối thiểu để test local.
+4. Thêm volume cho các DB trong [docker-compose.yaml](docker-compose.yaml) để tránh mất dữ liệu.
 
-Cach lam chi tiet:
+Cách làm chi tiết:
 
-1. Tao folder schema/migration rieng trong tung service.
-2. Them script o package.json moi service: db:migrate, db:seed, db:reset.
-3. Tao endpoint health check co kiem tra ket noi DB.
+1. Tạo folder schema/migration riêng trong từng service.
+2. Thêm script ở package.json mỗi service: db:migrate, db:seed, db:reset.
+3. Tạo endpoint health check có kiểm tra kết nối DB.
 
 Definition of Done:
 
-- Khoi tao DB bang migration, khong tao tay.
-- Restart container van giu du lieu.
-- Co du lieu seed de demo va test.
+- Khởi tạo DB bằng migration, không tạo tay.
+- Restart container vẫn giữ dữ liệu.
+- Có dữ liệu seed để demo và test.
 
 ### 1.2 Business Logic theo Bounded Context
 
-Muc tieu:
+Mục tiêu:
 
-- Moi service chi giai quyet mot pham vi nghiep vu ro rang.
+- Mỗi service chỉ giải quyết một phạm vi nghiệp vụ rõ ràng.
 
-Viec can lam:
+Việc cần làm:
 
-1. Ghi ro boundary cua 8 services trong 1 bang mapping domain.
-2. Tranh de service A truy cap truc tiep DB service B.
-3. Dua rule domain chung vao [packages/common/src](packages/common/src) chi khi thuc su dung chung.
+1. Ghi rõ boundary của 8 services trong 1 bảng mapping domain.
+2. Tránh để service A truy cập trực tiếp DB service B.
+3. Đưa rule domain chung vào [packages/common/src](packages/common/src) chỉ khi thực sự dùng chung.
 
-Cach lam chi tiet:
+Cách làm chi tiết:
 
-1. Tao tai lieu domain boundary trong [README.md](README.md).
-2. Khi mo rong tinh nang, check boundary truoc khi code.
+1. Tạo tài liệu domain boundary trong [README.md](README.md).
+2. Khi mở rộng tính năng, check boundary trước khi code.
 
 Definition of Done:
 
-- Moi endpoint moi deu thuoc dung service owner.
-- Khong co truy cap DB cheo service.
+- Mỗi endpoint mới đều thuộc đúng service owner.
+- Không có truy cập DB chéo service.
 
 ### 1.3 API Layer (REST/gRPC)
 
-Muc tieu:
+Mục tiêu:
 
-- API ro rang, version duoc, co validation.
+- API rõ ràng, version được, có validation.
 
-Viec can lam:
+Việc cần làm:
 
-1. Chuan hoa REST API cho tat ca service truoc, gRPC co the them sau cho internal high-throughput.
-2. Them validation DTO cho input, map loi theo format thong nhat.
-3. Them OpenAPI cho moi service.
+1. Chuẩn hóa REST API cho tất cả service trước, gRPC có thể thêm sau cho internal high-throughput.
+2. Thêm validation DTO cho input, map lỗi theo format thống nhất.
+3. Thêm OpenAPI cho mỗi service.
 
-Cach lam chi tiet:
+Cách làm chi tiết:
 
-1. Dinh nghia convention endpoint: /v1/<resource>.
-2. Viet error response contract dung chung trong common.
+1. Định nghĩa convention endpoint: /v1/<resource>.
+2. Viết error response contract dùng chung trong common.
 
 Definition of Done:
 
-- Service nao cung co swagger va input validation.
-- API contract duoc version hoa.
+- Service nào cũng có swagger và input validation.
+- API contract được version hóa.
 
 ---
 
@@ -98,103 +98,103 @@ Definition of Done:
 
 ### 2.1 API Gateway
 
-Hien trang:
+Hiện trạng:
 
-- Da co Kong trong [kong/kong.yaml](kong/kong.yaml).
+- Đã có Kong trong [kong/kong.yaml](kong/kong.yaml).
 
-Viec can lam tiep:
+Việc cần làm tiếp:
 
-1. Chuan hoa route naming va prefix version (vd /v1/auth).
-2. Bat plugin auth, request id, CORS policy, rate limit theo moi truong.
-3. Tach config dev/prod cho gateway.
+1. Chuẩn hóa route naming và prefix version (vd /v1/auth).
+2. Bật plugin auth, request id, CORS policy, rate limit theo môi trường.
+3. Tách config dev/prod cho gateway.
 
-Cach lam chi tiet:
+Cách làm chi tiết:
 
-1. Tao convention route table trong README.
-2. Test route bang smoke test script sau moi thay doi Kong config.
+1. Tạo convention route table trong README.
+2. Test route bằng smoke test script sau mỗi thay đổi Kong config.
 
 Definition of Done:
 
-- Tat ca request client di qua gateway.
-- Co auth + rate limit + log context tai gateway.
+- Tất cả request client đi qua gateway.
+- Có auth + rate limit + log context tại gateway.
 
 ### 2.2 Service Discovery
 
-Hien trang:
+Hiện trạng:
 
-- Dang dung static service name trong Docker network.
+- Đang dùng static service name trong Docker network.
 
-Viec can lam tiep:
+Việc cần làm tiếp:
 
-1. Ngan han: duy tri service name naming convention de on dinh local.
-2. Trung han: khi len K8s, dung service discovery native cua Kubernetes.
-3. Chuan bi health/readiness endpoint de orchestration co the route dung.
+1. Ngắn hạn: duy trì service name naming convention để ổn định local.
+2. Trung hạn: khi lên K8s, dùng service discovery native của Kubernetes.
+3. Chuẩn bị health/readiness endpoint để orchestration có thể route đúng.
 
 Definition of Done:
 
-- Service giao tiep qua DNS/service name, khong hardcode IP.
-- Co readiness/liveness endpoint.
+- Service giao tiếp qua DNS/service name, không hardcode IP.
+- Có readiness/liveness endpoint.
 
 ### 2.3 Config Management
 
-Viec can lam:
+Việc cần làm:
 
-1. Tao env template cho root va tung service.
-2. Validate env luc startup (fail-fast).
-3. Tach secrets khoi compose/file code.
+1. Tạo env template cho root và từng service.
+2. Validate env lúc startup (fail-fast).
+3. Tách secrets khỏi compose/file code.
 
-Cach lam chi tiet:
+Cách làm chi tiết:
 
-1. Them .env.example cho tung app.
-2. Dung schema validate env (zod/joi).
-3. Neu deploy cloud: dua secret vao secret manager.
+1. Thêm .env.example cho từng app.
+2. Dùng schema validate env (zod/joi).
+3. Nếu deploy cloud: đưa secret vào secret manager.
 
 Definition of Done:
 
-- Clone repo, copy env, chay duoc.
-- Sai env thi service dung ngay voi loi ro rang.
+- Clone repo, copy env, chạy được.
+- Sai env thì service dừng ngay với lỗi rõ ràng.
 
 ---
 
 ## 3) Inter-service Communication Standard (P0)
 
-Co 2 kenh can chuan hoa song song.
+Có 2 kênh cần chuẩn hóa song song.
 
 ### 3.1 Synchronous (HTTP/REST, gRPC)
 
-Viec can lam:
+Việc cần làm:
 
-1. Chot service nao goi sync service nao.
-2. Them timeout, retry co gioi han, va fallback.
-3. Neu can hieu nang cao cho internal call, lap ke hoach gRPC cho cap service nhieu traffic.
+1. Chốt service nào gọi sync service nào.
+2. Thêm timeout, retry có giới hạn, và fallback.
+3. Nếu cần hiệu năng cao cho internal call, lập kế hoạch gRPC cho cặp service nhiều traffic.
 
 Definition of Done:
 
-- Co ma tran call graph giua services.
-- Moi external/internal sync call deu co timeout.
+- Có ma trận call graph giữa services.
+- Mỗi external/internal sync call đều có timeout.
 
 ### 3.2 Asynchronous (RabbitMQ)
 
-Hien trang:
+Hiện trạng:
 
-- Da co RabbitMQ va demo event identity -> notification.
+- Đã có RabbitMQ và demo event identity -> notification.
 
-Viec can lam:
+Việc cần làm:
 
-1. Chuan hoa ten exchange, queue, routing key.
-2. Chuan hoa event contract va version hoa payload.
-3. Dua event constants vao [packages/common/src](packages/common/src).
+1. Chuẩn hóa tên exchange, queue, routing key.
+2. Chuẩn hóa event contract và version hóa payload.
+3. Đưa event constants vào [packages/common/src](packages/common/src).
 
-Cach lam chi tiet:
+Cách làm chi tiết:
 
 1. Event naming format: domain.action.v1.
 2. Queue naming format: service.purpose.queue.
-3. Tao tai lieu event catalog (publisher, consumer, schema).
+3. Tạo tài liệu event catalog (publisher, consumer, schema).
 
 Definition of Done:
 
-- Producer/consumer khong hardcode chuoi event tuy y.
-- Event contract duoc version hoa va tai su dung duoc.
+- Producer/consumer không hardcode chuỗi event tùy ý.
+- Event contract được version hóa và tái sử dụng được.
 
 ---
 
@@ -202,37 +202,37 @@ Definition of Done:
 
 ### 4.1 Circuit Breaker
 
-Viec can lam:
+Việc cần làm:
 
-1. Ap dung circuit breaker cho sync call quan trong.
-2. Track trang thai open/half-open/closed qua metric.
+1. Áp dụng circuit breaker cho sync call quan trọng.
+2. Track trạng thái open/half-open/closed qua metric.
 
-Cach lam chi tiet:
+Cách làm chi tiết:
 
-1. Chon thu vien phu hop NestJS.
-2. Cau hinh threshold theo SLA (error rate, timeout).
+1. Chọn thư viện phù hợp NestJS.
+2. Cấu hình threshold theo SLA (error rate, timeout).
 
 Definition of Done:
 
-- Mot service bi loi khong lam sap day chuyen cac service con lai.
+- Một service bị lỗi không làm sập dây chuyền các service còn lại.
 
 ### 4.2 Retry Logic
 
-Viec can lam:
+Việc cần làm:
 
-1. Retry co backoff cho loi tam thoi (network timeout).
-2. Khong retry vo han.
-3. Cho async flow: them DLQ va xu ly poison message.
+1. Retry có backoff cho lỗi tạm thời (network timeout).
+2. Không retry vô hạn.
+3. Cho async flow: thêm DLQ và xử lý poison message.
 
-Cach lam chi tiet:
+Cách làm chi tiết:
 
-1. Sync retry toi da 2-3 lan, exponential backoff.
-2. Async retry qua dead-letter exchange va TTL.
+1. Sync retry tối đa 2-3 lần, exponential backoff.
+2. Async retry qua dead-letter exchange và TTL.
 
 Definition of Done:
 
-- Loi tam thoi duoc tu phuc hoi.
-- Message loi duoc day vao DLQ de dieu tra.
+- Lỗi tạm thời được tự phục hồi.
+- Message lỗi được đẩy vào DLQ để điều tra.
 
 ---
 
@@ -240,39 +240,39 @@ Definition of Done:
 
 ### 5.1 Centralized Logging
 
-Viec can lam:
+Việc cần làm:
 
-1. Chuan hoa structured log JSON cho tat ca service.
-2. Day log ve 1 he thong tap trung (ELK hoac EFK).
-3. Gan correlation id cho moi request/event.
+1. Chuẩn hóa structured log JSON cho tất cả service.
+2. Đẩy log về 1 hệ thống tập trung (ELK hoặc EFK).
+3. Gắn correlation id cho mỗi request/event.
 
 Definition of Done:
 
-- Tim duoc log cua 1 request xuyen qua nhieu service.
+- Tìm được log của 1 request xuyên qua nhiều service.
 
 ### 5.2 Distributed Tracing
 
-Viec can lam:
+Việc cần làm:
 
-1. Tich hop OpenTelemetry.
-2. Day trace ve Jaeger/Zipkin/Tempo.
+1. Tích hợp OpenTelemetry.
+2. Đẩy trace về Jaeger/Zipkin/Tempo.
 
 Definition of Done:
 
-- Xem duoc trace end-to-end tu gateway den service cuoi.
+- Xem được trace end-to-end từ gateway đến service cuối.
 
 ### 5.3 Metrics and Health Check
 
-Viec can lam:
+Việc cần làm:
 
-1. Export metrics cho tung service.
-2. Dung Prometheus + Grafana dashboard.
-3. Co endpoint /health va /ready.
+1. Export metrics cho từng service.
+2. Dùng Prometheus + Grafana dashboard.
+3. Có endpoint /health và /ready.
 
 Definition of Done:
 
-- Co dashboard latency, error rate, throughput, resource usage.
-- Co alert co ban khi service down hoac error dot bien.
+- Có dashboard latency, error rate, throughput, resource usage.
+- Có alert cơ bản khi service down hoặc error đột biến.
 
 ---
 
@@ -280,83 +280,83 @@ Definition of Done:
 
 ### 6.1 Containerization
 
-Hien trang:
+Hiện trạng:
 
-- Da co Dockerfile cho cac service.
+- Đã có Dockerfile cho các service.
 
-Viec can lam:
+Việc cần làm:
 
-1. Chuan hoa Dockerfile template cho moi service moi.
-2. Them security scan image (Trivy).
+1. Chuẩn hóa Dockerfile template cho mỗi service mới.
+2. Thêm security scan image (Trivy).
 
 Definition of Done:
 
-- Moi service build image duoc va pass security scan co ban.
+- Mỗi service build image được và pass security scan cơ bản.
 
 ### 6.2 CI Pipeline
 
-Viec can lam:
+Việc cần làm:
 
-1. Tao CI pipeline: lint -> typecheck -> test -> build.
-2. Chi build service thay doi (turbo filter).
-3. Luu artifact test report.
+1. Tạo CI pipeline: lint -> typecheck -> test -> build.
+2. Chỉ build service thay đổi (turbo filter).
+3. Lưu artifact test report.
 
 Definition of Done:
 
-- PR fail quality gate thi khong duoc merge.
+- PR fail quality gate thì không được merge.
 
 ### 6.3 CD + Orchestration (Kubernetes)
 
-Viec can lam:
+Việc cần làm:
 
-1. Tao manifest Helm/Kustomize cho service deployment.
-2. Cau hinh readiness/liveness probe.
-3. Cau hinh HPA de auto-scale.
-4. Thiet lap rollout strategy (rolling/canary).
+1. Tạo manifest Helm/Kustomize cho service deployment.
+2. Cấu hình readiness/liveness probe.
+3. Cấu hình HPA để auto-scale.
+4. Thiết lập rollout strategy (rolling/canary).
 
 Definition of Done:
 
-- Co the deploy tu dong len moi truong staging.
-- Co kha nang scale va rollback an toan.
+- Có thể deploy tự động lên môi trường staging.
+- Có khả năng scale và rollback an toàn.
 
 ---
 
-## Ke hoach theo milestone
+## Kế hoạch theo milestone
 
-### Milestone 1 (2-3 tuan) - Foundation
+### Milestone 1 (2-3 tuần) - Foundation
 
-1. Hoan thanh Config Management.
-2. Hoan thanh migration + seed cho identity va user.
-3. Chuan hoa API contract + event contract trong common.
+1. Hoàn thành Config Management.
+2. Hoàn thành migration + seed cho identity và user.
+3. Chuẩn hóa API contract + event contract trong common.
 
-### Milestone 2 (2-3 tuan) - Reliable Communication
+### Milestone 2 (2-3 tuần) - Reliable Communication
 
-1. Hoan thien vertical slice dang ky user -> event -> notification.
-2. Them timeout/retry cho sync calls.
-3. Them DLQ + idempotency cho async flow.
+1. Hoàn thiện vertical slice đăng ký user -> event -> notification.
+2. Thêm timeout/retry cho sync calls.
+3. Thêm DLQ + idempotency cho async flow.
 
-### Milestone 3 (2-3 tuan) - Operability
+### Milestone 3 (2-3 tuần) - Operability
 
-1. Trien khai logging tap trung + tracing + metrics.
-2. Co dashboard va alert toi thieu.
+1. Triển khai logging tập trung + tracing + metrics.
+2. Có dashboard và alert tối thiểu.
 
-### Milestone 4 (2-4 tuan) - Delivery at Scale
+### Milestone 4 (2-4 tuần) - Delivery at Scale
 
-1. Hoan thien CI quality gate.
-2. Chuan bi Kubernetes deployment cho staging.
-3. Chot quy trinh release/rollback.
+1. Hoàn thiện CI quality gate.
+2. Chuẩn bị Kubernetes deployment cho staging.
+3. Chốt quy trình release/rollback.
 
 ---
 
-## Checklist lam ngay (Top 10)
+## Checklist làm ngay (Top 10)
 
-1. Tao env template va env validation cho 8 services.
-2. Them volume cho cac DB trong [docker-compose.yaml](docker-compose.yaml).
-3. Chon ORM va tao migration dau tien cho identity-service.
-4. Chot event naming convention domain.action.v1.
-5. Dua constants event vao [packages/common/src](packages/common/src).
-6. Them timeout cho moi HTTP call giua services.
-7. Them DLQ cho queue quan trong.
-8. Them request id/correlation id middleware.
-9. Dung CI toi thieu lint + test + build.
-10. Viet e2e test cho 1 luong nghiep vu xuyen suot qua gateway.
+1. Tạo env template và env validation cho 8 services.
+2. Thêm volume cho các DB trong [docker-compose.yaml](docker-compose.yaml).
+3. Chọn ORM và tạo migration đầu tiên cho identity-service.
+4. Chốt event naming convention domain.action.v1.
+5. Đưa constants event vào [packages/common/src](packages/common/src).
+6. Thêm timeout cho mỗi HTTP call giữa services.
+7. Thêm DLQ cho queue quan trọng.
+8. Thêm request id/correlation id middleware.
+9. Dùng CI tối thiểu lint + test + build.
+10. Viết e2e test cho 1 luồng nghiệp vụ xuyên suốt qua gateway.

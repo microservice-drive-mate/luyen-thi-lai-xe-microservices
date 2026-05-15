@@ -1,36 +1,36 @@
-# Exam Service - Huong Dan Test API Chi Tiet
+# Exam Service - Hướng Dẫn Test API Chi Tiết
 
-> Tai lieu nay huong dan test `exam-service` v1 khi chay local hybrid mode, ca khi goi truc tiep port `3003` va khi goi qua Kong `8000`.
+> Tài liệu này hướng dẫn test `exam-service` v1 khi chạy local hybrid mode, cả khi gọi trực tiếp port `3003` và khi gọi qua Kong `8000`.
 
 ---
 
-## Muc Luc
+## Mục Lục
 
-1. [Khoi dong moi truong](#1-khoi-dong-moi-truong)
-2. [Kien truc request flow](#2-kien-truc-request-flow)
-3. [Bien moi truong test](#3-bien-moi-truong-test)
-4. [Lay access token](#4-lay-access-token)
-5. [Seed du lieu phu thuoc](#5-seed-du-lieu-phu-thuoc)
+1. [Khởi động môi trường](#1-khởi-động-môi-trường)
+2. [Kiến trúc request flow](#2-kiến-trúc-request-flow)
+3. [Biến môi trường test](#3-biến-môi-trường-test)
+4. [Lấy access token](#4-lấy-access-token)
+5. [Seed dữ liệu phụ thuộc](#5-seed-dữ-liệu-phụ-thuộc)
 6. [Test exam template endpoints](#6-test-exam-template-endpoints)
 7. [Test student exam session flow](#7-test-student-exam-session-flow)
 8. [Negative scenarios](#8-negative-scenarios)
-9. [Kiem tra DB va RabbitMQ](#9-kiem-tra-db-va-rabbitmq)
+9. [Kiểm tra DB và RabbitMQ](#9-kiểm-tra-db-và-rabbitmq)
 10. [Quality gates](#10-quality-gates)
 11. [Troubleshooting](#11-troubleshooting)
 
 ---
 
-## 1. Khoi Dong Moi Truong
+## 1. Khởi Động Môi Trường
 
 ### 1.1 Start infrastructure
 
-Tu root project:
+Từ root project:
 
 ```bash
 npm run infra:up
 ```
 
-Hybrid infra gom:
+Hybrid infra gồm:
 
 - PostgreSQL databases: `5432..5440`
 - RabbitMQ: `5672`, UI `15672`
@@ -39,7 +39,7 @@ Hybrid infra gom:
 - Keycloak: `8080`
 - Kong dev gateway: proxy `8000`, admin `8001`
 
-Kiem tra nhanh:
+Kiểm tra nhanh:
 
 ```bash
 curl -s http://localhost:8500/v1/status/leader
@@ -47,19 +47,19 @@ curl -s http://localhost:8001/services | jq '.data | map(.name)'
 curl -s http://localhost:15672/api/overview -u guest:guest | jq '.rabbitmq_version'
 ```
 
-### 1.2 Seed config vao Consul
+### 1.2 Seed config vào Consul
 
 ```bash
 npm run consul:seed:local
 ```
 
-Kiem tra config exam-service:
+Kiểm tra config exam-service:
 
 ```bash
 curl -s "http://localhost:8500/v1/kv/config/development-local/exam-service/?recurse" | jq '.[].Key'
 ```
 
-Can co cac key quan trong:
+Cần có các key quan trọng:
 
 ```text
 config/development-local/exam-service/port
@@ -73,9 +73,9 @@ config/development-local/exam-service/services.question.baseUrl
 config/development-local/exam-service/services.user.baseUrl
 ```
 
-### 1.3 Generate va migrate database
+### 1.3 Generate và migrate database
 
-Chay migrate cho cac service lien quan den flow:
+Chạy migrate cho các service liên quan đến flow:
 
 ```bash
 npm --workspace=apps/identity-service run db:generate
@@ -91,7 +91,7 @@ npm --workspace=apps/exam-service run prisma:generate
 npm --workspace=apps/exam-service run db:migrate
 ```
 
-Neu migration da ton tai va chi can apply:
+Nếu migration đã tồn tại và chỉ cần apply:
 
 ```bash
 npm --workspace=apps/exam-service run db:deploy
@@ -99,7 +99,7 @@ npm --workspace=apps/exam-service run db:deploy
 
 ### 1.4 Start required services
 
-Exam flow can toi thieu 4 services:
+Exam flow cần tối thiểu 4 services:
 
 ```bash
 npm run dev --filter=identity-service
@@ -108,7 +108,7 @@ npm run dev --filter=question-service
 npm run dev --filter=exam-service
 ```
 
-Kiem tra Swagger:
+Kiểm tra Swagger:
 
 ```bash
 curl -s http://localhost:3003/docs-json | jq '.info.title'
@@ -122,29 +122,29 @@ Swagger UI:
 
 ---
 
-## 2. Kien Truc Request Flow
+## 2. Kiến Trúc Request Flow
 
 ```text
 Client/Postman
   |
   |-- DIRECT --> http://localhost:3003/exams/...
-  |              Van can Authorization header vi exam-service tu validate JWT
+  |              Vẫn cần Authorization header vì exam-service tự validate JWT
   |
   |-- KONG ----> http://localhost:8000/exams/...
-                 Kong forward path /exams voi strip_path=false
-                 exam-service van validate JWT/RBAC bang nest-keycloak-connect
+                 Kong forward path /exams với strip_path=false
+                 exam-service vẫn validate JWT/RBAC bằng nest-keycloak-connect
 
 exam-service
   |-- validates student profile --> user-service GET /users/me
-  |                                dung incoming student bearer token
+  |                                dùng incoming student bearer token
   |
   |-- fetches question pool -----> question-service POST /questions/pool
-                                   dung service-account token
+                                   dùng service-account token
 ```
 
 Endpoint path:
 
-| Nhom | Direct local | Qua Kong |
+| Nhóm | Direct local | Qua Kong |
 | --- | --- | --- |
 | Templates | `http://localhost:3003/exams/templates` | `http://localhost:8000/exams/templates` |
 | Sessions | `http://localhost:3003/exams/sessions` | `http://localhost:8000/exams/sessions` |
@@ -152,9 +152,9 @@ Endpoint path:
 
 ---
 
-## 3. Bien Moi Truong Test
+## 3. Biến Môi Trường Test
 
-Dung Git Bash/macOS/Linux style:
+Dùng Git Bash/macOS/Linux style:
 
 ```bash
 IDENTITY_BASE="http://localhost:8000"
@@ -171,7 +171,7 @@ STUDENT_PASSWORD="Temp@1234"
 LICENSE_CATEGORY="B2"
 ```
 
-Neu test truc tiep service, doi:
+Nếu test trực tiếp service, đổi:
 
 ```bash
 IDENTITY_BASE="http://localhost:3001"
@@ -180,7 +180,7 @@ QUESTION_BASE="http://localhost:3005"
 EXAM_BASE="http://localhost:3003"
 ```
 
-Luu y direct identity path khac Kong:
+Lưu ý direct identity path khác Kong:
 
 | Action | Direct local | Qua Kong |
 | --- | --- | --- |
@@ -188,11 +188,11 @@ Luu y direct identity path khac Kong:
 | Refresh | `POST /refresh` | `POST /auth/refresh` |
 | Admin users | `POST /admin/users` | `POST /admin/users` |
 
-Neu dung PowerShell, doi `\` thanh backtick `` ` `` hoac viet tren mot dong.
+Nếu dùng PowerShell, đổi `\` thành backtick `` ` `` hoặc viết trên một dòng.
 
 ---
 
-## 4. Lay Access Token
+## 4. Lấy Access Token
 
 ### 4.1 Login admin
 
@@ -220,18 +220,18 @@ ADMIN_TOKEN=$(curl -s -X POST "http://localhost:3001/login" \
   }" | jq -r '.data.accessToken')
 ```
 
-Kiem tra token co role admin:
+Kiểm tra token có role admin:
 
 ```bash
 curl -s "$IDENTITY_BASE/admin/users?page=1&size=1" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.success, .data.total'
 ```
 
-Expect `true` va HTTP `200`.
+Expect `true` và HTTP `200`.
 
-### 4.2 Tao student test qua identity-service
+### 4.2 Tạo student test qua identity-service
 
-`user-service` khong expose HTTP `POST /users`. Tao user bang identity-service, identity-service se publish RabbitMQ event `identity.user.created`, user-service se tao profile.
+`user-service` không expose HTTP `POST /users`. Tạo user bằng identity-service, identity-service sẽ publish RabbitMQ event `identity.user.created`, user-service sẽ tạo profile.
 
 ```bash
 STUDENT_USER_ID=$(curl -s -X POST "$IDENTITY_BASE/admin/users" \
@@ -247,14 +247,14 @@ STUDENT_USER_ID=$(curl -s -X POST "$IDENTITY_BASE/admin/users" \
 echo "STUDENT_USER_ID=$STUDENT_USER_ID"
 ```
 
-Neu user da ton tai, lay id tu list:
+Nếu user đã tồn tại, lấy id từ list:
 
 ```bash
 STUDENT_USER_ID=$(curl -s "$IDENTITY_BASE/admin/users?search=$STUDENT_EMAIL" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.data.items[0].id')
 ```
 
-Cho user-service consume event, roi verify profile:
+Chờ user-service consume event, rồi verify profile:
 
 ```bash
 sleep 2
@@ -275,9 +275,9 @@ Expect:
 }
 ```
 
-### 4.3 Gan license tier cho student
+### 4.3 Gắn license tier cho student
 
-Exam start se fail neu `studentDetail.licenseTier` khac template `licenseCategory`.
+Exam start sẽ fail nếu `studentDetail.licenseTier` khác template `licenseCategory`.
 
 ```bash
 curl -s -X PATCH "$USER_BASE/users/$STUDENT_USER_ID/license-tier" \
@@ -310,7 +310,7 @@ STUDENT_TOKEN=$(curl -s -X POST "$IDENTITY_BASE/auth/login" \
 echo "$STUDENT_TOKEN" | cut -c1-25
 ```
 
-Kiem tra current profile:
+Kiểm tra current profile:
 
 ```bash
 curl -s "$USER_BASE/users/me" \
@@ -319,11 +319,11 @@ curl -s "$USER_BASE/users/me" \
 
 ---
 
-## 5. Seed Du Lieu Phu Thuoc
+## 5. Seed Dữ Liệu Phụ Thuộc
 
-Exam-service can active question pool tu question-service. De test nhanh, tao 3 cau hoi `B2`, trong do co 1 cau critical.
+Exam-service cần active question pool từ question-service. Để test nhanh, tạo 3 câu hỏi `B2`, trong đó có 1 câu critical.
 
-### 5.1 Tao topic
+### 5.1 Tạo topic
 
 ```bash
 TOPIC_ID=$(curl -s -X POST "$QUESTION_BASE/questions/topics" \
@@ -331,97 +331,97 @@ TOPIC_ID=$(curl -s -X POST "$QUESTION_BASE/questions/topics" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Exam B2 Seed Topic",
-    "description": "Topic dung de test exam-service"
+    "description": "Topic dùng để test exam-service"
   }' | jq -r '.data.id')
 
 echo "TOPIC_ID=$TOPIC_ID"
 ```
 
-Neu topic da ton tai, co the lay topic dau tien:
+Nếu topic đã tồn tại, có thể lấy topic đầu tiên:
 
 ```bash
 TOPIC_ID=$(curl -s "$QUESTION_BASE/questions/topics?page=1&size=1" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.data.items[0].id')
 ```
 
-### 5.2 Tao question 1
+### 5.2 Tạo question 1
 
 ```bash
 Q1=$(curl -s -X POST "$QUESTION_BASE/questions" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"content\": \"Khi gap den do, nguoi lai xe phai lam gi?\",
+    \"content\": \"Khi gặp đèn đỏ, người lái xe phải làm gì?\",
     \"type\": \"SINGLE_CHOICE\",
     \"licenseCategories\": [\"$LICENSE_CATEGORY\"],
     \"difficulty\": \"EASY\",
-    \"explanation\": \"Den do bat buoc dung lai truoc vach dung.\",
+    \"explanation\": \"Đèn đỏ bắt buộc dừng lại trước vạch dừng.\",
     \"topicId\": \"$TOPIC_ID\",
     \"isCritical\": true,
     \"isActive\": true,
     \"options\": [
-      {\"content\": \"Dung lai truoc vach dung\", \"isCorrect\": true, \"displayOrder\": 1},
-      {\"content\": \"Tang toc di qua\", \"isCorrect\": false, \"displayOrder\": 2},
-      {\"content\": \"Bam coi va tiep tuc di\", \"isCorrect\": false, \"displayOrder\": 3}
+      {\"content\": \"Dừng lại trước vạch dừng\", \"isCorrect\": true, \"displayOrder\": 1},
+      {\"content\": \"Tăng tốc đi qua\", \"isCorrect\": false, \"displayOrder\": 2},
+      {\"content\": \"Bấm còi và tiếp tục đi\", \"isCorrect\": false, \"displayOrder\": 3}
     ]
   }" | jq -r '.data.id')
 
 echo "Q1=$Q1"
 ```
 
-### 5.3 Tao question 2
+### 5.3 Tạo question 2
 
 ```bash
 Q2=$(curl -s -X POST "$QUESTION_BASE/questions" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"content\": \"Bien bao hinh tron nen xanh thuong the hien dieu gi?\",
+    \"content\": \"Biển báo hình tròn nền xanh thường thể hiện điều gì?\",
     \"type\": \"SINGLE_CHOICE\",
     \"licenseCategories\": [\"$LICENSE_CATEGORY\"],
     \"difficulty\": \"EASY\",
-    \"explanation\": \"Bien tron nen xanh thuong la bien hieu lenh.\",
+    \"explanation\": \"Biển tròn nền xanh thường là biển hiệu lệnh.\",
     \"topicId\": \"$TOPIC_ID\",
     \"isCritical\": false,
     \"isActive\": true,
     \"options\": [
-      {\"content\": \"Bien hieu lenh\", \"isCorrect\": true, \"displayOrder\": 1},
-      {\"content\": \"Bien cam\", \"isCorrect\": false, \"displayOrder\": 2},
-      {\"content\": \"Bien nguy hiem\", \"isCorrect\": false, \"displayOrder\": 3}
+      {\"content\": \"Biển hiệu lệnh\", \"isCorrect\": true, \"displayOrder\": 1},
+      {\"content\": \"Biển cấm\", \"isCorrect\": false, \"displayOrder\": 2},
+      {\"content\": \"Biển nguy hiểm\", \"isCorrect\": false, \"displayOrder\": 3}
     ]
   }" | jq -r '.data.id')
 
 echo "Q2=$Q2"
 ```
 
-### 5.4 Tao question 3
+### 5.4 Tạo question 3
 
 ```bash
 Q3=$(curl -s -X POST "$QUESTION_BASE/questions" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"content\": \"Khoang cach an toan phu thuoc vao yeu to nao?\",
+    \"content\": \"Khoảng cách an toàn phụ thuộc vào yếu tố nào?\",
     \"type\": \"SINGLE_CHOICE\",
     \"licenseCategories\": [\"$LICENSE_CATEGORY\"],
     \"difficulty\": \"MEDIUM\",
-    \"explanation\": \"Toc do, mat duong, thoi tiet va tinh huong giao thong deu anh huong.\",
+    \"explanation\": \"Tốc độ, mặt đường, thời tiết và tình huống giao thông đều ảnh hưởng.\",
     \"topicId\": \"$TOPIC_ID\",
     \"isCritical\": false,
     \"isActive\": true,
     \"options\": [
-      {\"content\": \"Toc do va dieu kien giao thong\", \"isCorrect\": true, \"displayOrder\": 1},
-      {\"content\": \"Mau xe\", \"isCorrect\": false, \"displayOrder\": 2},
-      {\"content\": \"So ghe tren xe\", \"isCorrect\": false, \"displayOrder\": 3}
+      {\"content\": \"Tốc độ và điều kiện giao thông\", \"isCorrect\": true, \"displayOrder\": 1},
+      {\"content\": \"Màu xe\", \"isCorrect\": false, \"displayOrder\": 2},
+      {\"content\": \"Số ghế trên xe\", \"isCorrect\": false, \"displayOrder\": 3}
     ]
   }" | jq -r '.data.id')
 
 echo "Q3=$Q3"
 ```
 
-### 5.5 Kiem tra question pool
+### 5.5 Kiểm tra question pool
 
-Endpoint pool la internal/admin endpoint, student khong goi truc tiep.
+Endpoint pool là internal/admin endpoint, student không gọi trực tiếp.
 
 ```bash
 curl -s -X POST "$QUESTION_BASE/questions/pool" \
@@ -439,16 +439,16 @@ Expect `count >= 3`.
 
 ## 6. Test Exam Template Endpoints
 
-Tat ca template endpoints can role `ADMIN`.
+Tất cả template endpoints cần role `ADMIN`.
 
-### 6.1 POST /exams/templates - tao template
+### 6.1 POST /exams/templates - tạo template
 
 ```bash
 TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"name\": \"De thi $LICENSE_CATEGORY smoke test\",
+    \"name\": \"Đề thi $LICENSE_CATEGORY smoke test\",
     \"licenseCategory\": \"$LICENSE_CATEGORY\",
     \"totalQuestions\": 3,
     \"passingScore\": 2,
@@ -458,7 +458,7 @@ TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/exams/templates" \
 echo "TEMPLATE_ID=$TEMPLATE_ID"
 ```
 
-Kiem tra response day du:
+Kiểm tra response đầy đủ:
 
 ```bash
 curl -s "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
@@ -467,8 +467,8 @@ curl -s "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
 
 Expect:
 
-- HTTP `201 Created` khi tao
-- `data.id` la UUID
+- HTTP `201 Created` khi tạo
+- `data.id` là UUID
 - `data.licenseCategory = "B2"`
 - `data.totalQuestions = 3`
 - `data.passingScore = 2`
@@ -476,7 +476,7 @@ Expect:
 - `data.isActive = true`
 - `data.isDeleted = false`
 - `data.version = 1`
-- `data.createdById` bang admin user id trong token
+- `data.createdById` bằng admin user id trong token
 
 ### 6.2 GET /exams/templates - list/filter
 
@@ -488,12 +488,12 @@ curl -s "$EXAM_BASE/exams/templates?page=1&size=20&licenseCategory=$LICENSE_CATE
 Expect:
 
 - HTTP `200`
-- `data.items` co template vua tao
-- `page`, `size`, `total` hop le
+- `data.items` có template vừa tạo
+- `page`, `size`, `total` hợp lệ
 
-### 6.3 PATCH /exams/templates/:id - update voi version
+### 6.3 PATCH /exams/templates/:id - update với version
 
-Lay version hien tai:
+Lấy version hiện tại:
 
 ```bash
 TEMPLATE_VERSION=$(curl -s "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
@@ -510,7 +510,7 @@ curl -s -X PATCH "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
   -H "Content-Type: application/json" \
   -d "{
     \"version\": $TEMPLATE_VERSION,
-    \"name\": \"De thi $LICENSE_CATEGORY smoke test updated\",
+    \"name\": \"Đề thi $LICENSE_CATEGORY smoke test updated\",
     \"durationMinutes\": 25,
     \"isActive\": true
   }" | jq '.data | {id,name,durationMinutes,version}'
@@ -519,12 +519,12 @@ curl -s -X PATCH "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
 Expect:
 
 - HTTP `200`
-- `version` tang len 1
+- `version` tăng lên 1
 - `durationMinutes = 25`
 
 ### 6.4 PATCH stale version - expect conflict
 
-Goi lai version cu:
+Gọi lại version cũ:
 
 ```bash
 curl -s -X PATCH "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
@@ -543,7 +543,7 @@ Expect:
 
 ### 6.5 DELETE /exams/templates/:id - soft delete unused template
 
-Chi test voi template chua co session. Tao template tam:
+Chỉ test với template chưa có session. Tạo template tạm:
 
 ```bash
 DELETE_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/exams/templates" \
@@ -581,7 +581,7 @@ Expect:
 
 ## 7. Test Student Exam Session Flow
 
-Tat ca session endpoints can role `STUDENT` va owner-scope theo `JWT.sub`.
+Tất cả session endpoints cần role `STUDENT` và owner-scope theo `JWT.sub`.
 
 ### 7.1 POST /exams/sessions - start exam
 
@@ -614,11 +614,11 @@ Expect start response:
 - `data.isPassed = null`
 - `data.failedByCritical = false`
 - `data.questions.length = 3`
-- moi question co `questionId`, `content`, `options`, `displayOrder`, `isCritical`, `isBookmarked`, `selectedOptionId`
+- mỗi question có `questionId`, `content`, `options`, `displayOrder`, `isCritical`, `isBookmarked`, `selectedOptionId`
 
 ### 7.2 Confidentiality check cho active questions
 
-Active question payload khong duoc leak dap an.
+Active question payload không được leak đáp án.
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -626,13 +626,13 @@ curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
   | jq '.data.items[] | keys'
 ```
 
-Khong duoc co:
+Không được có:
 
 - `correctOptionId`
 - `isCorrect`
 - `explanation`
 
-Kiem tra options:
+Kiểm tra options:
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -640,7 +640,7 @@ curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
   | jq '.data.items[0].options[0] | keys'
 ```
 
-Expect chi co:
+Expect chỉ có:
 
 ```json
 [
@@ -650,7 +650,7 @@ Expect chi co:
 ]
 ```
 
-### 7.3 Lay question/option ids de autosave
+### 7.3 Lấy question/option ids để autosave
 
 ```bash
 QUESTIONS_JSON=$(curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -682,11 +682,11 @@ curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
 Expect:
 
 - HTTP `200`
-- question do co `selectedOptionId = OPTION_1_ID`
+- question đó có `selectedOptionId = OPTION_1_ID`
 - `isBookmarked = true`
-- response van khong co `isCorrect`
+- response vẫn không có `isCorrect`
 
-Autosave them cau 2 va cau 3:
+Autosave thêm câu 2 và câu 3:
 
 ```bash
 curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
@@ -718,18 +718,18 @@ curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
   }" | jq '.data.questions[] | select(.questionId == "'$QUESTION_2_ID'") | {selectedOptionId,isBookmarked}'
 ```
 
-Expect selected answer duoc giu nguyen, bookmark doi thanh `true`.
+Expect selected answer được giữ nguyên, bookmark đổi thành `true`.
 
-### 7.6 GET /exams/sessions - history khi dang lam bai
+### 7.6 GET /exams/sessions - history khi đang làm bài
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions?page=1&size=10&status=IN_PROGRESS" \
   -H "Authorization: Bearer $STUDENT_TOKEN" | jq '.data | {total,page,size,items: [.items[] | {id,status,score,isPassed}]}'
 ```
 
-Expect co session hien tai, `status = "IN_PROGRESS"`.
+Expect có session hiện tại, `status = "IN_PROGRESS"`.
 
-### 7.7 POST /exams/sessions/:id/submit - submit va grade
+### 7.7 POST /exams/sessions/:id/submit - submit và grade
 
 ```bash
 curl -s -X POST "$EXAM_BASE/exams/sessions/$SESSION_ID/submit" \
@@ -739,13 +739,13 @@ curl -s -X POST "$EXAM_BASE/exams/sessions/$SESSION_ID/submit" \
 Expect:
 
 - HTTP `200`
-- `status = "COMPLETED"` neu chua het gio
-- `score` la so cau dung
-- `isPassed = true` neu `score >= passingScore` va khong sai/unanswered critical
-- `failedByCritical = true` neu sai hoac bo trong cau critical
-- result payload duoc phep co `questions[].isCorrect`
+- `status = "COMPLETED"` nếu chưa hết giờ
+- `score` là số câu đúng
+- `isPassed = true` nếu `score >= passingScore` và không sai/unanswered critical
+- `failedByCritical = true` nếu sai hoặc bỏ trống câu critical
+- result payload được phép có `questions[].isCorrect`
 
-### 7.8 GET /exams/sessions/:id/result - xem ket qua
+### 7.8 GET /exams/sessions/:id/result - xem kết quả
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/result" \
@@ -755,9 +755,9 @@ curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/result" \
 Expect:
 
 - HTTP `200`
-- data giong submit result
-- `questions[].isCorrect` co gia tri `true/false/null`
-- van khong expose `correctOptionId` hoac `options[].isCorrect`
+- data giống submit result
+- `questions[].isCorrect` có giá trị `true/false/null`
+- vẫn không expose `correctOptionId` hoặc `options[].isCorrect`
 
 ### 7.9 GET /exams/sessions - history sau submit
 
@@ -766,7 +766,7 @@ curl -s "$EXAM_BASE/exams/sessions?page=1&size=10&status=COMPLETED" \
   -H "Authorization: Bearer $STUDENT_TOKEN" | jq '.data.items[] | {id,status,score,isPassed,failedByCritical}'
 ```
 
-Expect co session vua submit.
+Expect có session vừa submit.
 
 ---
 
@@ -774,14 +774,14 @@ Expect co session vua submit.
 
 ### 8.1 Student license tier mismatch
 
-Tao template license khac:
+Tạo template license khác:
 
 ```bash
 MISMATCH_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "De thi A1 mismatch",
+    "name": "Đề thi A1 mismatch",
     "licenseCategory": "A1",
     "totalQuestions": 1,
     "passingScore": 1,
@@ -803,14 +803,14 @@ Expect:
 
 ### 8.2 Insufficient question pool
 
-Tao template yeu cau nhieu cau hon pool:
+Tạo template yêu cầu nhiều câu hơn pool:
 
 ```bash
 BIG_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"name\": \"De thi $LICENSE_CATEGORY insufficient pool\",
+    \"name\": \"Đề thi $LICENSE_CATEGORY insufficient pool\",
     \"licenseCategory\": \"$LICENSE_CATEGORY\",
     \"totalQuestions\": 999,
     \"passingScore\": 900,
@@ -832,7 +832,7 @@ Expect:
 
 ### 8.3 Get result before submit
 
-Start session moi:
+Start session mới:
 
 ```bash
 OPEN_SESSION_ID=$(curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -851,7 +851,7 @@ Expect:
 - HTTP `422`
 - `code = "EXAM_SESSION_NOT_FINISHED"`
 
-### 8.4 Submit lan 2
+### 8.4 Submit lần 2
 
 ```bash
 curl -s -X POST "$EXAM_BASE/exams/sessions/$SESSION_ID/submit" \
@@ -878,9 +878,9 @@ curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
 Expect:
 
 - HTTP `409`
-- `code = "EXAM_SESSION_ALREADY_FINISHED"` hoac domain conflict tu session state
+- `code = "EXAM_SESSION_ALREADY_FINISHED"` hoặc domain conflict từ session state
 
-### 8.6 Student khong duoc goi template admin endpoints
+### 8.6 Student không được gọi template admin endpoints
 
 ```bash
 curl -s "$EXAM_BASE/exams/templates" \
@@ -892,7 +892,7 @@ Expect:
 - HTTP `403`
 - `code = "FORBIDDEN"`
 
-### 8.7 Admin khong duoc start student session
+### 8.7 Admin không được start student session
 
 ```bash
 curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -908,9 +908,9 @@ Expect:
 - HTTP `403`
 - `code = "FORBIDDEN"`
 
-### 8.8 Student A khong duoc doc session cua Student B
+### 8.8 Student A không được đọc session của Student B
 
-Tao student B tuong tu muc 4.2, login lay `STUDENT_B_TOKEN`, sau do:
+Tạo student B tương tự mục 4.2, login lấy `STUDENT_B_TOKEN`, sau đó:
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -922,9 +922,9 @@ Expect:
 - HTTP `403`
 - `code = "EXAM_SESSION_UNAUTHORIZED"`
 
-### 8.9 Delete template da co session
+### 8.9 Delete template đã có session
 
-Lay version template da co session:
+Lấy version template đã có session:
 
 ```bash
 TEMPLATE_VERSION_NOW=$(curl -s "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
@@ -961,16 +961,16 @@ curl -s -X POST "$EXAM_BASE/exams/templates" \
 Expect:
 
 - HTTP `400`
-- `code = "INVALID_EXAM_TEMPLATE"` hoac `VALIDATION_ERROR`
+- `code = "INVALID_EXAM_TEMPLATE"` hoặc `VALIDATION_ERROR`
 - domain invariant: `passingScore <= totalQuestions`
 
 ---
 
-## 9. Kiem Tra DB Va RabbitMQ
+## 9. Kiểm Tra DB Và RabbitMQ
 
-### 9.1 Kiem tra DB exam-service
+### 9.1 Kiểm tra DB exam-service
 
-Neu dung Docker Postgres local:
+Nếu dùng Docker Postgres local:
 
 ```bash
 docker exec -it luyen-thi-lai-xe-microservices-db-exam-1 psql -U user -d exam_db
@@ -995,13 +995,13 @@ where "sessionId" = '<SESSION_ID>'
 order by "displayOrder";
 ```
 
-Kiem tra snapshot security:
+Kiểm tra snapshot security:
 
-- DB co `correctOptionId` de grade.
-- Student active endpoints khong expose `correctOptionId`.
-- Result endpoint chi expose `isCorrect`, khong expose correct answer id.
+- DB có `correctOptionId` để grade.
+- Student active endpoints không expose `correctOptionId`.
+- Result endpoint chỉ expose `isCorrect`, không expose correct answer id.
 
-### 9.2 Kiem tra RabbitMQ events
+### 9.2 Kiểm tra RabbitMQ events
 
 Sau khi submit, exam-service publish:
 
@@ -1038,7 +1038,7 @@ Payload expected:
 }
 ```
 
-Failed event co them:
+Failed event có thêm:
 
 ```json
 {
@@ -1050,7 +1050,7 @@ Failed event co them:
 
 ## 10. Quality Gates
 
-Chay hep truoc:
+Chạy hẹp trước:
 
 ```bash
 npm --workspace=apps/exam-service run prisma:generate
@@ -1058,7 +1058,7 @@ npm --workspace=apps/exam-service run check-types
 npm --workspace=apps/exam-service run build
 ```
 
-Neu co sua common/config/Kong:
+Nếu có sửa common/config/Kong:
 
 ```bash
 npm run check-types
@@ -1066,7 +1066,7 @@ docker compose config --quiet
 docker compose -f docker-compose.infra.yml config --quiet
 ```
 
-Test focused neu co:
+Test focused nếu có:
 
 ```bash
 npm --workspace=apps/exam-service run test
@@ -1078,14 +1078,14 @@ npm --workspace=apps/exam-service run test
 
 ### 11.1 `401 UNAUTHORIZED`
 
-Nguyen nhan thuong gap:
+Nguyên nhân thường gặp:
 
-- Thieu `Authorization: Bearer <token>`.
-- Token het han.
-- Direct local van can JWT vi exam-service tu validate token.
+- Thiếu `Authorization: Bearer <token>`.
+- Token hết hạn.
+- Direct local vẫn cần JWT vì exam-service tự validate token.
 - `keycloak.authServerUrl`, `realm`, `clientId` trong Consul sai.
 
-Kiem tra:
+Kiểm tra:
 
 ```bash
 curl -s "http://localhost:8500/v1/kv/config/development-local/exam-service/keycloak.authServerUrl?raw"
@@ -1094,25 +1094,25 @@ curl -s http://localhost:8080/realms/luyen-thi-lai-xe-realm/.well-known/openid-c
 
 ### 11.2 `403 FORBIDDEN`
 
-Kiem tra role trong token:
+Kiểm tra role trong token:
 
-- Template endpoints can `ADMIN`.
-- Session endpoints can `STUDENT`.
-- Question seed endpoints can `ADMIN` hoac `CENTER_MANAGER`.
+- Template endpoints cần `ADMIN`.
+- Session endpoints cần `STUDENT`.
+- Question seed endpoints cần `ADMIN` hoặc `CENTER_MANAGER`.
 
-Neu service account goi question-service pool fail, kiem tra client `nestjs-backend` co service account role phu hop de goi `POST /questions/pool`.
+Nếu service account gọi question-service pool fail, kiểm tra client `nestjs-backend` có service account role phù hợp để gọi `POST /questions/pool`.
 
 ### 11.3 `STUDENT_PROFILE_INVALID`
 
-Exam-service start session goi `user-service /users/me` bang bearer token cua student. Loi nay thuong do:
+Exam-service start session gọi `user-service /users/me` bằng bearer token của student. Lỗi này thường do:
 
-- user-service chua chay.
-- profile chua duoc tao tu event `identity.user.created`.
-- student profile khong active.
-- role khong phai `STUDENT`.
-- `studentDetail` bi thieu.
+- user-service chưa chạy.
+- profile chưa được tạo từ event `identity.user.created`.
+- student profile không active.
+- role không phải `STUDENT`.
+- `studentDetail` bị thiếu.
 
-Kiem tra:
+Kiểm tra:
 
 ```bash
 curl -s "$USER_BASE/users/me" \
@@ -1121,7 +1121,7 @@ curl -s "$USER_BASE/users/me" \
 
 ### 11.4 `STUDENT_LICENSE_MISMATCH`
 
-License tier trong user profile khac template:
+License tier trong user profile khác template:
 
 ```bash
 curl -s "$USER_BASE/users/me" \
@@ -1131,7 +1131,7 @@ curl -s "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data.licenseCategory'
 ```
 
-Sua bang:
+Sửa bằng:
 
 ```bash
 curl -s -X PATCH "$USER_BASE/users/$STUDENT_USER_ID/license-tier" \
@@ -1144,7 +1144,7 @@ curl -s -X PATCH "$USER_BASE/users/$STUDENT_USER_ID/license-tier" \
 
 ### 11.5 `INSUFFICIENT_QUESTION_POOL`
 
-Question-service khong co du cau active cho license category:
+Question-service không có đủ câu active cho license category:
 
 ```bash
 curl -s -X POST "$QUESTION_BASE/questions/pool" \
@@ -1156,23 +1156,23 @@ curl -s -X POST "$QUESTION_BASE/questions/pool" \
   }" | jq '.data.items | length'
 ```
 
-Can dam bao:
+Cần đảm bảo:
 
-- `licenseCategories` cua question co category template.
+- `licenseCategories` của question có category template.
 - `isActive = true`.
-- Question chua bi soft delete.
-- Moi question co dung 1 option `isCorrect = true`.
+- Question chưa bị soft delete.
+- Mỗi question có đúng 1 option `isCorrect = true`.
 
 ### 11.6 Kong `502 Bad Gateway`
 
-Kong dev route forward ve local host port:
+Kong dev route forward về local host port:
 
 - exam-service: `3003`
 - user-service: `3002`
 - question-service: `3005`
 - identity-service: `3001`
 
-Kiem tra service local:
+Kiểm tra service local:
 
 ```bash
 curl -s http://localhost:3003/docs-json | jq '.info.title'
@@ -1180,7 +1180,7 @@ curl -s http://localhost:3002/docs-json | jq '.info.title'
 curl -s http://localhost:3005/docs-json | jq '.info.title'
 ```
 
-Kiem tra Kong logs:
+Kiểm tra Kong logs:
 
 ```bash
 docker logs luyen-thi-lai-xe-microservices-kong-dev-1 --tail 100
@@ -1188,14 +1188,14 @@ docker logs luyen-thi-lai-xe-microservices-kong-dev-1 --tail 100
 
 ### 11.7 Consul config stale
 
-Neu vua sua `.env` hoac `docker/consul/init.sh`, reseed:
+Nếu vừa sửa `.env` hoặc `docker/consul/init.sh`, reseed:
 
 ```bash
 docker compose -f docker-compose.infra.yml up -d --force-recreate consul-init
 npm run consul:seed:local
 ```
 
-Kiem tra key:
+Kiểm tra key:
 
 ```bash
 curl -s "http://localhost:8500/v1/kv/config/development-local/exam-service/services.question.baseUrl?raw"
@@ -1204,9 +1204,8 @@ curl -s "http://localhost:8500/v1/kv/config/development-local/exam-service/servi
 
 ### 11.8 Windows PowerShell note
 
-Cac command trong guide dung Bash syntax. Neu dung PowerShell:
+Các command trong guide dùng Bash syntax. Nếu dùng PowerShell:
 
-- Thay `\` thanh backtick `` ` ``.
-- Thay `VAR=value` bang `$env:VAR="value"` hoac `$VAR="value"` tuy nhu cau.
-- Neu `curl` bi alias sang `Invoke-WebRequest`, dung `curl.exe`.
-
+- Thay `\` thành backtick `` ` ``.
+- Thay `VAR=value` bằng `$env:VAR="value"` hoặc `$VAR="value"` tùy nhu cầu.
+- Nếu `curl` bị alias sang `Invoke-WebRequest`, dùng `curl.exe`.

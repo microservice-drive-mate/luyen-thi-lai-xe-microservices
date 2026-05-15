@@ -11,7 +11,7 @@
 
 ## Auth Update
 
-Course-service hien validate JWT/RBAC tai service bang Keycloak guard. Frontend goi qua Kong va gui `Authorization: Bearer <access_token>`; Kong forward header nay vao service. Service lay actor id tu `JWT.sub`, con `x-user-id` chi la fallback cho debug/local script cu.
+Course-service hiện validate JWT/RBAC tại service bằng Keycloak guard. Frontend gọi qua Kong và gửi `Authorization: Bearer <access_token>`; Kong forward header này vào service. Service lấy actor id từ `JWT.sub`, còn `x-user-id` chỉ là fallback cho debug/local script cũ.
 
 | Endpoint                                                                                                                                   | Role                                    |
 | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
@@ -19,9 +19,9 @@ Course-service hien validate JWT/RBAC tai service bang Keycloak guard. Frontend 
 | `PATCH /courses/:id/activate`                                                                                                              | `ADMIN`, `CENTER_MANAGER`               |
 | `POST /courses/:id/enroll`, `GET /enrollments`, `POST /enrollments/:id/lessons/:lessonId/complete`                                         | `STUDENT`                               |
 | `GET /enrollments/:id`                                                                                                                     | `STUDENT`, `ADMIN`, `CENTER_MANAGER`    |
-| `GET /courses`, `GET /courses/:id`                                                                                                         | JWT hop le                              |
+| `GET /courses`, `GET /courses/:id`                                                                                                         | JWT hợp lệ                              |
 
-Kong routes ca `/courses` va `/enrollments` vao course-service. Business API paths la `/courses/*` va `/enrollments/*`; Swagger/docs path la `/course-service/docs`.
+Kong routes cả `/courses` và `/enrollments` vào course-service. Business API paths là `/courses/*` và `/enrollments/*`; Swagger/docs path là `/course-service/docs`.
 
 ---
 
@@ -160,7 +160,7 @@ DTO hiện tại **không trả `lessonProgress`**.
 
 ### POST `/courses`
 
-Tao khoa hoc moi. `createdById` lay tu `sub` trong JWT cua caller.
+Tạo khóa học mới. `createdById` lấy từ `sub` trong JWT của caller.
 
 **Body**
 
@@ -342,7 +342,7 @@ Thêm tài liệu học tập. Nếu có `mediaFileId`, course-service phát eve
 
 ### POST `/courses/:id/enroll`
 
-Dang ky khoa hoc. `studentId` lay tu `sub` trong JWT cua caller; endpoint khong can request body.
+Đăng ký khóa học. `studentId` lấy từ `sub` trong JWT của caller; endpoint không cần request body.
 
 **Response `201 Created`:** `data` là `EnrollmentResponse`.
 
@@ -354,7 +354,7 @@ Dang ky khoa hoc. `studentId` lay tu `sub` trong JWT cua caller; endpoint khong 
 
 ### GET `/enrollments`
 
-Danh sach enrollment cua student hien tai. `studentId` lay tu `sub` trong JWT cua caller.
+Danh sách enrollment của student hiện tại. `studentId` lấy từ `sub` trong JWT của caller.
 
 **Query**
 

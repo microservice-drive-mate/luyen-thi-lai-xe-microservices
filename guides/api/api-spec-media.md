@@ -11,14 +11,14 @@
 
 ## Auth Update
 
-Media-service hien validate JWT/RBAC tai service bang Keycloak guard. Frontend goi qua Kong va gui `Authorization: Bearer <access_token>`; Kong forward header nay vao service. Upload/init upload lay `uploadedById` tu `JWT.sub`, con `x-user-id` chi la fallback cho debug/local script cu.
+Media-service hiện validate JWT/RBAC tại service bằng Keycloak guard. Frontend gọi qua Kong và gửi `Authorization: Bearer <access_token>`; Kong forward header này vào service. Upload/init upload lấy `uploadedById` từ `JWT.sub`, còn `x-user-id` chỉ là fallback cho debug/local script cũ.
 
 | Endpoint                                                                                          | Role                      |
 | ------------------------------------------------------------------------------------------------- | ------------------------- |
-| `POST /media/files`, `POST /media/files/init`, `GET /media/files/:id`, `GET /media/files/:id/url` | JWT hop le                |
+| `POST /media/files`, `POST /media/files/init`, `GET /media/files/:id`, `GET /media/files/:id/url` | JWT hợp lệ                |
 | `GET /media/files`, `DELETE /media/files/:id`                                                     | `ADMIN`, `CENTER_MANAGER` |
 
-Business API path la `/media/*`; Swagger/docs path la `/media-service/docs`.
+Business API path là `/media/*`; Swagger/docs path là `/media-service/docs`.
 
 ---
 
@@ -110,7 +110,7 @@ Response DTO hiện tại **không trả `status`**, dù domain vẫn có `FileS
 
 ### POST `/media/files`
 
-Upload file bang `multipart/form-data`. `uploadedById` lay tu `sub` trong JWT cua caller.
+Upload file bằng `multipart/form-data`. `uploadedById` lấy từ `sub` trong JWT của caller.
 
 **Body**
 
@@ -252,7 +252,7 @@ Tạo presigned download URL.
 
 ### DELETE `/media/files/:id`
 
-Xoa file khoi storage va database. `deletedById` lay tu `sub` trong JWT cua caller.
+Xóa file khỏi storage và database. `deletedById` lấy từ `sub` trong JWT của caller.
 
 **Response `204 No Content`**
 

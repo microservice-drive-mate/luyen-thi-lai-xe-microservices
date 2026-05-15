@@ -1,10 +1,10 @@
-# Luyen Thi Lai Xe Microservices - Dev Guide
+# Luyện Thi Lái Xe Microservices - Dev Guide
 
-Tai lieu nay la file duy nhat de team dev hieu cach code va van hanh local cho repo.
+Tài liệu này là file duy nhất để team dev hiểu cách code và vận hành local cho repo.
 
-File roadmap cac viec can lam tiep theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
+File roadmap các việc cần làm tiếp theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
 
-## 1. Tong quan kien truc
+## 1. Tổng quan kiến trúc
 
 - Monorepo: npm workspaces + Turborepo
 - Backend: NestJS microservices trong `apps/*`
@@ -12,7 +12,7 @@ File roadmap cac viec can lam tiep theo: [README.NEXT-STEPS.md](./README.NEXT-ST
 - Message broker: RabbitMQ
 - Database: Postgres (database per service)
 
-## 2. Cau truc thu muc
+## 2. Cấu trúc thư mục
 
 ```text
 apps/
@@ -25,7 +25,7 @@ apps/
   analytics-service/
   simulation-service/
 packages/
-  common/              # Thu vien noi bo dung chung
+  common/              # Thư viện nội bộ dùng chung
   eslint-config/
   typescript-config/
 kong/
@@ -33,9 +33,9 @@ kong/
 docker-compose.yaml
 ```
 
-## 3. Chay full stack bang Docker (khuyen nghi)
+## 3. Chạy full stack bằng Docker (khuyến nghị)
 
-Yeu cau:
+Yêu cầu:
 
 - Docker Desktop
 
@@ -45,7 +45,7 @@ Start:
 docker compose up --build
 ```
 
-URL quan trong:
+URL quan trọng:
 
 - Kong Proxy: http://localhost:8000
 - Kong Admin API: http://localhost:8001
@@ -106,9 +106,9 @@ npm run consul:get /config/development/identity-service/database.url
 - /analytics -> analytics-service
 - /simulations -> simulation-service
 
-## 6. Chay local de code/debug
+## 6. Chạy local để code/debug
 
-Yeu cau:
+Yêu cầu:
 
 - Node.js >= 18
 - npm
@@ -119,16 +119,16 @@ Install dependencies:
 npm install
 ```
 
-Chay 1 service:
+Chạy 1 service:
 
 ```bash
 npm run start:dev -w identity-service
 ```
 
-Luu y:
+Lưu ý:
 
-- Mac dinh service dung PORT=3000.
-- Neu chay nhieu service local, set PORT rieng.
+- Mặc định service dùng PORT=3000.
+- Nếu chạy nhiều service local, set PORT riêng.
 
 PowerShell example:
 
@@ -137,7 +137,7 @@ $env:PORT=3001
 npm run start:dev -w identity-service
 ```
 
-Scripts o root:
+Scripts ở root:
 
 ```bash
 npm run build
@@ -147,7 +147,7 @@ npm run check-types
 npm run format
 ```
 
-Lenh DB cho identity-service:
+Lệnh DB cho identity-service:
 
 ```bash
 npm run db:generate -w identity-service
@@ -155,7 +155,7 @@ npm run db:migrate -w identity-service
 npm run db:seed -w identity-service
 ```
 
-Neu chay bang Docker network noi bo:
+Nếu chạy bằng Docker network nội bộ:
 
 ```bash
 docker compose up -d db-identity
@@ -163,113 +163,113 @@ docker compose run --rm identity-service npm run db:deploy -w identity-service
 docker compose run --rm identity-service npm run db:seed -w identity-service
 ```
 
-## 7. Cach tao service moi
+## 7. Cách tạo service mới
 
-Vi du service moi: payment-service
+Ví dụ service mới: payment-service
 
-Buoc 1 - Scaffold service
+Bước 1 - Scaffold service
 
-- Co the clone tu service co san de giu convention.
-- Hoac tao moi:
+- Có thể clone từ service có sẵn để giữ convention.
+- Hoặc tạo mới:
 
 ```bash
 npx @nestjs/cli new apps/payment-service --package-manager npm --skip-git
 ```
 
-Buoc 2 - Cap nhat package cua service
+Bước 2 - Cập nhật package của service
 
-- Sua `name` trong `apps/payment-service/package.json`
-- Neu can dung thu vien noi bo, them dependency `@repo/common`
+- Sửa `name` trong `apps/payment-service/package.json`
+- Nếu cần dùng thư viện nội bộ, thêm dependency `@repo/common`
 
-Buoc 3 - Tao Dockerfile
+Bước 3 - Tạo Dockerfile
 
-- Copy pattern tu `apps/identity-service/Dockerfile`
-- Sua filter thanh `payment-service`
+- Copy pattern từ `apps/identity-service/Dockerfile`
+- Sửa filter thành `payment-service`
 
-Buoc 4 - Dang ky vao docker compose
+Bước 4 - Đăng ký vào docker compose
 
-- Them `db-payment` (neu can DB)
-- Them service `payment-service` trong `docker-compose.yaml`
+- Thêm `db-payment` (nếu cần DB)
+- Thêm service `payment-service` trong `docker-compose.yaml`
 
-Buoc 5 - Dang ky route Kong
+Bước 5 - Đăng ký route Kong
 
-- Them service + route trong `kong/kong.yaml`
+- Thêm service + route trong `kong/kong.yaml`
 - Restart Kong:
 
 ```bash
 docker compose restart kong
 ```
 
-Buoc 6 - Smoke test
+Bước 6 - Smoke test
 
 ```bash
 docker compose up --build -d
 curl http://localhost:8000/payments
 ```
 
-## 7. Su dung thu vien noi bo packages/common
+## 7. Sử dụng thư viện nội bộ packages/common
 
-Muc tieu cua `packages/common/src`:
+Mục tiêu của `packages/common/src`:
 
-- Chua constants, DTO, event contract, helper dung chung.
+- Chứa constants, DTO, event contract, helper dùng chung.
 
-Quy trinh dung:
+Quy trình dùng:
 
-1. Tao file module dung chung trong `packages/common/src/...`
+1. Tạo file module dùng chung trong `packages/common/src/...`
 2. Re-export trong `packages/common/src/index.ts`
-3. Import tu service:
+3. Import từ service:
 
 ```ts
 import { USER_CREATED_EVENT } from "@repo/common";
 ```
 
-4. Dam bao service co dependency `@repo/common` trong package.json.
+4. Đảm bảo service có dependency `@repo/common` trong package.json.
 
-Quy uoc:
+Quy ước:
 
 - Event name format: `domain.action.v1`
-- Breaking change thi tao version moi, khong sua de vo tuong thich.
+- Breaking change thì tạo version mới, không sửa để vỡ tương thích.
 
-## 8. Quy trinh code trong team
+## 8. Quy trình code trong team
 
-1. Keo code moi nhat.
-2. Chay lint + typecheck truoc khi push.
-3. Chay test service dang sua.
-4. Smoke test qua Kong neu co thay doi API/event.
-5. Cap nhat tai lieu neu thay doi route, contract hoac convention.
+1. Kéo code mới nhất.
+2. Chạy lint + typecheck trước khi push.
+3. Chạy test service đang sửa.
+4. Smoke test qua Kong nếu có thay đổi API/event.
+5. Cập nhật tài liệu nếu thay đổi route, contract hoặc convention.
 
-### 8.1 Git workflow khi lam viec voi CI (bat buoc)
+### 8.1 Git workflow khi làm việc với CI (bắt buộc)
 
-Nguyen tac:
+Nguyên tắc:
 
-- Khong code truc tiep tren `main`.
-- Moi tinh nang/bugfix phai di qua nhanh rieng + Pull Request.
-- Chi merge khi CI pass.
-- Tuyet doi khong merge khi CI dang chay hoac co job fail.
+- Không code trực tiếp trên `main`.
+- Mọi tính năng/bugfix phải đi qua nhánh riêng + Pull Request.
+- Chỉ merge khi CI pass.
+- Tuyệt đối không merge khi CI đang chạy hoặc có job fail.
 
-Luong lam viec de xuat cho 1 tinh nang moi:
+Luồng làm việc đề xuất cho 1 tính năng mới:
 
-1. Dong bo nhanh main moi nhat:
+1. Đồng bộ nhánh main mới nhất:
 
 ```bash
 git checkout main
 git pull origin main
 ```
 
-2. Tao nhanh feature tu main (dat ten ro y nghia):
+2. Tạo nhánh feature từ main (đặt tên rõ ý nghĩa):
 
 ```bash
 git checkout -b feature/user-registration
 ```
 
-3. Code + commit tung buoc nho, message ro rang:
+3. Code + commit từng bước nhỏ, message rõ ràng:
 
 ```bash
 git add .
 git commit -m "feat(identity): add user registration endpoint"
 ```
 
-4. Truoc khi push, chay quality gate local:
+4. Trước khi push, chạy quality gate local:
 
 ```bash
 npm run lint
@@ -277,24 +277,24 @@ npm run check-types
 npm run test -w identity-service
 ```
 
-5. Push nhanh len remote:
+5. Push nhánh lên remote:
 
 ```bash
 git push -u origin feature/user-registration
 ```
 
-6. Tao Pull Request: `feature/user-registration` -> `main`.
-7. Cho CI chay xong (lint/test/build) va xu ly comment review.
-8. Merge PR khi da pass CI va duoc approve.
+6. Tạo Pull Request: `feature/user-registration` -> `main`.
+7. Chờ CI chạy xong (lint/test/build) và xử lý comment review.
+8. Merge PR khi đã pass CI và được approve.
 
-Rule bat buoc truoc khi merge:
+Rule bắt buộc trước khi merge:
 
-- Tat ca CI checks phai o trang thai `success`.
-- Khong merge neu check con `pending`.
+- Tất cả CI checks phải ở trạng thái `success`.
+- Không merge nếu check còn `pending`.
 
-Sau khi merge xong, don dep nhanh da dung:
+Sau khi merge xong, dọn dẹp nhánh đã dùng:
 
-1. Xoa nhanh local:
+1. Xóa nhánh local:
 
 ```bash
 git checkout main
@@ -302,19 +302,19 @@ git pull origin main
 git branch -d feature/user-registration
 ```
 
-2. Xoa nhanh remote:
+2. Xóa nhánh remote:
 
 ```bash
 git push origin --delete feature/user-registration
 ```
 
-Luu y:
+Lưu ý:
 
-- Dung `git branch -d` de an toan (chi xoa khi nhanh da duoc merge).
-- Neu can xoa nhanh chua merge (khong khuyen khich), moi dung `git branch -D <branch-name>`.
-- Neu nhanh co thay doi moi trong luc dang code, hay rebase/merge tu `main` de giam conflict truoc khi mo PR.
+- Dùng `git branch -d` để an toàn (chỉ xóa khi nhánh đã được merge).
+- Nếu cần xóa nhánh chưa merge (không khuyến khích), mới dùng `git branch -D <branch-name>`.
+- Nếu nhánh có thay đổi mới trong lúc đang code, hãy rebase/merge từ `main` để giảm conflict trước khi mở PR.
 
-Lenh goi y:
+Lệnh gợi ý:
 
 ```bash
 npm run lint
@@ -324,24 +324,24 @@ npm run test -w identity-service
 
 ## 9. Troubleshooting nhanh
 
-Kong route khong nhan:
+Kong route không nhận:
 
-- Kiem tra route trong `kong/kong.yaml`
+- Kiểm tra route trong `kong/kong.yaml`
 - Restart Kong
 
-RabbitMQ khong nhan event:
+RabbitMQ không nhận event:
 
-- Kiem tra ten queue/event producer-consumer trung nhau
-- Kiem tra host la `rabbitmq` khi chay trong docker network
+- Kiểm tra tên queue/event producer-consumer trùng nhau
+- Kiểm tra host là `rabbitmq` khi chạy trong docker network
 
-Bi trung port local:
+Bị trùng port local:
 
-- Set PORT rieng cho tung service
+- Set PORT riêng cho từng service
 
 ## 10. Definition of Done cho feature/service
 
-- Co validation input
-- Co unit test cho business logic chinh
-- Co e2e test cho endpoint quan trong
-- Da dang ky gateway route neu la API moi
-- Da cap nhat tai lieu lien quan
+- Có validation input
+- Có unit test cho business logic chính
+- Có e2e test cho endpoint quan trọng
+- Đã đăng ký gateway route nếu là API mới
+- Đã cập nhật tài liệu liên quan

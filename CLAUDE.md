@@ -6,22 +6,22 @@ Use this file as the compact project map. For detailed behavior, read the releva
 
 ## Reusable Implementation Prompt
 
-Dung prompt nay moi khi yeu cau AI agent implement feature trong repo:
+Dùng prompt này mỗi khi yêu cầu AI agent implement feature trong repo:
 
 ```text
-Ban dang lam viec trong NestJS microservices monorepo "luyen-thi-lai-xe-microservices".
+Bạn đang làm việc trong NestJS microservices monorepo "luyen-thi-lai-xe-microservices".
 
-Truoc khi implement, hay doc va su dung context tu:
+Trước khi implement, hãy đọc và sử dụng context từ:
 - CLAUDE.md
 - guides/ddd+clean/CONVENTIONS.md
 - guides/ddd+clean/DATABASE_DESIGN.md
 - guides/consul/WORKFLOW.md
-- guides/api/*.md lien quan den service can sua
-- guides/testing/*.md lien quan den service can sua
-- apps/user-service nhu reference implementation
-- code hien co cua service can sua
+- guides/api/*.md liên quan đến service cần sửa
+- guides/testing/*.md liên quan đến service cần sửa
+- apps/user-service như reference implementation
+- code hiện có của service cần sửa
 
-Hay implement theo DDD + Clean Architecture, convention Consul config, Prisma custom client output, Kong/Keycloak integration, RabbitMQ event, va style hien co cua repo. Giu thay doi dung pham vi yeu cau. Khong hardcode secrets; dung root .env, Docker Compose env interpolation, va Consul env seeding. Neu them/sua endpoint, DTO, event, config, hoac behavior public, hay cap nhat API spec va test guide tuong ung. Sau khi sua, chay check hep nhat co ich truoc, roi chay check rong hon neu can.
+Hãy implement theo DDD + Clean Architecture, convention Consul config, Prisma custom client output, Kong/Keycloak integration, RabbitMQ event, và style hiện có của repo. Giữ thay đổi đúng phạm vi yêu cầu. Không hardcode secrets; dùng root .env, Docker Compose env interpolation, và Consul env seeding. Nếu thêm/sửa endpoint, DTO, event, config, hoặc behavior public, hãy cập nhật API spec và test guide tương ứng. Sau khi sửa, chạy check hẹp nhất có ích trước, rồi chạy check rộng hơn nếu cần.
 ```
 
 ## Key Commands
