@@ -289,6 +289,12 @@ services:
       - DATABASE_URL=postgresql://user:password@db-exam:5432/exam_db
       - CONSUL_URL=http://consul:8500
       - RABBITMQ_URL=amqp://rabbitmq:5672
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
+      - KEYCLOAK_CLIENT_ID=nestjs-backend
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+      - QUESTION_SERVICE_URL=http://question-service:3000
+      - USER_SERVICE_URL=http://user-service:3000
     ports:
       - "3003:3000"
     depends_on:

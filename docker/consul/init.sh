@@ -12,6 +12,19 @@ STORAGE_PRESIGNED_URL_EXPIRY="${STORAGE_PRESIGNED_URL_EXPIRY:-3600}"
 MAX_RETRIES=30
 RETRY_COUNT=0
 
+require_env() {
+  name="$1"
+  eval "value=\${$name:-}"
+  if [ -z "$value" ]; then
+    echo "[Consul] ERROR: $name is required for media-service storage config"
+    echo "[Consul] Add $name to the root .env before running consul-init"
+    exit 1
+  fi
+}
+
+require_env "STORAGE_ACCOUNT_NAME"
+require_env "STORAGE_ACCOUNT_KEY"
+
 echo "[Consul] Waiting for Consul to be ready..."
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
@@ -72,6 +85,12 @@ set_kv "config/development/user-service/keycloak.clientSecret" "${KEYCLOAK_CLIEN
 set_kv "config/development/exam-service/port" "3000"
 set_kv "config/development/exam-service/database.url" "postgresql://user:password@db-exam:5432/exam_db"
 set_kv "config/development/exam-service/rabbitmq.url" "amqp://rabbitmq:5672"
+set_kv "config/development/exam-service/keycloak.authServerUrl" "http://keycloak:8080"
+set_kv "config/development/exam-service/keycloak.realm" "luyen-thi-lai-xe-realm"
+set_kv "config/development/exam-service/keycloak.clientId" "nestjs-backend"
+set_kv "config/development/exam-service/keycloak.clientSecret" "${KEYCLOAK_CLIENT_SECRET}"
+set_kv "config/development/exam-service/services.question.baseUrl" "http://question-service:3000"
+set_kv "config/development/exam-service/services.user.baseUrl" "http://user-service:3000"
 set_kv "config/development/question-service/port" "3000"
 set_kv "config/development/question-service/database.url" "postgresql://user:password@db-question:5432/question_db"
 set_kv "config/development/question-service/rabbitmq.url" "amqp://rabbitmq:5672"
@@ -134,6 +153,12 @@ set_kv "config/development-local/user-service/keycloak.clientSecret" "${KEYCLOAK
 set_kv "config/development-local/exam-service/port" "3003"
 set_kv "config/development-local/exam-service/database.url" "postgresql://user:password@localhost:5434/exam_db"
 set_kv "config/development-local/exam-service/rabbitmq.url" "amqp://localhost:5672"
+set_kv "config/development-local/exam-service/keycloak.authServerUrl" "http://localhost:8080"
+set_kv "config/development-local/exam-service/keycloak.realm" "luyen-thi-lai-xe-realm"
+set_kv "config/development-local/exam-service/keycloak.clientId" "nestjs-backend"
+set_kv "config/development-local/exam-service/keycloak.clientSecret" "${KEYCLOAK_CLIENT_SECRET}"
+set_kv "config/development-local/exam-service/services.question.baseUrl" "http://localhost:3005"
+set_kv "config/development-local/exam-service/services.user.baseUrl" "http://localhost:3002"
 set_kv "config/development-local/question-service/port" "3005"
 set_kv "config/development-local/question-service/database.url" "postgresql://user:password@localhost:5436/question_db"
 set_kv "config/development-local/question-service/rabbitmq.url" "amqp://localhost:5672"

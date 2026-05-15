@@ -35,6 +35,7 @@ export class AdminService {
     const userId = await this.keycloakAdminService.createUser(
       dto.email,
       dto.temporaryPassword,
+      dto.fullName,
     );
     await this.keycloakAdminService.assignRealmRole(userId, dto.role);
 

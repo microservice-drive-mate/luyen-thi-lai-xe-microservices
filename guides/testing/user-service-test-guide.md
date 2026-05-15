@@ -120,18 +120,20 @@ Client (curl/Postman)
 
 ## 3. Chuẩn bị — Tạo dữ liệu mẫu trực tiếp
 
-Trước khi test, cần có ít nhất 1 user trong DB. Dùng `POST /users` để tạo trực tiếp (bypass RabbitMQ).
+Trước khi test, cần có ít nhất 1 user trong DB. Production flow nên tạo account qua `identity-service` admin API để publish RabbitMQ event `identity.user.created`; user-service cũng expose `POST /users` cho ADMIN/CENTER_MANAGER khi cần backfill profile với Keycloak user id đã có.
+
+Các lệnh `POST http://localhost:3001/admin/users` bên dưới cần thêm header `Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>` khi chạy với guard Keycloak.
 
 ### Tạo user ADMIN
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/users \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "admin-uuid-0001",
     "fullName": "Nguyễn Admin",
     "email": "admin@example.com",
-    "role": "ADMIN"
+    "role": "ADMIN",
+    "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
@@ -156,31 +158,26 @@ curl -s -X POST http://localhost:3002/users \
 ### Tạo user CENTER_MANAGER
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/users \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "manager-uuid-0002",
     "fullName": "Trần Manager",
     "email": "manager@example.com",
-    "role": "CENTER_MANAGER"
+    "role": "CENTER_MANAGER",
+    "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
 ### Tạo user STUDENT (với đầy đủ thông tin)
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/users \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "student-uuid-0003",
     "fullName": "Lê Học Viên",
     "email": "student@example.com",
     "role": "STUDENT",
-    "phoneNumber": "0912345678",
-    "dateOfBirth": "2000-01-15",
-    "gender": "MALE",
-    "address": "123 Đường ABC, TP.HCM",
-    "enrolledAt": "2026-01-01"
+    "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
@@ -205,13 +202,13 @@ curl -s -X POST http://localhost:3002/users \
 ### Tạo user INSTRUCTOR
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/users \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "instructor-uuid-0004",
     "fullName": "Phạm Giáo Viên",
     "email": "instructor@example.com",
-    "role": "INSTRUCTOR"
+    "role": "INSTRUCTOR",
+    "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
@@ -224,18 +221,40 @@ curl -s -X POST http://localhost:3002/users \
 
 ---
 
-### 4.1 POST /users — Tạo user profile
+### 4.1 POST /users — tạo user profile
+
+**Happy path — tạo profile trực tiếp bằng Keycloak user id đã có**
+
+```bash
+curl -s -X POST http://localhost:3002/users \
+  -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "keycloak-user-uuid",
+    "fullName": "Lê Học Viên",
+    "email": "student-profile@example.com",
+    "role": "STUDENT",
+    "phoneNumber": "0912345678",
+    "dateOfBirth": "2000-01-15",
+    "gender": "MALE",
+    "address": "TP.HCM",
+    "licenseTier": "B2",
+    "enrolledAt": "2026-01-01"
+  }' | jq .
+```
+
+Best practice: không dùng endpoint này để tạo account đăng nhập; account vẫn phải được tạo ở identity-service/Keycloak trước.
 
 **Case: Email đã tồn tại (expect 409)**
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/users \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "another-uuid",
     "fullName": "Người Khác",
     "email": "admin@example.com",
-    "role": "ADMIN"
+    "role": "ADMIN",
+    "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
@@ -254,7 +273,7 @@ curl -s -X POST http://localhost:3002/users \
 **Case: Body thiếu field bắt buộc (expect 400)**
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/users \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Thiếu email"
@@ -272,20 +291,6 @@ curl -s -X POST http://localhost:3002/users \
   "path": "/users",
   "errors": ["email must be an email", "id must be a string"]
 }
-```
-
-**Case: SĐT không hợp lệ (expect 400)**
-
-```bash
-curl -s -X POST http://localhost:3002/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "uuid-bad-phone",
-    "fullName": "Test",
-    "email": "test-phone@example.com",
-    "role": "STUDENT",
-    "phoneNumber": "12345"
-  }' | jq .
 ```
 
 ---

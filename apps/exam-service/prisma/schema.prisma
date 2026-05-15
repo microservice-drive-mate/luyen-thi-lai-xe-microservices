@@ -1,0 +1,90 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../node_modules/@prisma/exam-client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LicenseCategory {
+  A1
+  A2
+  B1
+  B2
+  C
+  D
+  E
+  F
+}
+
+enum ExamSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  TIMED_OUT
+  CANCELLED
+}
+
+model ExamTemplate {
+  id              String          @id @default(uuid())
+  name            String          @db.Text
+  licenseCategory LicenseCategory
+  totalQuestions  Int
+  passingScore    Int
+  durationMinutes Int
+  isActive        Boolean         @default(true)
+  isDeleted       Boolean         @default(false)
+  version         Int             @default(1)
+  createdById     String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  sessions ExamSession[]
+
+  @@index([licenseCategory, isActive, isDeleted])
+  @@map("exam_templates")
+}
+
+model ExamSession {
+  id               String            @id @default(uuid())
+  studentId        String
+  templateId       String
+  status           ExamSessionStatus @default(IN_PROGRESS)
+  score            Int?
+  isPassed         Boolean?
+  failedByCritical Boolean           @default(false)
+  startedAt        DateTime          @default(now())
+  finishedAt       DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  template  ExamTemplate          @relation(fields: [templateId], references: [id])
+  questions ExamSessionQuestion[]
+
+  @@index([studentId, status])
+  @@index([templateId])
+  @@map("exam_sessions")
+}
+
+model ExamSessionQuestion {
+  id               String   @id @default(uuid())
+  sessionId        String
+  questionId       String
+  questionContent  String   @db.Text
+  optionsSnapshot  Json
+  correctOptionId  String
+  isCritical       Boolean
+  displayOrder     Int
+  selectedOptionId String?
+  isCorrect        Boolean?
+  isBookmarked     Boolean  @default(false)
+  answeredAt       DateTime?
+
+  session ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, questionId])
+  @@unique([sessionId, displayOrder])
+  @@map("exam_session_questions")
+}

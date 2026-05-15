@@ -6,12 +6,15 @@ import {
   HttpStatus,
   Param,
   Patch,
+  Post,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { AssignLicenseTierCommand } from '../../application/use-cases/assign-license-tier/assign-license-tier.command';
 import { AssignLicenseTierUseCase } from '../../application/use-cases/assign-license-tier/assign-license-tier.use-case';
+import { CreateUserProfileCommand } from '../../application/use-cases/create-user-profile/create-user-profile.command';
+import { CreateUserProfileUseCase } from '../../application/use-cases/create-user-profile/create-user-profile.use-case';
 import { GetUserProfileQuery } from '../../application/use-cases/get-user-profile/get-user-profile.query';
 import { GetUserProfileUseCase } from '../../application/use-cases/get-user-profile/get-user-profile.use-case';
 import { ListUsersQuery } from '../../application/use-cases/list-users/list-users.query';
@@ -21,10 +24,12 @@ import { LockUserUseCase } from '../../application/use-cases/lock-user/lock-user
 import { UpdateUserProfileCommand } from '../../application/use-cases/update-user-profile/update-user-profile.command';
 import { UpdateUserProfileUseCase } from '../../application/use-cases/update-user-profile/update-user-profile.use-case';
 import { AssignLicenseTierRequestDto } from '../dtos/assign-license-tier.request.dto';
+import { CreateUserRequestDto } from '../dtos/create-user.request.dto';
 import { ListUsersQueryDto } from '../dtos/list-users.query.dto';
 import { LockUserRequestDto } from '../dtos/lock-user.request.dto';
 import { UpdateUserRequestDto } from '../dtos/update-user.request.dto';
 import {
+  CreateUserProfileResponseDto,
   PaginatedUsersResponseDto,
   UserProfileResponseDto,
 } from '../dtos/user-profile.response.dto';
@@ -38,12 +43,41 @@ interface JwtPayload {
 @ApiBearerAuth()
 export class UserController {
   constructor(
+    private readonly createUserProfileUseCase: CreateUserProfileUseCase,
     private readonly updateUserProfileUseCase: UpdateUserProfileUseCase,
     private readonly getUserProfileUseCase: GetUserProfileUseCase,
     private readonly listUsersUseCase: ListUsersUseCase,
     private readonly lockUserUseCase: LockUserUseCase,
     private readonly assignLicenseTierUseCase: AssignLicenseTierUseCase,
   ) {}
+
+  @Post()
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create user profile from an existing identity user',
+  })
+  async createUserProfile(
+    @Body() dto: CreateUserRequestDto,
+  ): Promise<CreateUserProfileResponseDto> {
+    const result = await this.createUserProfileUseCase.execute(
+      new CreateUserProfileCommand(
+        dto.id,
+        dto.fullName,
+        dto.email,
+        dto.role,
+        dto.phoneNumber,
+        dto.dateOfBirth,
+        dto.gender,
+        dto.address,
+        dto.avatarUrl,
+        dto.licenseTier,
+        dto.enrolledAt,
+        dto.mediaFileId,
+      ),
+    );
+    return CreateUserProfileResponseDto.fromResult(result);
+  }
 
   @Get()
   @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })

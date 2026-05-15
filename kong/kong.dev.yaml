@@ -27,6 +27,7 @@ services:
       - name: user-route
         paths:
           - /users
+        strip_path: false
       - name: user-swagger-route
         paths:
           - /user-service
@@ -38,6 +39,7 @@ services:
       - name: exam-route
         paths:
           - /exams
+        strip_path: false
       - name: exam-swagger-route
         paths:
           - /exam-service
@@ -50,6 +52,7 @@ services:
         paths:
           - /courses
           - /enrollments
+        strip_path: false
       - name: course-swagger-route
         paths:
           - /course-service
@@ -61,6 +64,7 @@ services:
       - name: question-route
         paths:
           - /questions
+        strip_path: false
       - name: question-swagger-route
         paths:
           - /question-service
@@ -72,6 +76,7 @@ services:
       - name: notification-route
         paths:
           - /notifications
+        strip_path: false
       - name: notification-swagger-route
         paths:
           - /notification-service
@@ -83,6 +88,7 @@ services:
       - name: analytics-route
         paths:
           - /analytics
+        strip_path: false
       - name: analytics-swagger-route
         paths:
           - /analytics-service
@@ -94,6 +100,7 @@ services:
       - name: simulation-route
         paths:
           - /simulations
+        strip_path: false
       - name: simulation-swagger-route
         paths:
           - /simulation-service
@@ -105,6 +112,7 @@ services:
       - name: media-route
         paths:
           - /media
+        strip_path: false
       - name: media-swagger-route
         paths:
           - /media-service

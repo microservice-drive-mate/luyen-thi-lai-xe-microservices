@@ -52,6 +52,7 @@ export class CreateUserProfileUseCase
       address: command.address,
       avatarUrl: command.avatarUrl,
       mediaFileId: command.mediaFileId,
+      licenseTier: command.licenseTier,
       enrolledAt: command.enrolledAt,
     });
 

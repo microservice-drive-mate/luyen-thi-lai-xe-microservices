@@ -33,6 +33,7 @@ export interface CreateUserProfileProps {
   mediaFileId?: string;
   gender?: Gender;
   address?: string;
+  licenseTier?: LicenseTier;
   enrolledAt?: Date;
 }
 

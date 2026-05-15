@@ -494,7 +494,7 @@
       "serviceAccountClientId": "nestjs-backend",
       "disableableCredentialTypes": [],
       "requiredActions": [],
-      "realmRoles": ["default-roles-luyen-thi-lai-xe-realm"],
+      "realmRoles": ["default-roles-luyen-thi-lai-xe-realm", "INSTRUCTOR"],
       "clientRoles": {
         "realm-management": ["manage-users", "view-realm"]
       },

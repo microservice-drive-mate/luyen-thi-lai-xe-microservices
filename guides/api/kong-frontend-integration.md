@@ -172,10 +172,10 @@ Response:
 
 ### Refresh Token
 
-Identity-service code hien tai expose direct local path `POST /auth/refresh`. Do Kong route `/auth/*` strip prefix `/auth`, public path qua Kong hien la:
+Identity-service expose direct local path `POST /refresh`. Do Kong route `/auth/*` strip prefix `/auth`, public path qua Kong la:
 
 ```http
-POST http://localhost:8000/auth/auth/refresh
+POST http://localhost:8000/auth/refresh
 Content-Type: application/json
 ```
 
@@ -211,7 +211,7 @@ api.interceptors.response.use(
       try {
         const refreshToken = authStore.getRefreshToken();
         const refreshResponse = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/auth/auth/refresh`,
+          `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
           { refreshToken },
         );
 

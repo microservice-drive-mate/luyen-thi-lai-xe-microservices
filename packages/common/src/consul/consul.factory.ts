@@ -227,6 +227,17 @@ export class ConsulConfigFactory {
                 : undefined,
             }
           : undefined,
+      services:
+        env.QUESTION_SERVICE_URL || env.USER_SERVICE_URL
+          ? {
+              question: env.QUESTION_SERVICE_URL
+                ? { baseUrl: env.QUESTION_SERVICE_URL }
+                : undefined,
+              user: env.USER_SERVICE_URL
+                ? { baseUrl: env.USER_SERVICE_URL }
+                : undefined,
+            }
+          : undefined,
     };
   }
 

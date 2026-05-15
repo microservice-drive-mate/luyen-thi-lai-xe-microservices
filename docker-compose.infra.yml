@@ -153,6 +153,11 @@ services:
       - ./docker/consul/init.sh:/consul/init.sh:ro
     environment:
       CONSUL_URL: http://consul:8500
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me}
+      STORAGE_ACCOUNT_NAME: ${STORAGE_ACCOUNT_NAME:-}
+      STORAGE_ACCOUNT_KEY: ${STORAGE_ACCOUNT_KEY:-}
+      STORAGE_CONTAINER_NAME: ${STORAGE_CONTAINER_NAME:-media}
+      STORAGE_PRESIGNED_URL_EXPIRY: ${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
     depends_on:
       consul:
         condition: service_healthy

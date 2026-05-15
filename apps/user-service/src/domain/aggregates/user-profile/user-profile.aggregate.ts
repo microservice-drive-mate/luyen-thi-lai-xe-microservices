@@ -63,7 +63,7 @@ export class UserProfile extends AggregateRoot<string> {
       props.role === UserRole.STUDENT
         ? new StudentDetail(
             crypto.randomUUID(),
-            null,
+            props.licenseTier ?? null,
             props.enrolledAt ?? null,
             null,
           )

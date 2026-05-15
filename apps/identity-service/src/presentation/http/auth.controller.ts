@@ -52,7 +52,7 @@ export class AuthController {
     return this.appService.logout(accessToken, body.refreshToken);
   }
 
-  @Post('auth/refresh')
+  @Post('refresh')
   @Public()
   @HttpCode(HttpStatus.OK)
   @ApiBody({ type: RefreshTokenRequestDto })

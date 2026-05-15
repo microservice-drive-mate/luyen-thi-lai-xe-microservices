@@ -42,11 +42,16 @@ export class KeycloakAdminService {
 
   /**
    * Tạo user mới trong Keycloak. Trả về keycloakUserId.
-   * Credential được đặt là temporary (user phải đổi mật khẩu lần đầu login).
+   * Credential được đặt permanent để user có thể login ngay bằng password grant.
    */
-  async createUser(email: string, temporaryPassword: string): Promise<string> {
+  async createUser(
+    email: string,
+    password: string,
+    fullName: string,
+  ): Promise<string> {
     const token = await this.getAdminToken();
     const url = `${this.adminBaseUrl}/users`;
+    const nameParts = this.splitFullName(fullName);
 
     try {
       const response = await lastValueFrom(
@@ -55,9 +60,13 @@ export class KeycloakAdminService {
           {
             username: email,
             email,
+            firstName: nameParts.firstName,
+            lastName: nameParts.lastName,
             enabled: true,
+            emailVerified: true,
+            requiredActions: [],
             credentials: [
-              { type: 'password', value: temporaryPassword, temporary: true },
+              { type: 'password', value: password, temporary: false },
             ],
           },
           { headers: { Authorization: `Bearer ${token}` } },
@@ -102,6 +111,7 @@ export class KeycloakAdminService {
     const url = `${this.adminBaseUrl}/users/${userId}`;
     const email = fields.email ?? existing.email;
     const fullName = fields.fullName ?? this.joinName(existing);
+    const nameParts = this.splitFullName(fullName);
 
     try {
       await lastValueFrom(
@@ -111,8 +121,8 @@ export class KeycloakAdminService {
             ...existing,
             username: email,
             email,
-            firstName: fullName,
-            lastName: '',
+            firstName: nameParts.firstName,
+            lastName: nameParts.lastName,
           },
           { headers: { Authorization: `Bearer ${token}` } },
         ),
@@ -276,6 +286,22 @@ export class KeycloakAdminService {
 
   private joinName(user: KeycloakUserRepresentation): string {
     return [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+  }
+
+  private splitFullName(fullName: string): {
+    firstName: string;
+    lastName: string;
+  } {
+    const normalized = fullName.trim().replace(/\s+/g, ' ');
+    const parts = normalized.split(' ');
+    if (parts.length === 1) {
+      return { firstName: parts[0], lastName: '' };
+    }
+
+    return {
+      firstName: parts.slice(0, -1).join(' '),
+      lastName: parts.at(-1) ?? '',
+    };
   }
 
   private handleKeycloakError(error: unknown, operation: string): never {

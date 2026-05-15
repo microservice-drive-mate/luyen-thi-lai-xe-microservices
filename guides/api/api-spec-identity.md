@@ -8,13 +8,13 @@
 **OpenAPI JSON qua Kong:** `http://localhost:8000/identity-service/docs-json`  
 **Version:** 1.0.0
 
-Qua Kong, auth business APIs dung prefix `/auth/*` cho login/logout va `/admin/*` cho admin APIs. Swagger/docs path la `/identity-service/docs`.
+Qua Kong, auth business APIs dung prefix `/auth/*` cho login/logout/refresh va `/admin/*` cho admin APIs. Swagger/docs path la `/identity-service/docs`.
 
 | Direct local path             | Kong public path              |
 | ----------------------------- | ----------------------------- |
 | `POST /login`                 | `POST /auth/login`            |
 | `POST /logout`                | `POST /auth/logout`           |
-| `POST /auth/refresh`          | `POST /auth/auth/refresh`     |
+| `POST /refresh`               | `POST /auth/refresh`          |
 | `GET /admin/users`            | `GET /admin/users`            |
 | `GET /admin/users/:id`        | `GET /admin/users/:id`        |
 | `POST /admin/users`           | `POST /admin/users`           |
@@ -33,7 +33,7 @@ Identity-service tích hợp Keycloak.
 | ----------------------------- | ----------------------------------------------------------- |
 | `POST /login`                 | Public                                                      |
 | `POST /logout`                | Public, nhưng cần access token trong `Authorization` header |
-| `POST /auth/refresh`          | Public                                                      |
+| `POST /refresh`               | Public                                                      |
 | `GET /admin/users`            | `ADMIN`, `CENTER_MANAGER`                                   |
 | `GET /admin/users/:id`        | `ADMIN`, `CENTER_MANAGER`                                   |
 | `GET /public`                 | Public, endpoint demo                                       |
@@ -181,7 +181,7 @@ Nếu thiếu/sai access token:
 
 ---
 
-### POST `/auth/refresh`
+### POST `/refresh`
 
 Lấy token mới bằng refresh token.
 
@@ -210,6 +210,8 @@ Lấy token mới bằng refresh token.
 ---
 
 ### POST `/admin/users`
+
+Account Keycloak duoc tao voi password permanent, `enabled=true`, `emailVerified=true`, va khong co required action, nen user co the login ngay bang `POST /auth/login`.
 
 Tạo user trong Keycloak, assign realm role, lưu record vào `identity_users`, rồi publish event.
 

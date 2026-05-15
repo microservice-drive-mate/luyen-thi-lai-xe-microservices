@@ -19,6 +19,7 @@ User-service dùng `nest-keycloak-connect`.
 
 | Endpoint                        | Auth hiện tại trong code  |
 | ------------------------------- | ------------------------- |
+| `POST /users`                   | `ADMIN`, `CENTER_MANAGER` |
 | `GET /users`                    | `ADMIN`, `CENTER_MANAGER` |
 | `GET /users/me`                 | JWT hợp lệ                |
 | `GET /users/:id`                | `ADMIN`, `CENTER_MANAGER` |
@@ -28,7 +29,7 @@ User-service dùng `nest-keycloak-connect`.
 | `PATCH /users/:id/license-tier` | `ADMIN`, `CENTER_MANAGER` |
 
 Các endpoint `me` và `license-tier` lấy user hiện tại từ `@AuthenticatedUser()` (`sub` trong JWT), không đọc trực tiếp `x-user-id`.
-User profile khong con duoc tao qua HTTP `POST /users`. Profile duoc tao/cap nhat/dong bo trang thai bang RabbitMQ events tu identity-service:
+Production flow nen tao account bang identity-service `POST /admin/users`, sau do identity-service publish event de user-service tao profile toi thieu. `POST /users` cua user-service danh cho admin/backfill profile khi da co Keycloak user id.
 
 | Event                        | User-service behavior                              |
 | ---------------------------- | -------------------------------------------------- |
@@ -130,7 +131,9 @@ Lỗi domain:
 
 ### POST `/users`
 
-Tạo user profile. Endpoint đang `@Public()` để identity-service/RabbitMQ flow có thể tái sử dụng logic hoặc dùng cho test nội bộ.
+Tao user profile cho mot identity user da ton tai trong Keycloak/identity-service. Endpoint nay can `ADMIN` hoac `CENTER_MANAGER`.
+
+Best practice: khong dung endpoint nay de tao account dang nhap. Tao account qua identity-service truoc, lay `userId`, roi dung id do lam `id` trong body neu can tao profile truc tiep. Neu profile da duoc tao boi event, dung `PATCH /users/:id` va `PATCH /users/:id/license-tier` de bo sung thong tin.
 
 **Body**
 

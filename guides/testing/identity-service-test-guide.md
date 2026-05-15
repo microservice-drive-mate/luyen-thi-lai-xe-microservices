@@ -186,7 +186,7 @@ curl http://localhost:3001/private \
 ### 3.3 — Refresh token
 
 ```bash
-curl -X POST http://localhost:3001/auth/refresh \
+curl -X POST http://localhost:3001/refresh \
   -H "Content-Type: application/json" \
   -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
 ```
@@ -245,7 +245,7 @@ curl http://localhost:3001/private \
 ### 3.6 — Xác nhận refresh token bị revoke (không thể lấy token mới)
 
 ```bash
-curl -X POST http://localhost:3001/auth/refresh \
+curl -X POST http://localhost:3001/refresh \
   -H "Content-Type: application/json" \
   -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
 ```
@@ -258,7 +258,7 @@ curl -X POST http://localhost:3001/auth/refresh \
   "code": "UNAUTHORIZED",
   "message": "Refresh token không hợp lệ hoặc đã hết hạn",
   "timestamp": "...",
-  "path": "/auth/refresh"
+  "path": "/refresh"
 }
 ```
 
