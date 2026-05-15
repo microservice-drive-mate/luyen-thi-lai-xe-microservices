@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { HttpService } from '@nestjs/axios';
 import {
   Injectable,
@@ -186,7 +188,7 @@ export class AppService {
       };
     } catch {
       throw new UnauthorizedException(
-        'Refresh token không hợp lệ hoặc đã hết hạn',
+        'Refresh token is invalid or has expired. Please log in again',
       );
     }
   }

@@ -9,8 +9,8 @@
 1. [Khởi động môi trường](#1-khởi-động-môi-trường)
 2. [Cấu hình Keycloak Client](#2-cấu-hình-keycloak-client)
 3. [Test Auth Flow](#3-test-auth-flow)
-4. [Test Admin User Management](#4-test-admin-user-management)
-5. [Xác nhận Event Propagation](#5-xác-nhận-event-propagation)
+4. [Test Admin User Management](#4-test-admin-user-management) — create, list, get, update, delete, role, lock
+5. [Xác nhận Event Propagation](#5-xác-nhận-event-propagation) — created, updated, role-changed, locked, deleted
 6. [Test Token Blacklist (Redis)](#6-test-token-blacklist-redis)
 7. [Kiểm tra Redis trực tiếp](#7-kiểm-tra-redis-trực-tiếp)
 8. [Troubleshooting](#8-troubleshooting)
@@ -417,7 +417,66 @@ curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/lock" \
 }
 ```
 
-### 4.7 — Test không đủ quyền (dùng STUDENT token)
+### 4.7 — List users
+
+```bash
+curl "http://localhost:3001/admin/users" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**Kết quả mong đợi `200`:**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "data": {
+    "items": [{ "userId": "...", "email": "...", "role": "...", "isActive": true, "isDeleted": false }],
+    "total": 1,
+    "page": 1,
+    "size": 20
+  }
+}
+```
+
+Thử filter: `?role=STUDENT`, `?isActive=true`, `?search=student1`, `?includeDeleted=true`.
+
+### 4.8 — Get user by ID
+
+```bash
+curl "http://localhost:3001/admin/users/$USER_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**Kết quả mong đợi `200`:** object `IdentityUserResponseDto` với `userId`, `email`, `fullName`, `role`, `isActive`, `isDeleted`, `createdAt`, `updatedAt`.
+
+### 4.9 — Cập nhật user (email + fullName)
+
+```bash
+curl -X PATCH "http://localhost:3001/admin/users/$USER_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "student1-updated@gm.uit.edu.vn", "fullName": "Nguyễn Văn A (updated)"}'
+```
+
+**Kết quả mong đợi `200`:** object với `email` và `fullName` đã được cập nhật.
+
+> Sau bước này, user-service sẽ nhận event `identity.user.updated` và đồng bộ email/fullName trong `UserProfile`.
+
+### 4.10 — Soft delete user
+
+```bash
+curl -X DELETE "http://localhost:3001/admin/users/$USER_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"deletedById": "<admin_keycloak_id>"}'
+```
+
+**Kết quả mong đợi `200`:** object với `isDeleted: true`, `isActive: false`, `deletedAt` có giá trị.
+
+> Sau bước này, user-service nhận event `identity.user.deleted` và set `isActive = false` trong `UserProfile`.
+
+### 4.11 — Test không đủ quyền (dùng STUDENT token)
 
 ```bash
 # Tạo student token (nếu student đã đổi password)
@@ -487,7 +546,47 @@ curl "http://localhost:3002/users/$USER_ID" \
 
 **Kết quả mong đợi:** `"role": "INSTRUCTOR"`, `"studentDetail": null`
 
-### 5.3 — Theo dõi RabbitMQ events
+### 5.3 — Kiểm tra event identity.user.updated
+
+Sau bước 4.9 (cập nhật email + fullName):
+
+```bash
+curl "http://localhost:3002/users/$USER_ID" \
+  -H "x-user-id: <admin_keycloak_id>" \
+  -H "x-user-role: ADMIN"
+```
+
+**Kết quả mong đợi:** `"email": "student1-updated@gm.uit.edu.vn"`, `"fullName": "Nguyễn Văn A (updated)"`.
+
+### 5.4 — Kiểm tra event identity.user.locked
+
+Sau bước 4.4 (lock user):
+
+```bash
+curl "http://localhost:3002/users/$USER_ID" \
+  -H "x-user-id: <admin_keycloak_id>" \
+  -H "x-user-role: ADMIN"
+```
+
+**Kết quả mong đợi:** `"isActive": false`.
+
+Sau bước 4.6 (unlock):
+
+**Kết quả mong đợi:** `"isActive": true`.
+
+### 5.5 — Kiểm tra event identity.user.deleted
+
+Sau bước 4.10 (soft delete):
+
+```bash
+curl "http://localhost:3002/users/$USER_ID" \
+  -H "x-user-id: <admin_keycloak_id>" \
+  -H "x-user-role: ADMIN"
+```
+
+**Kết quả mong đợi:** `"isActive": false` (profile bị deactivate nhưng vẫn tồn tại trong user-service).
+
+### 5.6 — Theo dõi RabbitMQ events
 
 Mở RabbitMQ Management: http://localhost:15672 (guest/guest)
 

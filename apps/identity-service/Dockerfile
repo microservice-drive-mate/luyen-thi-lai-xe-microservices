@@ -35,9 +35,8 @@ WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/identity-service/dist ./apps/identity-service/dist
 COPY --from=builder --chown=node:node /app/apps/identity-service/package.json ./apps/identity-service/
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json
 
 USER node
-CMD ["node", "apps/identity-service/dist/main.js"]
+CMD ["node", "apps/identity-service/dist/src/main.js"]

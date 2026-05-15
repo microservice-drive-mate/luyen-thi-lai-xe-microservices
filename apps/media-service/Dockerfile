@@ -28,8 +28,7 @@ WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/media-service/dist ./apps/media-service/dist
 COPY --from=builder --chown=node:node /app/apps/media-service/package.json ./apps/media-service/
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json
 USER node
-CMD ["node", "apps/media-service/dist/main.js"]
+CMD ["node", "apps/media-service/dist/src/main.js"]

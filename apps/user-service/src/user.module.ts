@@ -7,6 +7,7 @@ import { CreateUserProfileUseCase } from './application/use-cases/create-user-pr
 import { GetUserProfileUseCase } from './application/use-cases/get-user-profile/get-user-profile.use-case';
 import { ListUsersUseCase } from './application/use-cases/list-users/list-users.use-case';
 import { LockUserUseCase } from './application/use-cases/lock-user/lock-user.use-case';
+import { SyncUserIdentityUseCase } from './application/use-cases/sync-user-identity/sync-user-identity.use-case';
 import { SyncUserRoleUseCase } from './application/use-cases/sync-user-role/sync-user-role.use-case';
 import { UpdateUserProfileUseCase } from './application/use-cases/update-user-profile/update-user-profile.use-case';
 import { UserProfileRepository } from './domain/repositories/user-profile.repository';
@@ -68,6 +69,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     ListUsersUseCase,
     LockUserUseCase,
     AssignLicenseTierUseCase,
+    SyncUserIdentityUseCase,
     SyncUserRoleUseCase,
   ],
 })

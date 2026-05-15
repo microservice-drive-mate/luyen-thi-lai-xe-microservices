@@ -144,7 +144,7 @@ npm run dev --filter=identity-service
 curl -X POST http://localhost:8080/realms/luyen-thi-lai-xe-realm/protocol/openid-connect/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=nestjs-backend" \
-  -d "client_secret=FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ" \
+  -d "client_secret=${KEYCLOAK_CLIENT_SECRET}" \
   -d "grant_type=password" \
   -d "username=demo" \
   -d "password=demo"

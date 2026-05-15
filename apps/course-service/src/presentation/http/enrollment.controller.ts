@@ -8,7 +8,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { CompleteLessonCommand } from '../../application/use-cases/complete-lesson/complete-lesson.command';
 import { CompleteLessonUseCase } from '../../application/use-cases/complete-lesson/complete-lesson.use-case';
 import { GetEnrollmentQuery } from '../../application/use-cases/get-enrollment/get-enrollment.query';
@@ -21,7 +22,16 @@ import {
 } from '../dtos/enrollment.response.dto';
 import { ListEnrollmentsQueryDto } from '../dtos/list-enrollments.query.dto';
 
+interface JwtPayload {
+  sub?: string;
+}
+
+function resolveActorId(user: JwtPayload | undefined, headerUserId?: string) {
+  return user?.sub ?? headerUserId ?? '';
+}
+
 @ApiTags('Enrollments')
+@ApiBearerAuth()
 @Controller('enrollments')
 export class EnrollmentController {
   constructor(
@@ -31,19 +41,16 @@ export class EnrollmentController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Danh sách đăng ký của student hiện tại' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'ID của student (inject bởi Kong)',
-    required: true,
-  })
+  @Roles({ roles: ['realm:STUDENT'] })
+  @ApiOperation({ summary: 'List enrollments of the current student' })
   async listEnrollments(
-    @Headers('x-user-id') studentId: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
     @Query() query: ListEnrollmentsQueryDto,
   ): Promise<ListEnrollmentsResponseDto> {
     const result = await this.listStudentEnrollmentsUseCase.execute(
       new ListStudentEnrollmentsQuery(
-        studentId,
+        resolveActorId(user, headerUserId),
         query.page ?? 1,
         query.size ?? 20,
         query.status,
@@ -53,7 +60,8 @@ export class EnrollmentController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Chi tiết enrollment và tiến độ học' })
+  @Roles({ roles: ['realm:STUDENT', 'realm:ADMIN', 'realm:CENTER_MANAGER'] })
+  @ApiOperation({ summary: 'Get enrollment detail' })
   async getEnrollment(@Param('id') id: string): Promise<EnrollmentResponseDto> {
     const result = await this.getEnrollmentUseCase.execute(
       new GetEnrollmentQuery(id),
@@ -62,8 +70,9 @@ export class EnrollmentController {
   }
 
   @Post(':id/lessons/:lessonId/complete')
+  @Roles({ roles: ['realm:STUDENT'] })
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Đánh dấu hoàn thành bài học' })
+  @ApiOperation({ summary: 'Mark lesson as completed' })
   async completeLesson(
     @Param('id') enrollmentId: string,
     @Param('lessonId') lessonId: string,

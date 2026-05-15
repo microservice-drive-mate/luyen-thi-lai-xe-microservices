@@ -3,7 +3,7 @@ import {
   CourseStatus,
   LicenseCategory,
 } from '../../../domain/aggregates/course/course.types';
-import { Decimal } from '@prisma/course-client/runtime/library';
+import { Prisma } from '@prisma/course-client';
 
 export interface RawLessonRow {
   id: string;
@@ -45,7 +45,7 @@ export interface RawCourseRow {
   licenseCategory: string;
   totalLessons: number;
   duration: string | null;
-  tuitionFee: Decimal;
+  tuitionFee: Prisma.Decimal;
   capacity: number | null;
   status: string;
   createdById: string;

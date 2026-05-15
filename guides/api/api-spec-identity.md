@@ -3,8 +3,25 @@
 **Base URL qua Kong:** `http://localhost:8000`  
 **Direct local:** `http://localhost:3001`  
 **Swagger UI:** `http://localhost:3001/docs`  
+**Swagger UI qua Kong:** `http://localhost:8000/identity-service/docs`  
 **OpenAPI JSON:** `http://localhost:3001/docs-json`  
+**OpenAPI JSON qua Kong:** `http://localhost:8000/identity-service/docs-json`  
 **Version:** 1.0.0
+
+Qua Kong, auth business APIs dung prefix `/auth/*` cho login/logout va `/admin/*` cho admin APIs. Swagger/docs path la `/identity-service/docs`.
+
+| Direct local path             | Kong public path              |
+| ----------------------------- | ----------------------------- |
+| `POST /login`                 | `POST /auth/login`            |
+| `POST /logout`                | `POST /auth/logout`           |
+| `POST /auth/refresh`          | `POST /auth/auth/refresh`     |
+| `GET /admin/users`            | `GET /admin/users`            |
+| `GET /admin/users/:id`        | `GET /admin/users/:id`        |
+| `POST /admin/users`           | `POST /admin/users`           |
+| `PATCH /admin/users/:id`      | `PATCH /admin/users/:id`      |
+| `PATCH /admin/users/:id/role` | `PATCH /admin/users/:id/role` |
+| `PATCH /admin/users/:id/lock` | `PATCH /admin/users/:id/lock` |
+| `DELETE /admin/users/:id`     | `DELETE /admin/users/:id`     |
 
 ---
 
@@ -12,17 +29,21 @@
 
 Identity-service tích hợp Keycloak.
 
-| Endpoint | Auth hiện tại |
-|---|---|
-| `POST /login` | Public |
-| `POST /logout` | Public, nhưng cần access token trong `Authorization` header |
-| `POST /auth/refresh` | Public |
-| `GET /public` | Public, endpoint demo |
-| `GET /private` | JWT hợp lệ, endpoint demo |
-| `GET /admin-check` | `ADMIN`, endpoint demo |
-| `POST /admin/users` | `ADMIN`, `CENTER_MANAGER` |
-| `PATCH /admin/users/:id/role` | `ADMIN` |
-| `PATCH /admin/users/:id/lock` | `ADMIN`, `CENTER_MANAGER` |
+| Endpoint                      | Auth hiện tại                                               |
+| ----------------------------- | ----------------------------------------------------------- |
+| `POST /login`                 | Public                                                      |
+| `POST /logout`                | Public, nhưng cần access token trong `Authorization` header |
+| `POST /auth/refresh`          | Public                                                      |
+| `GET /admin/users`            | `ADMIN`, `CENTER_MANAGER`                                   |
+| `GET /admin/users/:id`        | `ADMIN`, `CENTER_MANAGER`                                   |
+| `GET /public`                 | Public, endpoint demo                                       |
+| `GET /private`                | JWT hợp lệ, endpoint demo                                   |
+| `GET /admin-check`            | `ADMIN`, endpoint demo                                      |
+| `POST /admin/users`           | `ADMIN`, `CENTER_MANAGER`                                   |
+| `PATCH /admin/users/:id`      | `ADMIN`                                                     |
+| `PATCH /admin/users/:id/role` | `ADMIN`                                                     |
+| `PATCH /admin/users/:id/lock` | `ADMIN`, `CENTER_MANAGER`                                   |
+| `DELETE /admin/users/:id`     | `ADMIN`                                                     |
 
 ---
 
@@ -57,15 +78,15 @@ Lỗi:
 
 ## Error Codes
 
-| HTTP | Code | Nguyên nhân |
-|---:|---|---|
-| 400 | `VALIDATION_ERROR` | Body không hợp lệ |
-| 400 | `BAD_REQUEST` | Keycloak/Admin operation bị từ chối dạng bad request |
-| 401 | `UNAUTHORIZED` | Sai credentials, token thiếu/hết hạn/không hợp lệ |
-| 403 | `FORBIDDEN` | Role không đủ quyền |
-| 404 | `IDENTITY_USER_NOT_FOUND` | Không tìm thấy identity user |
-| 409 | `IDENTITY_USER_ALREADY_EXISTS` | Identity user đã tồn tại |
-| 500 | `INTERNAL_ERROR` | Lỗi Keycloak hoặc lỗi server |
+| HTTP | Code                           | Nguyên nhân                                          |
+| ---: | ------------------------------ | ---------------------------------------------------- |
+|  400 | `VALIDATION_ERROR`             | Body không hợp lệ                                    |
+|  400 | `BAD_REQUEST`                  | Keycloak/Admin operation bị từ chối dạng bad request |
+|  401 | `UNAUTHORIZED`                 | Sai credentials, token thiếu/hết hạn/không hợp lệ    |
+|  403 | `FORBIDDEN`                    | Role không đủ quyền                                  |
+|  404 | `IDENTITY_USER_NOT_FOUND`      | Không tìm thấy identity user                         |
+|  409 | `IDENTITY_USER_ALREADY_EXISTS` | Identity user đã tồn tại                             |
+|  500 | `INTERNAL_ERROR`               | Lỗi Keycloak hoặc lỗi server                         |
 
 ---
 
@@ -92,10 +113,10 @@ Lỗi:
 }
 ```
 
-| Field | Type | Required | Validation |
-|---|---|---|---|
-| `username` | string | Yes | Non-empty |
-| `password` | string | Yes | Non-empty |
+| Field      | Type   | Required | Validation |
+| ---------- | ------ | -------- | ---------- |
+| `username` | string | Yes      | Non-empty  |
+| `password` | string | Yes      | Non-empty  |
 
 **Response `200 OK`**
 
@@ -205,12 +226,12 @@ Tạo user trong Keycloak, assign realm role, lưu record vào `identity_users`,
 }
 ```
 
-| Field | Type | Required | Validation |
-|---|---|---|---|
-| `email` | string | Yes | Email |
-| `fullName` | string | Yes | Non-empty |
-| `role` | UserRole | Yes | Enum |
-| `temporaryPassword` | string | Yes | Min length 8 |
+| Field               | Type     | Required | Validation   |
+| ------------------- | -------- | -------- | ------------ |
+| `email`             | string   | Yes      | Email        |
+| `fullName`          | string   | Yes      | Non-empty    |
+| `role`              | UserRole | Yes      | Enum         |
+| `temporaryPassword` | string   | Yes      | Min length 8 |
 
 **Response `201 Created`**
 
@@ -229,6 +250,45 @@ Tạo user trong Keycloak, assign realm role, lưu record vào `identity_users`,
 ```
 
 **Event published:** `identity.user.created`.
+
+---
+
+### GET `/admin/users`
+
+List identity users trong `identity_db`.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Query:** `page`, `size`, `role`, `isActive`, `includeDeleted`, `search`.
+
+**Response `200 OK`:** `data` gom `{ items, total, page, size }`.
+
+---
+
+### GET `/admin/users/:id`
+
+Lay chi tiet identity user.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Response `200 OK`:** `data` la `IdentityUserResponse`.
+
+---
+
+### PATCH `/admin/users/:id`
+
+Cap nhat identity user tren Keycloak va `identity_db`.
+
+**Auth:** `ADMIN`
+
+```json
+{
+  "email": "new-email@example.com",
+  "fullName": "New Name"
+}
+```
+
+**Event published:** `identity.user.updated`.
 
 ---
 
@@ -277,9 +337,9 @@ Khóa/mở khóa tài khoản trong Keycloak bằng cách set `enabled = !locked
 }
 ```
 
-| Field | Type | Required |
-|---|---|---|
-| `locked` | boolean | Yes |
+| Field    | Type    | Required |
+| -------- | ------- | -------- |
+| `locked` | boolean | Yes      |
 
 **Response `200 OK`**
 
@@ -298,15 +358,31 @@ Khóa/mở khóa tài khoản trong Keycloak bằng cách set `enabled = !locked
 
 ---
 
+### DELETE `/admin/users/:id`
+
+Soft delete identity user: disable account tren Keycloak, set `isDeleted=true`, `isActive=false`, `deletedAt` trong `identity_db`.
+
+**Auth:** `ADMIN`
+
+```json
+{
+  "deletedById": "admin-keycloak-user-id"
+}
+```
+
+**Event published:** `identity.user.deleted`.
+
+---
+
 ## Demo Endpoints
 
 Các endpoint sau đang tồn tại trong `AuthController`, chủ yếu dùng để kiểm thử guard:
 
-| Method | Path | Auth | Response |
-|---|---|---|---|
-| `GET` | `/public` | Public | `{ "message": "..." }` |
-| `GET` | `/private` | JWT | `{ "message": "..." }` |
-| `GET` | `/admin-check` | `ADMIN` | `{ "message": "..." }` |
+| Method | Path           | Auth    | Response               |
+| ------ | -------------- | ------- | ---------------------- |
+| `GET`  | `/public`      | Public  | `{ "message": "..." }` |
+| `GET`  | `/private`     | JWT     | `{ "message": "..." }` |
+| `GET`  | `/admin-check` | `ADMIN` | `{ "message": "..." }` |
 
 ---
 
@@ -314,11 +390,13 @@ Các endpoint sau đang tồn tại trong `AuthController`, chủ yếu dùng đ
 
 ### Published
 
-| Event | Destination | Trigger |
-|---|---|---|
-| `identity.user.created` | user-service + notification-service | `POST /admin/users` |
-| `identity.user.role-changed` | user-service | `PATCH /admin/users/:id/role` |
-| `identity.user.locked` | notification-service | `PATCH /admin/users/:id/lock` |
+| Event                        | Destination                         | Trigger                       |
+| ---------------------------- | ----------------------------------- | ----------------------------- |
+| `identity.user.created`      | user-service + notification-service | `POST /admin/users`           |
+| `identity.user.updated`      | user-service                        | `PATCH /admin/users/:id`      |
+| `identity.user.role-changed` | user-service                        | `PATCH /admin/users/:id/role` |
+| `identity.user.locked`       | user-service + notification-service | `PATCH /admin/users/:id/lock` |
+| `identity.user.deleted`      | user-service                        | `DELETE /admin/users/:id`     |
 
 #### `identity.user.created`
 
@@ -342,6 +420,17 @@ Các endpoint sau đang tồn tại trong `AuthController`, chủ yếu dùng đ
 }
 ```
 
+#### `identity.user.updated`
+
+```json
+{
+  "eventName": "identity.user.updated",
+  "userId": "keycloak-uuid",
+  "email": "new-email@example.com",
+  "fullName": "New Name"
+}
+```
+
 #### `identity.user.locked`
 
 ```json
@@ -352,14 +441,24 @@ Các endpoint sau đang tồn tại trong `AuthController`, chủ yếu dùng đ
 }
 ```
 
+#### `identity.user.deleted`
+
+```json
+{
+  "eventName": "identity.user.deleted",
+  "userId": "keycloak-uuid",
+  "deletedById": "admin-keycloak-user-id"
+}
+```
+
 ---
 
 ## Keycloak Client Prerequisites
 
 Client backend cần có:
 
-| Cấu hình | Giá trị |
-|---|---|
-| Service accounts | Enabled |
-| Realm management roles | `manage-users`, `view-realm` |
-| Realm roles | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
+| Cấu hình               | Giá trị                                            |
+| ---------------------- | -------------------------------------------------- |
+| Service accounts       | Enabled                                            |
+| Realm management roles | `manage-users`, `view-realm`                       |
+| Realm roles            | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |

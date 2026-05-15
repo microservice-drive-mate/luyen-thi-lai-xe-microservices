@@ -42,11 +42,20 @@ export class AzureBlobStorageProvider
 
   // Tự động tạo container nếu chưa tồn tại khi service khởi động
   async onModuleInit(): Promise<void> {
-    const containerClient = this.client.getContainerClient(this.containerName);
-    await containerClient.createIfNotExists();
-    this.logger.log(
-      `Azure Blob Storage ready — container: "${this.containerName}"`,
-    );
+    try {
+      const containerClient = this.client.getContainerClient(
+        this.containerName,
+      );
+      await containerClient.createIfNotExists();
+      this.logger.log(
+        `Azure Blob Storage ready — container: "${this.containerName}"`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `Azure Blob Storage is not reachable during startup: ${message}`,
+      );
+    }
   }
 
   async upload(key: string, buffer: Buffer, mimeType: string): Promise<void> {

@@ -21,7 +21,6 @@
     "prisma:generate": {
       "outputs": ["node_modules/.prisma/**"]
     },
-
     "dev": {
       "cache": false,
       "persistent": true

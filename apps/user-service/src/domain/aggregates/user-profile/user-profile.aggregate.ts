@@ -133,6 +133,11 @@ export class UserProfile extends AggregateRoot<string> {
     }
   }
 
+  syncIdentity(fullName: string, email: string): void {
+    this._fullName = fullName;
+    this._email = email;
+  }
+
   deactivate(): void {
     this._isActive = false;
   }

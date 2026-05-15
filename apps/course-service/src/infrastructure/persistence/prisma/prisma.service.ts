@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/course-client';
 
 @Injectable()
@@ -9,12 +10,10 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor(configService: ConfigService) {
+    const connectionString = configService.getOrThrow<string>('database.url');
+
     super({
-      datasources: {
-        db: {
-          url: configService.get<string>('database.url'),
-        },
-      },
+      adapter: new PrismaPg({ connectionString }),
     });
   }
 

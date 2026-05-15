@@ -19,6 +19,15 @@ interface KeycloakRoleRepresentation {
   name: string;
 }
 
+interface KeycloakUserRepresentation {
+  id: string;
+  username?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  enabled?: boolean;
+}
+
 @Injectable()
 export class KeycloakAdminService {
   private readonly logger = new Logger(KeycloakAdminService.name);
@@ -68,6 +77,52 @@ export class KeycloakAdminService {
     }
   }
 
+  async getUser(userId: string): Promise<KeycloakUserRepresentation> {
+    const token = await this.getAdminToken();
+    const url = `${this.adminBaseUrl}/users/${userId}`;
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.get<KeycloakUserRepresentation>(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleKeycloakError(error, 'getUser');
+    }
+  }
+
+  async updateUser(
+    userId: string,
+    fields: { email?: string; fullName?: string },
+  ): Promise<void> {
+    const token = await this.getAdminToken();
+    const existing = await this.getUser(userId);
+    const url = `${this.adminBaseUrl}/users/${userId}`;
+    const email = fields.email ?? existing.email;
+    const fullName = fields.fullName ?? this.joinName(existing);
+
+    try {
+      await lastValueFrom(
+        this.httpService.put(
+          url,
+          {
+            ...existing,
+            username: email,
+            email,
+            firstName: fullName,
+            lastName: '',
+          },
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      );
+      this.logger.log(`Updated Keycloak user ${userId}`);
+    } catch (error) {
+      this.handleKeycloakError(error, 'updateUser');
+    }
+  }
+
   /**
    * Gán realm role cho user (replace toàn bộ roles hiện tại).
    * Gồm 2 bước: lấy role representation → assign.
@@ -75,9 +130,21 @@ export class KeycloakAdminService {
   async assignRealmRole(userId: string, roleName: string): Promise<void> {
     const token = await this.getAdminToken();
     const role = await this.getRealmRole(roleName, token);
+    const currentRoles = await this.getUserRealmRoles(userId, token);
+    const managedRoles = currentRoles.filter((r) =>
+      ['ADMIN', 'CENTER_MANAGER', 'INSTRUCTOR', 'STUDENT'].includes(r.name),
+    );
 
     const url = `${this.adminBaseUrl}/users/${userId}/role-mappings/realm`;
     try {
+      if (managedRoles.length > 0) {
+        await lastValueFrom(
+          this.httpService.delete(url, {
+            headers: { Authorization: `Bearer ${token}` },
+            data: managedRoles,
+          }),
+        );
+      }
       await lastValueFrom(
         this.httpService.post(url, [role], {
           headers: { Authorization: `Bearer ${token}` },
@@ -190,6 +257,27 @@ export class KeycloakAdminService {
     }
   }
 
+  private async getUserRealmRoles(
+    userId: string,
+    token: string,
+  ): Promise<KeycloakRoleRepresentation[]> {
+    const url = `${this.adminBaseUrl}/users/${userId}/role-mappings/realm`;
+    try {
+      const response = await lastValueFrom(
+        this.httpService.get<KeycloakRoleRepresentation[]>(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleKeycloakError(error, 'getUserRealmRoles');
+    }
+  }
+
+  private joinName(user: KeycloakUserRepresentation): string {
+    return [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+  }
+
   private handleKeycloakError(error: unknown, operation: string): never {
     const axiosError = error as AxiosError<{ errorMessage?: string }>;
     const status = axiosError.response?.status;
@@ -202,6 +290,9 @@ export class KeycloakAdminService {
       throw new BadRequestException(
         'User with this email already exists in Keycloak',
       );
+    }
+    if (status === 404) {
+      throw new BadRequestException('User not found in Keycloak');
     }
     if (status === 400) {
       throw new BadRequestException(`Invalid request to Keycloak: ${message}`);

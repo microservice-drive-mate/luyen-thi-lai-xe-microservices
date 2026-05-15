@@ -1,7 +1,17 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { ConsulConfigFactory } from '@repo/common';
 import Joi from 'joi';
+import {
+  AuthGuard,
+  KeycloakConnectModule,
+  KeycloakConnectOptions,
+  PolicyEnforcementMode,
+  ResourceGuard,
+  RoleGuard,
+  TokenValidation,
+} from 'nest-keycloak-connect';
 import { MediaModule } from './media.module';
 
 @Module({
@@ -25,6 +35,12 @@ import { MediaModule } from './media.module';
             rabbitmq: Joi.object({
               url: Joi.string().required(),
             }).optional(),
+            keycloak: Joi.object({
+              authServerUrl: Joi.string().required(),
+              realm: Joi.string().required(),
+              clientId: Joi.string().required(),
+              clientSecret: Joi.string().optional(),
+            }).required(),
             storage: Joi.object({
               accountName: Joi.string().required(),
               accountKey: Joi.string().required(),
@@ -37,7 +53,25 @@ import { MediaModule } from './media.module';
       ],
       isGlobal: true,
     }),
+    KeycloakConnectModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService): KeycloakConnectOptions => ({
+        authServerUrl: configService.getOrThrow<string>(
+          'keycloak.authServerUrl',
+        ),
+        realm: configService.getOrThrow<string>('keycloak.realm'),
+        clientId: configService.getOrThrow<string>('keycloak.clientId'),
+        secret: configService.get<string>('keycloak.clientSecret') ?? '',
+        policyEnforcement: PolicyEnforcementMode.PERMISSIVE,
+        tokenValidation: TokenValidation.OFFLINE,
+      }),
+    }),
     MediaModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RoleGuard },
+    { provide: APP_GUARD, useClass: ResourceGuard },
   ],
 })
 export class AppModule {}

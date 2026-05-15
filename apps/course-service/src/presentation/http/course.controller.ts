@@ -11,7 +11,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { ActivateCourseCommand } from '../../application/use-cases/activate-course/activate-course.command';
 import { ActivateCourseUseCase } from '../../application/use-cases/activate-course/activate-course.use-case';
 import { AddCourseMaterialCommand } from '../../application/use-cases/add-course-material/add-course-material.command';
@@ -37,11 +38,20 @@ import {
   ListCoursesResponseDto,
 } from '../dtos/course.response.dto';
 import { CreateCourseRequestDto } from '../dtos/create-course.request.dto';
+import { EnrollmentResponseDto } from '../dtos/enrollment.response.dto';
 import { ListCoursesQueryDto } from '../dtos/list-courses.query.dto';
 import { UpdateCourseRequestDto } from '../dtos/update-course.request.dto';
-import { EnrollmentResponseDto } from '../dtos/enrollment.response.dto';
+
+interface JwtPayload {
+  sub?: string;
+}
+
+function resolveActorId(user: JwtPayload | undefined, headerUserId?: string) {
+  return user?.sub ?? headerUserId ?? '';
+}
 
 @ApiTags('Courses')
+@ApiBearerAuth()
 @Controller('courses')
 export class CourseController {
   constructor(
@@ -57,20 +67,19 @@ export class CourseController {
   ) {}
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Tạo khóa học mới' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'ID của người tạo (inject bởi Kong)',
-    required: true,
+  @Roles({
+    roles: ['realm:ADMIN', 'realm:CENTER_MANAGER', 'realm:INSTRUCTOR'],
   })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create course' })
   async createCourse(
-    @Headers('x-user-id') createdById: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
     @Body() dto: CreateCourseRequestDto,
   ): Promise<CourseResponseDto> {
     const result = await this.createCourseUseCase.execute(
       new CreateCourseCommand(
-        createdById,
+        resolveActorId(user, headerUserId),
         dto.title,
         dto.licenseCategory,
         dto.description,
@@ -85,7 +94,7 @@ export class CourseController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Danh sách khóa học (có phân trang và lọc)' })
+  @ApiOperation({ summary: 'List courses' })
   async listCourses(
     @Query() query: ListCoursesQueryDto,
   ): Promise<ListCoursesResponseDto> {
@@ -101,14 +110,17 @@ export class CourseController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Chi tiết khóa học' })
+  @ApiOperation({ summary: 'Get course detail' })
   async getCourse(@Param('id') id: string): Promise<CourseResponseDto> {
     const result = await this.getCourseUseCase.execute(new GetCourseQuery(id));
     return CourseResponseDto.fromResult(result);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Cập nhật khóa học' })
+  @Roles({
+    roles: ['realm:ADMIN', 'realm:CENTER_MANAGER', 'realm:INSTRUCTOR'],
+  })
+  @ApiOperation({ summary: 'Update course' })
   async updateCourse(
     @Param('id') id: string,
     @Body() dto: UpdateCourseRequestDto,
@@ -128,7 +140,8 @@ export class CourseController {
   }
 
   @Patch(':id/activate')
-  @ApiOperation({ summary: 'Kích hoạt khóa học (DRAFT → ACTIVE)' })
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
+  @ApiOperation({ summary: 'Activate course' })
   async activateCourse(@Param('id') id: string): Promise<CourseResponseDto> {
     const result = await this.activateCourseUseCase.execute(
       new ActivateCourseCommand(id),
@@ -137,8 +150,11 @@ export class CourseController {
   }
 
   @Post(':id/lessons')
+  @Roles({
+    roles: ['realm:ADMIN', 'realm:CENTER_MANAGER', 'realm:INSTRUCTOR'],
+  })
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Thêm bài học vào khóa học' })
+  @ApiOperation({ summary: 'Add lesson to course' })
   async addLesson(
     @Param('id') courseId: string,
     @Body() dto: AddLessonRequestDto,
@@ -150,7 +166,10 @@ export class CourseController {
   }
 
   @Delete(':id/lessons/:lessonId')
-  @ApiOperation({ summary: 'Xóa bài học khỏi khóa học' })
+  @Roles({
+    roles: ['realm:ADMIN', 'realm:CENTER_MANAGER', 'realm:INSTRUCTOR'],
+  })
+  @ApiOperation({ summary: 'Remove lesson from course' })
   async removeLesson(
     @Param('id') courseId: string,
     @Param('lessonId') lessonId: string,
@@ -162,8 +181,11 @@ export class CourseController {
   }
 
   @Post(':id/materials')
+  @Roles({
+    roles: ['realm:ADMIN', 'realm:CENTER_MANAGER', 'realm:INSTRUCTOR'],
+  })
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Thêm tài liệu học tập' })
+  @ApiOperation({ summary: 'Add course material' })
   async addMaterial(
     @Param('id') courseId: string,
     @Body() dto: AddCourseMaterialRequestDto,
@@ -181,19 +203,16 @@ export class CourseController {
   }
 
   @Post(':id/enroll')
+  @Roles({ roles: ['realm:STUDENT'] })
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Đăng ký khóa học (student tự đăng ký)' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'ID của student (inject bởi Kong)',
-    required: true,
-  })
+  @ApiOperation({ summary: 'Enroll current student in course' })
   async enroll(
     @Param('id') courseId: string,
-    @Headers('x-user-id') studentId: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
   ): Promise<EnrollmentResponseDto> {
     const result = await this.enrollStudentUseCase.execute(
-      new EnrollStudentCommand(courseId, studentId),
+      new EnrollStudentCommand(courseId, resolveActorId(user, headerUserId)),
     );
     return EnrollmentResponseDto.fromResult(result);
   }

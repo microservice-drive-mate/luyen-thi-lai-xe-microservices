@@ -4,8 +4,12 @@
 **Service path:** `/users`  
 **Direct local:** `http://localhost:3002`  
 **Swagger UI:** `http://localhost:3002/docs`  
+**Swagger UI qua Kong:** `http://localhost:8000/user-service/docs`  
 **OpenAPI JSON:** `http://localhost:3002/docs-json`  
+**OpenAPI JSON qua Kong:** `http://localhost:8000/user-service/docs-json`  
 **Version:** 1.0.0
+
+Business API path la `/users/*`; Swagger/docs path la `/user-service/docs`.
 
 ---
 
@@ -13,18 +17,26 @@
 
 User-service dùng `nest-keycloak-connect`.
 
-| Endpoint | Auth hiện tại trong code |
-|---|---|
-| `POST /users` | `@Public()` |
-| `GET /users` | `ADMIN`, `CENTER_MANAGER` |
-| `GET /users/me` | JWT hợp lệ |
-| `GET /users/:id` | `ADMIN`, `CENTER_MANAGER` |
-| `PATCH /users/me` | JWT hợp lệ |
-| `PATCH /users/:id` | `ADMIN` |
-| `PATCH /users/:id/lock` | `ADMIN`, `CENTER_MANAGER` |
+| Endpoint                        | Auth hiện tại trong code  |
+| ------------------------------- | ------------------------- |
+| `GET /users`                    | `ADMIN`, `CENTER_MANAGER` |
+| `GET /users/me`                 | JWT hợp lệ                |
+| `GET /users/:id`                | `ADMIN`, `CENTER_MANAGER` |
+| `PATCH /users/me`               | JWT hợp lệ                |
+| `PATCH /users/:id`              | `ADMIN`                   |
+| `PATCH /users/:id/lock`         | `ADMIN`, `CENTER_MANAGER` |
 | `PATCH /users/:id/license-tier` | `ADMIN`, `CENTER_MANAGER` |
 
 Các endpoint `me` và `license-tier` lấy user hiện tại từ `@AuthenticatedUser()` (`sub` trong JWT), không đọc trực tiếp `x-user-id`.
+User profile khong con duoc tao qua HTTP `POST /users`. Profile duoc tao/cap nhat/dong bo trang thai bang RabbitMQ events tu identity-service:
+
+| Event                        | User-service behavior                              |
+| ---------------------------- | -------------------------------------------------- |
+| `identity.user.created`      | Tao `UserProfile` idempotent theo Keycloak user id |
+| `identity.user.updated`      | Dong bo `email`, `fullName`                        |
+| `identity.user.role-changed` | Dong bo role va tao/xoa `StudentDetail` neu can    |
+| `identity.user.locked`       | Set `isActive = !locked`                           |
+| `identity.user.deleted`      | Soft-deactivate profile bang `isActive = false`    |
 
 ---
 
@@ -57,14 +69,14 @@ Lỗi domain:
 
 ## Error Codes
 
-| HTTP | Code | Nguyên nhân |
-|---:|---|---|
-| 400 | `VALIDATION_ERROR` | Body/query không hợp lệ |
-| 401 | `UNAUTHORIZED` | Thiếu hoặc sai JWT |
-| 403 | `FORBIDDEN` | Role không đủ quyền |
-| 404 | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user profile |
-| 409 | `USER_ALREADY_EXISTS` | User/email đã tồn tại |
-| 422 | `USER_NOT_STUDENT` | Thao tác chỉ áp dụng cho user role `STUDENT` |
+| HTTP | Code                     | Nguyên nhân                                  |
+| ---: | ------------------------ | -------------------------------------------- |
+|  400 | `VALIDATION_ERROR`       | Body/query không hợp lệ                      |
+|  401 | `UNAUTHORIZED`           | Thiếu hoặc sai JWT                           |
+|  403 | `FORBIDDEN`              | Role không đủ quyền                          |
+|  404 | `USER_PROFILE_NOT_FOUND` | Không tìm thấy user profile                  |
+|  409 | `USER_ALREADY_EXISTS`    | User/email đã tồn tại                        |
+|  422 | `USER_NOT_STUDENT`       | Thao tác chỉ áp dụng cho user role `STUDENT` |
 
 ---
 
@@ -139,20 +151,20 @@ Tạo user profile. Endpoint đang `@Public()` để identity-service/RabbitMQ f
 }
 ```
 
-| Field | Type | Required | Validation |
-|---|---|---|---|
-| `id` | string | Yes | Non-empty string |
-| `fullName` | string | Yes | Non-empty |
-| `email` | string | Yes | Email |
-| `role` | UserRole | Yes | Enum |
-| `phoneNumber` | string | No | Regex `^(0|\+84)[3-9]\d{8}$` |
-| `dateOfBirth` | date | No | Converted by `class-transformer` |
-| `gender` | Gender | No | Enum |
-| `address` | string | No | - |
-| `avatarUrl` | string | No | URL |
-| `mediaFileId` | string | No | UUID |
-| `licenseTier` | LicenseTier | No | Enum |
-| `enrolledAt` | date | No | Converted by `class-transformer` |
+| Field         | Type        | Required | Validation                       |
+| ------------- | ----------- | -------- | -------------------------------- | ----------------- |
+| `id`          | string      | Yes      | Non-empty string                 |
+| `fullName`    | string      | Yes      | Non-empty                        |
+| `email`       | string      | Yes      | Email                            |
+| `role`        | UserRole    | Yes      | Enum                             |
+| `phoneNumber` | string      | No       | Regex `^(0                       | \+84)[3-9]\d{8}$` |
+| `dateOfBirth` | date        | No       | Converted by `class-transformer` |
+| `gender`      | Gender      | No       | Enum                             |
+| `address`     | string      | No       | -                                |
+| `avatarUrl`   | string      | No       | URL                              |
+| `mediaFileId` | string      | No       | UUID                             |
+| `licenseTier` | LicenseTier | No       | Enum                             |
+| `enrolledAt`  | date        | No       | Converted by `class-transformer` |
 
 **Response `201 Created`**
 
@@ -180,13 +192,13 @@ Danh sách user có phân trang và filter.
 
 **Query**
 
-| Param | Type | Default | Validation |
-|---|---|---:|---|
-| `page` | number | 1 | integer, `>= 1` |
-| `size` | number | 20 | integer, `1..100` |
-| `role` | UserRole | - | enum |
-| `isActive` | boolean | - | boolean |
-| `search` | string | - | optional |
+| Param      | Type     | Default | Validation        |
+| ---------- | -------- | ------: | ----------------- |
+| `page`     | number   |       1 | integer, `>= 1`   |
+| `size`     | number   |      20 | integer, `1..100` |
+| `role`     | UserRole |       - | enum              |
+| `isActive` | boolean  |       - | boolean           |
+| `search`   | string   |       - | optional          |
 
 **Response `200 OK`**
 
@@ -244,16 +256,16 @@ Cập nhật profile của user đang đăng nhập. `userId = JWT.sub`.
 }
 ```
 
-| Field | Type | Validation |
-|---|---|---|
-| `fullName` | string | optional |
-| `phoneNumber` | string | Regex `^(0|\+84)[3-9]\d{8}$` |
-| `dateOfBirth` | date | converted |
-| `gender` | Gender | enum |
-| `address` | string | optional |
-| `avatarUrl` | string | URL |
-| `mediaFileId` | string | UUID |
-| `notes` | string | optional |
+| Field         | Type   | Validation |
+| ------------- | ------ | ---------- | ----------------- |
+| `fullName`    | string | optional   |
+| `phoneNumber` | string | Regex `^(0 | \+84)[3-9]\d{8}$` |
+| `dateOfBirth` | date   | converted  |
+| `gender`      | Gender | enum       |
+| `address`     | string | optional   |
+| `avatarUrl`   | string | URL        |
+| `mediaFileId` | string | UUID       |
+| `notes`       | string | optional   |
 
 **Response `200 OK`:** `data` là profile sau khi cập nhật.
 
@@ -284,9 +296,9 @@ Khóa hoặc mở khóa user profile trong user-service.
 { "lock": true }
 ```
 
-| Field | Type | Required | Mô tả |
-|---|---|---|---|
-| `lock` | boolean | Yes | `true` = khóa/deactivate, `false` = mở khóa/activate |
+| Field  | Type    | Required | Mô tả                                                |
+| ------ | ------- | -------- | ---------------------------------------------------- |
+| `lock` | boolean | Yes      | `true` = khóa/deactivate, `false` = mở khóa/activate |
 
 **Response `204 No Content`**
 
@@ -355,6 +367,43 @@ Tạo `UserProfile`; nếu role là `STUDENT` thì tạo `StudentDetail`.
 ```
 
 Đồng bộ role cho `UserProfile`; tạo hoặc xóa `StudentDetail` tùy role mới.
+
+### `identity.user.updated`
+
+```json
+{
+  "eventName": "identity.user.updated",
+  "userId": "keycloak-uuid",
+  "email": "new-email@example.com",
+  "fullName": "New Name"
+}
+```
+
+Dong bo `email` va `fullName` cho `UserProfile`.
+
+### `identity.user.locked`
+
+```json
+{
+  "eventName": "identity.user.locked",
+  "userId": "keycloak-uuid",
+  "locked": true
+}
+```
+
+Set `isActive = !locked`.
+
+### `identity.user.deleted`
+
+```json
+{
+  "eventName": "identity.user.deleted",
+  "userId": "keycloak-uuid",
+  "deletedById": "admin-keycloak-user-id"
+}
+```
+
+Soft-deactivate profile bang `isActive = false`.
 
 ### `media.file.deleted`
 

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ========================================================
   # 1. CÁC CƠ SỞ DỮ LIỆU (Mỗi Service một DB riêng)
@@ -33,6 +31,11 @@ services:
       - "5433:5432"
     volumes:
       - db_user_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d user_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Database cho Exam Service (Quản lý các kỳ thi, kết quả thi)
   db-exam:
@@ -45,6 +48,11 @@ services:
       - "5434:5432"
     volumes:
       - db_exam_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d exam_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Database cho Course Service (Quản lý khóa học, bài học)
   db-course:
@@ -57,6 +65,11 @@ services:
       - "5435:5432"
     volumes:
       - db_course_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d course_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Database cho Question Service (Quản lý ngân hàng câu hỏi)
   db-question:
@@ -69,6 +82,11 @@ services:
       - "5436:5432"
     volumes:
       - db_question_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d question_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Database cho Notification Service (Lưu lịch sử thông báo)
   db-notification:
@@ -81,6 +99,11 @@ services:
       - "5437:5432"
     volumes:
       - db_notification_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d notification_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Database cho Analytics Service (Thống kê, báo cáo dữ liệu)
   db-analytics:
@@ -93,6 +116,11 @@ services:
       - "5438:5432"
     volumes:
       - db_analytics_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d analytics_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Database cho Simulation Service (Mô phỏng các tình huống lái xe)
   db-simulation:
@@ -105,6 +133,11 @@ services:
       - "5439:5432"
     volumes:
       - db_simulation_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d simulation_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Database cho Media Service (Metadata của file lưu trên R2)
   db-media:
@@ -117,15 +150,43 @@ services:
       - "5440:5432"
     volumes:
       - db_media_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d media_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # ========================================================
   # 2. MESSAGE BROKER (Giao tiếp liên dịch vụ)
   # ========================================================
   rabbitmq:
     image: rabbitmq:3-management-alpine
+    hostname: rabbitmq
+    entrypoint: ["/bin/sh", "-lc"]
+    command: >
+      "export PATH=/opt/rabbitmq/sbin:/opt/erlang/bin:/opt/openssl/bin:$$PATH &&
+      mkdir -p /var/lib/rabbitmq &&
+      printf '%s' \"$$RABBITMQ_ERLANG_COOKIE\" > /var/lib/rabbitmq/.erlang.cookie &&
+      chown -R rabbitmq:rabbitmq /var/lib/rabbitmq &&
+      chmod 700 /var/lib/rabbitmq &&
+      chmod 600 /var/lib/rabbitmq/.erlang.cookie &&
+      exec docker-entrypoint.sh /opt/rabbitmq/sbin/rabbitmq-server"
+    environment:
+      RABBITMQ_NODENAME: rabbit@rabbitmq
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_ERLANG_COOKIE: luyen-thi-lai-xe-rabbitmq-cookie
     ports:
       - "5672:5672"   # Port cho ứng dụng kết nối
       - "15672:15672" # Port cho giao diện quản lý (Web UI)
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
   # ========================================================
   # 2.5 CONFIG SERVER (CONSUL)
   # ========================================================
@@ -153,6 +214,11 @@ services:
       - ./docker/consul/init.sh:/consul/init.sh:ro
     environment:
       CONSUL_URL: http://consul:8500
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me}
+      STORAGE_ACCOUNT_NAME: ${STORAGE_ACCOUNT_NAME:-}
+      STORAGE_ACCOUNT_KEY: ${STORAGE_ACCOUNT_KEY:-}
+      STORAGE_CONTAINER_NAME: ${STORAGE_CONTAINER_NAME:-media}
+      STORAGE_PRESIGNED_URL_EXPIRY: ${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
     depends_on:
       consul:
         condition: service_healthy
@@ -170,6 +236,12 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-identity:5432/identity_db
       - CONSUL_URL=http://consul:8500
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - REDIS_URL=redis://redis:6379
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
+      - KEYCLOAK_CLIENT_ID=nestjs-backend
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
       - LOGSTASH_HOST=logstash
     ports:
       - "3001:3000"
@@ -180,6 +252,11 @@ services:
         condition: service_healthy
       consul-init:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   user-service:
     build:
       context: .
@@ -187,11 +264,22 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-user:5432/user_db
       - CONSUL_URL=http://consul:8500
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
+      - KEYCLOAK_CLIENT_ID=nestjs-backend
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
     ports:
       - "3002:3000"
     depends_on:
-      - db-user
-      - consul
+      db-user:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   exam-service:
     build:
@@ -200,11 +288,18 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-exam:5432/exam_db
       - CONSUL_URL=http://consul:8500
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     ports:
       - "3003:3000"
     depends_on:
-      - db-exam
-      - consul
+      db-exam:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   course-service:
     build:
@@ -213,11 +308,22 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-course:5432/course_db
       - CONSUL_URL=http://consul:8500
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
+      - KEYCLOAK_CLIENT_ID=nestjs-backend
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
     ports:
       - "3004:3000"
     depends_on:
-      - db-course
-      - consul
+      db-course:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   question-service:
     build:
@@ -226,11 +332,22 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-question:5432/question_db
       - CONSUL_URL=http://consul:8500
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
+      - KEYCLOAK_CLIENT_ID=nestjs-backend
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
     ports:
       - "3005:3000"
     depends_on:
-      - db-question
-      - consul
+      db-question:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   notification-service:
     build:
@@ -239,11 +356,18 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-notification:5432/notification_db
       - CONSUL_URL=http://consul:8500
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     ports:
       - "3006:3000"
     depends_on:
-      - db-notification
-      - consul
+      db-notification:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   analytics-service:
     build:
@@ -252,11 +376,18 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-analytics:5432/analytics_db
       - CONSUL_URL=http://consul:8500
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     ports:
       - "3007:3000"
     depends_on:
-      - db-analytics
-      - consul
+      db-analytics:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
   simulation-service:
     build:
       context: .
@@ -264,11 +395,18 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-simulation:5432/simulation_db
       - CONSUL_URL=http://consul:8500
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     ports:
       - "3008:3000"
     depends_on:
-      - db-simulation
-      - consul
+      db-simulation:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   media-service:
     build:
@@ -277,9 +415,26 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-media:5432/media_db
       - CONSUL_URL=http://consul:8500
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
+      - KEYCLOAK_CLIENT_ID=nestjs-backend
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+      - STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME:-}
+      - STORAGE_ACCOUNT_KEY=${STORAGE_ACCOUNT_KEY:-}
+      - STORAGE_CONTAINER_NAME=${STORAGE_CONTAINER_NAME:-media}
+      - STORAGE_PRESIGNED_URL_EXPIRY=${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
+    ports:
+      - "3010:3000"
     depends_on:
-      - db-media
-      - consul
+      db-media:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   # ========================================================
   # 4. API GATEWAY (KONG)
@@ -343,6 +498,11 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - db_keycloak_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Keycloak Service
   keycloak:
@@ -361,7 +521,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - db-keycloak
+      db-keycloak:
+        condition: service_healthy
 
   # ========================================================
   # 6. TOKEN BLACKLIST CACHE (Redis)
@@ -389,6 +550,7 @@ volumes:
   db_simulation_data:
   db_media_data:
   consul_data:
+  rabbitmq_data:
   elasticsearch_data:
   db_keycloak_data:
   redis_data:

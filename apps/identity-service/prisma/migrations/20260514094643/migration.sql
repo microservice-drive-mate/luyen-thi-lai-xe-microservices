@@ -1,0 +1,3 @@
+-- No-op.
+-- The role column is introduced in the following migration
+-- `20260514160000_identity_user_lifecycle`.

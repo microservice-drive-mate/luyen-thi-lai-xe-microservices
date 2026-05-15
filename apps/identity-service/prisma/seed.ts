@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/identity-client';
 
 const prisma = new PrismaClient();
 
@@ -13,6 +13,7 @@ async function main() {
       id: ADMIN_KEYCLOAK_ID,
       email: 'admin@test.com',
       name: 'Admin Test',
+      role: 'ADMIN',
     },
   });
 
