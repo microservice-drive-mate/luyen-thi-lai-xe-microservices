@@ -82,12 +82,15 @@ jobs:
             user-service:
               - 'apps/user-service/**'
               - 'packages/**'
+            media-service:
+              - 'apps/media-service/**'
+              - 'packages/**'
 
       - name: Build matrix
         id: set-matrix
         run: |
           CHANGED='${{ steps.filter.outputs.changes }}'
-          ALL_SERVICES='["identity-service","analytics-service","course-service","exam-service","notification-service","question-service","simulation-service","user-service"]'
+          ALL_SERVICES='["identity-service","analytics-service","course-service","exam-service","notification-service","question-service","simulation-service","user-service","media-service"]'
           SERVICES="[]"
 
           for SERVICE in $(echo $ALL_SERVICES | jq -rc '.[]'); do
@@ -99,15 +102,13 @@ jobs:
               continue
             fi
 
-            if [[ "${{ github.event_name }}" == "push" ]]; then
-              HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                "https://ghcr.io/v2/${{ github.repository_owner }}/luyen-thi-lai-xe-$SERVICE/manifests/latest")
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://ghcr.io/v2/${{ github.repository_owner }}/luyen-thi-lai-xe-$SERVICE/manifests/latest")
 
-              if [ "$HTTP_STATUS" != "200" ]; then
-                echo "$SERVICE: image missing on GHCR -> build"
-                SERVICES=$(echo $SERVICES | jq -rc --arg s "$SERVICE" '. + [$s]')
-              fi
+            if [ "$HTTP_STATUS" != "200" ]; then
+              echo "$SERVICE: image missing on GHCR -> build"
+              SERVICES=$(echo $SERVICES | jq -rc --arg s "$SERVICE" '. + [$s]')
             fi
           done
 
@@ -174,16 +175,39 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & Push Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./apps/${{ matrix.service }}/Dockerfile
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest
-            ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          OUTPUT_FLAG="--load"
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            OUTPUT_FLAG="--push"
+          fi
+
+          for attempt in 1 2 3; do
+            echo "Docker build attempt $attempt/3 for ${{ matrix.service }}"
+
+            if docker buildx build \
+              --file "./apps/${{ matrix.service }}/Dockerfile" \
+              --tag "ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest" \
+              --tag "ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}" \
+              --cache-from "type=gha,scope=${{ matrix.service }}" \
+              --cache-to "type=gha,mode=max,scope=${{ matrix.service }}" \
+              --provenance=false \
+              "$OUTPUT_FLAG" \
+              .; then
+              exit 0
+            fi
+
+            if [[ "$attempt" == "3" ]]; then
+              echo "Docker build failed after 3 attempts"
+              exit 1
+            fi
+
+            sleep_seconds=$((attempt * 30))
+            echo "Docker build failed, retrying in ${sleep_seconds}s..."
+            sleep "$sleep_seconds"
+          done
 
       - name: Get image size
         id: size
