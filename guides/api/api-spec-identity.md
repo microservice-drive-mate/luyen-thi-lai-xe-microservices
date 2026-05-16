@@ -8,13 +8,14 @@
 **OpenAPI JSON qua Kong:** `http://localhost:8000/identity-service/docs-json`  
 **Version:** 1.0.0
 
-Qua Kong, auth business APIs dùng prefix `/auth/*` cho login/logout/refresh và `/admin/*` cho admin APIs. Swagger/docs path là `/identity-service/docs`.
+Qua Kong, auth business APIs dùng prefix `/auth/*` cho login/logout/refresh/forgot-password và `/admin/*` cho admin APIs. Swagger/docs path là `/identity-service/docs`.
 
 | Direct local path             | Kong public path              |
 | ----------------------------- | ----------------------------- |
 | `POST /login`                 | `POST /auth/login`            |
 | `POST /logout`                | `POST /auth/logout`           |
 | `POST /refresh`               | `POST /auth/refresh`          |
+| `POST /forgot-password`       | `POST /auth/forgot-password`  |
 | `GET /admin/users`            | `GET /admin/users`            |
 | `GET /admin/users/:id`        | `GET /admin/users/:id`        |
 | `POST /admin/users`           | `POST /admin/users`           |
@@ -34,6 +35,7 @@ Identity-service tích hợp Keycloak.
 | `POST /login`                 | Public                                                      |
 | `POST /logout`                | Public, nhưng cần access token trong `Authorization` header |
 | `POST /refresh`               | Public                                                      |
+| `POST /forgot-password`       | Public                                                      |
 | `GET /admin/users`            | `ADMIN`, `CENTER_MANAGER`                                   |
 | `GET /admin/users/:id`        | `ADMIN`, `CENTER_MANAGER`                                   |
 | `GET /public`                 | Public, endpoint demo                                       |
@@ -204,6 +206,74 @@ Lấy token mới bằng refresh token.
   "success": false,
   "code": "UNAUTHORIZED",
   "message": "Refresh token không hợp lệ hoặc đã hết hạn"
+}
+```
+
+---
+
+### POST `/forgot-password`
+
+UC02 - yeu cau dat lai mat khau. Identity-service tim user trong Keycloak theo email va goi Keycloak Admin API `execute-actions-email` voi action `UPDATE_PASSWORD`.
+
+Endpoint luon tra response generic de tranh leak email co ton tai hay khong. Neu email ton tai va account dang enabled, Keycloak se gui email reset password.
+
+**Luu y cau hinh:** Keycloak realm phai bat reset password va phai cau hinh SMTP hop le. Local Docker dung Mailpit tai `http://localhost:8025`, SMTP host trong container la `mailpit:1025`. Docker Compose co sidecar `keycloak-smtp-config` de apply SMTP config vao realm dang ton tai, nen khong can xoa Keycloak volume khi doi SMTP provider.
+
+Flow reset: API nay chi trigger email reset. User mo email, click link reset cua Keycloak, nhap mat khau moi tren trang Keycloak, sau do quay lai app de login bang mat khau moi.
+
+**SMTP real-inbox dev/demo qua env**
+
+Khi chua co private domain, cach it ma sat nhat de test inbox that la Gmail SMTP bang App Password. Gmail SMTP phu hop dev/demo; production nen dung private domain da verify voi transactional provider.
+
+Bat 2-Step Verification tren Google account, tao App Password, dat cac bien sau trong root `.env`, sau do chay lai sidecar `keycloak-smtp-config`.
+
+```env
+KEYCLOAK_SMTP_HOST=smtp.gmail.com
+KEYCLOAK_SMTP_PORT=587
+KEYCLOAK_SMTP_FROM=your-gmail-address@gmail.com
+KEYCLOAK_SMTP_FROM_DISPLAY_NAME=Luyen Thi Lai Xe
+KEYCLOAK_SMTP_REPLY_TO=your-gmail-address@gmail.com
+KEYCLOAK_SMTP_REPLY_TO_DISPLAY_NAME=Luyen Thi Lai Xe
+KEYCLOAK_SMTP_AUTH=true
+KEYCLOAK_SMTP_USER=your-gmail-address@gmail.com
+KEYCLOAK_SMTP_PASSWORD=<gmail-app-password>
+KEYCLOAK_SMTP_SSL=false
+KEYCLOAK_SMTP_STARTTLS=true
+```
+
+Apply lai config:
+
+```bash
+docker compose up -d --force-recreate keycloak-smtp-config
+
+# Neu dang dung infra-only mode:
+docker compose -f docker-compose.infra.yml up -d --force-recreate keycloak-smtp-config
+```
+
+Trong production, nen dung email domain da verify, cau hinh SPF/DKIM/DMARC tai DNS provider, va luu SMTP secret bang secret manager/CI secret thay vi commit vao repo.
+
+**Body**
+
+```json
+{
+  "email": "student1@gm.uit.edu.vn"
+}
+```
+
+| Field   | Type   | Required | Validation |
+| ------- | ------ | -------- | ---------- |
+| `email` | string | Yes      | Email      |
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "data": {
+    "success": true,
+    "message": "If this email exists, password reset instructions have been sent."
+  }
 }
 ```
 

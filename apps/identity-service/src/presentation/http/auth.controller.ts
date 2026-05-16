@@ -17,6 +17,8 @@ import {
 } from '@nestjs/swagger';
 import { Public, Roles } from 'nest-keycloak-connect';
 import { AppService } from '../../app.service';
+import { ForgotPasswordRequestDto } from '../dtos/forgot-password.request.dto';
+import { ForgotPasswordResponseDto } from '../dtos/forgot-password.response.dto';
 import { LoginRequestDto } from '../dtos/login.request.dto';
 import { LoginResponseDto } from '../dtos/login.response.dto';
 import { LogoutRequestDto } from '../dtos/logout.request.dto';
@@ -64,6 +66,17 @@ export class AuthController {
     @Body() body: RefreshTokenRequestDto,
   ): Promise<LoginResponseDto> {
     return this.appService.refreshToken(body.refreshToken);
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiBody({ type: ForgotPasswordRequestDto })
+  @ApiOkResponse({ type: ForgotPasswordResponseDto })
+  async forgotPassword(
+    @Body() body: ForgotPasswordRequestDto,
+  ): Promise<ForgotPasswordResponseDto> {
+    return this.appService.forgotPassword(body.email);
   }
 
   @Get('public')

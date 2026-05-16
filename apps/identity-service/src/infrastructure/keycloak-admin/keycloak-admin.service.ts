@@ -7,7 +7,7 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosResponse } from 'axios';
 
 interface AdminTokenCache {
   accessToken: string;
@@ -27,6 +27,15 @@ interface KeycloakUserRepresentation {
   lastName?: string;
   enabled?: boolean;
 }
+
+type KeycloakErrorBody =
+  | string
+  | {
+      error?: string;
+      error_description?: string;
+      errorMessage?: string;
+      message?: string;
+    };
 
 @Injectable()
 export class KeycloakAdminService {
@@ -189,6 +198,51 @@ export class KeycloakAdminService {
 
   // ─── Private Helpers ──────────────────────────────────────────────────────
 
+  async findUserByEmail(
+    email: string,
+  ): Promise<KeycloakUserRepresentation | null> {
+    const token = await this.getAdminToken();
+    const url = `${this.adminBaseUrl}/users`;
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.get<KeycloakUserRepresentation[]>(url, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { email, exact: true },
+        }),
+      );
+      return response.data[0] ?? null;
+    } catch (error) {
+      this.handleKeycloakError(error, 'findUserByEmail');
+    }
+  }
+
+  async sendPasswordResetEmail(userId: string): Promise<void> {
+    const token = await this.getAdminToken();
+    const clientId = this.configService.getOrThrow<string>('keycloak.clientId');
+    const url = `${this.adminBaseUrl}/users/${userId}/execute-actions-email`;
+
+    try {
+      this.logger.log(
+        `Requesting Keycloak password reset email for user=${userId} client=${clientId} lifespan=900`,
+      );
+      const response = await lastValueFrom(
+        this.httpService.put(url, ['UPDATE_PASSWORD'], {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            client_id: clientId,
+            lifespan: 900,
+          },
+        }),
+      );
+      this.logger.log(
+        `Keycloak accepted password reset email request for user=${userId} status=${response.status}`,
+      );
+    } catch (error) {
+      this.handleKeycloakError(error, 'sendPasswordResetEmail');
+    }
+  }
+
   private get adminBaseUrl(): string {
     const authServerUrl = this.configService.getOrThrow<string>(
       'keycloak.authServerUrl',
@@ -305,12 +359,17 @@ export class KeycloakAdminService {
   }
 
   private handleKeycloakError(error: unknown, operation: string): never {
-    const axiosError = error as AxiosError<{ errorMessage?: string }>;
+    const axiosError = error as AxiosError<KeycloakErrorBody>;
     const status = axiosError.response?.status;
-    const message =
-      axiosError.response?.data?.errorMessage ?? axiosError.message;
+    const message = this.getKeycloakErrorMessage(axiosError);
+    const responseBody = this.stringifyResponseBody(axiosError.response);
 
-    this.logger.error(`Keycloak ${operation} failed [${status}]: ${message}`);
+    this.logger.error(
+      `Keycloak ${operation} failed [${status ?? 'NO_RESPONSE'}]: ${message}`,
+    );
+    if (responseBody) {
+      this.logger.error(`Keycloak ${operation} response body: ${responseBody}`);
+    }
 
     if (status === 409) {
       throw new BadRequestException(
@@ -324,5 +383,27 @@ export class KeycloakAdminService {
       throw new BadRequestException(`Invalid request to Keycloak: ${message}`);
     }
     throw new InternalServerErrorException(`Keycloak ${operation} failed`);
+  }
+
+  private getKeycloakErrorMessage(
+    error: AxiosError<KeycloakErrorBody>,
+  ): string {
+    const body = error.response?.data;
+    if (typeof body === 'string') return body;
+    return (
+      body?.errorMessage ??
+      body?.error_description ??
+      body?.message ??
+      body?.error ??
+      error.message
+    );
+  }
+
+  private stringifyResponseBody(
+    response: AxiosResponse<KeycloakErrorBody> | undefined,
+  ): string | null {
+    if (!response?.data) return null;
+    if (typeof response.data === 'string') return response.data;
+    return JSON.stringify(response.data);
   }
 }

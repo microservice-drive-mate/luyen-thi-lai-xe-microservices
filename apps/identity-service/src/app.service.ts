@@ -14,6 +14,8 @@ import { lastValueFrom } from 'rxjs';
 import { LoginResponseDto } from './presentation/dtos/login.response.dto';
 import { LogoutResponseDto } from './presentation/dtos/logout.response.dto';
 import { TokenBlacklistService } from './infrastructure/token-blacklist/token-blacklist.service';
+import { KeycloakAdminService } from './infrastructure/keycloak-admin/keycloak-admin.service';
+import { ForgotPasswordResponseDto } from './presentation/dtos/forgot-password.response.dto';
 
 @Injectable()
 export class AppService {
@@ -23,6 +25,7 @@ export class AppService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly tokenBlacklistService: TokenBlacklistService,
+    private readonly keycloakAdminService: KeycloakAdminService,
   ) {}
 
   async login(username: string, password: string): Promise<LoginResponseDto> {
@@ -191,6 +194,27 @@ export class AppService {
         'Refresh token is invalid or has expired. Please log in again',
       );
     }
+  }
+
+  async forgotPassword(email: string): Promise<ForgotPasswordResponseDto> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const genericResponse = {
+      success: true,
+      message:
+        'If this email exists, password reset instructions have been sent.',
+    };
+
+    const user =
+      await this.keycloakAdminService.findUserByEmail(normalizedEmail);
+    if (!user?.id || user.enabled === false) {
+      this.logger.log(
+        `Forgot password requested for non-existing or disabled email: ${normalizedEmail}`,
+      );
+      return genericResponse;
+    }
+
+    await this.keycloakAdminService.sendPasswordResetEmail(user.id);
+    return genericResponse;
   }
 
   private decodeToken(token: string): jwt.JwtPayload | null {
