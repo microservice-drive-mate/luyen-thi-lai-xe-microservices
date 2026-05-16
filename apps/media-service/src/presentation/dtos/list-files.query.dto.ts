@@ -17,13 +17,13 @@ export class ListFilesQueryDto {
   @Min(1)
   size: number = 20;
 
-  @ApiPropertyOptional({ description: 'Filter by uploader user ID' })
+  @ApiPropertyOptional({ description: 'Lọc theo ID người dùng tải lên' })
   @IsOptional()
   @IsString()
   uploadedById?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by MIME type prefix (e.g. "image/")',
+    description: 'Lọc theo tiền tố định dạng file (VD: "image/")',
   })
   @IsOptional()
   @IsString()

@@ -5,7 +5,7 @@ export class InstructorAlreadyAssignedException extends DomainException {
 
   constructor(instructorId: string, courseId: string) {
     super(
-      `Instructor ${instructorId} is already assigned to course ${courseId}`,
+      `Giảng viên ${instructorId} đã được phân công cho khóa học ${courseId}`,
     );
   }
 }

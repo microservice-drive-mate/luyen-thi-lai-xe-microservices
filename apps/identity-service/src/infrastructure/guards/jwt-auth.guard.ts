@@ -42,7 +42,7 @@ export class JwtAuthGuard implements CanActivate {
     const authHeader = request.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
       throw new UnauthorizedException(
-        'Missing or invalid Authorization header',
+        'Thiếu hoặc không hợp lệ header Authorization',
       );
     }
 
@@ -66,7 +66,7 @@ export class JwtAuthGuard implements CanActivate {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.warn(`JWT validation failed: ${message}`);
-      throw new UnauthorizedException('Invalid or expired token');
+      throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
     }
   }
 
@@ -90,7 +90,7 @@ export class JwtAuthGuard implements CanActivate {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`Failed to fetch Keycloak public key: ${message}`);
       throw new UnauthorizedException(
-        'Unable to verify token: auth server unavailable',
+        'Không thể xác thực token: server xác thực không phản hồi',
       );
     }
   }

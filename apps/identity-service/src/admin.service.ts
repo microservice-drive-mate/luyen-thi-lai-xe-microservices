@@ -101,7 +101,8 @@ export class AdminService {
     const user = await this.prisma.identityUser.findUnique({
       where: { id: userId },
     });
-    if (!user) throw new NotFoundException('Identity user not found');
+    if (!user)
+      throw new NotFoundException('Không tìm thấy người dùng (Identity User)');
     return this.toResponse(user);
   }
 
@@ -112,9 +113,10 @@ export class AdminService {
     const existing = await this.prisma.identityUser.findUnique({
       where: { id: userId },
     });
-    if (!existing) throw new NotFoundException('Identity user not found');
+    if (!existing)
+      throw new NotFoundException('Không tìm thấy người dùng (Identity User)');
     if (existing.isDeleted) {
-      throw new BadRequestException('Cannot update a deleted identity user');
+      throw new BadRequestException('Không thể cập nhật người dùng đã bị xóa');
     }
 
     const email = dto.email ?? existing.email;
@@ -168,7 +170,8 @@ export class AdminService {
     const existing = await this.prisma.identityUser.findUnique({
       where: { id: userId },
     });
-    if (!existing) throw new NotFoundException('Identity user not found');
+    if (!existing)
+      throw new NotFoundException('Không tìm thấy người dùng (Identity User)');
     if (existing.isDeleted) return this.toResponse(existing);
 
     await this.keycloakAdminService.setUserEnabled(userId, false);

@@ -38,12 +38,12 @@ interface JwtPayload {
   sub?: string;
 }
 
-@ApiTags('admin')
+@ApiTags('Identity Users')
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Post('users')
+  @Post('identity-users')
   @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @ApiBearerAuth()
   @ApiBody({ type: CreateUserRequestDto })
@@ -56,7 +56,7 @@ export class AdminController {
     return this.adminService.createUser(body);
   }
 
-  @Get('users')
+  @Get('identity-users')
   @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @ApiBearerAuth()
   @ApiOkResponse({ type: PaginatedIdentityUsersResponseDto })
@@ -66,7 +66,7 @@ export class AdminController {
     return this.adminService.listUsers(query);
   }
 
-  @Get('users/:id')
+  @Get('identity-users/:id')
   @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @ApiBearerAuth()
   @ApiOkResponse({ type: IdentityUserResponseDto })
@@ -74,7 +74,7 @@ export class AdminController {
     return this.adminService.getUser(userId);
   }
 
-  @Patch('users/:id')
+  @Patch('identity-users/:id')
   @Roles({ roles: ['realm:ADMIN'] })
   @ApiBearerAuth()
   @ApiBody({ type: UpdateIdentityUserRequestDto })
@@ -86,7 +86,7 @@ export class AdminController {
     return this.adminService.updateUser(userId, body);
   }
 
-  @Patch('users/:id/role')
+  @Patch('identity-users/:id/role')
   @Roles({ roles: ['realm:ADMIN'] })
   @ApiBearerAuth()
   @ApiBody({ type: ChangeRoleRequestDto })
@@ -100,7 +100,7 @@ export class AdminController {
     return this.adminService.changeRole(userId, body.role);
   }
 
-  @Patch('users/:id/lock')
+  @Patch('identity-users/:id/lock')
   @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @ApiBearerAuth()
   @ApiBody({ type: LockUserRequestDto })
@@ -114,7 +114,7 @@ export class AdminController {
     return this.adminService.lockUser(userId, body.locked);
   }
 
-  @Delete('users/:id')
+  @Delete('identity-users/:id')
   @Roles({ roles: ['realm:ADMIN'] })
   @ApiBearerAuth()
   @ApiBody({ type: DeleteIdentityUserRequestDto, required: false })

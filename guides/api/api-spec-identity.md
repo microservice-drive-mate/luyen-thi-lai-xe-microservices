@@ -16,13 +16,15 @@ Qua Kong, auth business APIs dùng prefix `/auth/*` cho login/logout/refresh/for
 | `POST /logout`                | `POST /auth/logout`           |
 | `POST /refresh`               | `POST /auth/refresh`          |
 | `POST /forgot-password`       | `POST /auth/forgot-password`  |
-| `GET /admin/users`            | `GET /admin/users`            |
-| `GET /admin/users/:id`        | `GET /admin/users/:id`        |
-| `POST /admin/users`           | `POST /admin/users`           |
-| `PATCH /admin/users/:id`      | `PATCH /admin/users/:id`      |
-| `PATCH /admin/users/:id/role` | `PATCH /admin/users/:id/role` |
-| `PATCH /admin/users/:id/lock` | `PATCH /admin/users/:id/lock` |
-| `DELETE /admin/users/:id`     | `DELETE /admin/users/:id`     |
+| `GET /admin/identity-users`            | `GET /admin/identity-users`            |
+| `GET /admin/identity-users/:id`        | `GET /admin/identity-users/:id`        |
+| `POST /admin/identity-users`           | `POST /admin/identity-users`           |
+| `PATCH /admin/identity-users/:id`      | `PATCH /admin/identity-users/:id`      |
+| `PATCH /admin/identity-users/:id/role` | `PATCH /admin/identity-users/:id/role` |
+| `PATCH /admin/identity-users/:id/lock` | `PATCH /admin/identity-users/:id/lock` |
+| `DELETE /admin/identity-users/:id`     | `DELETE /admin/identity-users/:id`     |
+
+Identity-service owns Keycloak account lifecycle. The public admin resource is named `identity-users` to avoid confusion with `user-service /users`, which manages profile and student detail data. There is no backward-compatible alias for the previous generic admin user resource.
 
 ---
 
@@ -36,16 +38,16 @@ Identity-service tích hợp Keycloak.
 | `POST /logout`                | Public, nhưng cần access token trong `Authorization` header |
 | `POST /refresh`               | Public                                                      |
 | `POST /forgot-password`       | Public                                                      |
-| `GET /admin/users`            | `ADMIN`, `CENTER_MANAGER`                                   |
-| `GET /admin/users/:id`        | `ADMIN`, `CENTER_MANAGER`                                   |
+| `GET /admin/identity-users`            | `ADMIN`, `CENTER_MANAGER`                                   |
+| `GET /admin/identity-users/:id`        | `ADMIN`, `CENTER_MANAGER`                                   |
 | `GET /public`                 | Public, endpoint demo                                       |
 | `GET /private`                | JWT hợp lệ, endpoint demo                                   |
 | `GET /admin-check`            | `ADMIN`, endpoint demo                                      |
-| `POST /admin/users`           | `ADMIN`, `CENTER_MANAGER`                                   |
-| `PATCH /admin/users/:id`      | `ADMIN`                                                     |
-| `PATCH /admin/users/:id/role` | `ADMIN`                                                     |
-| `PATCH /admin/users/:id/lock` | `ADMIN`, `CENTER_MANAGER`                                   |
-| `DELETE /admin/users/:id`     | `ADMIN`                                                     |
+| `POST /admin/identity-users`           | `ADMIN`, `CENTER_MANAGER`                                   |
+| `PATCH /admin/identity-users/:id`      | `ADMIN`                                                     |
+| `PATCH /admin/identity-users/:id/role` | `ADMIN`                                                     |
+| `PATCH /admin/identity-users/:id/lock` | `ADMIN`, `CENTER_MANAGER`                                   |
+| `DELETE /admin/identity-users/:id`     | `ADMIN`                                                     |
 
 ---
 
@@ -279,7 +281,7 @@ Trong production, nen dung email domain da verify, cau hinh SPF/DKIM/DMARC tai D
 
 ---
 
-### POST `/admin/users`
+### POST `/admin/identity-users`
 
 Account Keycloak được tạo với password permanent, `enabled=true`, `emailVerified=true`, và không có required action, nên user có thể login ngay bằng `POST /auth/login`.
 
@@ -325,7 +327,18 @@ Tạo user trong Keycloak, assign realm role, lưu record vào `identity_users`,
 
 ---
 
-### GET `/admin/users`
+### GET `/admin/identity-users`
+
+**Query details**
+
+| Param | Type | Default | Validation | Description |
+| --- | --- | ---: | --- | --- |
+| `page` | number | 1 | integer, `>= 1` | Page index. |
+| `size` | number | 20 | integer, `1..100` | Items per page. |
+| `role` | UserRole | - | optional enum | Filter by realm role. |
+| `isActive` | boolean | - | optional boolean | Filter enabled/disabled identity records. |
+| `includeDeleted` | boolean | false | optional boolean | Include soft-deleted accounts. |
+| `search` | string | - | optional | Search by email/full name. |
 
 List identity users trong `identity_db`.
 
@@ -337,7 +350,13 @@ List identity users trong `identity_db`.
 
 ---
 
-### GET `/admin/users/:id`
+### GET `/admin/identity-users/:id`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Keycloak/identity user id. |
 
 Lấy chi tiết identity user.
 
@@ -347,7 +366,13 @@ Lấy chi tiết identity user.
 
 ---
 
-### PATCH `/admin/users/:id`
+### PATCH `/admin/identity-users/:id`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Keycloak/identity user id. |
 
 Cập nhật identity user trên Keycloak và `identity_db`.
 
@@ -364,7 +389,13 @@ Cập nhật identity user trên Keycloak và `identity_db`.
 
 ---
 
-### PATCH `/admin/users/:id/role`
+### PATCH `/admin/identity-users/:id/role`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Keycloak/identity user id. |
 
 Đổi realm role của user trên Keycloak.
 
@@ -395,7 +426,13 @@ Cập nhật identity user trên Keycloak và `identity_db`.
 
 ---
 
-### PATCH `/admin/users/:id/lock`
+### PATCH `/admin/identity-users/:id/lock`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Keycloak/identity user id. |
 
 Khóa/mở khóa tài khoản trong Keycloak bằng cách set `enabled = !locked`.
 
@@ -430,7 +467,13 @@ Khóa/mở khóa tài khoản trong Keycloak bằng cách set `enabled = !locked
 
 ---
 
-### DELETE `/admin/users/:id`
+### DELETE `/admin/identity-users/:id`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Keycloak/identity user id. |
 
 Soft delete identity user: disable account trên Keycloak, set `isDeleted=true`, `isActive=false`, `deletedAt` trong `identity_db`.
 
@@ -464,11 +507,11 @@ Các endpoint sau đang tồn tại trong `AuthController`, chủ yếu dùng đ
 
 | Event                        | Destination                         | Trigger                       |
 | ---------------------------- | ----------------------------------- | ----------------------------- |
-| `identity.user.created`      | user-service + notification-service | `POST /admin/users`           |
-| `identity.user.updated`      | user-service                        | `PATCH /admin/users/:id`      |
-| `identity.user.role-changed` | user-service                        | `PATCH /admin/users/:id/role` |
-| `identity.user.locked`       | user-service + notification-service | `PATCH /admin/users/:id/lock` |
-| `identity.user.deleted`      | user-service                        | `DELETE /admin/users/:id`     |
+| `identity.user.created`      | user-service + notification-service | `POST /admin/identity-users`           |
+| `identity.user.updated`      | user-service                        | `PATCH /admin/identity-users/:id`      |
+| `identity.user.role-changed` | user-service                        | `PATCH /admin/identity-users/:id/role` |
+| `identity.user.locked`       | user-service + notification-service | `PATCH /admin/identity-users/:id/lock` |
+| `identity.user.deleted`      | user-service                        | `DELETE /admin/identity-users/:id`     |
 
 #### `identity.user.created`
 

@@ -5,7 +5,7 @@ export class FileTooLargeException extends DomainException {
 
   constructor(actualBytes: number, maxBytes: number) {
     super(
-      `File size ${actualBytes} bytes exceeds maximum allowed size of ${maxBytes} bytes`,
+      `Kích thước file ${actualBytes} bytes vượt quá kích thước tối đa cho phép là ${maxBytes} bytes`,
     );
   }
 }

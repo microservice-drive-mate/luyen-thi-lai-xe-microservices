@@ -11,6 +11,8 @@
 
 Business API path là `/users/*`; Swagger/docs path là `/user-service/docs`.
 
+In this bounded context, `/users` means user profiles: display information, student detail, license tier, avatar, and profile active state. Account/Keycloak user lifecycle belongs to `identity-service /admin/identity-users/*`.
+
 ---
 
 ## Tổng Quan Xác Thực
@@ -29,7 +31,7 @@ User-service dùng `nest-keycloak-connect`.
 | `PATCH /users/:id/license-tier` | `ADMIN`, `CENTER_MANAGER` |
 
 Các endpoint `me` và `license-tier` lấy user hiện tại từ `@AuthenticatedUser()` (`sub` trong JWT), không đọc trực tiếp `x-user-id`.
-Production flow nên tạo account bằng identity-service `POST /admin/users`, sau đó identity-service publish event để user-service tạo profile tối thiểu. `POST /users` của user-service dành cho admin/backfill profile khi đã có Keycloak user id.
+Production flow nên tạo account bằng identity-service `POST /admin/identity-users`, sau đó identity-service publish event để user-service tạo profile tối thiểu. `POST /users` của user-service dành cho admin/backfill profile khi đã có Keycloak user id.
 
 | Event                        | User-service behavior                              |
 | ---------------------------- | -------------------------------------------------- |

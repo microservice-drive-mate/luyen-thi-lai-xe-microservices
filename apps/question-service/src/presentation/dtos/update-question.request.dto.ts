@@ -63,7 +63,8 @@ export class UpdateQuestionRequestDto {
   imageUrl?: string | null;
 
   @ApiPropertyOptional({
-    description: 'Reference to media-service FileObject for question image',
+    description:
+      'Tham chiếu tới FileObject của media-service cho hình ảnh câu hỏi',
   })
   @IsOptional()
   @IsUUID('4')

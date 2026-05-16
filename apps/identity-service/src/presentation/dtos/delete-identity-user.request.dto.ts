@@ -3,7 +3,7 @@ import { IsOptional, IsString } from 'class-validator';
 
 export class DeleteIdentityUserRequestDto {
   @ApiPropertyOptional({
-    description: 'User id thuc hien xoa, neu khong gui se lay tu JWT.sub',
+    description: 'ID người dùng thực hiện xóa, nếu không gửi sẽ lấy từ JWT.sub',
   })
   @IsOptional()
   @IsString()

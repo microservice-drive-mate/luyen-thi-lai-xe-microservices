@@ -12,16 +12,16 @@ import {
 } from './domain/exceptions/question.exceptions';
 
 const validQuestionProps = {
-  content: 'Khi gap den do, nguoi lai xe phai lam gi?',
+  content: 'Khi gặp đèn đỏ, người lái xe phải làm gì?',
   type: QuestionType.THEORY,
   licenseCategories: [LicenseCategory.B2],
   difficulty: QuestionDifficulty.EASY,
-  explanation: 'Den do yeu cau dung lai truoc vach dung.',
+  explanation: 'Đèn đỏ yêu cầu dừng lại trước vạch dừng.',
   topicId: '550e8400-e29b-41d4-a716-446655440000',
   createdById: 'creator-001',
   options: [
-    { content: 'Dung lai', isCorrect: true, displayOrder: 1 },
-    { content: 'Di tiep neu vang nguoi', isCorrect: false, displayOrder: 2 },
+    { content: 'Dừng lại', isCorrect: true, displayOrder: 1 },
+    { content: 'Đi tiếp nếu vắng người', isCorrect: false, displayOrder: 2 },
   ],
 };
 
@@ -62,15 +62,15 @@ describe('Question aggregate', () => {
 
     question.update({
       expectedVersion: 1,
-      content: 'Noi dung moi',
+      content: 'Nội dung mới',
     });
 
     expect(question.version).toBe(2);
-    expect(question.content).toBe('Noi dung moi');
+    expect(question.content).toBe('Nội dung mới');
     expect(() =>
       question.update({
         expectedVersion: 1,
-        content: 'Noi dung cu',
+        content: 'Nội dung cũ',
       }),
     ).toThrow(QuestionVersionConflictException);
   });
@@ -89,7 +89,7 @@ describe('Question aggregate', () => {
     expect(() =>
       question.update({
         expectedVersion: 2,
-        content: 'Khong hop le',
+        content: 'Không hợp lệ',
       }),
     ).toThrow(QuestionAlreadyDeletedException);
   });

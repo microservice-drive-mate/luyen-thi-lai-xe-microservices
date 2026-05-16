@@ -44,7 +44,9 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiBody({ type: LogoutRequestDto })
   @ApiOkResponse({ type: LogoutResponseDto })
-  @ApiUnauthorizedResponse({ description: 'Token missing or invalid (MSG129)' })
+  @ApiUnauthorizedResponse({
+    description: 'Token bị thiếu hoặc không hợp lệ (MSG129)',
+  })
   async logout(
     @Req() req: Request,
     @Body() body: LogoutRequestDto,

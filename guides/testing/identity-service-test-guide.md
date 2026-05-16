@@ -382,7 +382,7 @@ ACCESS_TOKEN=$(curl -s -X POST http://localhost:3001/login \
 ### 4.1 — Tạo user mới (STUDENT)
 
 ```bash
-curl -X POST http://localhost:3001/admin/users \
+curl -X POST http://localhost:3001/admin/identity-users \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -401,7 +401,7 @@ curl -X POST http://localhost:3001/admin/users \
   "code": "SUCCESS",
   "message": "Created",
   "timestamp": "...",
-  "path": "/admin/users",
+  "path": "/admin/identity-users",
   "data": {
     "userId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "email": "student1@gm.uit.edu.vn",
@@ -420,7 +420,7 @@ USER_ID="f47ac10b-58cc-4372-a567-0e02b2c3d479"
 ### 4.2 — Tạo user trùng email (kiểm tra conflict)
 
 ```bash
-curl -X POST http://localhost:3001/admin/users \
+curl -X POST http://localhost:3001/admin/identity-users \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -439,14 +439,14 @@ curl -X POST http://localhost:3001/admin/users \
   "code": "VALIDATION_ERROR",
   "message": "User with this email already exists in Keycloak",
   "timestamp": "...",
-  "path": "/admin/users"
+  "path": "/admin/identity-users"
 }
 ```
 
 ### 4.3 — Đổi role
 
 ```bash
-curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/role" \
+curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/role" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"role": "INSTRUCTOR"}'
@@ -460,7 +460,7 @@ curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/role" \
   "code": "SUCCESS",
   "message": "OK",
   "timestamp": "...",
-  "path": "/admin/users/.../role",
+  "path": "/admin/identity-users/.../role",
   "data": { "userId": "...", "role": "INSTRUCTOR" }
 }
 ```
@@ -468,7 +468,7 @@ curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/role" \
 ### 4.4 — Khoá tài khoản
 
 ```bash
-curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/lock" \
+curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/lock" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"locked": true}'
@@ -482,7 +482,7 @@ curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/lock" \
   "code": "SUCCESS",
   "message": "OK",
   "timestamp": "...",
-  "path": "/admin/users/.../lock",
+  "path": "/admin/identity-users/.../lock",
   "data": { "userId": "...", "locked": true }
 }
 ```
@@ -501,7 +501,7 @@ curl -X POST http://localhost:3001/login \
 ### 4.6 — Mở khoá tài khoản
 
 ```bash
-curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/lock" \
+curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/lock" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"locked": false}'
@@ -515,7 +515,7 @@ curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/lock" \
   "code": "SUCCESS",
   "message": "OK",
   "timestamp": "...",
-  "path": "/admin/users/.../lock",
+  "path": "/admin/identity-users/.../lock",
   "data": { "userId": "...", "locked": false }
 }
 ```
@@ -523,7 +523,7 @@ curl -X PATCH "http://localhost:3001/admin/users/$USER_ID/lock" \
 ### 4.7 — List users
 
 ```bash
-curl "http://localhost:3001/admin/users" \
+curl "http://localhost:3001/admin/identity-users" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -547,7 +547,7 @@ Thử filter: `?role=STUDENT`, `?isActive=true`, `?search=student1`, `?includeDe
 ### 4.8 — Get user by ID
 
 ```bash
-curl "http://localhost:3001/admin/users/$USER_ID" \
+curl "http://localhost:3001/admin/identity-users/$USER_ID" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -556,7 +556,7 @@ curl "http://localhost:3001/admin/users/$USER_ID" \
 ### 4.9 — Cập nhật user (email + fullName)
 
 ```bash
-curl -X PATCH "http://localhost:3001/admin/users/$USER_ID" \
+curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"email": "student1-updated@gm.uit.edu.vn", "fullName": "Nguyễn Văn A (updated)"}'
@@ -569,7 +569,7 @@ curl -X PATCH "http://localhost:3001/admin/users/$USER_ID" \
 ### 4.10 — Soft delete user
 
 ```bash
-curl -X DELETE "http://localhost:3001/admin/users/$USER_ID" \
+curl -X DELETE "http://localhost:3001/admin/identity-users/$USER_ID" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"deletedById": "<admin_keycloak_id>"}'
@@ -588,7 +588,7 @@ STUDENT_TOKEN=$(curl -s -X POST http://localhost:3001/login \
   -d '{"username":"student1@gm.uit.edu.vn","password":"<new_password>"}' \
   | jq -r '.data.accessToken')
 
-curl -X POST http://localhost:3001/admin/users \
+curl -X POST http://localhost:3001/admin/identity-users \
   -H "Authorization: Bearer $STUDENT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"email":"x@test.com","fullName":"X","role":"STUDENT","temporaryPassword":"Pass@123"}'

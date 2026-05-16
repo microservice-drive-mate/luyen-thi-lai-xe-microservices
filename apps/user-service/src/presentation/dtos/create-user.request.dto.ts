@@ -39,7 +39,7 @@ export class CreateUserRequestDto {
   @ApiPropertyOptional()
   @IsOptional()
   @Matches(/^(0|\+84)[3-9]\d{8}$/, {
-    message: 'Invalid Vietnamese phone number',
+    message: 'Số điện thoại Việt Nam không hợp lệ',
   })
   phoneNumber?: string;
 

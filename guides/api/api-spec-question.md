@@ -174,6 +174,39 @@ Tạo topic mới.
 
 ### GET `/questions/topics`
 
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Query details**
+
+| Param | Type | Default | Validation | Description |
+| --- | --- | ---: | --- | --- |
+| `page` | number | 1 | integer, `>= 1` | Page index. |
+| `size` | number | 20 | integer, `1..100` | Items per page. |
+| `parentId` | UUID | - | optional UUID | Filter child topics by parent topic. |
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "data": {
+    "items": [
+      {
+        "id": "topic-uuid",
+        "name": "Bien bao giao thong",
+        "description": "Nhom cau hoi ve bien bao",
+        "parentId": null,
+        "createdAt": "2026-05-14T10:00:00.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 20
+  }
+}
+```
+
 List topic có phân trang.
 
 | Param      | Type   | Default |
@@ -184,9 +217,41 @@ List topic có phân trang.
 
 ### GET `/questions/topics/:id`
 
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Topic id. |
+
+**Response `200 OK`:** `data` is `TopicResponse`.
+
+**Errors:** `QUESTION_TOPIC_NOT_FOUND`.
+
 Lấy chi tiết topic.
 
 ### PATCH `/questions/topics/:id`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Body**
+
+```json
+{
+  "name": "Bien bao cam",
+  "description": "Nhom cau hoi ve bien bao cam",
+  "parentId": "parent-topic-uuid"
+}
+```
+
+| Field | Type | Required | Validation | Description |
+| --- | --- | --- | --- | --- |
+| `name` | string | No | non-empty when present | Topic display name. |
+| `description` | string | No | optional | Topic description. |
+| `parentId` | UUID/null | No | optional UUID/null | Parent topic id; use null for root topic. |
+
+**Response `200 OK`:** `data` is updated `TopicResponse`.
 
 Cập nhật `name`, `description`, hoặc `parentId`.
 
@@ -249,6 +314,8 @@ Media integration dùng event-driven pattern: question-service chỉ lưu UUID r
 
 ### GET `/questions`
 
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
 Search question bank có filter và pagination.
 
 | Param             | Type               | Default |
@@ -281,9 +348,31 @@ Search question bank có filter và pagination.
 
 ### GET `/questions/:id`
 
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Question id. |
+
+**Response `200 OK`:** `data` is `QuestionResponse`.
+
+Frontend/admin note: this endpoint is safe for question management screens only. It includes `options[].isCorrect`; do not expose this response to students.
+
+**Errors:** `QUESTION_NOT_FOUND`.
+
 Lấy chi tiết question. Response có `options[].isCorrect`.
 
 ### PATCH `/questions/:id`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Question id. |
 
 Cập nhật question. Bắt buộc gửi `version`.
 
@@ -297,7 +386,34 @@ Cập nhật question. Bắt buộc gửi `version`.
 
 Nếu `version` không khớp, response `409 QUESTION_VERSION_CONFLICT`. Nếu `isActive` chuyển từ `true` sang `false`, publish `question.deactivated`.
 
+Common update fields:
+
+| Field | Type | Required | Validation | Description |
+| --- | --- | --- | --- | --- |
+| `version` | number | Yes | integer | Current version from latest question response. |
+| `content` | string | No | max 2000 chars | Question text. |
+| `type` | QuestionType | No | enum | Question category/type. |
+| `licenseCategories` | LicenseCategory[] | No | non-empty enum array | License tiers this question applies to. |
+| `difficulty` | QuestionDifficulty | No | enum | Difficulty filter/display value. |
+| `explanation` | string | No | optional | Explanation for admins/internal use. |
+| `imageUrl` | string/null | No | optional URL/null | Display URL if already available. |
+| `mediaFileId` | UUID/null | No | optional UUID/null | Reference to media-service file metadata. |
+| `isCritical` | boolean | No | boolean | Critical question flag. |
+| `isActive` | boolean | No | boolean | Active question can be used in pools. |
+| `topicId` | UUID | No | UUID | Topic id. |
+| `options` | array | No | 2..6 items | Replacement option set; exactly one option must be correct. |
+
+**Response `200 OK`:** `data` is updated `QuestionResponse`.
+
 ### DELETE `/questions/:id`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Question id. |
 
 Soft delete question. `deletedById` lấy từ `sub` trong JWT của caller.
 
@@ -310,6 +426,10 @@ Response `200 OK`: `QuestionResponse` với `isDeleted=true`, `isActive=false`.
 **Event published:** `question.deactivated`.
 
 ### POST `/questions/pool`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` or service-account token used by exam-service.
+
+Frontend note: student clients must not call this endpoint. Use `GET /exams/available` and `POST /exams/sessions` instead.
 
 Endpoint nội bộ cho exam-service lấy question pool active và chưa soft-delete.
 
@@ -324,6 +444,18 @@ Endpoint nội bộ cho exam-service lấy question pool active và chưa soft-d
   "excludeQuestionIds": ["question-uuid"]
 }
 ```
+
+Request fields:
+
+| Field | Type | Required | Validation | Description |
+| --- | --- | --- | --- | --- |
+| `licenseCategory` | LicenseCategory | Yes | enum | Required license tier. |
+| `size` | number | Yes | integer, `>= 1` | Number of questions requested. |
+| `type` | QuestionType | No | enum | Optional type filter. |
+| `difficulty` | QuestionDifficulty | No | enum | Optional difficulty filter. |
+| `topicId` | UUID | No | UUID | Optional topic filter. |
+| `isCritical` | boolean | No | boolean | Optional critical filter. |
+| `excludeQuestionIds` | UUID[] | No | optional array | Questions to exclude from pool. |
 
 Response:
 

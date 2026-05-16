@@ -94,21 +94,21 @@ export class AppService {
   ): Promise<LogoutResponseDto> {
     if (!accessToken) {
       throw new UnauthorizedException(
-        'Authentication token is missing or invalid. (MSG129)',
+        'Token xác thực bị thiếu hoặc không hợp lệ. (MSG129)',
       );
     }
 
     const decoded = this.decodeToken(accessToken);
     if (!decoded || typeof decoded.exp !== 'number') {
       throw new UnauthorizedException(
-        'Authentication token is missing or invalid. (MSG129)',
+        'Token xác thực bị thiếu hoặc không hợp lệ. (MSG129)',
       );
     }
 
     const now = Math.floor(Date.now() / 1000);
     if (decoded.exp <= now) {
       throw new UnauthorizedException(
-        'Authentication token is missing or invalid. (MSG129)',
+        'Token xác thực bị thiếu hoặc không hợp lệ. (MSG129)',
       );
     }
 
@@ -120,8 +120,8 @@ export class AppService {
 
     return {
       success: true,
-      message: 'You have been logged out successfully. (MSG130)',
-      instruction: 'Please delete your token from LocalStorage or Cookie',
+      message: 'Bạn đã đăng xuất thành công. (MSG130)',
+      instruction: 'Vui lòng xóa token khỏi LocalStorage hoặc Cookie',
     };
   }
 
@@ -191,7 +191,7 @@ export class AppService {
       };
     } catch {
       throw new UnauthorizedException(
-        'Refresh token is invalid or has expired. Please log in again',
+        'Refresh token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại',
       );
     }
   }
@@ -200,8 +200,7 @@ export class AppService {
     const normalizedEmail = email.trim().toLowerCase();
     const genericResponse = {
       success: true,
-      message:
-        'If this email exists, password reset instructions have been sent.',
+      message: 'Nếu email này tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi.',
     };
 
     const user =

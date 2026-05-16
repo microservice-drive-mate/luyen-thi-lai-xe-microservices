@@ -186,7 +186,7 @@ Lưu ý direct identity path khác Kong:
 | --- | --- | --- |
 | Login | `POST /login` | `POST /auth/login` |
 | Refresh | `POST /refresh` | `POST /auth/refresh` |
-| Admin users | `POST /admin/users` | `POST /admin/users` |
+| Admin users | `POST /admin/identity-users` | `POST /admin/identity-users` |
 
 Nếu dùng PowerShell, đổi `\` thành backtick `` ` `` hoặc viết trên một dòng.
 
@@ -223,7 +223,7 @@ ADMIN_TOKEN=$(curl -s -X POST "http://localhost:3001/login" \
 Kiểm tra token có role admin:
 
 ```bash
-curl -s "$IDENTITY_BASE/admin/users?page=1&size=1" \
+curl -s "$IDENTITY_BASE/admin/identity-users?page=1&size=1" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.success, .data.total'
 ```
 
@@ -234,7 +234,7 @@ Expect `true` và HTTP `200`.
 `user-service` không expose HTTP `POST /users`. Tạo user bằng identity-service, identity-service sẽ publish RabbitMQ event `identity.user.created`, user-service sẽ tạo profile.
 
 ```bash
-STUDENT_USER_ID=$(curl -s -X POST "$IDENTITY_BASE/admin/users" \
+STUDENT_USER_ID=$(curl -s -X POST "$IDENTITY_BASE/admin/identity-users" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -250,7 +250,7 @@ echo "STUDENT_USER_ID=$STUDENT_USER_ID"
 Nếu user đã tồn tại, lấy id từ list:
 
 ```bash
-STUDENT_USER_ID=$(curl -s "$IDENTITY_BASE/admin/users?search=$STUDENT_EMAIL" \
+STUDENT_USER_ID=$(curl -s "$IDENTITY_BASE/admin/identity-users?search=$STUDENT_EMAIL" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.data.items[0].id')
 ```
 
@@ -583,7 +583,21 @@ Expect:
 
 Tất cả session endpoints cần role `STUDENT` và owner-scope theo `JWT.sub`.
 
-### 7.1 POST /exams/sessions - start exam
+### 7.1 GET /exams/available - list exams student can start
+
+```bash
+curl -s "$EXAM_BASE/exams/available?page=1&size=10" \
+  -H "Authorization: Bearer $STUDENT_TOKEN" | jq '.data'
+```
+
+Expect:
+
+- HTTP `200`
+- `data.items[]` only includes active templates matching `studentDetail.licenseTier`
+- item fields are student-safe: `id`, `name`, `licenseCategory`, `totalQuestions`, `passingScore`, `durationMinutes`
+- no `createdById`, `isDeleted`, or `version`
+
+### 7.2 POST /exams/sessions - start exam
 
 ```bash
 SESSION_ID=$(curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -616,7 +630,7 @@ Expect start response:
 - `data.questions.length = 3`
 - mỗi question có `questionId`, `content`, `options`, `displayOrder`, `isCritical`, `isBookmarked`, `selectedOptionId`
 
-### 7.2 Confidentiality check cho active questions
+### 7.3 Confidentiality check cho active questions
 
 Active question payload không được leak đáp án.
 
@@ -650,7 +664,7 @@ Expect chỉ có:
 ]
 ```
 
-### 7.3 Lấy question/option ids để autosave
+### 7.4 Lấy question/option ids để autosave
 
 ```bash
 QUESTIONS_JSON=$(curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -666,7 +680,7 @@ OPTION_3_ID=$(echo "$QUESTIONS_JSON" | jq -r '.data.items[2].options[0].id')
 echo "$QUESTION_1_ID $OPTION_1_ID"
 ```
 
-### 7.4 PATCH /exams/sessions/:id/answers - autosave answer
+### 7.5 PATCH /exams/sessions/:id/answers - autosave answer
 
 ```bash
 curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
@@ -706,7 +720,7 @@ curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
   }" | jq '.data.status'
 ```
 
-### 7.5 Bookmark-only update
+### 7.6 Bookmark-only update
 
 ```bash
 curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
@@ -720,7 +734,7 @@ curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
 
 Expect selected answer được giữ nguyên, bookmark đổi thành `true`.
 
-### 7.6 GET /exams/sessions - history khi đang làm bài
+### 7.7 GET /exams/sessions - history khi đang làm bài
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions?page=1&size=10&status=IN_PROGRESS" \
@@ -729,7 +743,7 @@ curl -s "$EXAM_BASE/exams/sessions?page=1&size=10&status=IN_PROGRESS" \
 
 Expect có session hiện tại, `status = "IN_PROGRESS"`.
 
-### 7.7 POST /exams/sessions/:id/submit - submit và grade
+### 7.8 POST /exams/sessions/:id/submit - submit và grade
 
 ```bash
 curl -s -X POST "$EXAM_BASE/exams/sessions/$SESSION_ID/submit" \
@@ -745,7 +759,7 @@ Expect:
 - `failedByCritical = true` nếu sai hoặc bỏ trống câu critical
 - result payload được phép có `questions[].isCorrect`
 
-### 7.8 GET /exams/sessions/:id/result - xem kết quả
+### 7.9 GET /exams/sessions/:id/result - xem kết quả
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/result" \
@@ -759,7 +773,7 @@ Expect:
 - `questions[].isCorrect` có giá trị `true/false/null`
 - vẫn không expose `correctOptionId` hoặc `options[].isCorrect`
 
-### 7.9 GET /exams/sessions - history sau submit
+### 7.10 GET /exams/sessions - history sau submit
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions?page=1&size=10&status=COMPLETED" \

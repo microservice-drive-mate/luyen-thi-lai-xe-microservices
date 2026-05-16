@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../../types/user-role.enum';
 
 export class CreateUserResponseDto {
-  @ApiProperty({ description: 'Keycloak user UUID' })
+  @ApiProperty({ description: 'UUID của người dùng trong Keycloak' })
   userId!: string;
 
   @ApiProperty()

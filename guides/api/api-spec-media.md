@@ -195,6 +195,8 @@ Khi entity khác đã lưu `mediaFileId`, service đó phát event `user.avatar.
 
 ### GET `/media/files`
 
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
 Liệt kê metadata file.
 
 **Query**
@@ -225,6 +227,14 @@ Liệt kê metadata file.
 
 ### GET `/media/files/:id`
 
+**Auth:** JWT hop le.
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Media file id. |
+
 Lấy metadata theo file id.
 
 **Response `200 OK`:** `data` là `FileObjectResponse`.
@@ -232,6 +242,14 @@ Lấy metadata theo file id.
 ---
 
 ### GET `/media/files/:id/url`
+
+**Auth:** JWT hop le.
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Media file id. |
 
 Tạo presigned download URL.
 
@@ -251,6 +269,14 @@ Tạo presigned download URL.
 ---
 
 ### DELETE `/media/files/:id`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Media file id. |
 
 Xóa file khỏi storage và database. `deletedById` lấy từ `sub` trong JWT của caller.
 

@@ -4,6 +4,6 @@ export class EnrollmentAlreadyCompletedException extends DomainException {
   readonly code = 'ENROLLMENT_ALREADY_COMPLETED';
 
   constructor(enrollmentId: string) {
-    super(`Enrollment ${enrollmentId} has already been completed`);
+    super(`Đăng ký ${enrollmentId} đã được hoàn thành`);
   }
 }

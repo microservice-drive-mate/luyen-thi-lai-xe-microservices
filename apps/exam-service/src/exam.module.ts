@@ -9,6 +9,7 @@ import { DeleteTemplateUseCase } from './application/use-cases/delete-template/d
 import { GetSessionQuestionsUseCase } from './application/use-cases/get-session-questions/get-session-questions.use-case';
 import { GetSessionResultUseCase } from './application/use-cases/get-session-result/get-session-result.use-case';
 import { GetTemplateUseCase } from './application/use-cases/get-template/get-template.use-case';
+import { ListAvailableExamsUseCase } from './application/use-cases/list-available-exams/list-available-exams.use-case';
 import { ListSessionsUseCase } from './application/use-cases/list-sessions/list-sessions.use-case';
 import { ListTemplatesUseCase } from './application/use-cases/list-templates/list-templates.use-case';
 import { SaveAnswerUseCase } from './application/use-cases/save-answer/save-answer.use-case';
@@ -30,6 +31,7 @@ import {
 import { PrismaExamSessionRepository } from './infrastructure/persistence/prisma/prisma-exam-session.repository';
 import { PrismaExamTemplateRepository } from './infrastructure/persistence/prisma/prisma-exam-template.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { ExamController } from './presentation/http/exam.controller';
 import { ExamSessionController } from './presentation/http/exam-session.controller';
 import { ExamTemplateController } from './presentation/http/exam-template.controller';
 
@@ -59,7 +61,7 @@ const rmqClientFactory = (queue: string) => ({
       },
     ]),
   ],
-  controllers: [ExamTemplateController, ExamSessionController],
+  controllers: [ExamController, ExamTemplateController, ExamSessionController],
   providers: [
     PrismaService,
     DomainExceptionFilter,
@@ -74,6 +76,7 @@ const rmqClientFactory = (queue: string) => ({
     DeleteTemplateUseCase,
     GetTemplateUseCase,
     ListTemplatesUseCase,
+    ListAvailableExamsUseCase,
     StartSessionUseCase,
     SaveAnswerUseCase,
     SubmitSessionUseCase,

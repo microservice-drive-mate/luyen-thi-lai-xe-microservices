@@ -210,6 +210,8 @@ Tạo khóa học mới. `createdById` lấy từ `sub` trong JWT của caller.
 
 ### GET `/courses`
 
+**Auth:** JWT hop le.
+
 Danh sách khóa học có phân trang và filter.
 
 **Query**
@@ -240,6 +242,14 @@ Danh sách khóa học có phân trang và filter.
 
 ### GET `/courses/:id`
 
+**Auth:** JWT hop le.
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Course id. |
+
 Lấy chi tiết khóa học.
 
 **Response `200 OK`:** `data` là `CourseResponse`.
@@ -247,6 +257,14 @@ Lấy chi tiết khóa học.
 ---
 
 ### PATCH `/courses/:id`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Course id. |
 
 Cập nhật thông tin khóa học. Endpoint này không nhận `licenseCategory`, `status`, `thumbnailUrl`, hoặc `instructorIds`.
 
@@ -273,6 +291,14 @@ Cập nhật thông tin khóa học. Endpoint này không nhận `licenseCategor
 ---
 
 ### PATCH `/courses/:id/activate`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Course id. |
 
 Kích hoạt khóa học từ `DRAFT` sang `ACTIVE`. Domain yêu cầu khóa học có ít nhất một lesson.
 
@@ -306,6 +332,15 @@ Thêm bài học vào khóa học. DTO hiện tại **không nhận `videoUrl` h
 
 ### DELETE `/courses/:id/lessons/:lessonId`
 
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Course id. |
+| `lessonId` | UUID | Yes | Lesson id in the course. |
+
 Xóa bài học khỏi khóa học.
 
 **Response `200 OK`:** `data` là `CourseResponse`.
@@ -313,6 +348,14 @@ Xóa bài học khỏi khóa học.
 ---
 
 ### POST `/courses/:id/materials`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Course id. |
 
 Thêm tài liệu học tập. Nếu có `mediaFileId`, course-service phát event `course.material.linked`.
 
@@ -342,6 +385,14 @@ Thêm tài liệu học tập. Nếu có `mediaFileId`, course-service phát eve
 
 ### POST `/courses/:id/enroll`
 
+**Auth:** `STUDENT`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Active course id. |
+
 Đăng ký khóa học. `studentId` lấy từ `sub` trong JWT của caller; endpoint không cần request body.
 
 **Response `201 Created`:** `data` là `EnrollmentResponse`.
@@ -353,6 +404,8 @@ Thêm tài liệu học tập. Nếu có `mediaFileId`, course-service phát eve
 ## Endpoints - Enrollments
 
 ### GET `/enrollments`
+
+**Auth:** `STUDENT`
 
 Danh sách enrollment của student hiện tại. `studentId` lấy từ `sub` trong JWT của caller.
 
@@ -383,6 +436,14 @@ Danh sách enrollment của student hiện tại. `studentId` lấy từ `sub` t
 
 ### GET `/enrollments/:id`
 
+**Auth:** `STUDENT`, `ADMIN`, `CENTER_MANAGER`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Enrollment id. |
+
 Lấy chi tiết enrollment.
 
 **Response `200 OK`:** `data` là `EnrollmentResponse`.
@@ -390,6 +451,15 @@ Lấy chi tiết enrollment.
 ---
 
 ### POST `/enrollments/:id/lessons/:lessonId/complete`
+
+**Auth:** `STUDENT`
+
+**Path params**
+
+| Param | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | UUID | Yes | Enrollment id owned by current student. |
+| `lessonId` | UUID | Yes | Lesson id to complete. |
 
 Đánh dấu hoàn thành bài học. Endpoint hiện tại **không đọc request body**; `CompleteLessonRequestDto` rỗng và controller không truyền `watchedSeconds`.
 

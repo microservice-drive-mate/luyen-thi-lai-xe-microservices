@@ -1,6 +1,8 @@
 import { EventPublisher } from './application/ports/event-publisher.port';
 import { QuestionPoolClient } from './application/ports/question-pool.client';
 import { UserProfileClient } from './application/ports/user-profile.client';
+import { ListAvailableExamsQuery } from './application/use-cases/list-available-exams/list-available-exams.query';
+import { ListAvailableExamsUseCase } from './application/use-cases/list-available-exams/list-available-exams.use-case';
 import { StartSessionCommand } from './application/use-cases/start-session/start-session.command';
 import { StartSessionUseCase } from './application/use-cases/start-session/start-session.use-case';
 import { SubmitSessionCommand } from './application/use-cases/submit-session/submit-session.command';
@@ -11,6 +13,7 @@ import { LicenseCategory } from './domain/aggregates/exam-template/exam-template
 import {
   InsufficientQuestionPoolException,
   StudentLicenseMismatchException,
+  StudentProfileInvalidException,
 } from './domain/exceptions/exam.exceptions';
 import { ExamSessionRepository } from './domain/repositories/exam-session.repository';
 import { ExamTemplateRepository } from './domain/repositories/exam-template.repository';
@@ -161,6 +164,86 @@ describe('Exam use cases', () => {
 
     expect(result.questions).toHaveLength(2);
     expect(sessionRepository.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('lists available exams for the current student license tier', async () => {
+    const template = createTemplate();
+    userProfileClient.getCurrentStudentProfile.mockResolvedValue({
+      id: 'student-id',
+      role: 'STUDENT',
+      isActive: true,
+      studentDetail: { licenseTier: LicenseCategory.B2 },
+    });
+    templateRepository.findAll.mockResolvedValue({
+      items: [template],
+      total: 1,
+    });
+
+    const useCase = new ListAvailableExamsUseCase(
+      templateRepository,
+      userProfileClient,
+    );
+    const result = await useCase.execute(
+      new ListAvailableExamsQuery('student-id', 'token', 1, 20),
+    );
+
+    expect(templateRepository.findAll).toHaveBeenCalledWith({
+      page: 1,
+      size: 20,
+      licenseCategory: LicenseCategory.B2,
+      isActive: true,
+      includeDeleted: false,
+    });
+    expect(result.items).toEqual([
+      {
+        id: template.id,
+        name: template.name,
+        licenseCategory: template.licenseCategory,
+        totalQuestions: template.totalQuestions,
+        passingScore: template.passingScore,
+        durationMinutes: template.durationMinutes,
+      },
+    ]);
+  });
+
+  it('returns an empty available exam list when student has no license tier', async () => {
+    userProfileClient.getCurrentStudentProfile.mockResolvedValue({
+      id: 'student-id',
+      role: 'STUDENT',
+      isActive: true,
+      studentDetail: { licenseTier: null },
+    });
+
+    const useCase = new ListAvailableExamsUseCase(
+      templateRepository,
+      userProfileClient,
+    );
+    const result = await useCase.execute(
+      new ListAvailableExamsQuery('student-id', 'token', 1, 20),
+    );
+
+    expect(templateRepository.findAll).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ items: [], total: 0, page: 1, size: 20 });
+  });
+
+  it('rejects available exams when current profile is not an active student', async () => {
+    userProfileClient.getCurrentStudentProfile.mockResolvedValue({
+      id: 'student-id',
+      role: 'INSTRUCTOR',
+      isActive: true,
+      studentDetail: null,
+    });
+
+    const useCase = new ListAvailableExamsUseCase(
+      templateRepository,
+      userProfileClient,
+    );
+
+    await expect(
+      useCase.execute(
+        new ListAvailableExamsQuery('student-id', 'token', 1, 20),
+      ),
+    ).rejects.toBeInstanceOf(StudentProfileInvalidException);
   });
 
   it('rejects license tier mismatch', async () => {

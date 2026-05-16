@@ -26,9 +26,16 @@ Mapping hiện tại:
 | ---------------- | ------------------------------ | -------------------------- |
 | identity-service | `/auth/*`, `/admin/*`          | `/identity-service/docs`   |
 | user-service     | `/users/*`                     | `/user-service/docs`       |
+| exam-service     | `/exams/*`                     | `/exam-service/docs`       |
 | course-service   | `/courses/*`, `/enrollments/*` | `/course-service/docs`     |
 | question-service | `/questions/*`                 | `/question-service/docs`   |
 | media-service    | `/media/*`                     | `/media-service/docs`      |
+
+Naming convention cho frontend:
+
+- `identity-service /admin/identity-users/*` = account/Keycloak identity lifecycle: create account, role, lock, delete.
+- `user-service /users/*` = profile domain: profile detail, student detail, license tier, avatar, profile active state.
+- Student exam flow dùng `GET /exams/available` để chọn đề, sau đó `POST /exams/sessions` để bắt đầu.
 
 Ví dụ tạo câu hỏi:
 

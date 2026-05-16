@@ -122,12 +122,12 @@ Client (curl/Postman)
 
 Trước khi test, cần có ít nhất 1 user trong DB. Production flow nên tạo account qua `identity-service` admin API để publish RabbitMQ event `identity.user.created`; user-service cũng expose `POST /users` cho ADMIN/CENTER_MANAGER khi cần backfill profile với Keycloak user id đã có.
 
-Các lệnh `POST http://localhost:3001/admin/users` bên dưới cần thêm header `Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>` khi chạy với guard Keycloak.
+Các lệnh `POST http://localhost:3001/admin/identity-users` bên dưới cần thêm header `Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>` khi chạy với guard Keycloak.
 
 ### Tạo user ADMIN
 
 ```bash
-curl -s -X POST http://localhost:3001/admin/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Nguyễn Admin",
@@ -158,7 +158,7 @@ curl -s -X POST http://localhost:3001/admin/users \
 ### Tạo user CENTER_MANAGER
 
 ```bash
-curl -s -X POST http://localhost:3001/admin/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Trần Manager",
@@ -171,7 +171,7 @@ curl -s -X POST http://localhost:3001/admin/users \
 ### Tạo user STUDENT (với đầy đủ thông tin)
 
 ```bash
-curl -s -X POST http://localhost:3001/admin/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Lê Học Viên",
@@ -202,7 +202,7 @@ curl -s -X POST http://localhost:3001/admin/users \
 ### Tạo user INSTRUCTOR
 
 ```bash
-curl -s -X POST http://localhost:3001/admin/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Phạm Giáo Viên",
@@ -248,7 +248,7 @@ Best practice: không dùng endpoint này để tạo account đăng nhập; acc
 **Case: Email đã tồn tại (expect 409)**
 
 ```bash
-curl -s -X POST http://localhost:3001/admin/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Người Khác",
@@ -273,7 +273,7 @@ curl -s -X POST http://localhost:3001/admin/users \
 **Case: Body thiếu field bắt buộc (expect 400)**
 
 ```bash
-curl -s -X POST http://localhost:3001/admin/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Thiếu email"
