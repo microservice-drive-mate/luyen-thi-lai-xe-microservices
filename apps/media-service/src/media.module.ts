@@ -23,6 +23,7 @@ import {
 import { PrismaFileObjectRepository } from './infrastructure/persistence/prisma/prisma-file-object.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { AzureBlobStorageProvider } from './infrastructure/storage/azure-blob-storage.provider';
+import { AdminMediaController } from './presentation/http/admin-media.controller';
 import { MediaController } from './presentation/http/media.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';
 
@@ -77,7 +78,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
       },
     ]),
   ],
-  controllers: [MediaController, MessagingController],
+  controllers: [MediaController, AdminMediaController, MessagingController],
   providers: [
     PrismaService,
     DomainExceptionFilter,

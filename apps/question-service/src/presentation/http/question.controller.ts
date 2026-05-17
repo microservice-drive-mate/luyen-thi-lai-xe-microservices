@@ -63,7 +63,7 @@ const QUESTION_ADMIN_ROLES = ['realm:ADMIN', 'realm:CENTER_MANAGER'];
 
 @ApiTags('Questions')
 @ApiBearerAuth()
-@Controller('questions')
+@Controller('admin/questions')
 export class QuestionController {
   constructor(
     private readonly createQuestionUseCase: CreateQuestionUseCase,

@@ -25,6 +25,7 @@ import {
 import { PrismaCourseEnrollmentRepository } from './infrastructure/persistence/prisma/prisma-course-enrollment.repository';
 import { PrismaCourseRepository } from './infrastructure/persistence/prisma/prisma-course.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { AdminCourseController } from './presentation/http/admin-course.controller';
 import { CourseController } from './presentation/http/course.controller';
 import { EnrollmentController } from './presentation/http/enrollment.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';
@@ -62,7 +63,12 @@ import { MessagingController } from './presentation/messaging/messaging.controll
       },
     ]),
   ],
-  controllers: [CourseController, EnrollmentController, MessagingController],
+  controllers: [
+    CourseController,
+    AdminCourseController,
+    EnrollmentController,
+    MessagingController,
+  ],
   providers: [
     // Infrastructure
     PrismaService,

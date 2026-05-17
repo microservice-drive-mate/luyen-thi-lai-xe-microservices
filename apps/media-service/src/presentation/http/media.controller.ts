@@ -2,14 +2,12 @@ import {
   BadRequestException,
   Body,
   Controller,
-  Delete,
   Get,
   Headers,
   HttpCode,
   HttpStatus,
   Param,
   Post,
-  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -21,26 +19,18 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
-import { DeleteFileCommand } from '../../application/use-cases/delete-file/delete-file.command';
-import { DeleteFileUseCase } from '../../application/use-cases/delete-file/delete-file.use-case';
+import { AuthenticatedUser } from 'nest-keycloak-connect';
 import { GetFileMetadataQuery } from '../../application/use-cases/get-file-metadata/get-file-metadata.query';
 import { GetFileMetadataUseCase } from '../../application/use-cases/get-file-metadata/get-file-metadata.use-case';
 import { GetPresignedUrlQuery } from '../../application/use-cases/get-presigned-url/get-presigned-url.query';
 import { GetPresignedUrlUseCase } from '../../application/use-cases/get-presigned-url/get-presigned-url.use-case';
 import { InitiateUploadCommand } from '../../application/use-cases/initiate-upload/initiate-upload.command';
 import { InitiateUploadUseCase } from '../../application/use-cases/initiate-upload/initiate-upload.use-case';
-import { ListFilesQuery } from '../../application/use-cases/list-files/list-files.query';
-import { ListFilesUseCase } from '../../application/use-cases/list-files/list-files.use-case';
 import { UploadFileCommand } from '../../application/use-cases/upload-file/upload-file.command';
 import { UploadFileUseCase } from '../../application/use-cases/upload-file/upload-file.use-case';
-import {
-  FileObjectResponseDto,
-  PaginatedFileObjectsResponseDto,
-} from '../dtos/file-object.response.dto';
+import { FileObjectResponseDto } from '../dtos/file-object.response.dto';
 import { InitiateUploadRequestDto } from '../dtos/initiate-upload.request.dto';
 import { InitiateUploadResponseDto } from '../dtos/initiate-upload.response.dto';
-import { ListFilesQueryDto } from '../dtos/list-files.query.dto';
 import { PresignedUrlResponseDto } from '../dtos/presigned-url.response.dto';
 
 interface JwtPayload {
@@ -60,8 +50,6 @@ export class MediaController {
     private readonly initiateUploadUseCase: InitiateUploadUseCase,
     private readonly getFileMetadataUseCase: GetFileMetadataUseCase,
     private readonly getPresignedUrlUseCase: GetPresignedUrlUseCase,
-    private readonly deleteFileUseCase: DeleteFileUseCase,
-    private readonly listFilesUseCase: ListFilesUseCase,
   ) {}
 
   @Post()
@@ -114,23 +102,6 @@ export class MediaController {
     return InitiateUploadResponseDto.fromResult(result);
   }
 
-  @Get()
-  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
-  @ApiOperation({ summary: 'List uploaded files' })
-  async listFiles(
-    @Query() query: ListFilesQueryDto,
-  ): Promise<PaginatedFileObjectsResponseDto> {
-    const result = await this.listFilesUseCase.execute(
-      new ListFilesQuery(
-        query.page,
-        query.size,
-        query.uploadedById,
-        query.mimeType,
-      ),
-    );
-    return PaginatedFileObjectsResponseDto.fromResult(result);
-  }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get file metadata' })
   async getFileMetadata(
@@ -151,19 +122,5 @@ export class MediaController {
       new GetPresignedUrlQuery(id),
     );
     return PresignedUrlResponseDto.fromResult(result);
-  }
-
-  @Delete(':id')
-  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete file from storage and database' })
-  async deleteFile(
-    @Param('id') id: string,
-    @AuthenticatedUser() user: JwtPayload,
-    @Headers('x-user-id') headerUserId: string | undefined,
-  ): Promise<void> {
-    await this.deleteFileUseCase.execute(
-      new DeleteFileCommand(id, resolveActorId(user, headerUserId)),
-    );
   }
 }

@@ -28,7 +28,7 @@ export class HttpQuestionPoolClient extends QuestionPoolClient {
       this.configService.get<string>('services.question.baseUrl') ??
       'http://localhost:3005';
     const token = await this.tokenService.getServiceToken();
-    const response = await fetch(`${baseUrl}/questions/pool`, {
+    const response = await fetch(`${baseUrl}/admin/questions/pool`, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${token}`,

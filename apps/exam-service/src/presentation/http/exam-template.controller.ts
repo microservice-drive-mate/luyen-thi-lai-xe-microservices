@@ -42,7 +42,7 @@ function resolveActorId(user: JwtPayload | undefined, headerUserId?: string) {
 
 @ApiTags('Exam Templates')
 @ApiBearerAuth()
-@Controller('exams/templates')
+@Controller('admin/exams/templates')
 export class ExamTemplateController {
   constructor(
     private readonly createTemplateUseCase: CreateTemplateUseCase,

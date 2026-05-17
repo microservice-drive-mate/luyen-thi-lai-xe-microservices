@@ -50,9 +50,9 @@ describe('QuestionController (e2e smoke)', () => {
     await app.init();
   });
 
-  it('GET /questions returns the shared response envelope', async () => {
+  it('GET /admin/questions returns the shared response envelope', async () => {
     await request(app.getHttpServer())
-      .get('/questions')
+      .get('/admin/questions')
       .expect(200)
       .expect((response) => {
         expect(response.body.success).toBe(true);

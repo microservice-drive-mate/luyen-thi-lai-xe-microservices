@@ -28,6 +28,10 @@ services:
         paths:
           - /users
         strip_path: false
+      - name: user-admin-route
+        paths:
+          - /admin/users
+        strip_path: false
       - name: user-swagger-route
         paths:
           - /user-service
@@ -39,6 +43,10 @@ services:
       - name: exam-route
         paths:
           - /exams
+        strip_path: false
+      - name: exam-admin-route
+        paths:
+          - /admin/exams
         strip_path: false
       - name: exam-swagger-route
         paths:
@@ -53,6 +61,10 @@ services:
           - /courses
           - /enrollments
         strip_path: false
+      - name: course-admin-route
+        paths:
+          - /admin/courses
+        strip_path: false
       - name: course-swagger-route
         paths:
           - /course-service
@@ -61,9 +73,9 @@ services:
   - name: question-service
     url: http://host.docker.internal:3005
     routes:
-      - name: question-route
+      - name: question-admin-route
         paths:
-          - /questions
+          - /admin/questions
         strip_path: false
       - name: question-swagger-route
         paths:
@@ -112,6 +124,10 @@ services:
       - name: media-route
         paths:
           - /media
+        strip_path: false
+      - name: media-admin-route
+        paths:
+          - /admin/media
         strip_path: false
       - name: media-swagger-route
         paths:

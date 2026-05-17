@@ -82,11 +82,11 @@ Client
   |-- DIRECT --> http://localhost:3005
   |              Tự set x-user-id khi cần audit user
   |
-  |-- KONG ----> http://localhost:8000/questions
+  |-- KONG ----> http://localhost:8000/admin/questions
                  Kong validate JWT và inject x-user-id/x-user-role
 ```
 
-Trong local hybrid mode, Kong container `kong-dev` đọc `kong/kong.dev.yaml` và forward `/questions` về `host.docker.internal:3005`. Vì vậy frontend/Postman nên test qua `http://localhost:8000` để giống production path hơn.
+Trong local hybrid mode, Kong container `kong-dev` đọc `kong/kong.dev.yaml` và forward `/admin/questions` về `host.docker.internal:3005`. Vì vậy frontend/Postman nên test qua `http://localhost:8000` để giống production path hơn.
 
 Kiểm tra Kong đã nạp route:
 
@@ -104,7 +104,7 @@ curl -s http://localhost:8000/question-service/docs-json | jq '.info.title'
 Kiểm tra API qua Kong:
 
 ```bash
-curl -s "http://localhost:8000/questions?page=1&size=5" | jq .
+curl -s "http://localhost:8000/admin/questions?page=1&size=5" | jq .
 ```
 
 Nếu gọi qua Kong bị `502`, thử:
@@ -133,7 +133,7 @@ ADMIN_ID="550e8400-e29b-41d4-a716-446655440000"
 ### 4.1 Tạo topic
 
 ```bash
-TOPIC_ID=$(curl -s -X POST "$BASE/questions/topics" \
+TOPIC_ID=$(curl -s -X POST "$BASE/admin/questions/topics" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Biển báo giao thông",
@@ -148,7 +148,7 @@ Expect `201 Created`, response có `data.id`.
 Qua Kong thì đổi `$BASE` thành `$KONG_BASE`:
 
 ```bash
-curl -s -X POST "$KONG_BASE/questions/topics" \
+curl -s -X POST "$KONG_BASE/admin/questions/topics" \
   -H "Content-Type: application/json" \
   -d '{"name":"Topic via Kong"}' | jq .
 ```
@@ -156,19 +156,19 @@ curl -s -X POST "$KONG_BASE/questions/topics" \
 ### 4.2 List topics
 
 ```bash
-curl -s "$BASE/questions/topics?page=1&size=20" | jq '.data | {total, page, size}'
+curl -s "$BASE/admin/questions/topics?page=1&size=20" | jq '.data | {total, page, size}'
 ```
 
 ### 4.3 Get topic detail
 
 ```bash
-curl -s "$BASE/questions/topics/$TOPIC_ID" | jq .data
+curl -s "$BASE/admin/questions/topics/$TOPIC_ID" | jq .data
 ```
 
 ### 4.4 Update topic
 
 ```bash
-curl -s -X PATCH "$BASE/questions/topics/$TOPIC_ID" \
+curl -s -X PATCH "$BASE/admin/questions/topics/$TOPIC_ID" \
   -H "Content-Type: application/json" \
   -d '{"description":"Mô tả mới"}' | jq '.data.description'
 ```
@@ -180,7 +180,7 @@ curl -s -X PATCH "$BASE/questions/topics/$TOPIC_ID" \
 ### 5.1 Tạo question
 
 ```bash
-QUESTION_ID=$(curl -s -X POST "$BASE/questions" \
+QUESTION_ID=$(curl -s -X POST "$BASE/admin/questions" \
   -H "Content-Type: application/json" \
   -H "x-user-id: $ADMIN_ID" \
   -d "{
@@ -204,7 +204,7 @@ echo "QUESTION_ID=$QUESTION_ID"
 Tạo question qua Kong:
 
 ```bash
-curl -s -X POST "$KONG_BASE/questions" \
+curl -s -X POST "$KONG_BASE/admin/questions" \
   -H "Content-Type: application/json" \
   -H "x-user-id: $ADMIN_ID" \
   -d "{
@@ -224,13 +224,13 @@ curl -s -X POST "$KONG_BASE/questions" \
 Expect:
 
 ```bash
-curl -s "$BASE/questions/$QUESTION_ID" | jq '.data | {id, version, isActive, isDeleted, correct: [.options[] | select(.isCorrect == true)]}'
+curl -s "$BASE/admin/questions/$QUESTION_ID" | jq '.data | {id, version, isActive, isDeleted, correct: [.options[] | select(.isCorrect == true)]}'
 ```
 
 ### 5.2 Validation: không có đúng 1 đáp án đúng
 
 ```bash
-curl -s -X POST "$BASE/questions" \
+curl -s -X POST "$BASE/admin/questions" \
   -H "Content-Type: application/json" \
   -H "x-user-id: $ADMIN_ID" \
   -d "{
@@ -252,28 +252,28 @@ Expect `400 INVALID_QUESTION`.
 ### 5.3 Search/list questions
 
 ```bash
-curl -s "$BASE/questions?licenseCategory=B2&type=THEORY&page=1&size=10" \
+curl -s "$BASE/admin/questions?licenseCategory=B2&type=THEORY&page=1&size=10" \
   | jq '.data | {total, items_count: (.items | length)}'
 ```
 
 Filter booleans:
 
 ```bash
-curl -s "$BASE/questions?isActive=true&isCritical=false" | jq '.data.items | map({id, isActive, isCritical})'
+curl -s "$BASE/admin/questions?isActive=true&isCritical=false" | jq '.data.items | map({id, isActive, isCritical})'
 ```
 
 ### 5.4 Get question detail
 
 ```bash
-curl -s "$BASE/questions/$QUESTION_ID" | jq .data
+curl -s "$BASE/admin/questions/$QUESTION_ID" | jq .data
 ```
 
 ### 5.5 Update question với version đúng
 
 ```bash
-VERSION=$(curl -s "$BASE/questions/$QUESTION_ID" | jq -r '.data.version')
+VERSION=$(curl -s "$BASE/admin/questions/$QUESTION_ID" | jq -r '.data.version')
 
-curl -s -X PATCH "$BASE/questions/$QUESTION_ID" \
+curl -s -X PATCH "$BASE/admin/questions/$QUESTION_ID" \
   -H "Content-Type: application/json" \
   -d "{
     \"version\": $VERSION,
@@ -287,7 +287,7 @@ Expect `version` tăng lên 1.
 ### 5.6 Version conflict
 
 ```bash
-curl -s -X PATCH "$BASE/questions/$QUESTION_ID" \
+curl -s -X PATCH "$BASE/admin/questions/$QUESTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "version": 1,
@@ -300,9 +300,9 @@ Expect `409 QUESTION_VERSION_CONFLICT`.
 ### 5.7 Deactivate question
 
 ```bash
-VERSION=$(curl -s "$BASE/questions/$QUESTION_ID" | jq -r '.data.version')
+VERSION=$(curl -s "$BASE/admin/questions/$QUESTION_ID" | jq -r '.data.version')
 
-curl -s -X PATCH "$BASE/questions/$QUESTION_ID" \
+curl -s -X PATCH "$BASE/admin/questions/$QUESTION_ID" \
   -H "Content-Type: application/json" \
   -d "{
     \"version\": $VERSION,
@@ -318,9 +318,9 @@ Upload/initiate file qua media-service trước để lấy `mediaFileId`, sau �
 
 ```bash
 MEDIA_FILE_ID="550e8400-e29b-41d4-a716-446655440001"
-VERSION=$(curl -s "$BASE/questions/$QUESTION_ID" | jq -r '.data.version')
+VERSION=$(curl -s "$BASE/admin/questions/$QUESTION_ID" | jq -r '.data.version')
 
-curl -s -X PATCH "$BASE/questions/$QUESTION_ID" \
+curl -s -X PATCH "$BASE/admin/questions/$QUESTION_ID" \
   -H "Content-Type: application/json" \
   -d "{
     \"version\": $VERSION,
@@ -335,7 +335,7 @@ Expect question-service publish event `question.image.linked` vào queue `media_
 Tạo thêm question active nếu question trên đã deactivate, sau đó:
 
 ```bash
-curl -s -X POST "$BASE/questions/pool" \
+curl -s -X POST "$BASE/admin/questions/pool" \
   -H "Content-Type: application/json" \
   -d '{
     "licenseCategory": "B2",
@@ -349,7 +349,7 @@ Expect chỉ trả về question `isActive=true`, `isDeleted=false`. Pool respon
 Qua Kong:
 
 ```bash
-curl -s -X POST "$KONG_BASE/questions/pool" \
+curl -s -X POST "$KONG_BASE/admin/questions/pool" \
   -H "Content-Type: application/json" \
   -d '{"licenseCategory":"B2","size":5}' | jq '.data.items | length'
 ```
@@ -357,9 +357,9 @@ curl -s -X POST "$KONG_BASE/questions/pool" \
 ### 5.10 Soft delete question
 
 ```bash
-VERSION=$(curl -s "$BASE/questions/$QUESTION_ID" | jq -r '.data.version')
+VERSION=$(curl -s "$BASE/admin/questions/$QUESTION_ID" | jq -r '.data.version')
 
-curl -s -X DELETE "$BASE/questions/$QUESTION_ID" \
+curl -s -X DELETE "$BASE/admin/questions/$QUESTION_ID" \
   -H "Content-Type: application/json" \
   -H "x-user-id: $ADMIN_ID" \
   -d "{\"version\": $VERSION}" | jq '.data | {isDeleted, isActive, deletedById}'
@@ -370,13 +370,13 @@ Expect `isDeleted=true`, `isActive=false`.
 Mặc định list không trả về question đã xóa:
 
 ```bash
-curl -s "$BASE/questions" | jq ".data.items | map(select(.id == \"$QUESTION_ID\"))"
+curl -s "$BASE/admin/questions" | jq ".data.items | map(select(.id == \"$QUESTION_ID\"))"
 ```
 
 Nếu cần debug:
 
 ```bash
-curl -s "$BASE/questions?includeDeleted=true" | jq ".data.items | map(select(.id == \"$QUESTION_ID\"))"
+curl -s "$BASE/admin/questions?includeDeleted=true" | jq ".data.items | map(select(.id == \"$QUESTION_ID\"))"
 ```
 
 ---
@@ -391,7 +391,7 @@ Queues liên quan:
 - `question_service_events`: queue consume của question-service
 - `question_service_publish`: queue publish domain events
 
-Sau `POST /questions`, kiểm tra `question.created`.
+Sau `POST /admin/questions`, kiểm tra `question.created`.
 
 Sau deactivate hoặc delete, kiểm tra `question.deactivated`.
 
@@ -454,7 +454,7 @@ Tạo topic trước khi tạo question, hoặc kiểm tra `topicId`.
 
 ### `QUESTION_VERSION_CONFLICT`
 
-Client đang gửi version cũ. Gọi `GET /questions/:id` để lấy version mới nhất rồi retry.
+Client đang gửi version cũ. Gọi `GET /admin/questions/:id` để lấy version mới nhất rồi retry.
 
 ### Pool không có items
 
@@ -473,12 +473,12 @@ Kiểm tra question phải:
 BASE="http://localhost:3005"
 ADMIN_ID="550e8400-e29b-41d4-a716-446655440000"
 
-TOPIC_ID=$(curl -s -X POST "$BASE/questions/topics" \
+TOPIC_ID=$(curl -s -X POST "$BASE/admin/questions/topics" \
   -H "Content-Type: application/json" \
   -d '{"name":"Topic smoke"}' | jq -r '.data.id')
 echo "Topic: $TOPIC_ID"
 
-QUESTION_ID=$(curl -s -X POST "$BASE/questions" \
+QUESTION_ID=$(curl -s -X POST "$BASE/admin/questions" \
   -H "Content-Type: application/json" \
   -H "x-user-id: $ADMIN_ID" \
   -d "{
@@ -495,13 +495,13 @@ QUESTION_ID=$(curl -s -X POST "$BASE/questions" \
   }" | jq -r '.data.id')
 echo "Question: $QUESTION_ID"
 
-curl -s "$BASE/questions?licenseCategory=B2" | jq '.data.total'
-curl -s -X POST "$BASE/questions/pool" \
+curl -s "$BASE/admin/questions?licenseCategory=B2" | jq '.data.total'
+curl -s -X POST "$BASE/admin/questions/pool" \
   -H "Content-Type: application/json" \
   -d '{"licenseCategory":"B2","size":5}' | jq '.data.items | length'
 
-VERSION=$(curl -s "$BASE/questions/$QUESTION_ID" | jq -r '.data.version')
-curl -s -X DELETE "$BASE/questions/$QUESTION_ID" \
+VERSION=$(curl -s "$BASE/admin/questions/$QUESTION_ID" | jq -r '.data.version')
+curl -s -X DELETE "$BASE/admin/questions/$QUESTION_ID" \
   -H "Content-Type: application/json" \
   -H "x-user-id: $ADMIN_ID" \
   -d "{\"version\": $VERSION}" | jq '.data.isDeleted'

@@ -19,6 +19,7 @@ import {
 } from './infrastructure/messaging/rabbitmq-event-publisher.service';
 import { PrismaUserProfileRepository } from './infrastructure/persistence/prisma/prisma-user-profile.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { AdminUserController } from './presentation/http/admin-user.controller';
 import { UserController } from './presentation/http/user.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';
 
@@ -55,7 +56,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
       },
     ]),
   ],
-  controllers: [UserController, MessagingController],
+  controllers: [UserController, AdminUserController, MessagingController],
   providers: [
     PrismaService,
     DomainExceptionFilter,

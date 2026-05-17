@@ -1,7 +1,7 @@
 # Media Service API Specification
 
 **Base URL qua Kong:** `http://localhost:8000`  
-**Service path:** `/media`  
+**Service paths:** `/media`, `/admin/media`  
 **Direct local:** `http://localhost:3010`  
 **Swagger UI:** `http://localhost:3010/docs`  
 **Swagger UI qua Kong:** `http://localhost:8000/media-service/docs`  
@@ -16,9 +16,9 @@ Media-service hiện validate JWT/RBAC tại service bằng Keycloak guard. Fron
 | Endpoint                                                                                          | Role                      |
 | ------------------------------------------------------------------------------------------------- | ------------------------- |
 | `POST /media/files`, `POST /media/files/init`, `GET /media/files/:id`, `GET /media/files/:id/url` | JWT hợp lệ                |
-| `GET /media/files`, `DELETE /media/files/:id`                                                     | `ADMIN`, `CENTER_MANAGER` |
+| `GET /admin/media/files`, `DELETE /admin/media/files/:id`                                                     | `ADMIN`, `CENTER_MANAGER` |
 
-Business API path là `/media/*`; Swagger/docs path là `/media-service/docs`.
+Business API path là `/media/*` cho upload/read có JWT và `/admin/media/*` cho admin dashboard quản lý file; Swagger/docs path là `/media-service/docs`.
 
 ---
 
@@ -193,7 +193,7 @@ Khi entity khác đã lưu `mediaFileId`, service đó phát event `user.avatar.
 
 ---
 
-### GET `/media/files`
+### GET `/admin/media/files`
 
 **Auth:** `ADMIN`, `CENTER_MANAGER`
 
@@ -268,7 +268,7 @@ Tạo presigned download URL.
 
 ---
 
-### DELETE `/media/files/:id`
+### DELETE `/admin/media/files/:id`
 
 **Auth:** `ADMIN`, `CENTER_MANAGER`
 

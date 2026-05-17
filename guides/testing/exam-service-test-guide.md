@@ -138,7 +138,7 @@ exam-service
   |-- validates student profile --> user-service GET /users/me
   |                                dùng incoming student bearer token
   |
-  |-- fetches question pool -----> question-service POST /questions/pool
+  |-- fetches question pool -----> question-service POST /admin/questions/pool
                                    dùng service-account token
 ```
 
@@ -146,7 +146,7 @@ Endpoint path:
 
 | Nhóm | Direct local | Qua Kong |
 | --- | --- | --- |
-| Templates | `http://localhost:3003/exams/templates` | `http://localhost:8000/exams/templates` |
+| Templates | `http://localhost:3003/admin/exams/templates` | `http://localhost:8000/admin/exams/templates` |
 | Sessions | `http://localhost:3003/exams/sessions` | `http://localhost:8000/exams/sessions` |
 | Swagger | `http://localhost:3003/docs` | `http://localhost:8000/exam-service/docs` |
 
@@ -326,7 +326,7 @@ Exam-service cần active question pool từ question-service. Để test nhanh,
 ### 5.1 Tạo topic
 
 ```bash
-TOPIC_ID=$(curl -s -X POST "$QUESTION_BASE/questions/topics" \
+TOPIC_ID=$(curl -s -X POST "$QUESTION_BASE/admin/questions/topics" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -340,14 +340,14 @@ echo "TOPIC_ID=$TOPIC_ID"
 Nếu topic đã tồn tại, có thể lấy topic đầu tiên:
 
 ```bash
-TOPIC_ID=$(curl -s "$QUESTION_BASE/questions/topics?page=1&size=1" \
+TOPIC_ID=$(curl -s "$QUESTION_BASE/admin/questions/topics?page=1&size=1" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.data.items[0].id')
 ```
 
 ### 5.2 Tạo question 1
 
 ```bash
-Q1=$(curl -s -X POST "$QUESTION_BASE/questions" \
+Q1=$(curl -s -X POST "$QUESTION_BASE/admin/questions" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -372,7 +372,7 @@ echo "Q1=$Q1"
 ### 5.3 Tạo question 2
 
 ```bash
-Q2=$(curl -s -X POST "$QUESTION_BASE/questions" \
+Q2=$(curl -s -X POST "$QUESTION_BASE/admin/questions" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -397,7 +397,7 @@ echo "Q2=$Q2"
 ### 5.4 Tạo question 3
 
 ```bash
-Q3=$(curl -s -X POST "$QUESTION_BASE/questions" \
+Q3=$(curl -s -X POST "$QUESTION_BASE/admin/questions" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -424,7 +424,7 @@ echo "Q3=$Q3"
 Endpoint pool là internal/admin endpoint, student không gọi trực tiếp.
 
 ```bash
-curl -s -X POST "$QUESTION_BASE/questions/pool" \
+curl -s -X POST "$QUESTION_BASE/admin/questions/pool" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -441,10 +441,10 @@ Expect `count >= 3`.
 
 Tất cả template endpoints cần role `ADMIN`.
 
-### 6.1 POST /exams/templates - tạo template
+### 6.1 POST /admin/exams/templates - tạo template
 
 ```bash
-TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/exams/templates" \
+TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -461,7 +461,7 @@ echo "TEMPLATE_ID=$TEMPLATE_ID"
 Kiểm tra response đầy đủ:
 
 ```bash
-curl -s "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
+curl -s "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data'
 ```
 
@@ -478,10 +478,10 @@ Expect:
 - `data.version = 1`
 - `data.createdById` bằng admin user id trong token
 
-### 6.2 GET /exams/templates - list/filter
+### 6.2 GET /admin/exams/templates - list/filter
 
 ```bash
-curl -s "$EXAM_BASE/exams/templates?page=1&size=20&licenseCategory=$LICENSE_CATEGORY&isActive=true" \
+curl -s "$EXAM_BASE/admin/exams/templates?page=1&size=20&licenseCategory=$LICENSE_CATEGORY&isActive=true" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data | {total,page,size,items: [.items[] | {id,name,version}]}'
 ```
 
@@ -491,12 +491,12 @@ Expect:
 - `data.items` có template vừa tạo
 - `page`, `size`, `total` hợp lệ
 
-### 6.3 PATCH /exams/templates/:id - update với version
+### 6.3 PATCH /admin/exams/templates/:id - update với version
 
 Lấy version hiện tại:
 
 ```bash
-TEMPLATE_VERSION=$(curl -s "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
+TEMPLATE_VERSION=$(curl -s "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.data.version')
 
 echo "TEMPLATE_VERSION=$TEMPLATE_VERSION"
@@ -505,7 +505,7 @@ echo "TEMPLATE_VERSION=$TEMPLATE_VERSION"
 Update:
 
 ```bash
-curl -s -X PATCH "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
+curl -s -X PATCH "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -527,7 +527,7 @@ Expect:
 Gọi lại version cũ:
 
 ```bash
-curl -s -X PATCH "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
+curl -s -X PATCH "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -541,12 +541,12 @@ Expect:
 - HTTP `409`
 - `code = "EXAM_TEMPLATE_VERSION_CONFLICT"`
 
-### 6.5 DELETE /exams/templates/:id - soft delete unused template
+### 6.5 DELETE /admin/exams/templates/:id - soft delete unused template
 
 Chỉ test với template chưa có session. Tạo template tạm:
 
 ```bash
-DELETE_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/exams/templates" \
+DELETE_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -557,14 +557,14 @@ DELETE_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/exams/templates" \
     \"durationMinutes\": 10
   }" | jq -r '.data.id')
 
-DELETE_TEMPLATE_VERSION=$(curl -s "$EXAM_BASE/exams/templates/$DELETE_TEMPLATE_ID" \
+DELETE_TEMPLATE_VERSION=$(curl -s "$EXAM_BASE/admin/exams/templates/$DELETE_TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.data.version')
 ```
 
 Delete:
 
 ```bash
-curl -s -X DELETE "$EXAM_BASE/exams/templates/$DELETE_TEMPLATE_ID" \
+curl -s -X DELETE "$EXAM_BASE/admin/exams/templates/$DELETE_TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -791,7 +791,7 @@ Expect có session vừa submit.
 Tạo template license khác:
 
 ```bash
-MISMATCH_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/exams/templates" \
+MISMATCH_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -820,7 +820,7 @@ Expect:
 Tạo template yêu cầu nhiều câu hơn pool:
 
 ```bash
-BIG_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/exams/templates" \
+BIG_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -897,7 +897,7 @@ Expect:
 ### 8.6 Student không được gọi template admin endpoints
 
 ```bash
-curl -s "$EXAM_BASE/exams/templates" \
+curl -s "$EXAM_BASE/admin/exams/templates" \
   -H "Authorization: Bearer $STUDENT_TOKEN" | jq .
 ```
 
@@ -941,10 +941,10 @@ Expect:
 Lấy version template đã có session:
 
 ```bash
-TEMPLATE_VERSION_NOW=$(curl -s "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
+TEMPLATE_VERSION_NOW=$(curl -s "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.data.version')
 
-curl -s -X DELETE "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
+curl -s -X DELETE "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -960,7 +960,7 @@ Expect:
 ### 8.10 Invalid template body
 
 ```bash
-curl -s -X POST "$EXAM_BASE/exams/templates" \
+curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -1114,7 +1114,7 @@ Kiểm tra role trong token:
 - Session endpoints cần `STUDENT`.
 - Question seed endpoints cần `ADMIN` hoặc `CENTER_MANAGER`.
 
-Nếu service account gọi question-service pool fail, kiểm tra client `nestjs-backend` có service account role phù hợp để gọi `POST /questions/pool`.
+Nếu service account gọi question-service pool fail, kiểm tra client `nestjs-backend` có service account role phù hợp để gọi `POST /admin/questions/pool`.
 
 ### 11.3 `STUDENT_PROFILE_INVALID`
 
@@ -1141,7 +1141,7 @@ License tier trong user profile khác template:
 curl -s "$USER_BASE/users/me" \
   -H "Authorization: Bearer $STUDENT_TOKEN" | jq '.data.studentDetail.licenseTier'
 
-curl -s "$EXAM_BASE/exams/templates/$TEMPLATE_ID" \
+curl -s "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data.licenseCategory'
 ```
 
@@ -1161,7 +1161,7 @@ curl -s -X PATCH "$USER_BASE/users/$STUDENT_USER_ID/license-tier" \
 Question-service không có đủ câu active cho license category:
 
 ```bash
-curl -s -X POST "$QUESTION_BASE/questions/pool" \
+curl -s -X POST "$QUESTION_BASE/admin/questions/pool" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{

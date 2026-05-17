@@ -17,11 +17,11 @@ Exam-service validate JWT/RBAC tại service bằng `nest-keycloak-connect`. Fro
 
 | Endpoint | Role |
 | --- | --- |
-| `POST /exams/templates` | `ADMIN` |
-| `GET /exams/templates` | `ADMIN` |
-| `GET /exams/templates/:id` | `ADMIN` |
-| `PATCH /exams/templates/:id` | `ADMIN` |
-| `DELETE /exams/templates/:id` | `ADMIN` |
+| `POST /admin/exams/templates` | `ADMIN` |
+| `GET /admin/exams/templates` | `ADMIN` |
+| `GET /admin/exams/templates/:id` | `ADMIN` |
+| `PATCH /admin/exams/templates/:id` | `ADMIN` |
+| `DELETE /admin/exams/templates/:id` | `ADMIN` |
 | `GET /exams/available` | `STUDENT` |
 | `POST /exams/sessions` | `STUDENT` |
 | `GET /exams/sessions` | `STUDENT` |
@@ -30,7 +30,7 @@ Exam-service validate JWT/RBAC tại service bằng `nest-keycloak-connect`. Fro
 | `POST /exams/sessions/:id/submit` | `STUDENT`, owner only |
 | `GET /exams/sessions/:id/result` | `STUDENT`, owner only |
 
-Exam-service gọi nội bộ `question-service /questions/pool` bằng Keycloak client-credentials token. Không expose endpoint pool trực tiếp cho student.
+Exam-service gọi nội bộ `question-service /admin/questions/pool` bằng Keycloak client-credentials token. Không expose endpoint pool trực tiếp cho student.
 
 ## Error Codes
 
@@ -109,7 +109,7 @@ Behavior:
 - student with `studentDetail.licenseTier = null` receives an empty list.
 - inactive/non-student/missing student detail profile returns `STUDENT_PROFILE_INVALID`.
 
-### POST `/exams/templates`
+### POST `/admin/exams/templates`
 
 Create an exam template. This is an admin-only blueprint; students do not call this endpoint directly.
 
@@ -141,7 +141,7 @@ Create an exam template. This is an admin-only blueprint; students do not call t
 
 Frontend/admin UI note: store `version` from this response if the next action is update/delete.
 
-### GET `/exams/templates`
+### GET `/admin/exams/templates`
 
 List templates for admin management.
 
@@ -187,7 +187,7 @@ List templates for admin management.
 }
 ```
 
-### GET `/exams/templates/:id`
+### GET `/admin/exams/templates/:id`
 
 Get one template for admin edit/detail screen.
 
@@ -203,7 +203,7 @@ Get one template for admin edit/detail screen.
 
 **Errors:** `EXAM_TEMPLATE_NOT_FOUND` if the id does not exist.
 
-### PATCH `/exams/templates/:id`
+### PATCH `/admin/exams/templates/:id`
 
 Optimistic concurrency uses `version`.
 
@@ -241,7 +241,7 @@ Optimistic concurrency uses `version`.
 
 **Errors:** `EXAM_TEMPLATE_VERSION_CONFLICT`, `INVALID_EXAM_TEMPLATE`, `EXAM_TEMPLATE_NOT_FOUND`.
 
-### DELETE `/exams/templates/:id`
+### DELETE `/admin/exams/templates/:id`
 
 Soft delete an unused template.
 

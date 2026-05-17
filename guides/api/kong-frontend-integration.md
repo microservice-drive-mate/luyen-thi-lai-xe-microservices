@@ -16,7 +16,7 @@ Tách rõ 2 loại path:
 
 | Loại path         | Mục đích                            | Ví dụ question-service        |
 | ----------------- | ----------------------------------- | ----------------------------- |
-| Business API path | Frontend gọi API nghiệp vụ          | `/questions/*`                |
+| Business API path | Frontend gọi API nghiệp vụ          | `/admin/questions/*`                |
 | Swagger/docs path | Dev mở Swagger của service qua Kong | `/question-service/docs`      |
 | OpenAPI JSON path | Docs-service/tooling lấy spec       | `/question-service/docs-json` |
 
@@ -24,23 +24,23 @@ Mapping hiện tại:
 
 | Service          | Business API path qua Kong     | Swagger/docs path qua Kong |
 | ---------------- | ------------------------------ | -------------------------- |
-| identity-service | `/auth/*`, `/admin/*`          | `/identity-service/docs`   |
-| user-service     | `/users/*`                     | `/user-service/docs`       |
-| exam-service     | `/exams/*`                     | `/exam-service/docs`       |
-| course-service   | `/courses/*`, `/enrollments/*` | `/course-service/docs`     |
-| question-service | `/questions/*`                 | `/question-service/docs`   |
-| media-service    | `/media/*`                     | `/media-service/docs`      |
+| identity-service | `/auth/*`, `/admin/identity-users/*` | `/identity-service/docs`   |
+| user-service     | `/users/*`, `/admin/users/*`         | `/user-service/docs`       |
+| exam-service     | `/exams/*`, `/admin/exams/*`         | `/exam-service/docs`       |
+| course-service   | `/courses/*`, `/enrollments/*`, `/admin/courses/*` | `/course-service/docs`     |
+| question-service | `/admin/questions/*`                 | `/question-service/docs`   |
+| media-service    | `/media/*`, `/admin/media/*`         | `/media-service/docs`      |
 
 Naming convention cho frontend:
 
 - `identity-service /admin/identity-users/*` = account/Keycloak identity lifecycle: create account, role, lock, delete.
-- `user-service /users/*` = profile domain: profile detail, student detail, license tier, avatar, profile active state.
+- `user-service /users/*` = self profile domain; `/admin/users/*` = admin dashboard profile management.
 - Student exam flow dùng `GET /exams/available` để chọn đề, sau đó `POST /exams/sessions` để bắt đầu.
 
 Ví dụ tạo câu hỏi:
 
 ```http
-POST http://localhost:8000/questions
+POST http://localhost:8000/admin/questions
 Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
@@ -124,7 +124,7 @@ Thành công:
   "code": "SUCCESS",
   "message": "OK",
   "timestamp": "2026-05-14T10:00:00.000Z",
-  "path": "/questions",
+  "path": "/admin/questions",
   "data": {}
 }
 ```
@@ -137,7 +137,7 @@ Lỗi:
   "code": "VALIDATION_ERROR",
   "message": "Request validation failed",
   "timestamp": "2026-05-14T10:00:00.000Z",
-  "path": "/questions"
+  "path": "/admin/questions"
 }
 ```
 
@@ -278,7 +278,7 @@ http://localhost:8000/question-service/docs
 Bearer eyJ...
 ```
 
-4. Test endpoint như `POST /questions`.
+4. Test endpoint như `POST /admin/questions`.
 
 Nếu test direct local, vẫn dùng:
 
@@ -301,7 +301,7 @@ TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
 Tạo topic:
 
 ```bash
-curl -X POST http://localhost:8000/questions/topics \
+curl -X POST http://localhost:8000/admin/questions/topics \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Biển báo","description":"Câu hỏi về biển báo"}'
@@ -310,7 +310,7 @@ curl -X POST http://localhost:8000/questions/topics \
 Tạo question:
 
 ```bash
-curl -X POST http://localhost:8000/questions \
+curl -X POST http://localhost:8000/admin/questions \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

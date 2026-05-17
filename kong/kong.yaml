@@ -27,6 +27,10 @@ services:
         paths:
           - /users
         strip_path: false
+      - name: user-admin-route
+        paths:
+          - /admin/users
+        strip_path: false
       - name: user-swagger-route
         paths:
           - /user-service
@@ -40,6 +44,10 @@ services:
         paths:
           - /exams
         strip_path: false
+      - name: exam-admin-route
+        paths:
+          - /admin/exams
+        strip_path: false
       - name: exam-swagger-route
         paths:
           - /exam-service
@@ -49,9 +57,9 @@ services:
   - name: question-service
     url: http://question-service:3000
     routes:
-      - name: question-route
+      - name: question-admin-route
         paths:
-          - /questions
+          - /admin/questions
         strip_path: false
       - name: question-swagger-route
         paths:
@@ -66,6 +74,10 @@ services:
         paths:
           - /courses
           - /enrollments
+        strip_path: false
+      - name: course-admin-route
+        paths:
+          - /admin/courses
         strip_path: false
       - name: course-swagger-route
         paths:
@@ -118,6 +130,10 @@ services:
       - name: media-route
         paths:
           - /media
+        strip_path: false
+      - name: media-admin-route
+        paths:
+          - /admin/media
         strip_path: false
       - name: media-swagger-route
         paths:
