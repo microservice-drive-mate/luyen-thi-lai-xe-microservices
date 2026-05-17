@@ -11,6 +11,7 @@ import { ExamSession } from './domain/aggregates/exam-session/exam-session.aggre
 import { ExamTemplate } from './domain/aggregates/exam-template/exam-template.aggregate';
 import { LicenseCategory } from './domain/aggregates/exam-template/exam-template.types';
 import {
+  ExamSessionAlreadyFinishedException,
   InsufficientQuestionPoolException,
   StudentLicenseMismatchException,
   StudentProfileInvalidException,
@@ -92,7 +93,7 @@ describe('ExamSession domain', () => {
     const session = createSession();
     session.submit();
 
-    expect(() => session.submit()).toThrow('already finished');
+    expect(() => session.submit()).toThrow(ExamSessionAlreadyFinishedException);
   });
 });
 
