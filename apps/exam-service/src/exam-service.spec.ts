@@ -12,6 +12,7 @@ import { ExamTemplate } from './domain/aggregates/exam-template/exam-template.ag
 import { LicenseCategory } from './domain/aggregates/exam-template/exam-template.types';
 import {
   ExamSessionAlreadyFinishedException,
+  InvalidExamTemplateException,
   InsufficientQuestionPoolException,
   StudentLicenseMismatchException,
   StudentProfileInvalidException,
@@ -22,10 +23,15 @@ import { ExamTemplateRepository } from './domain/repositories/exam-template.repo
 function createTemplate() {
   return ExamTemplate.create({
     name: 'De thi B2',
+    description: 'De thi B2 strict distribution',
     licenseCategory: LicenseCategory.B2,
     totalQuestions: 2,
     passingScore: 2,
     durationMinutes: 20,
+    criticalQuestions: 1,
+    maxCriticalMistakes: 0,
+    shuffleQuestions: false,
+    topicDistribution: [{ topicId: 'topic-1', questionCount: 2 }],
     createdById: 'admin-id',
   });
 }
@@ -37,6 +43,7 @@ function createSession() {
     licenseCategory: LicenseCategory.B2,
     passingScore: 2,
     durationMinutes: 20,
+    maxCriticalMistakes: 0,
     questions: [
       {
         questionId: 'q1',
@@ -87,6 +94,51 @@ describe('ExamSession domain', () => {
     expect(session.score).toBe(1);
     expect(session.isPassed).toBe(false);
     expect(session.failedByCritical).toBe(true);
+    expect(session.criticalMistakes).toBe(1);
+  });
+
+  it('passes when critical mistakes are within configured threshold', () => {
+    const session = ExamSession.create({
+      studentId: 'student-id',
+      templateId: 'template-id',
+      licenseCategory: LicenseCategory.B2,
+      passingScore: 1,
+      durationMinutes: 20,
+      maxCriticalMistakes: 1,
+      questions: [
+        {
+          questionId: 'q1',
+          questionContent: 'Question 1',
+          correctOptionId: 'q1-o1',
+          isCritical: true,
+          displayOrder: 1,
+          optionsSnapshot: [
+            { id: 'q1-o1', content: 'A', displayOrder: 1 },
+            { id: 'q1-o2', content: 'B', displayOrder: 2 },
+          ],
+        },
+        {
+          questionId: 'q2',
+          questionContent: 'Question 2',
+          correctOptionId: 'q2-o1',
+          isCritical: false,
+          displayOrder: 2,
+          optionsSnapshot: [
+            { id: 'q2-o1', content: 'A', displayOrder: 1 },
+            { id: 'q2-o2', content: 'B', displayOrder: 2 },
+          ],
+        },
+      ],
+    });
+    session.saveAnswer('q1', 'q1-o2');
+    session.saveAnswer('q2', 'q2-o1');
+
+    session.submit();
+
+    expect(session.score).toBe(1);
+    expect(session.criticalMistakes).toBe(1);
+    expect(session.failedByCritical).toBe(false);
+    expect(session.isPassed).toBe(true);
   });
 
   it('rejects double submit', () => {
@@ -94,6 +146,65 @@ describe('ExamSession domain', () => {
     session.submit();
 
     expect(() => session.submit()).toThrow(ExamSessionAlreadyFinishedException);
+  });
+});
+
+describe('ExamTemplate domain', () => {
+  it('rejects topic distribution totals that do not match totalQuestions', () => {
+    expect(() =>
+      ExamTemplate.create({
+        name: 'Invalid template',
+        description: null,
+        licenseCategory: LicenseCategory.B2,
+        totalQuestions: 2,
+        passingScore: 1,
+        durationMinutes: 20,
+        criticalQuestions: 1,
+        maxCriticalMistakes: 0,
+        shuffleQuestions: true,
+        topicDistribution: [{ topicId: 'topic-1', questionCount: 1 }],
+        createdById: 'admin-id',
+      }),
+    ).toThrow(InvalidExamTemplateException);
+  });
+
+  it('rejects duplicate topic ids', () => {
+    expect(() =>
+      ExamTemplate.create({
+        name: 'Invalid template',
+        description: null,
+        licenseCategory: LicenseCategory.B2,
+        totalQuestions: 2,
+        passingScore: 1,
+        durationMinutes: 20,
+        criticalQuestions: 1,
+        maxCriticalMistakes: 0,
+        shuffleQuestions: true,
+        topicDistribution: [
+          { topicId: 'topic-1', questionCount: 1 },
+          { topicId: 'topic-1', questionCount: 1 },
+        ],
+        createdById: 'admin-id',
+      }),
+    ).toThrow(InvalidExamTemplateException);
+  });
+
+  it('rejects maxCriticalMistakes greater than criticalQuestions', () => {
+    expect(() =>
+      ExamTemplate.create({
+        name: 'Invalid template',
+        description: null,
+        licenseCategory: LicenseCategory.B2,
+        totalQuestions: 2,
+        passingScore: 1,
+        durationMinutes: 20,
+        criticalQuestions: 1,
+        maxCriticalMistakes: 2,
+        shuffleQuestions: true,
+        topicDistribution: [{ topicId: 'topic-1', questionCount: 2 }],
+        createdById: 'admin-id',
+      }),
+    ).toThrow(InvalidExamTemplateException);
   });
 });
 
@@ -139,6 +250,7 @@ describe('Exam use cases', () => {
         imageUrl: null,
         mediaFileId: null,
         isCritical: false,
+        topicId: 'topic-1',
         options: [
           { id: 'q1-o1', content: 'A', isCorrect: true, displayOrder: 1 },
           { id: 'q1-o2', content: 'B', isCorrect: false, displayOrder: 2 },
@@ -150,6 +262,7 @@ describe('Exam use cases', () => {
         imageUrl: null,
         mediaFileId: null,
         isCritical: true,
+        topicId: 'topic-1',
         options: [
           { id: 'q2-o1', content: 'A', isCorrect: true, displayOrder: 1 },
           { id: 'q2-o2', content: 'B', isCorrect: false, displayOrder: 2 },
@@ -168,6 +281,11 @@ describe('Exam use cases', () => {
     );
 
     expect(result.questions).toHaveLength(2);
+    expect(questionPoolClient.getPool).toHaveBeenCalledWith({
+      licenseCategory: LicenseCategory.B2,
+      size: 2,
+      topicId: 'topic-1',
+    });
     expect(sessionRepository.save).toHaveBeenCalledTimes(1);
   });
 
@@ -203,10 +321,14 @@ describe('Exam use cases', () => {
       {
         id: template.id,
         name: template.name,
+        description: template.description,
         licenseCategory: template.licenseCategory,
         totalQuestions: template.totalQuestions,
         passingScore: template.passingScore,
         durationMinutes: template.durationMinutes,
+        criticalQuestions: template.criticalQuestions,
+        maxCriticalMistakes: template.maxCriticalMistakes,
+        shuffleQuestions: template.shuffleQuestions,
       },
     ]);
   });
@@ -296,6 +418,79 @@ describe('Exam use cases', () => {
         new StartSessionCommand('template-id', 'student-id', 'token'),
       ),
     ).rejects.toBeInstanceOf(InsufficientQuestionPoolException);
+  });
+
+  it('enforces required critical questions by replacing non-critical questions in the same topic', async () => {
+    templateRepository.findById.mockResolvedValue(createTemplate());
+    userProfileClient.getCurrentStudentProfile.mockResolvedValue({
+      id: 'student-id',
+      role: 'STUDENT',
+      isActive: true,
+      studentDetail: { licenseTier: LicenseCategory.B2 },
+    });
+    questionPoolClient.getPool
+      .mockResolvedValueOnce([
+        {
+          id: 'q1',
+          content: 'Question 1',
+          imageUrl: null,
+          mediaFileId: null,
+          isCritical: false,
+          topicId: 'topic-1',
+          options: [
+            { id: 'q1-o1', content: 'A', isCorrect: true, displayOrder: 1 },
+            { id: 'q1-o2', content: 'B', isCorrect: false, displayOrder: 2 },
+          ],
+        },
+        {
+          id: 'q2',
+          content: 'Question 2',
+          imageUrl: 'https://blob/q2.png',
+          mediaFileId: 'media-q2',
+          isCritical: false,
+          topicId: 'topic-1',
+          options: [
+            { id: 'q2-o1', content: 'A', isCorrect: true, displayOrder: 1 },
+            { id: 'q2-o2', content: 'B', isCorrect: false, displayOrder: 2 },
+          ],
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'q3',
+          content: 'Question 3',
+          imageUrl: null,
+          mediaFileId: null,
+          isCritical: true,
+          topicId: 'topic-1',
+          options: [
+            { id: 'q3-o1', content: 'A', isCorrect: true, displayOrder: 1 },
+            { id: 'q3-o2', content: 'B', isCorrect: false, displayOrder: 2 },
+          ],
+        },
+      ]);
+
+    const useCase = new StartSessionUseCase(
+      templateRepository,
+      sessionRepository,
+      questionPoolClient,
+      userProfileClient,
+    );
+    const result = await useCase.execute(
+      new StartSessionCommand('template-id', 'student-id', 'token'),
+    );
+
+    expect(result.questions).toHaveLength(2);
+    expect(
+      result.questions.filter((question) => question.isCritical),
+    ).toHaveLength(1);
+    expect(questionPoolClient.getPool).toHaveBeenNthCalledWith(2, {
+      licenseCategory: LicenseCategory.B2,
+      size: 1,
+      topicId: 'topic-1',
+      isCritical: true,
+      excludeQuestionIds: ['q1', 'q2'],
+    });
   });
 
   it('publishes events after submit save', async () => {

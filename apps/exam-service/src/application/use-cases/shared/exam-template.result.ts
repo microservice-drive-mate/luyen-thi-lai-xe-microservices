@@ -1,14 +1,22 @@
 import { ExamTemplate } from '../../../domain/aggregates/exam-template/exam-template.aggregate';
-import { LicenseCategory } from '../../../domain/aggregates/exam-template/exam-template.types';
+import {
+  ExamTopicDistributionItem,
+  LicenseCategory,
+} from '../../../domain/aggregates/exam-template/exam-template.types';
 
 export class ExamTemplateResult {
   constructor(
     readonly id: string,
     readonly name: string,
+    readonly description: string | null,
     readonly licenseCategory: LicenseCategory,
     readonly totalQuestions: number,
     readonly passingScore: number,
     readonly durationMinutes: number,
+    readonly criticalQuestions: number,
+    readonly maxCriticalMistakes: number,
+    readonly shuffleQuestions: boolean,
+    readonly topicDistribution: ExamTopicDistributionItem[],
     readonly isActive: boolean,
     readonly isDeleted: boolean,
     readonly version: number,
@@ -21,10 +29,15 @@ export class ExamTemplateResult {
     return new ExamTemplateResult(
       template.id,
       template.name,
+      template.description,
       template.licenseCategory,
       template.totalQuestions,
       template.passingScore,
       template.durationMinutes,
+      template.criticalQuestions,
+      template.maxCriticalMistakes,
+      template.shuffleQuestions,
+      template.topicDistribution,
       template.isActive,
       template.isDeleted,
       template.version,

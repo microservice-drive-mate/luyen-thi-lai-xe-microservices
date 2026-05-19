@@ -13,12 +13,18 @@ export interface QuestionPoolItem {
   imageUrl: string | null;
   mediaFileId: string | null;
   isCritical: boolean;
+  topicId: string;
   options: QuestionPoolOption[];
 }
 
+export interface QuestionPoolRequest {
+  licenseCategory: LicenseCategory;
+  size: number;
+  topicId?: string;
+  isCritical?: boolean;
+  excludeQuestionIds?: string[];
+}
+
 export abstract class QuestionPoolClient {
-  abstract getPool(
-    licenseCategory: LicenseCategory,
-    size: number,
-  ): Promise<QuestionPoolItem[]>;
+  abstract getPool(request: QuestionPoolRequest): Promise<QuestionPoolItem[]>;
 }

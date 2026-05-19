@@ -35,6 +35,7 @@ export interface CreateExamSessionProps {
   licenseCategory: LicenseCategory;
   passingScore: number;
   durationMinutes: number;
+  maxCriticalMistakes: number;
   questions: ExamQuestionSnapshot[];
 }
 
@@ -44,6 +45,7 @@ export interface ReconstituteExamSessionProps extends CreateExamSessionProps {
   score: number | null;
   isPassed: boolean | null;
   failedByCritical: boolean;
+  criticalMistakes: number;
   startedAt: Date;
   finishedAt: Date | null;
   expiresAt: Date;

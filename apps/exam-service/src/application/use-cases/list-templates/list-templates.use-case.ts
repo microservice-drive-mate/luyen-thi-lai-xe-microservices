@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
 import { ExamTemplateRepository } from '../../../domain/repositories/exam-template.repository';
-import { ListExamTemplatesResult } from '../shared/exam-template.result';
+import {
+  ExamTemplateResult,
+  ListExamTemplatesResult,
+} from '../shared/exam-template.result';
 import { ListTemplatesQuery } from './list-templates.query';
 
 @Injectable()
@@ -19,20 +22,7 @@ export class ListTemplatesUseCase
       size,
     });
     return new ListExamTemplatesResult(
-      result.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        licenseCategory: item.licenseCategory,
-        totalQuestions: item.totalQuestions,
-        passingScore: item.passingScore,
-        durationMinutes: item.durationMinutes,
-        isActive: item.isActive,
-        isDeleted: item.isDeleted,
-        version: item.version,
-        createdById: item.createdById,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-      })),
+      result.items.map(ExamTemplateResult.fromAggregate),
       result.total,
       page,
       size,

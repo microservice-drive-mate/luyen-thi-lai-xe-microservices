@@ -6,7 +6,6 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   Min,
 } from 'class-validator';
 import {
@@ -58,7 +57,7 @@ export class ListQuestionsQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID('4')
+  @IsString()
   topicId?: string;
 
   @ApiPropertyOptional()

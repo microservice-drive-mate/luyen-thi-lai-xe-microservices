@@ -1,13 +1,21 @@
 import { ExamTemplate } from '../../../domain/aggregates/exam-template/exam-template.aggregate';
-import { LicenseCategory } from '../../../domain/aggregates/exam-template/exam-template.types';
+import {
+  ExamTopicDistributionItem,
+  LicenseCategory,
+} from '../../../domain/aggregates/exam-template/exam-template.types';
 
 export interface RawExamTemplate {
   id: string;
   name: string;
+  description: string | null;
   licenseCategory: string;
   totalQuestions: number;
   passingScore: number;
   durationMinutes: number;
+  criticalQuestions: number;
+  maxCriticalMistakes: number;
+  shuffleQuestions: boolean;
+  topicDistribution: unknown;
   isActive: boolean;
   isDeleted: boolean;
   version: number;
@@ -21,10 +29,15 @@ export class ExamTemplateMapper {
     return ExamTemplate.reconstitute({
       id: raw.id,
       name: raw.name,
+      description: raw.description,
       licenseCategory: raw.licenseCategory as LicenseCategory,
       totalQuestions: raw.totalQuestions,
       passingScore: raw.passingScore,
       durationMinutes: raw.durationMinutes,
+      criticalQuestions: raw.criticalQuestions,
+      maxCriticalMistakes: raw.maxCriticalMistakes,
+      shuffleQuestions: raw.shuffleQuestions,
+      topicDistribution: raw.topicDistribution as ExamTopicDistributionItem[],
       isActive: raw.isActive,
       isDeleted: raw.isDeleted,
       version: raw.version,

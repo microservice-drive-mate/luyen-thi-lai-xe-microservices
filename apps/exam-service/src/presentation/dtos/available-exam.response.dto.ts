@@ -8,19 +8,27 @@ import { LicenseCategory } from '../../domain/aggregates/exam-template/exam-temp
 export class AvailableExamResponseDto {
   @ApiProperty() id: string;
   @ApiProperty() name: string;
+  @ApiProperty({ nullable: true }) description: string | null;
   @ApiProperty({ enum: LicenseCategory }) licenseCategory: LicenseCategory;
   @ApiProperty() totalQuestions: number;
   @ApiProperty() passingScore: number;
   @ApiProperty() durationMinutes: number;
+  @ApiProperty() criticalQuestions: number;
+  @ApiProperty() maxCriticalMistakes: number;
+  @ApiProperty() shuffleQuestions: boolean;
 
   static fromResult(result: AvailableExamResult): AvailableExamResponseDto {
     const dto = new AvailableExamResponseDto();
     dto.id = result.id;
     dto.name = result.name;
+    dto.description = result.description;
     dto.licenseCategory = result.licenseCategory;
     dto.totalQuestions = result.totalQuestions;
     dto.passingScore = result.passingScore;
     dto.durationMinutes = result.durationMinutes;
+    dto.criticalQuestions = result.criticalQuestions;
+    dto.maxCriticalMistakes = result.maxCriticalMistakes;
+    dto.shuffleQuestions = result.shuffleQuestions;
     return dto;
   }
 }

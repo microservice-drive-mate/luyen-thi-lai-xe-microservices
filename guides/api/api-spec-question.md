@@ -526,7 +526,7 @@ Soft delete question. `deletedById` lấy từ `sub` trong JWT của caller.
 
 ### POST `/admin/questions/pool`
 
-Endpoint nội bộ cho exam-service lấy question pool active và chưa soft-delete. Student clients không gọi endpoint này.
+Endpoint nội bộ cho exam-service lấy question pool active và chưa soft-delete. Student clients không gọi endpoint này. Với exam template có `topicDistribution`, exam-service có thể gọi endpoint này nhiều lần, mỗi lần truyền một `topicId` và `size` tương ứng để lấy đúng số câu theo từng topic.
 
 **Body**
 

@@ -23,6 +23,7 @@ export class ExamSession extends AggregateRoot<string> {
   private _score: number | null;
   private _isPassed: boolean | null;
   private _failedByCritical: boolean;
+  private _criticalMistakes: number;
   private _startedAt: Date;
   private _finishedAt: Date | null;
   private _expiresAt: Date;
@@ -37,6 +38,7 @@ export class ExamSession extends AggregateRoot<string> {
     readonly licenseCategory: LicenseCategory,
     readonly passingScore: number,
     readonly durationMinutes: number,
+    readonly maxCriticalMistakes: number,
     props: Omit<
       ReconstituteExamSessionProps,
       | 'id'
@@ -45,6 +47,7 @@ export class ExamSession extends AggregateRoot<string> {
       | 'licenseCategory'
       | 'passingScore'
       | 'durationMinutes'
+      | 'maxCriticalMistakes'
     >,
   ) {
     super(id);
@@ -52,6 +55,7 @@ export class ExamSession extends AggregateRoot<string> {
     this._score = props.score;
     this._isPassed = props.isPassed;
     this._failedByCritical = props.failedByCritical;
+    this._criticalMistakes = props.criticalMistakes;
     this._startedAt = props.startedAt;
     this._finishedAt = props.finishedAt;
     this._expiresAt = props.expiresAt;
@@ -76,11 +80,13 @@ export class ExamSession extends AggregateRoot<string> {
       props.licenseCategory,
       props.passingScore,
       props.durationMinutes,
+      props.maxCriticalMistakes,
       {
         status: ExamSessionStatus.IN_PROGRESS,
         score: null,
         isPassed: null,
         failedByCritical: false,
+        criticalMistakes: 0,
         startedAt: now,
         finishedAt: null,
         expiresAt,
@@ -99,6 +105,7 @@ export class ExamSession extends AggregateRoot<string> {
       props.licenseCategory,
       props.passingScore,
       props.durationMinutes,
+      props.maxCriticalMistakes,
       props,
     );
   }
@@ -157,13 +164,15 @@ export class ExamSession extends AggregateRoot<string> {
 
   private grade(status: ExamSessionStatus, finishedAt: Date): void {
     let score = 0;
-    let failedByCritical = false;
+    let criticalMistakes = 0;
     for (const question of this._questions) {
       const correct = question.grade();
       if (correct) score += 1;
-      if (question.isCritical && !correct) failedByCritical = true;
+      if (question.isCritical && !correct) criticalMistakes += 1;
     }
+    const failedByCritical = criticalMistakes > this.maxCriticalMistakes;
     this._score = score;
+    this._criticalMistakes = criticalMistakes;
     this._failedByCritical = failedByCritical;
     this._isPassed = !failedByCritical && score >= this.passingScore;
     this._status = status;
@@ -213,6 +222,9 @@ export class ExamSession extends AggregateRoot<string> {
   }
   get failedByCritical(): boolean {
     return this._failedByCritical;
+  }
+  get criticalMistakes(): number {
+    return this._criticalMistakes;
   }
   get startedAt(): Date {
     return this._startedAt;

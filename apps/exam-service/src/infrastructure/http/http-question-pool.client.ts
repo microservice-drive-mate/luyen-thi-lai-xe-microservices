@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import {
   QuestionPoolClient,
   QuestionPoolItem,
+  QuestionPoolRequest,
 } from '../../application/ports/question-pool.client';
-import { LicenseCategory } from '../../domain/aggregates/exam-template/exam-template.types';
 import { KeycloakTokenService } from './keycloak-token.service';
 
 interface ApiEnvelope<T> {
@@ -20,10 +20,7 @@ export class HttpQuestionPoolClient extends QuestionPoolClient {
     super();
   }
 
-  async getPool(
-    licenseCategory: LicenseCategory,
-    size: number,
-  ): Promise<QuestionPoolItem[]> {
+  async getPool(request: QuestionPoolRequest): Promise<QuestionPoolItem[]> {
     const baseUrl =
       this.configService.get<string>('services.question.baseUrl') ??
       'http://localhost:3005';
@@ -34,7 +31,7 @@ export class HttpQuestionPoolClient extends QuestionPoolClient {
         authorization: `Bearer ${token}`,
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ licenseCategory, size }),
+      body: JSON.stringify(request),
     });
     if (!response.ok)
       throw new Error(`Question pool request failed: ${response.status}`);

@@ -449,10 +449,17 @@ TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
   -H "Content-Type: application/json" \
   -d "{
     \"name\": \"Đề thi $LICENSE_CATEGORY smoke test\",
+    \"description\": \"Smoke test strict topic distribution\",
     \"licenseCategory\": \"$LICENSE_CATEGORY\",
     \"totalQuestions\": 3,
     \"passingScore\": 2,
-    \"durationMinutes\": 20
+    \"durationMinutes\": 20,
+    \"criticalQuestions\": 1,
+    \"maxCriticalMistakes\": 0,
+    \"shuffleQuestions\": false,
+    \"topicDistribution\": [
+      {\"topicId\": \"$TOPIC_ID\", \"questionCount\": 3}
+    ]
   }" | jq -r '.data.id')
 
 echo "TEMPLATE_ID=$TEMPLATE_ID"
@@ -473,6 +480,10 @@ Expect:
 - `data.totalQuestions = 3`
 - `data.passingScore = 2`
 - `data.durationMinutes = 20`
+- `data.criticalQuestions = 1`
+- `data.maxCriticalMistakes = 0`
+- `data.shuffleQuestions = false`
+- `data.topicDistribution[0].questionCount = 3`
 - `data.isActive = true`
 - `data.isDeleted = false`
 - `data.version = 1`
@@ -554,7 +565,13 @@ DELETE_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
     \"licenseCategory\": \"$LICENSE_CATEGORY\",
     \"totalQuestions\": 3,
     \"passingScore\": 2,
-    \"durationMinutes\": 10
+    \"durationMinutes\": 10,
+    \"criticalQuestions\": 1,
+    \"maxCriticalMistakes\": 0,
+    \"shuffleQuestions\": false,
+    \"topicDistribution\": [
+      {\"topicId\": \"$TOPIC_ID\", \"questionCount\": 3}
+    ]
   }" | jq -r '.data.id')
 
 DELETE_TEMPLATE_VERSION=$(curl -s "$EXAM_BASE/admin/exams/templates/$DELETE_TEMPLATE_ID" \
@@ -594,7 +611,7 @@ Expect:
 
 - HTTP `200`
 - `data.items[]` only includes active templates matching `studentDetail.licenseTier`
-- item fields are student-safe: `id`, `name`, `licenseCategory`, `totalQuestions`, `passingScore`, `durationMinutes`
+- item fields are student-safe: `id`, `name`, `description`, `licenseCategory`, `totalQuestions`, `passingScore`, `durationMinutes`, `criticalQuestions`, `maxCriticalMistakes`, `shuffleQuestions`
 - no `createdById`, `isDeleted`, or `version`
 
 ### 7.2 POST /exams/sessions - start exam
@@ -755,8 +772,9 @@ Expect:
 - HTTP `200`
 - `status = "COMPLETED"` nếu chưa hết giờ
 - `score` là số câu đúng
-- `isPassed = true` nếu `score >= passingScore` và không sai/unanswered critical
-- `failedByCritical = true` nếu sai hoặc bỏ trống câu critical
+- `criticalMistakes` là số câu critical sai hoặc bỏ trống
+- `isPassed = true` nếu `score >= passingScore` và `criticalMistakes <= maxCriticalMistakes`
+- `failedByCritical = true` nếu `criticalMistakes > maxCriticalMistakes`
 - result payload được phép có `questions[].isCorrect`
 
 ### 7.9 GET /exams/sessions/:id/result - xem kết quả
@@ -799,7 +817,13 @@ MISMATCH_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
     "licenseCategory": "A1",
     "totalQuestions": 1,
     "passingScore": 1,
-    "durationMinutes": 10
+    "durationMinutes": 10,
+    "criticalQuestions": 0,
+    "maxCriticalMistakes": 0,
+    "shuffleQuestions": false,
+    "topicDistribution": [
+      {"topicId": "'$TOPIC_ID'", "questionCount": 1}
+    ]
   }' | jq -r '.data.id')
 
 curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -828,7 +852,13 @@ BIG_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
     \"licenseCategory\": \"$LICENSE_CATEGORY\",
     \"totalQuestions\": 999,
     \"passingScore\": 900,
-    \"durationMinutes\": 20
+    \"durationMinutes\": 20,
+    \"criticalQuestions\": 0,
+    \"maxCriticalMistakes\": 0,
+    \"shuffleQuestions\": false,
+    \"topicDistribution\": [
+      {\"topicId\": \"$TOPIC_ID\", \"questionCount\": 999}
+    ]
   }" | jq -r '.data.id')
 
 curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -968,7 +998,13 @@ curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
     \"licenseCategory\": \"$LICENSE_CATEGORY\",
     \"totalQuestions\": 3,
     \"passingScore\": 4,
-    \"durationMinutes\": 20
+    \"durationMinutes\": 20,
+    \"criticalQuestions\": 1,
+    \"maxCriticalMistakes\": 0,
+    \"shuffleQuestions\": false,
+    \"topicDistribution\": [
+      {\"topicId\": \"$TOPIC_ID\", \"questionCount\": 3}
+    ]
   }" | jq .
 ```
 
@@ -993,12 +1029,12 @@ docker exec -it luyen-thi-lai-xe-microservices-db-exam-1 psql -U user -d exam_db
 Query:
 
 ```sql
-select id, name, "licenseCategory", "totalQuestions", "passingScore", "durationMinutes", "isActive", "isDeleted", version
+select id, name, "licenseCategory", "totalQuestions", "passingScore", "durationMinutes", "criticalQuestions", "maxCriticalMistakes", "shuffleQuestions", "topicDistribution", "isActive", "isDeleted", version
 from exam_templates
 order by "createdAt" desc
 limit 5;
 
-select id, "studentId", "templateId", status, score, "isPassed", "failedByCritical", "startedAt", "finishedAt", "expiresAt"
+select id, "studentId", "templateId", status, score, "isPassed", "failedByCritical", "criticalMistakes", "maxCriticalMistakes", "startedAt", "finishedAt", "expiresAt"
 from exam_sessions
 order by "startedAt" desc
 limit 5;

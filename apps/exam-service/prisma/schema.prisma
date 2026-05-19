@@ -29,10 +29,15 @@ enum ExamSessionStatus {
 model ExamTemplate {
   id              String          @id @default(uuid())
   name            String          @db.Text
+  description     String?         @db.Text
   licenseCategory LicenseCategory
   totalQuestions  Int
   passingScore    Int
   durationMinutes Int
+  criticalQuestions Int           @default(0)
+  maxCriticalMistakes Int         @default(0)
+  shuffleQuestions Boolean        @default(true)
+  topicDistribution Json          @default("[]")
   isActive        Boolean         @default(true)
   isDeleted       Boolean         @default(false)
   version         Int             @default(1)
@@ -54,6 +59,8 @@ model ExamSession {
   score            Int?
   isPassed         Boolean?
   failedByCritical Boolean           @default(false)
+  criticalMistakes Int               @default(0)
+  maxCriticalMistakes Int            @default(0)
   startedAt        DateTime          @default(now())
   finishedAt       DateTime?
   expiresAt        DateTime
