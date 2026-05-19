@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/exam-client';
 import { ExamTemplate } from '../../../domain/aggregates/exam-template/exam-template.aggregate';
 import {
   ExamTemplateRepository,
@@ -56,10 +57,16 @@ export class PrismaExamTemplateRepository extends ExamTemplateRepository {
       create: {
         id: template.id,
         name: template.name,
+        description: template.description,
         licenseCategory: template.licenseCategory,
         totalQuestions: template.totalQuestions,
         passingScore: template.passingScore,
         durationMinutes: template.durationMinutes,
+        criticalQuestions: template.criticalQuestions,
+        maxCriticalMistakes: template.maxCriticalMistakes,
+        shuffleQuestions: template.shuffleQuestions,
+        topicDistribution:
+          template.topicDistribution as unknown as Prisma.InputJsonValue,
         isActive: template.isActive,
         isDeleted: template.isDeleted,
         version: template.version,
@@ -69,9 +76,15 @@ export class PrismaExamTemplateRepository extends ExamTemplateRepository {
       },
       update: {
         name: template.name,
+        description: template.description,
         totalQuestions: template.totalQuestions,
         passingScore: template.passingScore,
         durationMinutes: template.durationMinutes,
+        criticalQuestions: template.criticalQuestions,
+        maxCriticalMistakes: template.maxCriticalMistakes,
+        shuffleQuestions: template.shuffleQuestions,
+        topicDistribution:
+          template.topicDistribution as unknown as Prisma.InputJsonValue,
         isActive: template.isActive,
         isDeleted: template.isDeleted,
         version: template.version,

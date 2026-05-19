@@ -82,7 +82,8 @@ export class UpdateQuestionRequestDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID('4')
+  @IsString()
+  @IsNotEmpty()
   topicId?: string;
 
   @ApiPropertyOptional({ type: [QuestionOptionRequestDto] })

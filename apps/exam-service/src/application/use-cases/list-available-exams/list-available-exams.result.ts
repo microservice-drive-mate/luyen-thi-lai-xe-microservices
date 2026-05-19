@@ -4,10 +4,14 @@ export class AvailableExamResult {
   constructor(
     readonly id: string,
     readonly name: string,
+    readonly description: string | null,
     readonly licenseCategory: LicenseCategory,
     readonly totalQuestions: number,
     readonly passingScore: number,
     readonly durationMinutes: number,
+    readonly criticalQuestions: number,
+    readonly maxCriticalMistakes: number,
+    readonly shuffleQuestions: boolean,
   ) {}
 }
 

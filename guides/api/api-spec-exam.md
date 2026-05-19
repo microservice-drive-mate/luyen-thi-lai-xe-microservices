@@ -90,10 +90,20 @@ Exam-service gọi nội bộ `question-service /admin/questions/pool` bằng Ke
 {
   "id": "template-uuid",
   "name": "Đề thi B2 cơ bản",
+  "description": "De thi mo phong theo cau truc GPLX hang B2",
   "licenseCategory": "B2",
   "totalQuestions": 30,
   "passingScore": 26,
   "durationMinutes": 20,
+  "criticalQuestions": 1,
+  "maxCriticalMistakes": 0,
+  "shuffleQuestions": true,
+  "topicDistribution": [
+    {
+      "topicId": "10000000-0000-0000-0000-000000000101",
+      "questionCount": 9
+    }
+  ],
   "isActive": true,
   "isDeleted": false,
   "version": 1,
@@ -102,6 +112,10 @@ Exam-service gọi nội bộ `question-service /admin/questions/pool` bằng Ke
   "updatedAt": "2026-05-18T10:00:00.000Z"
 }
 ```
+
+`topicDistribution` uses strict counts: the sum of all `questionCount` values must equal `totalQuestions`. When a student starts a session, exam-service pulls exactly that many active questions per topic from question-service. If any topic lacks enough questions, the session start returns `INSUFFICIENT_QUESTION_POOL`.
+
+Critical passing rule: `isPassed = score >= passingScore && criticalMistakes <= maxCriticalMistakes`.
 
 ### Student-Safe Question
 
@@ -148,6 +162,8 @@ For active sessions, `questions[].isCorrect` is not returned.
   "score": null,
   "isPassed": null,
   "failedByCritical": false,
+  "criticalMistakes": 0,
+  "maxCriticalMistakes": 0,
   "startedAt": "2026-05-18T10:00:00.000Z",
   "finishedAt": null,
   "expiresAt": "2026-05-18T10:20:00.000Z",
@@ -187,6 +203,8 @@ Submit/result responses include `questions[].isCorrect`, but still do not expose
   "score": 26,
   "isPassed": true,
   "failedByCritical": false,
+  "criticalMistakes": 0,
+  "maxCriticalMistakes": 0,
   "startedAt": "2026-05-18T10:00:00.000Z",
   "finishedAt": "2026-05-18T10:15:00.000Z",
   "expiresAt": "2026-05-18T10:20:00.000Z",
@@ -244,10 +262,14 @@ List active exam templates that the current student can start. Frontend should c
       {
         "id": "template-uuid",
         "name": "Đề thi B2 cơ bản",
+        "description": "De thi mo phong theo cau truc GPLX hang B2",
         "licenseCategory": "B2",
         "totalQuestions": 30,
         "passingScore": 26,
-        "durationMinutes": 20
+        "durationMinutes": 20,
+        "criticalQuestions": 1,
+        "maxCriticalMistakes": 0,
+        "shuffleQuestions": true
       }
     ],
     "total": 1,
@@ -278,20 +300,39 @@ Create an exam template. This is an admin-only blueprint; students do not call t
 ```json
 {
   "name": "Đề thi B2 cơ bản",
+  "description": "De thi mo phong theo cau truc GPLX hang B2",
   "licenseCategory": "B2",
   "totalQuestions": 30,
   "passingScore": 26,
-  "durationMinutes": 20
+  "durationMinutes": 20,
+  "criticalQuestions": 1,
+  "maxCriticalMistakes": 0,
+  "shuffleQuestions": true,
+  "topicDistribution": [
+    {
+      "topicId": "10000000-0000-0000-0000-000000000101",
+      "questionCount": 9
+    },
+    {
+      "topicId": "10000000-0000-0000-0000-000000000105",
+      "questionCount": 21
+    }
+  ]
 }
 ```
 
 | Field | Type | Required | Validation | Description |
 | --- | --- | --- | --- | --- |
 | `name` | string | Yes | non-empty | Display name shown to admins and students through `GET /exams/available`. |
+| `description` | string/null | No | string | Description shown in admin/student UI. |
 | `licenseCategory` | LicenseCategory | Yes | enum | License tier this template belongs to. |
 | `totalQuestions` | number | Yes | integer, `>= 1` | Number of questions pulled from question-service when a session starts. |
 | `passingScore` | number | Yes | integer, `>= 1` | Minimum score to pass; domain rejects invalid values. |
 | `durationMinutes` | number | Yes | integer, `1..180` | Session time limit. |
+| `criticalQuestions` | number | Yes | integer, `>= 0`, `<= totalQuestions` | Exact number of critical questions that must appear in the generated exam. |
+| `maxCriticalMistakes` | number | Yes | integer, `>= 0`, `<= criticalQuestions` | Maximum wrong/unanswered critical questions allowed. |
+| `shuffleQuestions` | boolean | Yes | boolean | Shuffle final session question order after strict topic selection. |
+| `topicDistribution` | array | Yes | non-empty, sum `questionCount = totalQuestions` | Strict question counts per topic. |
 
 **Response `201 Created`**
 
@@ -305,10 +346,24 @@ Create an exam template. This is an admin-only blueprint; students do not call t
   "data": {
     "id": "template-uuid",
     "name": "Đề thi B2 cơ bản",
+    "description": "De thi mo phong theo cau truc GPLX hang B2",
     "licenseCategory": "B2",
     "totalQuestions": 30,
     "passingScore": 26,
     "durationMinutes": 20,
+    "criticalQuestions": 1,
+    "maxCriticalMistakes": 0,
+    "shuffleQuestions": true,
+    "topicDistribution": [
+      {
+        "topicId": "10000000-0000-0000-0000-000000000101",
+        "questionCount": 9
+      },
+      {
+        "topicId": "10000000-0000-0000-0000-000000000105",
+        "questionCount": 21
+      }
+    ],
     "isActive": true,
     "isDeleted": false,
     "version": 1,
@@ -434,9 +489,23 @@ Optimistic concurrency uses `version`.
 {
   "version": 1,
   "name": "Đề thi B2 cập nhật",
+  "description": "Cap nhat cau truc de thi B2",
   "totalQuestions": 30,
   "passingScore": 26,
   "durationMinutes": 20,
+  "criticalQuestions": 1,
+  "maxCriticalMistakes": 0,
+  "shuffleQuestions": true,
+  "topicDistribution": [
+    {
+      "topicId": "10000000-0000-0000-0000-000000000101",
+      "questionCount": 9
+    },
+    {
+      "topicId": "10000000-0000-0000-0000-000000000105",
+      "questionCount": 21
+    }
+  ],
   "isActive": true
 }
 ```
@@ -445,9 +514,14 @@ Optimistic concurrency uses `version`.
 | --- | --- | --- | --- | --- |
 | `version` | number | Yes | integer, `>= 1` | Current version from latest template response. |
 | `name` | string | No | non-empty when present | New display name. |
+| `description` | string/null | No | string | New description. |
 | `totalQuestions` | number | No | integer, `>= 1` | New question count. |
 | `passingScore` | number | No | integer, `>= 1` | New passing score. |
 | `durationMinutes` | number | No | integer, `1..180` | New duration. |
+| `criticalQuestions` | number | No | integer, `>= 0`, `<= totalQuestions` | New exact critical question count. |
+| `maxCriticalMistakes` | number | No | integer, `>= 0`, `<= criticalQuestions` | New critical mistake threshold. |
+| `shuffleQuestions` | boolean | No | boolean | Enable/disable question order shuffle. |
+| `topicDistribution` | array | No | non-empty, sum `questionCount = totalQuestions` | Replace strict topic distribution. |
 | `isActive` | boolean | No | boolean | Enable or disable this template for student starts. |
 
 **Response `200 OK`**
@@ -462,10 +536,24 @@ Optimistic concurrency uses `version`.
   "data": {
     "id": "template-uuid",
     "name": "Đề thi B2 cập nhật",
+    "description": "Cap nhat cau truc de thi B2",
     "licenseCategory": "B2",
     "totalQuestions": 30,
     "passingScore": 26,
     "durationMinutes": 20,
+    "criticalQuestions": 1,
+    "maxCriticalMistakes": 0,
+    "shuffleQuestions": true,
+    "topicDistribution": [
+      {
+        "topicId": "10000000-0000-0000-0000-000000000101",
+        "questionCount": 9
+      },
+      {
+        "topicId": "10000000-0000-0000-0000-000000000105",
+        "questionCount": 21
+      }
+    ],
     "isActive": true,
     "isDeleted": false,
     "version": 2,
@@ -566,6 +654,8 @@ The response includes `questions[]` so frontend can render the exam immediately 
     "score": null,
     "isPassed": null,
     "failedByCritical": false,
+    "criticalMistakes": 0,
+    "maxCriticalMistakes": 0,
     "startedAt": "2026-05-18T10:00:00.000Z",
     "finishedAt": null,
     "expiresAt": "2026-05-18T10:20:00.000Z",
@@ -628,6 +718,8 @@ List current student exam history.
         "score": null,
         "isPassed": null,
         "failedByCritical": false,
+        "criticalMistakes": 0,
+        "maxCriticalMistakes": 0,
         "startedAt": "2026-05-18T10:00:00.000Z",
         "finishedAt": null,
         "expiresAt": "2026-05-18T10:20:00.000Z",
@@ -752,6 +844,8 @@ Controller returns the updated active session. `questions[].isCorrect` is not re
     "score": null,
     "isPassed": null,
     "failedByCritical": false,
+    "criticalMistakes": 0,
+    "maxCriticalMistakes": 0,
     "startedAt": "2026-05-18T10:00:00.000Z",
     "finishedAt": null,
     "expiresAt": "2026-05-18T10:20:00.000Z",
@@ -812,6 +906,8 @@ Submit and synchronously grade. Each correct answer is 1 point; wrong/unanswered
     "score": 26,
     "isPassed": true,
     "failedByCritical": false,
+    "criticalMistakes": 0,
+    "maxCriticalMistakes": 0,
     "startedAt": "2026-05-18T10:00:00.000Z",
     "finishedAt": "2026-05-18T10:15:00.000Z",
     "expiresAt": "2026-05-18T10:20:00.000Z",
@@ -869,6 +965,8 @@ Same shape as `POST /exams/sessions/:id/submit`.
     "score": 26,
     "isPassed": true,
     "failedByCritical": false,
+    "criticalMistakes": 0,
+    "maxCriticalMistakes": 0,
     "startedAt": "2026-05-18T10:00:00.000Z",
     "finishedAt": "2026-05-18T10:15:00.000Z",
     "expiresAt": "2026-05-18T10:20:00.000Z",

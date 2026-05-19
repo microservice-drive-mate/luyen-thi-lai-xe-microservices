@@ -74,6 +74,8 @@ export class ExamSessionResponseDto {
   @ApiPropertyOptional({ nullable: true }) score: number | null;
   @ApiPropertyOptional({ nullable: true }) isPassed: boolean | null;
   @ApiProperty() failedByCritical: boolean;
+  @ApiProperty() criticalMistakes: number;
+  @ApiProperty() maxCriticalMistakes: number;
   @ApiProperty() startedAt: Date;
   @ApiPropertyOptional({ nullable: true }) finishedAt: Date | null;
   @ApiProperty() expiresAt: Date;
@@ -90,6 +92,8 @@ export class ExamSessionResponseDto {
     dto.score = result.score;
     dto.isPassed = result.isPassed;
     dto.failedByCritical = result.failedByCritical;
+    dto.criticalMistakes = result.criticalMistakes;
+    dto.maxCriticalMistakes = result.maxCriticalMistakes;
     dto.startedAt = result.startedAt;
     dto.finishedAt = result.finishedAt;
     dto.expiresAt = result.expiresAt;

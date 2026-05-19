@@ -64,10 +64,15 @@ export class ExamTemplateController {
     const result = await this.createTemplateUseCase.execute(
       new CreateTemplateCommand(
         dto.name,
+        dto.description,
         dto.licenseCategory,
         dto.totalQuestions,
         dto.passingScore,
         dto.durationMinutes,
+        dto.criticalQuestions,
+        dto.maxCriticalMistakes,
+        dto.shuffleQuestions,
+        dto.topicDistribution,
         resolveActorId(user, headerUserId),
       ),
     );
@@ -114,9 +119,14 @@ export class ExamTemplateController {
         id,
         dto.version,
         dto.name,
+        dto.description,
         dto.totalQuestions,
         dto.passingScore,
         dto.durationMinutes,
+        dto.criticalQuestions,
+        dto.maxCriticalMistakes,
+        dto.shuffleQuestions,
+        dto.topicDistribution,
         dto.isActive,
       ),
     );

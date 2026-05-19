@@ -9,6 +9,7 @@ interface RawTemplateForSession {
   licenseCategory: string;
   passingScore: number;
   durationMinutes: number;
+  maxCriticalMistakes: number;
 }
 
 interface RawSessionQuestion {
@@ -35,6 +36,8 @@ export interface RawExamSession {
   score: number | null;
   isPassed: boolean | null;
   failedByCritical: boolean;
+  criticalMistakes: number;
+  maxCriticalMistakes: number;
   startedAt: Date;
   finishedAt: Date | null;
   expiresAt: Date;
@@ -53,10 +56,12 @@ export class ExamSessionMapper {
       licenseCategory: raw.template.licenseCategory as LicenseCategory,
       passingScore: raw.template.passingScore,
       durationMinutes: raw.template.durationMinutes,
+      maxCriticalMistakes: raw.maxCriticalMistakes,
       status: raw.status as ExamSessionStatus,
       score: raw.score,
       isPassed: raw.isPassed,
       failedByCritical: raw.failedByCritical,
+      criticalMistakes: raw.criticalMistakes,
       startedAt: raw.startedAt,
       finishedAt: raw.finishedAt,
       expiresAt: raw.expiresAt,

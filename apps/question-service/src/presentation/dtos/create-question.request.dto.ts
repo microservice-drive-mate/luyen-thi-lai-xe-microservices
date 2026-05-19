@@ -88,7 +88,8 @@ export class CreateQuestionRequestDto {
   isActive?: boolean;
 
   @ApiProperty()
-  @IsUUID('4')
+  @IsString()
+  @IsNotEmpty()
   topicId: string;
 
   @ApiProperty({ type: [QuestionOptionRequestDto] })

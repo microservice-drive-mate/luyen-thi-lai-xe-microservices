@@ -11,11 +11,21 @@ export enum LicenseCategory {
 
 export interface CreateExamTemplateProps {
   name: string;
+  description?: string | null;
   licenseCategory: LicenseCategory;
   totalQuestions: number;
   passingScore: number;
   durationMinutes: number;
+  criticalQuestions: number;
+  maxCriticalMistakes: number;
+  shuffleQuestions: boolean;
+  topicDistribution: ExamTopicDistributionItem[];
   createdById: string;
+}
+
+export interface ExamTopicDistributionItem {
+  topicId: string;
+  questionCount: number;
 }
 
 export interface ReconstituteExamTemplateProps extends CreateExamTemplateProps {
@@ -30,8 +40,13 @@ export interface ReconstituteExamTemplateProps extends CreateExamTemplateProps {
 export interface UpdateExamTemplateProps {
   expectedVersion: number;
   name?: string;
+  description?: string | null;
   totalQuestions?: number;
   passingScore?: number;
   durationMinutes?: number;
+  criticalQuestions?: number;
+  maxCriticalMistakes?: number;
+  shuffleQuestions?: boolean;
+  topicDistribution?: ExamTopicDistributionItem[];
   isActive?: boolean;
 }
