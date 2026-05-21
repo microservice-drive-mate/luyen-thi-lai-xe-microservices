@@ -1,0 +1,66 @@
+@startuml UC28-Sequence
+title UC28 - Reset Learning Progress
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Student" as ActorStudent
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "ResetController" as ResetController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorStudent -> Client: Click Reset Progress
+Client -> APIGateway: POST /api/v1/progress/reset
+APIGateway -> ResetController: Forward request
+activate ResetController
+ResetController -> AuthService: Validate JWT + permission
+AuthService --> ResetController: Valid/Invalid
+
+alt JWT invalid
+  ResetController --> APIGateway: 403 Error\n(MSG106)
+  deactivate ResetController
+  APIGateway --> Client: Error Response
+else JWT valid
+  ResetController -> ResetController: Validate reset policy
+  
+  alt policy not satisfied
+    ResetController --> APIGateway: 400 Error\n(MSG105)
+    deactivate ResetController
+    APIGateway --> Client: Error Response
+  else policy ok
+    ResetController -> Database: Load progress scope
+    Database --> ResetController: Scope or null
+    
+    alt not found
+      ResetController --> APIGateway: 404 Error\n(MSG107)
+      deactivate ResetController
+      APIGateway --> Client: Error Response
+    else found
+      ResetController -> Database: Reset progress
+      Database --> ResetController: Committed
+      ResetController --> APIGateway: 200 OK\n(MSG108)
+      deactivate ResetController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

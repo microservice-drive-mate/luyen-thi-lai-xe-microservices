@@ -37,6 +37,7 @@ export class ListUsersUseCase
           p.phoneNumber,
           p.dateOfBirth,
           p.avatarUrl,
+          p.mediaFileId,
           p.gender,
           p.address,
           p.role,

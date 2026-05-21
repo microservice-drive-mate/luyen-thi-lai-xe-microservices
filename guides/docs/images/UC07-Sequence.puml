@@ -1,0 +1,68 @@
+@startuml UC07-Sequence
+title UC07 - View Detailed Course List
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "User" as ActorUser
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "CourseController" as CourseController
+participant "Cache (Redis)" as Cache
+database "Database\n(PostgreSQL)" as Database
+
+ActorUser -> Client: Navigate to Course List + optional filters
+Client -> APIGateway: GET /api/v1/courses?filters
+APIGateway -> CourseController: Forward request
+activate CourseController
+CourseController -> APIGateway: Validate JWT (from header)
+APIGateway --> CourseController: Token valid/invalid
+
+alt JWT invalid
+  CourseController --> APIGateway: 401 Error\n(MSG21)
+  deactivate CourseController
+  APIGateway --> Client: Error Response
+else JWT valid
+  CourseController -> CourseController: Extract user.licenseCategory
+  CourseController -> Cache: Get key [licenseCategory,page,size]
+  Cache --> CourseController: Hit or Miss
+  
+  alt cache hit
+    CourseController --> APIGateway: 200 OK\n(paginated courses)
+    deactivate CourseController
+    APIGateway --> Client: Success Response
+  else cache miss
+    CourseController -> Database: Query courses with filters + licenseCategory + pagination
+    Database --> CourseController: Result set
+    
+    alt result empty
+      CourseController --> APIGateway: 200 OK\n(MSG25 - empty result)
+      deactivate CourseController
+      APIGateway --> Client: Success Response
+    else results
+      CourseController -> Cache: Populate cache key
+      Cache --> CourseController: Stored
+      CourseController --> APIGateway: 200 OK\n(paginated courses)
+      deactivate CourseController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

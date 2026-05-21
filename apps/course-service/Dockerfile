@@ -33,8 +33,7 @@ COPY --from=builder --chown=node:node /app/apps/course-service/dist ./apps/cours
 COPY --from=builder --chown=node:node /app/apps/course-service/package.json ./apps/course-service/
 COPY --from=builder --chown=node:node /app/apps/course-service/prisma ./apps/course-service/prisma
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json
 USER node
-CMD ["node", "apps/course-service/dist/main.js"]
+CMD ["node", "apps/course-service/dist/src/main.js"]

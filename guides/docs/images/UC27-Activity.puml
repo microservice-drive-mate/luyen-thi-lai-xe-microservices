@@ -1,0 +1,39 @@
+@startuml UC27-Activity
+title UC27 - View Exam History
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Instructor/Admin|
+start
+:(1) Open exam history page;
+
+|System|
+:(2) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(3) Check [View_ExamHistory] permission;
+  if (Has permission?) then (Yes)
+    :(4) Validate period and pagination;
+    if (Valid?) then (Yes)
+      :(5) Load attempt history;
+      if (History exists?) then (Yes)
+        :(6) Build chronological timeline;
+        :(7) Return MSG104 (HTTP 200);
+      else (No)
+        :(8) Return MSG103 (HTTP 404);
+      endif
+    else (No)
+      :(9) Return MSG101 (HTTP 400);
+    endif
+  else (No)
+    :(10) Return MSG102 (HTTP 403);
+  endif
+else (No)
+  :(11) Return MSG102 (HTTP 403);
+endif
+
+|Instructor/Admin|
+:(12) View timeline;
+stop
+@enduml

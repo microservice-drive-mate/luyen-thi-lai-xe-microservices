@@ -24,6 +24,16 @@ export class CreateUserProfileUseCase
   async execute(
     command: CreateUserProfileCommand,
   ): Promise<CreateUserProfileResult> {
+    const existingById = await this.userProfileRepository.findById(command.id);
+    if (existingById) {
+      return new CreateUserProfileResult(
+        existingById.id,
+        existingById.fullName,
+        existingById.email,
+        existingById.role,
+      );
+    }
+
     const exists = await this.userProfileRepository.existsByEmail(
       command.email,
     );
@@ -41,6 +51,8 @@ export class CreateUserProfileUseCase
       gender: command.gender,
       address: command.address,
       avatarUrl: command.avatarUrl,
+      mediaFileId: command.mediaFileId,
+      licenseTier: command.licenseTier,
       enrolledAt: command.enrolledAt,
     });
 

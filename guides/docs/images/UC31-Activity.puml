@@ -1,0 +1,36 @@
+@startuml UC31-Activity
+title UC31 - View General Maneuver Errors
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Student|
+start
+:(1) Click errors button;
+
+|System|
+:(2) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(3) Check [View_ManeuverErrors] permission;
+  if (Has permission?) then (Yes)
+    :(4) Cache-aside retrieve error reference;
+    :(5) Parse error table;
+    if (Errors found?) then (Yes)
+      :(6) Categorize by severity (Yellow/Red);
+      :(7) Sort by frequency;
+      :(8) Return MSG120 (HTTP 200);
+    else (No)
+      :(9) Return MSG119 (HTTP 404);
+    endif
+  else (No)
+    :(10) Return MSG118 (HTTP 403);
+  endif
+else (No)
+  :(11) Return MSG118 (HTTP 403);
+endif
+
+|Student|
+:(12) View error list;
+stop
+@enduml

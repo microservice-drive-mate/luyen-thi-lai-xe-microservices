@@ -5,6 +5,7 @@ export interface UpdateUserProfileFields {
   phoneNumber?: string | null;
   dateOfBirth?: Date | null;
   avatarUrl?: string | null;
+  mediaFileId?: string | null;
   gender?: Gender | null;
   address?: string | null;
   notes?: string | null;
@@ -15,6 +16,7 @@ export class UpdateUserProfileCommand {
   readonly phoneNumber?: string | null;
   readonly dateOfBirth?: Date | null;
   readonly avatarUrl?: string | null;
+  readonly mediaFileId?: string | null;
   readonly gender?: Gender | null;
   readonly address?: string | null;
   readonly notes?: string | null;
@@ -27,6 +29,7 @@ export class UpdateUserProfileCommand {
     this.phoneNumber = fields.phoneNumber;
     this.dateOfBirth = fields.dateOfBirth;
     this.avatarUrl = fields.avatarUrl;
+    this.mediaFileId = fields.mediaFileId;
     this.gender = fields.gender;
     this.address = fields.address;
     this.notes = fields.notes;

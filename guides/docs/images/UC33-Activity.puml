@@ -1,0 +1,32 @@
+@startuml UC33-Activity
+title UC33 - Logout
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Student/Instructor/Admin|
+start
+:(1) Click [btnLogout];
+
+|System|
+:(2) Extract JWT from header;
+if (JWT exists?) then (Yes)
+  :(3) Validate JWT signature;
+  if (Valid?) then (Yes)
+    :(4) Add JWT to Redis blacklist;
+    :(5) Set TTL = JWT_exp - now;
+    :(6) Instruct client cleanup;
+    :(7) Return MSG128 (HTTP 200);
+  else (No)
+    :(8) Return MSG127 (HTTP 401);
+  endif
+else (No)
+  :(9) Return MSG126 (HTTP 401);
+endif
+
+|Student/Instructor/Admin|
+:(10) Token cleared locally;
+:(11) Redirect to login;
+stop
+@enduml

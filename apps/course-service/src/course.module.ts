@@ -18,12 +18,14 @@ import { CourseEnrollmentRepository } from './domain/repositories/course-enrollm
 import { CourseRepository } from './domain/repositories/course.repository';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 import {
+  MEDIA_SERVICE_CLIENT,
   RABBITMQ_CLIENT,
   RabbitMqEventPublisher,
 } from './infrastructure/messaging/rabbitmq-event-publisher.service';
 import { PrismaCourseEnrollmentRepository } from './infrastructure/persistence/prisma/prisma-course-enrollment.repository';
 import { PrismaCourseRepository } from './infrastructure/persistence/prisma/prisma-course.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { AdminCourseController } from './presentation/http/admin-course.controller';
 import { CourseController } from './presentation/http/course.controller';
 import { EnrollmentController } from './presentation/http/enrollment.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';
@@ -38,16 +40,35 @@ import { MessagingController } from './presentation/messaging/messaging.controll
           transport: Transport.RMQ,
           options: {
             urls: [
-              config.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672',
+              config.get<string>('rabbitmq.url') ?? 'amqp://127.0.0.1:5672',
             ],
             queue: 'course_service_publish',
             queueOptions: { durable: true },
           },
         }),
       },
+      {
+        name: MEDIA_SERVICE_CLIENT,
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              config.get<string>('rabbitmq.url') ?? 'amqp://127.0.0.1:5672',
+            ],
+            queue: 'media_service_events',
+            queueOptions: { durable: true },
+          },
+        }),
+      },
     ]),
   ],
-  controllers: [CourseController, EnrollmentController, MessagingController],
+  controllers: [
+    CourseController,
+    AdminCourseController,
+    EnrollmentController,
+    MessagingController,
+  ],
   providers: [
     // Infrastructure
     PrismaService,

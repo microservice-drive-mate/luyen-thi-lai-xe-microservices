@@ -1,0 +1,78 @@
+@startuml UC06-Sequence
+title UC06 - Assign License Categories To Students
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Admin/Manager" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "AssignmentController" as AssignmentController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+participant "Audit Service" as AuditService
+
+ActorAdmin -> Client: Select student + choose licenseTier + submit
+Client -> APIGateway: POST /api/v1/students/{studentId}/assign-license
+APIGateway -> AssignmentController: Forward request
+activate AssignmentController
+AssignmentController -> AuthService: Validate JWT token
+AuthService --> AssignmentController: Token valid/invalid
+
+alt JWT invalid or expired
+  AssignmentController --> APIGateway: 403 Forbidden\n(MSG19)
+  deactivate AssignmentController
+  APIGateway --> Client: Error Response
+else JWT valid
+  AuthService -> AssignmentController: Check RBAC permission
+  
+  alt RBAC denied
+    AssignmentController --> APIGateway: 403 Forbidden\n(MSG19)
+    deactivate AssignmentController
+    APIGateway --> Client: Error Response
+  else RBAC granted
+    AssignmentController -> Database: Query student by studentId
+    Database --> AssignmentController: Student record or null
+    
+    alt student not found
+      AssignmentController --> APIGateway: 404 Not Found\n(MSG12)
+      deactivate AssignmentController
+      APIGateway --> Client: Error Response
+    else student found
+      AssignmentController -> Database: Validate licenseTierId exists and active
+      Database --> AssignmentController: Tier record or null
+      
+      alt tier invalid
+        AssignmentController --> APIGateway: 400 Bad Request\n(MSG15)
+        deactivate AssignmentController
+        APIGateway --> Client: Error Response
+      else tier valid
+        AssignmentController -> Database: Update student licenseTierId
+        Database --> AssignmentController: Commit success
+        AssignmentController -> AuditService: Write audit entry
+        AuditService --> AssignmentController: Stored
+        AssignmentController --> APIGateway: 200 OK\n(MSG17)
+        deactivate AssignmentController
+        APIGateway --> Client: Success Response
+      end
+    end
+  end
+end
+
+@enduml

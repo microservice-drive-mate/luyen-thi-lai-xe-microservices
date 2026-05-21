@@ -1,25 +1,41 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { PrismaService } from './prisma/prisma.service';
+import { APP_GUARD } from '@nestjs/core';
+import {
+  KeycloakConnectModule,
+  KeycloakConnectOptions,
+  PolicyEnforcementMode,
+  TokenValidation,
+} from 'nest-keycloak-connect';
+
+import { JwtAuthGuard } from './infrastructure/guards/jwt-auth.guard';
+import { JwtRoleGuard } from './infrastructure/guards/jwt-role.guard';
+import Redis from 'ioredis';
+import Joi from 'joi';
 import {
   AppLoggerModule,
   ConsulConfigFactory,
   HealthModule,
 } from '@repo/common';
-import Joi from 'joi';
+
+import { AuthController } from './presentation/http/auth.controller';
+import { AdminController } from './presentation/http/admin.controller';
+import { AppService } from './app.service';
+import { AdminService } from './admin.service';
+import { PrismaService } from './prisma/prisma.service';
 import {
-  KeycloakConnectModule,
-  KeycloakConnectOptions,
-  PolicyEnforcementMode,
-  RoleGuard,
-  AuthGuard,
-  TokenValidation,
-} from 'nest-keycloak-connect';
-import { APP_GUARD } from '@nestjs/core';
+  TokenBlacklistService,
+  REDIS_CLIENT,
+} from './infrastructure/token-blacklist/token-blacklist.service';
+import { TokenBlacklistGuard } from './infrastructure/guards/token-blacklist.guard';
+import { KeycloakAdminService } from './infrastructure/keycloak-admin/keycloak-admin.service';
+import {
+  IdentityEventPublisher,
+  USER_SERVICE_CLIENT,
+  NOTI_SERVICE_CLIENT,
+} from './infrastructure/messaging/identity-event-publisher.service';
 
 @Module({
   imports: [
@@ -47,6 +63,7 @@ import { APP_GUARD } from '@nestjs/core';
                 'development-local',
                 'staging',
                 'production',
+                'test',
               )
               .default('development'),
             port: Joi.number().default(3000),
@@ -63,6 +80,9 @@ import { APP_GUARD } from '@nestjs/core';
               connectionTimeout: Joi.number().default(10000),
               heartbeat: Joi.number().default(60),
             }).optional(),
+            redis: Joi.object({
+              url: Joi.string().default('redis://localhost:6379'),
+            }).optional(),
             keycloak: Joi.object({
               authServerUrl: Joi.string().uri().required(),
               realm: Joi.string().required(),
@@ -77,7 +97,22 @@ import { APP_GUARD } from '@nestjs/core';
     }),
     ClientsModule.registerAsync([
       {
-        name: 'NOTI_SERVICE',
+        name: USER_SERVICE_CLIENT,
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              configService.get<string>('rabbitmq.url') ??
+                'amqp://localhost:5672',
+            ],
+            queue: 'user_service_events',
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+      {
+        name: NOTI_SERVICE_CLIENT,
         inject: [ConfigService],
         useFactory: (configService: ConfigService) => ({
           transport: Transport.RMQ,
@@ -87,6 +122,7 @@ import { APP_GUARD } from '@nestjs/core';
                 'amqp://localhost:5672',
             ],
             queue: 'notification_queue',
+            queueOptions: { durable: true },
           },
         }),
       },
@@ -101,16 +137,30 @@ import { APP_GUARD } from '@nestjs/core';
         clientId: configService.getOrThrow<string>('keycloak.clientId'),
         secret: configService.getOrThrow<string>('keycloak.clientSecret'),
         policyEnforcement: PolicyEnforcementMode.PERMISSIVE,
-        tokenValidation: TokenValidation.ONLINE,
+        tokenValidation: TokenValidation.OFFLINE,
       }),
     }),
   ],
-  controllers: [AppController],
+  controllers: [AuthController, AdminController],
   providers: [
     AppService,
+    AdminService,
     PrismaService,
-    { provide: APP_GUARD, useClass: AuthGuard },
-    { provide: APP_GUARD, useClass: RoleGuard },
+    KeycloakAdminService,
+    IdentityEventPublisher,
+    TokenBlacklistService,
+    {
+      provide: REDIS_CLIENT,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const redisUrl =
+          configService.get<string>('redis.url') ?? 'redis://localhost:6379';
+        return new Redis(redisUrl);
+      },
+    },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: TokenBlacklistGuard },
+    { provide: APP_GUARD, useClass: JwtRoleGuard },
   ],
 })
 export class AppModule {}

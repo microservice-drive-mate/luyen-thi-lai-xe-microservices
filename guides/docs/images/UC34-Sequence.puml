@@ -1,0 +1,71 @@
+@startuml UC34-Sequence
+title UC34 - View my Learning Progress
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Student" as ActorStudent
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "ProgressController" as ProgressController
+participant "Auth Service" as AuthService
+participant "Cache\n(Redis)" as Cache
+database "Database\n(PostgreSQL)" as Database
+
+ActorStudent -> Client: Click My Progress
+Client -> APIGateway: GET /api/v1/my-progress
+APIGateway -> ProgressController: Forward request
+activate ProgressController
+ProgressController -> AuthService: Validate JWT + role=Student
+AuthService --> ProgressController: Valid/Invalid
+
+alt JWT invalid
+  ProgressController --> APIGateway: 403 Error\n(MSG130)
+  deactivate ProgressController
+  APIGateway --> Client: Error Response
+else JWT valid but not Student
+  ProgressController --> APIGateway: 403 Error\n(MSG130)
+  deactivate ProgressController
+  APIGateway --> Client: Error Response
+else JWT valid & Student role
+  ProgressController -> Cache: Lookup progress
+  
+  alt cache hit
+    Cache --> ProgressController: Metrics
+  else cache miss
+    ProgressController -> Database: Query progress
+    Database --> ProgressController: Metrics or null
+    
+    alt not found
+      ProgressController --> APIGateway: 404 Error\n(MSG132)
+      deactivate ProgressController
+      APIGateway --> Client: Error Response
+    else found
+      ProgressController -> Cache: Store metrics
+      Cache --> ProgressController: OK
+    end
+  end
+  
+  ProgressController -> ProgressController: Scope check & project
+  ProgressController --> APIGateway: 200 OK\n(MSG133)
+  deactivate ProgressController
+  APIGateway --> Client: Success Response
+end
+
+@enduml

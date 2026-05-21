@@ -1,0 +1,47 @@
+@startuml UC08-Activity
+title UC08 - Create Course
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/Manager|
+start
+:(1) Click [btnCreateCourse];
+:(2) Fill [courseCode],[courseName],[licenseCategory],[status];
+:(3) Submit form;
+
+|System|
+:(4) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(5) Check RBAC permission;
+  if (Can create courses?) then (Yes)
+    :(6) Validate required fields;
+    if (Fields valid?) then (Yes)
+      :(7) Check courseCode uniqueness;
+      if (Duplicate?) then (Yes)
+        :(8) Return MSG28 (HTTP 409);
+      else (No)
+        :(9) Validate licenseCategory and status against reference data;
+        if (Valid?) then (Yes)
+          :(10) Persist course record;
+          :(11) Write audit {createdBy, createdAt};
+          :(12) Return MSG30 (HTTP 201);
+        else (No)
+          :(13) Return MSG29 (HTTP 400);
+        endif
+      endif
+    else (No)
+      :(14) Return MSG26 (HTTP 400);
+    endif
+  else (No)
+    :(15) Return MSG27 (HTTP 403);
+  endif
+else (No)
+  :(16) Return MSG27 (HTTP 403);
+endif
+
+|Admin/Manager|
+:(17) See result;
+stop
+@enduml

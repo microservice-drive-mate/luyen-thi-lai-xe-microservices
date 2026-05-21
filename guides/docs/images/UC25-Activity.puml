@@ -1,0 +1,39 @@
+@startuml UC25-Activity
+title UC25 - View Student List
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Instructor/Admin|
+start
+:(1) Open student roster module;
+
+|System|
+:(2) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(3) Check [View_StudentList] permission;
+  if (Has permission?) then (Yes)
+    :(4) Validate class filter, keyword, pagination;
+    if (Valid?) then (Yes)
+      :(5) Load assignment scope;
+      if (Scope exists?) then (Yes)
+        :(6) Build list with status badges;
+        :(7) Return MSG96 (HTTP 200);
+      else (No)
+        :(8) Return MSG95 (HTTP 404);
+      endif
+    else (No)
+      :(9) Return MSG93 (HTTP 400);
+    endif
+  else (No)
+    :(10) Return MSG94 (HTTP 403);
+  endif
+else (No)
+  :(11) Return MSG94 (HTTP 403);
+endif
+
+|Instructor/Admin|
+:(12) View roster;
+stop
+@enduml

@@ -1,0 +1,42 @@
+@startuml UC09-Activity
+title UC09 - Update Course
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/Manager|
+start
+:(1) Select course from list;
+:(2) Edit [courseName],[status],[licenseCategory],[version];
+:(3) Click [btnUpdateCourse];
+
+|System|
+:(4) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(5) Check RBAC permission;
+  if (Can update courses?) then (Yes)
+    :(6) Query course by [courseId] where isDeleted=false;
+    if (Course exists?) then (Yes)
+      :(7) Validate mutable fields and optimistic concurrency (version);
+      if (Version mismatch?) then (Yes)
+        :(8) Return MSG32 (HTTP 409);
+      else (No)
+        :(9) Persist updated course, increment version;
+        :(10) Write audit {updatedBy, oldValue, newValue, updatedAt};
+        :(11) Return MSG33 (HTTP 200);
+      endif
+    else (No)
+      :(12) Return MSG23 (HTTP 404);
+    endif
+  else (No)
+    :(13) Return MSG31 (HTTP 403);
+  endif
+else (No)
+  :(14) Return MSG31 (HTTP 403);
+endif
+
+|Admin/Manager|
+:(15) See result;
+stop
+@enduml

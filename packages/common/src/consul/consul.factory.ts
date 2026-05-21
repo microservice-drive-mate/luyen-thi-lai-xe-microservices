@@ -208,6 +208,36 @@ export class ConsulConfigFactory {
               clientSecret: env.KEYCLOAK_CLIENT_SECRET,
             }
           : undefined,
+      redis: env.REDIS_URL
+        ? {
+            url: env.REDIS_URL,
+          }
+        : undefined,
+      storage:
+        env.STORAGE_ACCOUNT_NAME ||
+        env.STORAGE_ACCOUNT_KEY ||
+        env.STORAGE_CONTAINER_NAME ||
+        env.STORAGE_PRESIGNED_URL_EXPIRY
+          ? {
+              accountName: env.STORAGE_ACCOUNT_NAME,
+              accountKey: env.STORAGE_ACCOUNT_KEY,
+              containerName: env.STORAGE_CONTAINER_NAME,
+              presignedUrlExpiry: env.STORAGE_PRESIGNED_URL_EXPIRY
+                ? parseInt(env.STORAGE_PRESIGNED_URL_EXPIRY, 10)
+                : undefined,
+            }
+          : undefined,
+      services:
+        env.QUESTION_SERVICE_URL || env.USER_SERVICE_URL
+          ? {
+              question: env.QUESTION_SERVICE_URL
+                ? { baseUrl: env.QUESTION_SERVICE_URL }
+                : undefined,
+              user: env.USER_SERVICE_URL
+                ? { baseUrl: env.USER_SERVICE_URL }
+                : undefined,
+            }
+          : undefined,
     };
   }
 

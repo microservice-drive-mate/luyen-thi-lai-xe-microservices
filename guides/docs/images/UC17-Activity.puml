@@ -1,0 +1,40 @@
+@startuml UC17-Activity
+title UC17 - Search Question Bank
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/Manager|
+start
+:(1) Enter keyword/filter;
+:(2) Click Search;
+
+|System|
+:(3) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(4) Check [Search_QuestionBank] permission;
+  if (Has permission?) then (Yes)
+    :(5) Validate keyword, filters, pagination;
+    if (Valid?) then (Yes)
+      :(6) Load searchable scope;
+      if (Scope exists?) then (Yes)
+        :(7) Execute indexed query with ranking;
+        :(8) Return paginated results (HTTP 200);
+      else (No)
+        :(9) Return MSG63 (HTTP 404);
+      endif
+    else (No)
+      :(10) Return MSG61 (HTTP 400);
+    endif
+  else (No)
+    :(11) Return MSG62 (HTTP 403);
+  endif
+else (No)
+  :(12) Return MSG62 (HTTP 403);
+endif
+
+|Admin/Manager|
+:(13) View search results;
+stop
+@enduml

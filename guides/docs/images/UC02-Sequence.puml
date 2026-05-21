@@ -1,0 +1,102 @@
+@startuml UC02-Sequence
+title UC02 - Forgot Password
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "User" as ActorUser
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "PasswordController" as PasswordController
+database "Database\n(PostgreSQL)" as Database
+participant "Email Service" as EmailService
+participant "Token Generator" as TokenGenerator
+participant "Password Encoder" as PasswordEncoder
+
+ActorUser -> Client: Enter email + click Forgot Password
+Client -> APIGateway: POST /api/v1/auth/forgot-password
+APIGateway -> PasswordController: Forward request
+activate PasswordController
+PasswordController -> PasswordController: Validate email format
+
+alt invalid email format
+  PasswordController --> APIGateway: 400 Error\n(MSG04)
+  deactivate PasswordController
+  APIGateway --> Client: Error Response
+else valid email format
+  PasswordController -> Database: Find user by email
+  Database --> PasswordController: User record or null
+  alt account not found
+    PasswordController --> APIGateway: 404 Error\n(MSG05)
+    deactivate PasswordController
+    APIGateway --> Client: Error Response
+  else account found
+    PasswordController -> TokenGenerator: Generate reset token
+    TokenGenerator --> PasswordController: Token + expiration time (24h)
+    PasswordController -> Database: Store reset token record
+    Database --> PasswordController: Stored
+    PasswordController -> EmailService: Send reset email with token link
+    EmailService --> PasswordController: Email sent
+    PasswordController --> APIGateway: 200 OK\n(Confirmation message)
+    deactivate PasswordController
+    APIGateway --> Client: Success Response
+    Client --> ActorUser: Show "Check your email"
+    
+    ActorUser -> EmailService: Click reset link in email
+    EmailService --> Client: Redirect with token parameter
+    Client -> APIGateway: GET /auth/reset-password?token=XXX
+    APIGateway -> PasswordController: Validate token
+    activate PasswordController
+    PasswordController -> Database: Find token record
+    Database --> PasswordController: Token record
+    
+    alt token invalid or expired
+      PasswordController --> APIGateway: 400 Error\n(MSG06)
+      deactivate PasswordController
+      APIGateway --> Client: Error Response
+    else token valid and not expired
+      PasswordController --> Client: Show password reset form
+      deactivate PasswordController
+      Client --> ActorUser: Display form
+      
+      ActorUser -> Client: Enter new password + submit
+      Client -> APIGateway: POST /api/v1/auth/reset-password
+      APIGateway -> PasswordController: Forward request with token
+      activate PasswordController
+      PasswordController -> PasswordController: Validate password policy
+      
+      alt password does not meet policy
+        PasswordController --> APIGateway: 422 Error\n(MSG07)
+        deactivate PasswordController
+        APIGateway --> Client: Error Response
+      else password meets policy
+        PasswordController -> PasswordEncoder: Hash new password
+        PasswordEncoder --> PasswordController: Hashed password
+        PasswordController -> Database: Update password + mark token used
+        Database --> PasswordController: Updated
+        PasswordController --> APIGateway: 200 OK\n(Success message)
+        deactivate PasswordController
+        APIGateway --> Client: Success Response
+        Client --> ActorUser: Redirect to login page
+      end
+    end
+  end
+end
+
+@enduml

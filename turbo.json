@@ -21,7 +21,6 @@
     "prisma:generate": {
       "outputs": []
     },
-
     "dev": {
       "cache": false,
       "persistent": true

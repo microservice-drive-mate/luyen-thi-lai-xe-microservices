@@ -1,0 +1,55 @@
+@startuml UC33-Sequence
+title UC33 - Logout
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Student/Instructor/Admin" as ActorUser
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "AuthController" as AuthController
+participant "Auth Service" as AuthService
+participant "Cache\n(Redis)" as Cache
+
+ActorUser -> Client: Click logout
+Client -> APIGateway: POST /api/v1/logout
+APIGateway -> AuthController: Forward request
+activate AuthController
+AuthController -> AuthService: Extract & validate JWT
+AuthService --> AuthController: Valid/Invalid or null
+
+alt JWT missing
+  AuthController --> APIGateway: 401 Error\n(MSG126)
+  deactivate AuthController
+  APIGateway --> Client: Error Response
+else JWT invalid signature
+  AuthController --> APIGateway: 401 Error\n(MSG127)
+  deactivate AuthController
+  APIGateway --> Client: Error Response
+else JWT valid
+  AuthController -> Cache: Add JWT to blacklist
+  Cache --> AuthController: Blacklisted with TTL
+  AuthController --> APIGateway: 200 OK\n(MSG128)
+  deactivate AuthController
+  APIGateway --> Client: Success Response
+  Client -> Client: Clear local token
+  Client -> Client: Redirect to login
+end
+
+@enduml

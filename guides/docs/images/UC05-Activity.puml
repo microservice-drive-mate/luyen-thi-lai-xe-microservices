@@ -1,0 +1,48 @@
+@startuml UC05-Activity
+title UC05 - Lock Student Account
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/Manager|
+start
+:(1) Click Lock Account;
+|System|
+:(2) POST /api/students/{studentId}/lock;
+:(3) Lock Request;
+:(4) Validate JWT;
+:(5) Token Valid?;
+if (Condition?) then (Yes)
+:(6) MSG20 - Unauthorized;
+:(7) 403 Forbidden;
+else (No)
+:(8) Check RBAC Permission;
+:(9) Can Lock?;
+if (Condition?) then (Yes)
+:(10) MSG20 - Unauthorized;
+:(11) 403 Forbidden;
+else (No)
+:(12) Query Student;
+if (Condition?) then (Yes)
+:(13) MSG12 - Not Found;
+:(14) 404 Not Found;
+else (No)
+:(15) Get Student Status;
+if (Condition?) then (Yes)
+:(16) MSG24 - Invalid Status;
+:(17) 400 Bad Request;
+else (No)
+:(18) Update isLocked=true;
+:(19) MSG128 - Lock Success;
+:(20) 200 OK;
+|Admin/Manager|
+:(21) Display Success;
+endif
+endif
+endif
+endif
+:(22) See result;
+stop
+@enduml
+

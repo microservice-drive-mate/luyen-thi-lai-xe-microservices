@@ -30,8 +30,10 @@ export interface CreateUserProfileProps {
   phoneNumber?: string;
   dateOfBirth?: Date;
   avatarUrl?: string;
+  mediaFileId?: string;
   gender?: Gender;
   address?: string;
+  licenseTier?: LicenseTier;
   enrolledAt?: Date;
 }
 
@@ -42,6 +44,7 @@ export interface ReconstituteUserProfileProps {
   phoneNumber: string | null;
   dateOfBirth: Date | null;
   avatarUrl: string | null;
+  mediaFileId: string | null;
   gender: Gender | null;
   address: string | null;
   role: UserRole;
@@ -60,6 +63,7 @@ export interface UpdateUserProfileProps {
   phoneNumber?: string | null;
   dateOfBirth?: Date | null;
   avatarUrl?: string | null;
+  mediaFileId?: string | null;
   gender?: Gender | null;
   address?: string | null;
   notes?: string | null;

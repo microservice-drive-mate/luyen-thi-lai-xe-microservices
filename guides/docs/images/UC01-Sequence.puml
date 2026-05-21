@@ -1,0 +1,75 @@
+@startuml UC01-Sequence
+title UC01 - Log in
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "User" as ActorUser
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "AuthController" as AuthController
+database "Database\n(PostgreSQL)" as Database
+participant "Password Encoder" as PasswordEncoder
+participant "JWT Service" as JwtService
+
+ActorUser -> Client: Enter email/password + click Login
+Client -> APIGateway: POST /api/v1/auth/login
+APIGateway -> AuthController: Forward request
+activate AuthController
+AuthController -> AuthController: Validate required fields
+AuthController -> AuthController: Validate email format
+
+alt invalid input (missing fields or invalid email format)
+  AuthController --> APIGateway: 400 Error\n(MSG01)
+  deactivate AuthController
+  APIGateway --> Client: Error Response
+else valid input
+  AuthController -> Database: Find user by email
+  Database --> AuthController: User record
+  alt account locked
+    AuthController --> APIGateway: 401 Error\n(MSG02)
+    deactivate AuthController
+    APIGateway --> Client: Error Response
+  else account active
+    AuthController -> PasswordEncoder: Verify password hash
+    PasswordEncoder --> AuthController: Match / Mismatch
+
+    alt password mismatch
+      AuthController -> Database: Increment failedLoginCount
+      AuthController -> AuthController: Check threshold (>5 in 15m)
+      alt threshold exceeded
+        AuthController -> Database: Set isLocked = true
+        AuthController --> APIGateway: 401 Error\n(MSG03)
+      else threshold not exceeded
+        AuthController --> APIGateway: 401 Error\n(MSG03)
+      end
+      deactivate AuthController
+      APIGateway --> Client: Error Response
+    else password matched
+      AuthController -> Database: Reset failedLoginCount = 0
+      AuthController -> JwtService: Generate signed JWT
+      JwtService --> AuthController: JWT token
+      AuthController --> APIGateway: 200 OK\n(JWT + redirect info)
+      deactivate AuthController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

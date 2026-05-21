@@ -3,14 +3,17 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run start:dev --filter=\"./apps/*\"",
+    "dev": "tsx scripts/dev.ts",
     "lint": "turbo run lint",
     "format": "biome format --write .",
     "check": "biome check --write .",
     "check-types": "turbo run check-types",
     "prisma:generate": "turbo run prisma:generate",
-    "db:deploy": "npm run db:deploy -w identity-service && npm run db:deploy -w user-service && npm run db:deploy -w course-service",
-    "db:seed": "npm run db:seed -w identity-service && npm run db:seed -w user-service && npm run db:seed -w course-service",
+    "db:migrate": "tsx scripts/prisma-migrate-all.ts dev",
+    "db:deploy": "tsx scripts/prisma-migrate-all.ts deploy",
+    "db:seed": "tsx scripts/prisma-seed-all.ts",
+    "db:seed:question": "tsx scripts/prisma-seed-all.ts question-service",
+    "db:seed:question-images": "tsx scripts/seed-question-images.ts",
     "db:backup:local": "tsx scripts/db-backup-local.ts",
     "smoke": "tsx scripts/smoke.ts",
     "infra:up": "docker compose -f docker-compose.infra.yml up -d",
@@ -19,6 +22,7 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:build": "docker compose build",
+    "docker:migrate": "tsx scripts/prisma-migrate-all.ts deploy development-local",
     "consul:seed": "tsx scripts/consul-seed.ts",
     "consul:seed:local": "tsx scripts/consul-seed.ts development-local",
     "consul:list": "tsx scripts/consul-list.ts",
@@ -29,6 +33,10 @@
     "*.{js,ts,jsx,tsx}": [
       "biome check --write --no-errors-on-unmatched"
     ]
+  },
+  "optionalDependencies": {
+    "@biomejs/cli-linux-x64": "2.4.13",
+    "@biomejs/cli-win32-x64": "2.4.13"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",

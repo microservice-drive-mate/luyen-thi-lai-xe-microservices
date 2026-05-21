@@ -1,6 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  output        = "../../../node_modules/.prisma/client"
+  output        = "../../../node_modules/@prisma/identity-client"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -10,11 +10,16 @@ datasource db {
 }
 
 model IdentityUser {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String    @id @default(uuid())
+  email       String    @unique
+  name        String
+  role        String
+  isActive    Boolean   @default(true)
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  deletedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@map("identity_users")
 }

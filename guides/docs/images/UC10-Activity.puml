@@ -1,0 +1,42 @@
+@startuml UC10-Activity
+title UC10 - Delete Course
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/Manager|
+start
+:(1) Select course;
+:(2) Click [btnDeleteCourse] and confirm;
+
+|System|
+:(3) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(4) Check RBAC permission;
+  if (Can delete courses?) then (Yes)
+    :(5) Query course by [courseId] where isDeleted=false;
+    if (Course exists?) then (Yes)
+      :(6) Check blocking dependencies (active enrollments, scheduled exams, locked refs);
+      if (Dependencies exist?) then (Yes)
+        :(7) Return MSG35 (HTTP 409);
+      else (No)
+        :(8) Set isDeleted = true; set deletedAt, deletedBy;
+        :(9) Commit transaction;
+        :(10) Write audit {action=DELETE_COURSE};
+        :(11) Return MSG36 (HTTP 200);
+      endif
+    else (No)
+      :(12) Return MSG23 (HTTP 404);
+    endif
+  else (No)
+    :(13) Return MSG34 (HTTP 403);
+  endif
+else (No)
+  :(14) Return MSG34 (HTTP 403);
+endif
+
+|Admin/Manager|
+:(15) See result;
+stop
+@enduml

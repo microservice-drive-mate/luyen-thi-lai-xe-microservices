@@ -1,0 +1,65 @@
+@startuml UC26-Sequence
+title UC26 - Track Learning Progress
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Instructor/Admin" as ActorInstructor
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "ProgressController" as ProgressController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorInstructor -> Client: Open progress dashboard
+Client -> APIGateway: GET /api/v1/progress
+APIGateway -> ProgressController: Forward request
+activate ProgressController
+ProgressController -> AuthService: Validate JWT + permission
+AuthService --> ProgressController: Valid/Invalid
+
+alt JWT invalid
+  ProgressController --> APIGateway: 403 Error\n(MSG98)
+  deactivate ProgressController
+  APIGateway --> Client: Error Response
+else JWT valid
+  ProgressController -> ProgressController: Validate filters
+  
+  alt invalid
+    ProgressController --> APIGateway: 400 Error\n(MSG97)
+    deactivate ProgressController
+    APIGateway --> Client: Error Response
+  else valid
+    ProgressController -> Database: Load metrics
+    Database --> ProgressController: Metrics or null
+    
+    alt empty
+      ProgressController --> APIGateway: 404 Error\n(MSG99)
+      deactivate ProgressController
+      APIGateway --> Client: Error Response
+    else found
+      ProgressController -> ProgressController: Calculate trends
+      ProgressController --> APIGateway: 200 OK\n(MSG100)
+      deactivate ProgressController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

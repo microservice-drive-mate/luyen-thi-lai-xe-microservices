@@ -1,0 +1,40 @@
+@startuml UC30-Activity
+title UC30 - View Maneuver Checkpoint Details
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Student|
+start
+:(1) Click checkpoint button;
+
+|System|
+:(2) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(3) Check [View_Checkpoint] permission;
+  if (Has permission?) then (Yes)
+    :(4) Validate license filter;
+    if (Valid?) then (Yes)
+      :(5) Load checkpoint catalog;
+      if (Checkpoints exist?) then (Yes)
+        :(6) Build map and list view;
+        :(7) Filter by license category;
+        :(8) Return MSG116 (HTTP 200);
+      else (No)
+        :(9) Return MSG115 (HTTP 404);
+      endif
+    else (No)
+      :(10) Return MSG113 (HTTP 400);
+    endif
+  else (No)
+    :(11) Return MSG114 (HTTP 403);
+  endif
+else (No)
+  :(12) Return MSG114 (HTTP 403);
+endif
+
+|Student|
+:(13) View checkpoint map;
+stop
+@enduml

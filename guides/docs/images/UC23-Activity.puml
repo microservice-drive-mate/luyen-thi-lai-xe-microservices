@@ -1,0 +1,40 @@
+@startuml UC23-Activity
+title UC23 - Delete Exam Template
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin|
+start
+:(1) Click [btnDeleteExamTemplate];
+
+|System|
+:(2) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(3) Check [Manage_ExamConfig] permission;
+  if (Has permission?) then (Yes)
+    :(4) Validate safe-delete policy;
+    if (Policy satisfied?) then (Yes)
+      :(5) Load template and usage context;
+      if (Exists?) then (Yes)
+        :(6) Soft delete template;
+        :(7) Clear cache links;
+        :(8) Return MSG87 (HTTP 200);
+      else (No)
+        :(9) Return MSG84 (HTTP 404);
+      endif
+    else (No)
+      :(10) Return MSG86 (HTTP 400);
+    endif
+  else (No)
+    :(11) Return MSG79 (HTTP 403);
+  endif
+else (No)
+  :(12) Return MSG79 (HTTP 403);
+endif
+
+|Admin|
+:(13) See result;
+stop
+@enduml

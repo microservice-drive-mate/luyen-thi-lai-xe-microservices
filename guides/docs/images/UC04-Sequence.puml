@@ -1,0 +1,75 @@
+@startuml UC04-Sequence
+title UC04 - Update Student Account
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Admin/Manager" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "AccountController" as AccountController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorAdmin -> Client: Select student + edit form
+Client -> APIGateway: PUT /api/v1/admin/accounts/{studentId}
+APIGateway -> AccountController: Forward request
+activate AccountController
+AccountController -> AuthService: Validate JWT token
+AuthService --> AccountController: Token valid/invalid
+
+alt JWT invalid or expired
+  AccountController --> APIGateway: 403 Error\n(MSG18)
+  deactivate AccountController
+  APIGateway --> Client: Error Response
+else JWT valid
+  AuthService -> AccountController: Check RBAC permission
+  
+  alt unauthorized (no permission)
+    AccountController --> APIGateway: 403 Error\n(MSG18)
+    deactivate AccountController
+    APIGateway --> Client: Error Response
+  else authorized
+    AccountController -> Database: Query student by studentId
+    Database --> AccountController: Student record or null
+    
+    alt student not found
+      AccountController --> APIGateway: 404 Error\n(MSG12)
+      deactivate AccountController
+      APIGateway --> Client: Error Response
+    else student found
+      AccountController -> AccountController: Validate fullName, email, role, metadata
+      
+      alt invalid fields
+        AccountController --> APIGateway: 400 Error\n(MSG14)
+        deactivate AccountController
+        APIGateway --> Client: Error Response
+      else valid fields
+        AccountController -> Database: Update student record
+        Database --> AccountController: Updated
+        AccountController --> APIGateway: 200 OK\n(MSG16 + updated account)
+        deactivate AccountController
+        APIGateway --> Client: Success Response
+        Client --> ActorAdmin: Show confirmation + updated data
+      end
+    end
+  end
+end
+
+@enduml

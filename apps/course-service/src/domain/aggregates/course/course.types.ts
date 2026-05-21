@@ -97,6 +97,7 @@ export interface ReconstituteMaterialProps {
   courseId: string;
   title: string;
   fileUrl: string | null;
+  mediaFileId: string | null;
   type: string | null;
   createdAt: Date;
 }
@@ -104,5 +105,6 @@ export interface ReconstituteMaterialProps {
 export interface CreateMaterialProps {
   title: string;
   fileUrl?: string | null;
+  mediaFileId?: string | null;
   type?: string | null;
 }

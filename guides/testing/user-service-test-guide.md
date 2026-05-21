@@ -120,18 +120,20 @@ Client (curl/Postman)
 
 ## 3. Chuẩn bị — Tạo dữ liệu mẫu trực tiếp
 
-Trước khi test, cần có ít nhất 1 user trong DB. Dùng `POST /users` để tạo trực tiếp (bypass RabbitMQ).
+Trước khi test, cần có ít nhất 1 user trong DB. Production flow nên tạo account qua `identity-service` admin API để publish RabbitMQ event `identity.user.created`; user-service cũng expose `POST /admin/users` cho ADMIN/CENTER_MANAGER khi cần backfill profile với Keycloak user id đã có.
+
+Các lệnh `POST http://localhost:3001/admin/identity-users` bên dưới cần thêm header `Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>` khi chạy với guard Keycloak.
 
 ### Tạo user ADMIN
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "admin-uuid-0001",
     "fullName": "Nguyễn Admin",
     "email": "admin@example.com",
-    "role": "ADMIN"
+    "role": "ADMIN",
+    "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
@@ -141,7 +143,7 @@ curl -s -X POST http://localhost:3002/users \
 {
   "success": true,
   "code": "SUCCESS",
-  "message": "OK",
+  "message": "Created",
   "timestamp": "2026-05-06T10:00:00.000Z",
   "path": "/users",
   "data": {
@@ -156,31 +158,26 @@ curl -s -X POST http://localhost:3002/users \
 ### Tạo user CENTER_MANAGER
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "manager-uuid-0002",
     "fullName": "Trần Manager",
     "email": "manager@example.com",
-    "role": "CENTER_MANAGER"
+    "role": "CENTER_MANAGER",
+    "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
 ### Tạo user STUDENT (với đầy đủ thông tin)
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "student-uuid-0003",
     "fullName": "Lê Học Viên",
     "email": "student@example.com",
     "role": "STUDENT",
-    "phoneNumber": "0912345678",
-    "dateOfBirth": "2000-01-15",
-    "gender": "MALE",
-    "address": "123 Đường ABC, TP.HCM",
-    "enrolledAt": "2026-01-01"
+    "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
@@ -189,6 +186,10 @@ curl -s -X POST http://localhost:3002/users \
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "Created",
+  "timestamp": "2026-05-06T10:00:00.000Z",
+  "path": "/users",
   "data": {
     "id": "student-uuid-0003",
     "fullName": "Lê Học Viên",
@@ -201,13 +202,13 @@ curl -s -X POST http://localhost:3002/users \
 ### Tạo user INSTRUCTOR
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "instructor-uuid-0004",
     "fullName": "Phạm Giáo Viên",
     "email": "instructor@example.com",
-    "role": "INSTRUCTOR"
+    "role": "INSTRUCTOR",
+    "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
@@ -220,18 +221,40 @@ curl -s -X POST http://localhost:3002/users \
 
 ---
 
-### 4.1 POST /users — Tạo user profile
+### 4.1 POST /admin/users — tạo user profile
+
+**Happy path — tạo profile trực tiếp bằng Keycloak user id đã có**
+
+```bash
+curl -s -X POST http://localhost:3002/users \
+  -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "keycloak-user-uuid",
+    "fullName": "Lê Học Viên",
+    "email": "student-profile@example.com",
+    "role": "STUDENT",
+    "phoneNumber": "0912345678",
+    "dateOfBirth": "2000-01-15",
+    "gender": "MALE",
+    "address": "TP.HCM",
+    "licenseTier": "B2",
+    "enrolledAt": "2026-01-01"
+  }' | jq .
+```
+
+Best practice: không dùng endpoint này để tạo account đăng nhập; account vẫn phải được tạo ở identity-service/Keycloak trước.
 
 **Case: Email đã tồn tại (expect 409)**
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "another-uuid",
     "fullName": "Người Khác",
     "email": "admin@example.com",
-    "role": "ADMIN"
+    "role": "ADMIN",
+    "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
@@ -250,7 +273,7 @@ curl -s -X POST http://localhost:3002/users \
 **Case: Body thiếu field bắt buộc (expect 400)**
 
 ```bash
-curl -s -X POST http://localhost:3002/users \
+curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Thiếu email"
@@ -263,28 +286,16 @@ curl -s -X POST http://localhost:3002/users \
 {
   "success": false,
   "code": "VALIDATION_ERROR",
-  "message": "...",
+  "message": "Validation failed",
+  "timestamp": "...",
+  "path": "/users",
   "errors": ["email must be an email", "id must be a string"]
 }
 ```
 
-**Case: SĐT không hợp lệ (expect 400)**
-
-```bash
-curl -s -X POST http://localhost:3002/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "uuid-bad-phone",
-    "fullName": "Test",
-    "email": "test-phone@example.com",
-    "role": "STUDENT",
-    "phoneNumber": "12345"
-  }' | jq .
-```
-
 ---
 
-### 4.2 GET /users — Danh sách user (có phân trang + filter)
+### 4.2 GET /admin/users — Danh sách user profile (có phân trang + filter)
 
 **Lấy tất cả users (page 1, size 20):**
 
@@ -297,6 +308,10 @@ curl -s "http://localhost:3002/users" | jq .
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-06T10:00:00.000Z",
+  "path": "/users",
   "data": {
     "items": [
       /* mảng UserProfileResponse */
@@ -311,39 +326,39 @@ curl -s "http://localhost:3002/users" | jq .
 **Lọc theo role STUDENT:**
 
 ```bash
-curl -s "http://localhost:3002/users?role=STUDENT" | jq .
+curl -s "http://localhost:3002/admin/users?role=STUDENT" | jq .
 ```
 
 **Lọc theo isActive:**
 
 ```bash
-curl -s "http://localhost:3002/users?isActive=true" | jq .
+curl -s "http://localhost:3002/admin/users?isActive=true" | jq .
 ```
 
 **Tìm kiếm theo tên/email/SĐT:**
 
 ```bash
-curl -s "http://localhost:3002/users?search=Học+Viên" | jq .
-curl -s "http://localhost:3002/users?search=student@" | jq .
+curl -s "http://localhost:3002/admin/users?search=Học+Viên" | jq .
+curl -s "http://localhost:3002/admin/users?search=student@" | jq .
 ```
 
 **Phân trang:**
 
 ```bash
-curl -s "http://localhost:3002/users?page=1&size=2" | jq .
-curl -s "http://localhost:3002/users?page=2&size=2" | jq .
+curl -s "http://localhost:3002/admin/users?page=1&size=2" | jq .
+curl -s "http://localhost:3002/admin/users?page=2&size=2" | jq .
 ```
 
 **Kết hợp filter:**
 
 ```bash
-curl -s "http://localhost:3002/users?role=STUDENT&isActive=true&page=1&size=10" | jq .
+curl -s "http://localhost:3002/admin/users?role=STUDENT&isActive=true&page=1&size=10" | jq .
 ```
 
 **Case: size vượt giới hạn (expect 400):**
 
 ```bash
-curl -s "http://localhost:3002/users?size=200" | jq .
+curl -s "http://localhost:3002/admin/users?size=200" | jq .
 ```
 
 ---
@@ -364,6 +379,10 @@ curl -s http://localhost:3002/users/me \
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-06T10:00:00.000Z",
+  "path": "/users/me",
   "data": {
     "id": "student-uuid-0003",
     "fullName": "Lê Học Viên",
@@ -396,19 +415,21 @@ curl -s http://localhost:3002/users/me \
 {
   "success": false,
   "code": "USER_PROFILE_NOT_FOUND",
-  "message": "User profile not found: non-existent-uuid"
+  "message": "User profile not found: non-existent-uuid",
+  "timestamp": "...",
+  "path": "/users/me"
 }
 ```
 
 ---
 
-### 4.4 GET /users/:id — Lấy profile theo ID
+### 4.4 GET /admin/users/:id — Lấy profile theo ID
 
 **Happy path:**
 
 ```bash
-curl -s http://localhost:3002/users/admin-uuid-0001 | jq .
-curl -s http://localhost:3002/users/student-uuid-0003 | jq .
+curl -s http://localhost:3002/admin/users/admin-uuid-0001 | jq .
+curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq .
 ```
 
 **So sánh studentDetail:**
@@ -419,7 +440,7 @@ curl -s http://localhost:3002/users/student-uuid-0003 | jq .
 **Case: ID không tồn tại (expect 404):**
 
 ```bash
-curl -s http://localhost:3002/users/does-not-exist | jq .
+curl -s http://localhost:3002/admin/users/does-not-exist | jq .
 ```
 
 ---
@@ -446,6 +467,10 @@ curl -s -X PATCH http://localhost:3002/users/me \
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "...",
+  "path": "/users/me",
   "data": {
     "fullName": "Lê Học Viên (Updated)",
     "address": "456 Đường Mới, Hà Nội",
@@ -486,10 +511,10 @@ curl -s -X PATCH http://localhost:3002/users/me \
 
 ---
 
-### 4.6 PATCH /users/:id — Cập nhật profile bất kỳ (admin)
+### 4.6 PATCH /admin/users/:id — Cập nhật profile bất kỳ (admin)
 
 ```bash
-curl -s -X PATCH http://localhost:3002/users/instructor-uuid-0004 \
+curl -s -X PATCH http://localhost:3002/admin/users/instructor-uuid-0004 \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Phạm Giáo Viên (Admin Updated)",
@@ -499,12 +524,12 @@ curl -s -X PATCH http://localhost:3002/users/instructor-uuid-0004 \
 
 ---
 
-### 4.7 PATCH /users/:id/lock — Khóa / mở khóa user
+### 4.7 PATCH /admin/users/:id/lock — Khóa / mở khóa user
 
 **Khóa user (isActive → false):**
 
 ```bash
-curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/lock \
+curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/lock \
   -H "Content-Type: application/json" \
   -d '{ "lock": true }'
 # Kết quả mong đợi: HTTP 204 (không có body)
@@ -513,21 +538,21 @@ curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/lock \
 **Xác nhận user đã bị khóa:**
 
 ```bash
-curl -s http://localhost:3002/users/student-uuid-0003 | jq '.data.isActive'
+curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data.isActive'
 # Kết quả mong đợi: false
 ```
 
 **Kiểm tra user không xuất hiện khi lọc isActive=true:**
 
 ```bash
-curl -s "http://localhost:3002/users?isActive=true" | jq '.data.items | map(.id)'
+curl -s "http://localhost:3002/admin/users?isActive=true" | jq '.data.items | map(.id)'
 # student-uuid-0003 không có trong danh sách
 ```
 
 **Mở khóa user (isActive → true):**
 
 ```bash
-curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/lock \
+curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/lock \
   -H "Content-Type: application/json" \
   -d '{ "lock": false }'
 # Kết quả mong đợi: HTTP 204
@@ -536,14 +561,14 @@ curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/lock \
 **Xác nhận:**
 
 ```bash
-curl -s http://localhost:3002/users/student-uuid-0003 | jq '.data.isActive'
+curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data.isActive'
 # Kết quả mong đợi: true
 ```
 
 **Case: ID không tồn tại (expect 404):**
 
 ```bash
-curl -s -X PATCH http://localhost:3002/users/fake-uuid/lock \
+curl -s -X PATCH http://localhost:3002/admin/users/fake-uuid/lock \
   -H "Content-Type: application/json" \
   -d '{ "lock": true }' | jq .
 ```
@@ -551,21 +576,21 @@ curl -s -X PATCH http://localhost:3002/users/fake-uuid/lock \
 **Case: Body không hợp lệ — thiếu field `lock` (expect 400):**
 
 ```bash
-curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/lock \
+curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/lock \
   -H "Content-Type: application/json" \
   -d '{}' | jq .
 ```
 
 ---
 
-### 4.8 PATCH /users/:id/license-tier — Gán hạng bằng lái
+### 4.8 PATCH /admin/users/:id/license-tier — Gán hạng bằng lái
 
 > Endpoint này đọc `x-user-id` làm `changedById` (người thực hiện) để ghi audit.
 
 **Gán hạng B2 cho student:**
 
 ```bash
-curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/license-tier \
+curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/license-tier \
   -H "Content-Type: application/json" \
   -H "x-user-id: admin-uuid-0001" \
   -d '{ "licenseTier": "B2" }'
@@ -575,7 +600,7 @@ curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/license-tier \
 **Xác nhận license tier đã được gán:**
 
 ```bash
-curl -s http://localhost:3002/users/student-uuid-0003 | jq '.data.studentDetail'
+curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data.studentDetail'
 ```
 
 **Kết quả mong đợi:**
@@ -591,7 +616,7 @@ curl -s http://localhost:3002/users/student-uuid-0003 | jq '.data.studentDetail'
 **Thay đổi hạng (từ B2 → C):**
 
 ```bash
-curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/license-tier \
+curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/license-tier \
   -H "Content-Type: application/json" \
   -H "x-user-id: manager-uuid-0002" \
   -d '{ "licenseTier": "C" }'
@@ -602,7 +627,7 @@ curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/license-tier \
 **Case: Gán cho user KHÔNG phải STUDENT (expect 422):**
 
 ```bash
-curl -s -X PATCH http://localhost:3002/users/admin-uuid-0001/license-tier \
+curl -s -X PATCH http://localhost:3002/admin/users/admin-uuid-0001/license-tier \
   -H "Content-Type: application/json" \
   -H "x-user-id: admin-uuid-0001" \
   -d '{ "licenseTier": "B2" }' | jq .
@@ -623,7 +648,7 @@ curl -s -X PATCH http://localhost:3002/users/admin-uuid-0001/license-tier \
 **Case: licenseTier không hợp lệ (expect 400):**
 
 ```bash
-curl -s -X PATCH http://localhost:3002/users/student-uuid-0003/license-tier \
+curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/license-tier \
   -H "Content-Type: application/json" \
   -H "x-user-id: admin-uuid-0001" \
   -d '{ "licenseTier": "Z9" }' | jq .
@@ -668,7 +693,7 @@ Thay vì dùng Keycloak, publish trực tiếp vào RabbitMQ queue bằng Manage
 **Xác nhận user đã được tạo:**
 
 ```bash
-curl -s http://localhost:3002/users/rabbitmq-user-uuid-0005 | jq .
+curl -s http://localhost:3002/admin/users/rabbitmq-user-uuid-0005 | jq .
 ```
 
 **Cách 2: Dùng amqp script**
@@ -720,7 +745,7 @@ channel.sendToQueue(
 **Sau khi consume:**
 
 ```bash
-curl -s http://localhost:3002/users/student-uuid-0003 | jq '.data | {role, studentDetail}'
+curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data | {role, studentDetail}'
 ```
 
 **Kết quả mong đợi:**
@@ -752,7 +777,7 @@ channel.sendToQueue(
 **Sau khi consume:**
 
 ```bash
-curl -s http://localhost:3002/users/student-uuid-0003 | jq '.data | {role, studentDetail}'
+curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data | {role, studentDetail}'
 ```
 
 **Kết quả mong đợi:**

@@ -1,0 +1,84 @@
+@startuml UC03-Sequence
+title UC03 - Create Student Account
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Admin/Manager" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "AccountController" as AccountController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+participant "Password Generator" as PasswordGenerator
+participant "Email Service" as EmailService
+
+ActorAdmin -> Client: Fill create account form
+Client -> APIGateway: POST /api/v1/admin/accounts
+APIGateway -> AccountController: Forward request
+activate AccountController
+AccountController -> AuthService: Validate JWT token
+AuthService --> AccountController: Token valid/invalid
+
+alt JWT invalid or expired
+  AccountController --> APIGateway: 403 Error\n(MSG09)
+  deactivate AccountController
+  APIGateway --> Client: Error Response
+else JWT valid
+  AuthService -> AccountController: Check RBAC permission
+  
+  alt unauthorized (no permission)
+    AccountController --> APIGateway: 403 Error\n(MSG09)
+    deactivate AccountController
+    APIGateway --> Client: Error Response
+  else authorized
+    AccountController -> AccountController: Validate fullName, email, role
+    
+    alt invalid fields
+      AccountController --> APIGateway: 400 Error\n(MSG08)
+      deactivate AccountController
+      APIGateway --> Client: Error Response
+    else valid fields
+      AccountController -> Database: Check email uniqueness
+      Database --> AccountController: Exists or Not exists
+      
+      alt email already exists
+        AccountController --> APIGateway: 409 Error\n(MSG10)
+        deactivate AccountController
+        APIGateway --> Client: Error Response
+      else email unique
+        AccountController -> PasswordGenerator: Generate temporary password
+        PasswordGenerator --> AccountController: Temporary password
+        AccountController -> PasswordGenerator: Hash password
+        PasswordGenerator --> AccountController: Hashed password
+        AccountController -> Database: Insert new account record
+        Database --> AccountController: Account created
+        AccountController -> EmailService: Send credentials email
+        EmailService --> AccountController: Email sent
+        AccountController --> APIGateway: 201 Created\n(MSG11 + account data)
+        deactivate AccountController
+        APIGateway --> Client: Success Response
+        Client --> ActorAdmin: Show confirmation
+        EmailService --> ActorAdmin: Send credentials to email
+      end
+    end
+  end
+end
+
+@enduml

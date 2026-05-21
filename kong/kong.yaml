@@ -9,6 +9,11 @@ services:
       - name: identity-route
         paths:
           - /auth
+        strip_path: true
+      - name: identity-admin-route
+        paths:
+          - /admin
+        strip_path: false
       - name: identity-swagger-route
         paths:
           - /identity-service
@@ -21,6 +26,11 @@ services:
       - name: user-route
         paths:
           - /users
+        strip_path: false
+      - name: user-admin-route
+        paths:
+          - /admin/users
+        strip_path: false
       - name: user-swagger-route
         paths:
           - /user-service
@@ -33,6 +43,11 @@ services:
       - name: exam-route
         paths:
           - /exams
+        strip_path: false
+      - name: exam-admin-route
+        paths:
+          - /admin/exams
+        strip_path: false
       - name: exam-swagger-route
         paths:
           - /exam-service
@@ -42,9 +57,10 @@ services:
   - name: question-service
     url: http://question-service:3000
     routes:
-      - name: question-route
+      - name: question-admin-route
         paths:
-          - /questions
+          - /admin/questions
+        strip_path: false
       - name: question-swagger-route
         paths:
           - /question-service
@@ -57,6 +73,12 @@ services:
       - name: course-route
         paths:
           - /courses
+          - /enrollments
+        strip_path: false
+      - name: course-admin-route
+        paths:
+          - /admin/courses
+        strip_path: false
       - name: course-swagger-route
         paths:
           - /course-service
@@ -69,6 +91,7 @@ services:
       - name: notification-route
         paths:
           - /notifications
+        strip_path: false
       - name: notification-swagger-route
         paths:
           - /notification-service
@@ -81,6 +104,7 @@ services:
       - name: analytics-route
         paths:
           - /analytics
+        strip_path: false
       - name: analytics-swagger-route
         paths:
           - /analytics-service
@@ -93,15 +117,58 @@ services:
       - name: simulation-route
         paths:
           - /simulations
+        strip_path: false
       - name: simulation-swagger-route
         paths:
           - /simulation-service
         strip_path: true
 
+  # 9. Lưu trữ media và file (Cloudflare R2)
+  - name: media-service
+    url: http://media-service:3000
+    routes:
+      - name: media-route
+        paths:
+          - /media
+        strip_path: false
+      - name: media-admin-route
+        paths:
+          - /admin/media
+        strip_path: false
+      - name: media-swagger-route
+        paths:
+          - /media-service
+        strip_path: true
 # ========================================================
 # Cấu hình Plugins chung (Optional)
 # ========================================================
 plugins:
+  - name: cors
+    config:
+      origins:
+        - http://localhost:3000
+        - http://localhost:5173
+        - http://127.0.0.1:3000
+        - http://127.0.0.1:5173
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Authorization
+        - Content-Type
+        - Origin
+        - X-Requested-With
+        - x-user-id
+        - x-user-role
+      exposed_headers:
+        - Authorization
+      credentials: true
+      max_age: 3600
   - name: rate-limiting
     config:
       second: 5

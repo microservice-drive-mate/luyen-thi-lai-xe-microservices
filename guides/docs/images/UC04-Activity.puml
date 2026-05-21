@@ -1,0 +1,44 @@
+@startuml UC04-Activity
+title UC04 - Update Student Account
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/Manager|
+start
+:(1) Select student from list;
+:(2) Edit account form;
+:(3) Modify [fullName], [email], [role], etc.;
+:(4) Click [btnUpdate];
+
+|System|
+:(5) Validate JWT token;
+if (JWT valid?) then (Yes)
+  :(6) Check RBAC permission;
+  if (Can update account?) then (Yes)
+    :(7) Query student by [studentId];
+    if (Student exists?) then (Yes)
+      :(8) Validate input fields;
+      if (All fields valid?) then (Yes)
+        :(9) Update account record;
+        :(10) Store changes in database;
+        :(11) Return updated payload;
+        :(12) Return MSG16 (HTTP 200);
+      else (No)
+        :(13) Return MSG14 (HTTP 400);
+      endif
+    else (No)
+      :(14) Return MSG12 (HTTP 404);
+    endif
+  else (No)
+    :(15) Return MSG18 (HTTP 403);
+  endif
+else (No)
+  :(16) Return MSG18 (HTTP 403);
+endif
+
+|Admin/Manager|
+:(17) See result;
+stop
+@enduml

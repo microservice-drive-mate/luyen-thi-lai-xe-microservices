@@ -1,0 +1,31 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../node_modules/@prisma/media-client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum FileStatus {
+  UNLINKED
+  LINKED
+}
+
+model FileObject {
+  id           String     @id @default(uuid())
+  storageKey   String     @unique @map("storage_key")
+  originalName String     @map("original_name")
+  mimeType     String     @map("mime_type")
+  fileSize     Int        @map("file_size")
+  bucketName   String     @map("bucket_name")
+  uploadedById String     @map("uploaded_by_id")
+  isPublic     Boolean    @default(false) @map("is_public")
+  status       FileStatus @default(UNLINKED) @map("status")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@map("file_objects")
+}

@@ -1,0 +1,66 @@
+@startuml UC12-Sequence
+title UC12 - Manage Exam Session
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Student" as ActorStudent
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "SessionController" as SessionController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorStudent -> Client: Interact during exam (answer/bookmark/autosave)
+Client -> APIGateway: POST /api/v1/exams/{attemptId}/session
+APIGateway -> SessionController: Forward request
+activate SessionController
+SessionController -> AuthService: Validate JWT + check permission
+AuthService --> SessionController: Valid/Invalid
+
+alt JWT invalid
+  SessionController --> APIGateway: 403 Error\n(MSG42)
+  deactivate SessionController
+  APIGateway --> Client: Error Response
+else JWT valid
+  SessionController -> SessionController: Validate attemptId, questionId, eventType
+  
+  alt invalid
+    SessionController --> APIGateway: 400 Error\n(MSG41)
+    deactivate SessionController
+    APIGateway --> Client: Error Response
+  else valid
+    SessionController -> Database: Load attempt, question, timer
+    Database --> SessionController: Records or null
+    
+    alt not found
+      SessionController --> APIGateway: 404 Error\n(MSG43)
+      deactivate SessionController
+      APIGateway --> Client: Error Response
+    else found
+      SessionController -> Database: Upsert answer + autosave
+      Database --> SessionController: Committed
+      SessionController --> APIGateway: 200 OK\n(MSG44)
+      deactivate SessionController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

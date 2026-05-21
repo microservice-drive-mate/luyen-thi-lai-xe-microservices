@@ -42,12 +42,80 @@ services:
       - "5435:5432"
     volumes:
       - db_course_data:/var/lib/postgresql/data
+
+  db-question:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: question_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5436:5432"
+    volumes:
+      - db_question_data:/var/lib/postgresql/data
+
+  db-notification:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5437:5432"
+    volumes:
+      - db_notification_data:/var/lib/postgresql/data
+
+  db-analytics:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: analytics_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5438:5432"
+    volumes:
+      - db_analytics_data:/var/lib/postgresql/data
+
+  db-simulation:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: simulation_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5439:5432"
+    volumes:
+      - db_simulation_data:/var/lib/postgresql/data
+
+  db-media:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: media_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5440:5432"
+    volumes:
+      - db_media_data:/var/lib/postgresql/data
   # ── Message Broker ─────────────────────────────────────────
   rabbitmq:
     image: rabbitmq:3-management-alpine
     ports:
       - "5672:5672"
       - "15672:15672"
+
+  # ── Token Blacklist Cache ───────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_data:/data
 
   # ── Config Server ──────────────────────────────────────────
   consul:
@@ -73,6 +141,11 @@ services:
       - ./docker/consul/init.sh:/consul/init.sh:ro
     environment:
       CONSUL_URL: http://consul:8500
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me}
+      STORAGE_ACCOUNT_NAME: ${STORAGE_ACCOUNT_NAME:-}
+      STORAGE_ACCOUNT_KEY: ${STORAGE_ACCOUNT_KEY:-}
+      STORAGE_CONTAINER_NAME: ${STORAGE_CONTAINER_NAME:-media}
+      STORAGE_PRESIGNED_URL_EXPIRY: ${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
     depends_on:
       consul:
         condition: service_healthy
@@ -91,7 +164,9 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
-    command: start-dev
+    # --import-realm: tự động import tất cả *.json trong /opt/keycloak/data/import/
+    # khi realm chưa tồn tại (idempotent – restart an toàn)
+    command: start-dev --import-realm
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://db-keycloak:5432/keycloak_db
@@ -101,12 +176,48 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_URL: "http://localhost:8080"
     ports:
       - "8080:8080"
+    volumes:
+      - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     depends_on:
       - db-keycloak
+      - mailpit
 
   # ── API Gateway (trỏ vào localhost của máy host) ───────────
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  keycloak-smtp-config:
+    image: quay.io/keycloak/keycloak:24.0
+    volumes:
+      - ./docker/keycloak/configure-smtp.sh:/opt/keycloak/configure-smtp.sh:ro
+    entrypoint: ["/bin/sh", "/opt/keycloak/configure-smtp.sh"]
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: luyen-thi-lai-xe-realm
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_SMTP_HOST: ${KEYCLOAK_SMTP_HOST:-mailpit}
+      KEYCLOAK_SMTP_PORT: ${KEYCLOAK_SMTP_PORT:-1025}
+      KEYCLOAK_SMTP_FROM: ${KEYCLOAK_SMTP_FROM:-no-reply@luyen-thi-lai-xe.local}
+      KEYCLOAK_SMTP_FROM_DISPLAY_NAME: ${KEYCLOAK_SMTP_FROM_DISPLAY_NAME:-Luyen Thi Lai Xe}
+      KEYCLOAK_SMTP_REPLY_TO: ${KEYCLOAK_SMTP_REPLY_TO:-no-reply@luyen-thi-lai-xe.local}
+      KEYCLOAK_SMTP_REPLY_TO_DISPLAY_NAME: ${KEYCLOAK_SMTP_REPLY_TO_DISPLAY_NAME:-Luyen Thi Lai Xe}
+      KEYCLOAK_SMTP_AUTH: ${KEYCLOAK_SMTP_AUTH:-false}
+      KEYCLOAK_SMTP_USER: ${KEYCLOAK_SMTP_USER:-}
+      KEYCLOAK_SMTP_PASSWORD: ${KEYCLOAK_SMTP_PASSWORD:-}
+      KEYCLOAK_SMTP_SSL: ${KEYCLOAK_SMTP_SSL:-false}
+      KEYCLOAK_SMTP_STARTTLS: ${KEYCLOAK_SMTP_STARTTLS:-false}
+    depends_on:
+      - keycloak
+      - mailpit
+    restart: "no"
+
   kong-dev:
     image: kong:latest
     user: "root"
@@ -126,9 +237,59 @@ services:
       - "8000:8000"
       - "8001:8001"
 
+  # ── Observability (ELK Stack) ─────────────────────────────────────────────
+  # Hybrid dev mode still needs ELK because services run local and send logs
+  # to Logstash via localhost:5044 by default.
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.3
+    volumes:
+      - ./docker/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    ports:
+      - "5044:5044"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.3
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
 volumes:
   db_identity_data:
   db_user_data:
   db_course_data:
+  db_question_data:
+  db_notification_data:
+  db_analytics_data:
+  db_simulation_data:
+  db_media_data:
   consul_data:
   db_keycloak_data:
+  redis_data:
+  elasticsearch_data:

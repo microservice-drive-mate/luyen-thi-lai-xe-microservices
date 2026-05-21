@@ -1,0 +1,43 @@
+@startuml UC12-Activity
+title UC12 - Manage Exam Session
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Student|
+start
+:(1) Interact with exam interface;
+:(2) Answer question/bookmark/autosave;
+:(3) Submit session action;
+
+|System|
+:(4) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(5) Check [Manage_ExamSession] permission;
+  if (Has permission?) then (Yes)
+    :(6) Validate [attemptId], [questionId], [eventType], status;
+    if (Request valid?) then (Yes)
+      :(7) Load attempt, question, timer metadata;
+      if (Context exists?) then (Yes)
+        :(8) Upsert answer/bookmark and autosave checkpoint;
+        :(9) Update remaining time;
+        :(10) Persist session state;
+        :(11) Return MSG44 (HTTP 200);
+      else (No)
+        :(12) Return MSG43 (HTTP 404);
+      endif
+    else (No)
+      :(13) Return MSG41 (HTTP 400);
+    endif
+  else (No)
+    :(14) Return MSG42 (HTTP 403);
+  endif
+else (No)
+  :(15) Return MSG42 (HTTP 403);
+endif
+
+|Student|
+:(16) Receive updated session state;
+stop
+@enduml

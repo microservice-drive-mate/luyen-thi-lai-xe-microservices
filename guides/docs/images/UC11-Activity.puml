@@ -1,0 +1,44 @@
+@startuml UC11-Activity
+title UC11 - Take Theory Exam
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Student|
+start
+:(1) Click [btnStartExam];
+:(2) Submit exam start request;
+
+|System|
+:(3) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(4) Check [Take_Exam] permission;
+  if (Has permission?) then (Yes)
+    :(5) Validate [templateId], [licenseTierId];
+    if (Payload valid?) then (Yes)
+      :(6) Load student profile, exam template, config;
+      if (All resources exist?) then (Yes)
+        :(7) Generate randomized question set;
+        :(8) Create attempt record with initial state;
+        :(9) Initialize timer/session fields;
+        :(10) Persist attempt in database;
+        :(11) Serialize questions (exclude correctAnswer);
+        :(12) Return MSG40 (HTTP 201);
+      else (No)
+        :(13) Return MSG39 (HTTP 404);
+      endif
+    else (No)
+      :(14) Return MSG37 (HTTP 400);
+    endif
+  else (No)
+    :(15) Return MSG38 (HTTP 403);
+  endif
+else (No)
+  :(16) Return MSG38 (HTTP 403);
+endif
+
+|Student|
+:(17) Receive attempt ID and questions;
+stop
+@enduml

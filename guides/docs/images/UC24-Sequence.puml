@@ -1,0 +1,65 @@
+@startuml UC24-Sequence
+title UC24 - Auto-generate Exam Papers
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+participant "Generation Job" as Job
+participant "API Gateway" as APIGateway
+participant "GenerationController" as GenerationController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+Job -> APIGateway: POST /api/v1/exams/generate-papers
+APIGateway -> GenerationController: Forward request
+activate GenerationController
+GenerationController -> AuthService: Validate JWT + permission
+AuthService --> GenerationController: Valid/Invalid
+
+alt JWT invalid
+  GenerationController --> APIGateway: 403 Error\n(MSG90)
+  deactivate GenerationController
+  APIGateway --> Job: Error Response
+else JWT valid
+  GenerationController -> GenerationController: Validate template + amount
+  
+  alt invalid
+    GenerationController --> APIGateway: 400 Error\n(MSG89)
+    deactivate GenerationController
+    APIGateway --> Job: Error Response
+  else valid
+    GenerationController -> Database: Load template + question pool
+    Database --> GenerationController: Resources or null
+    
+    alt not found
+      GenerationController --> APIGateway: 404 Error\n(MSG91)
+      deactivate GenerationController
+      APIGateway --> Job: Error Response
+    else found
+      GenerationController -> GenerationController: Generate papers
+      GenerationController -> Database: Persist papers
+      Database --> GenerationController: Committed
+      GenerationController --> APIGateway: 201 Created\n(MSG92)
+      deactivate GenerationController
+      APIGateway --> Job: Success Response
+    end
+  end
+end
+
+@enduml

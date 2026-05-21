@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
 import { UserProfileNotFoundException } from '../../../domain/exceptions/user-profile-not-found.exception';
 import { UserProfileRepository } from '../../../domain/repositories/user-profile.repository';
+import { EventPublisher } from '../../ports/event-publisher.port';
 import { GetUserProfileResult } from '../get-user-profile/get-user-profile.result';
 import { UpdateUserProfileCommand } from './update-user-profile.command';
 
@@ -9,7 +10,10 @@ import { UpdateUserProfileCommand } from './update-user-profile.command';
 export class UpdateUserProfileUseCase
   implements IUseCase<UpdateUserProfileCommand, GetUserProfileResult>
 {
-  constructor(private readonly userProfileRepository: UserProfileRepository) {}
+  constructor(
+    private readonly userProfileRepository: UserProfileRepository,
+    private readonly eventPublisher: EventPublisher,
+  ) {}
 
   async execute(
     command: UpdateUserProfileCommand,
@@ -26,12 +30,16 @@ export class UpdateUserProfileUseCase
       phoneNumber: command.phoneNumber,
       dateOfBirth: command.dateOfBirth,
       avatarUrl: command.avatarUrl,
+      mediaFileId: command.mediaFileId,
       gender: command.gender,
       address: command.address,
       notes: command.notes,
     });
 
     await this.userProfileRepository.save(profile);
+
+    await this.eventPublisher.publishAll(profile.getDomainEvents());
+    profile.clearDomainEvents();
 
     return new GetUserProfileResult(
       profile.id,
@@ -40,6 +48,7 @@ export class UpdateUserProfileUseCase
       profile.phoneNumber,
       profile.dateOfBirth,
       profile.avatarUrl,
+      profile.mediaFileId,
       profile.gender,
       profile.address,
       profile.role,

@@ -4,6 +4,6 @@ export class UserAlreadyExistsException extends DomainException {
   readonly code = 'USER_ALREADY_EXISTS';
 
   constructor(email: string) {
-    super(`A user with email "${email}" already exists`);
+    super(`Người dùng với email "${email}" đã tồn tại`);
   }
 }

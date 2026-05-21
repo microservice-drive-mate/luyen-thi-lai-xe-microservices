@@ -1,0 +1,64 @@
+@startuml UC27-Sequence
+title UC27 - View Exam History
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Instructor/Admin" as ActorInstructor
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "HistoryController" as HistoryController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorInstructor -> Client: Open exam history
+Client -> APIGateway: GET /api/v1/exams/history
+APIGateway -> HistoryController: Forward request
+activate HistoryController
+HistoryController -> AuthService: Validate JWT + permission
+AuthService --> HistoryController: Valid/Invalid
+
+alt JWT invalid
+  HistoryController --> APIGateway: 403 Error\n(MSG102)
+  deactivate HistoryController
+  APIGateway --> Client: Error Response
+else JWT valid
+  HistoryController -> HistoryController: Validate filters
+  
+  alt invalid
+    HistoryController --> APIGateway: 400 Error\n(MSG101)
+    deactivate HistoryController
+    APIGateway --> Client: Error Response
+  else valid
+    HistoryController -> Database: Load history
+    Database --> HistoryController: Results or empty
+    
+    alt empty
+      HistoryController --> APIGateway: 404 Error\n(MSG103)
+      deactivate HistoryController
+      APIGateway --> Client: Error Response
+    else found
+      HistoryController --> APIGateway: 200 OK\n(MSG104)
+      deactivate HistoryController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

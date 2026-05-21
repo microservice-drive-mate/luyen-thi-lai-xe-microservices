@@ -26,6 +26,7 @@ export interface CourseMaterialResult {
   id: string;
   title: string;
   fileUrl: string | null;
+  mediaFileId: string | null;
   type: string | null;
   createdAt: Date;
 }
@@ -87,6 +88,7 @@ export class CourseResult {
         id: m.id,
         title: m.title,
         fileUrl: m.fileUrl,
+        mediaFileId: m.mediaFileId,
         type: m.type,
         createdAt: m.createdAt,
       })),

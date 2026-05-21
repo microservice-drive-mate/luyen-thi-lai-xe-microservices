@@ -1,53 +1,63 @@
 # Course Service API Specification
 
-**Base URL (qua Kong):** `http://localhost:8000`
-**Service path:** `/courses`, `/enrollments`
-**Port local:** `3004`
+**Base URL qua Kong:** `http://localhost:8000`  
+**Service paths:** `/courses`, `/enrollments`, `/admin/courses`  
+**Direct local:** `http://localhost:3004`  
+**Swagger UI:** `http://localhost:3004/docs`  
+**Swagger UI qua Kong:** `http://localhost:8000/course-service/docs`  
+**OpenAPI JSON:** `http://localhost:3004/docs-json`  
+**OpenAPI JSON qua Kong:** `http://localhost:8000/course-service/docs-json`  
 **Version:** 1.0.0
+
+Course-service validate JWT/RBAC tại service bằng Keycloak guard. Frontend gọi qua Kong và gửi `Authorization: Bearer <access_token>`. Service lấy actor id từ `JWT.sub`; `x-user-id` chỉ là fallback cho debug/local script cũ.
 
 ---
 
-## Tổng quan xác thực
+## Authentication
 
-Tất cả endpoint (trừ `GET /courses` và `GET /courses/:id`) yêu cầu JWT hợp lệ do Keycloak phát hành.
-
-Kong gateway:
-
-1. Xác thực chữ ký JWT (`exp`, `iss`)
-2. Inject các header vào request trước khi forward xuống service:
-   - `x-user-id` — `sub` claim từ JWT (Keycloak user UUID)
-   - `x-user-role` — role của user (từ Keycloak token claims)
-
-**Header Authorization:**
-
-```
-Authorization: Bearer <keycloak_access_token>
-```
+| Endpoint | Role |
+| --- | --- |
+| `POST /admin/courses` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `GET /admin/courses` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `GET /admin/courses/:id` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `PATCH /admin/courses/:id` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `PATCH /admin/courses/:id/activate` | `ADMIN`, `CENTER_MANAGER` |
+| `POST /admin/courses/:id/lessons` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `DELETE /admin/courses/:id/lessons/:lessonId` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `POST /admin/courses/:id/materials` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `GET /courses` | JWT hợp lệ |
+| `GET /courses/:id` | JWT hợp lệ |
+| `POST /courses/:id/enroll` | `STUDENT` |
+| `GET /enrollments` | `STUDENT` |
+| `GET /enrollments/:id` | `STUDENT`, `ADMIN`, `CENTER_MANAGER` |
+| `POST /enrollments/:id/lessons/:lessonId/complete` | `STUDENT` |
 
 ---
 
 ## Response Format
 
-Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
+Tất cả HTTP success response được bọc bởi `ApiResponseInterceptor`.
 
 ```json
-// Thành công
 {
   "success": true,
   "code": "SUCCESS",
   "message": "OK",
-  "timestamp": "2026-05-07T10:00:00.000Z",
+  "timestamp": "2026-05-14T10:00:00.000Z",
   "path": "/courses",
-  "data": { ... }
+  "data": {}
 }
+```
 
-// Lỗi
+Lỗi domain:
+
+```json
 {
   "success": false,
   "code": "COURSE_NOT_FOUND",
-  "message": "Course not found: abc-123",
-  "timestamp": "2026-05-07T10:00:00.000Z",
-  "path": "/courses/abc-123"
+  "message": "Course not found: course-uuid",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/courses/course-uuid"
 }
 ```
 
@@ -55,160 +65,51 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 ## Error Codes
 
-| HTTP Status | code                          | Nguyên nhân                                   |
-| ----------- | ----------------------------- | --------------------------------------------- |
-| 400         | `VALIDATION_ERROR`            | Request body/query không hợp lệ               |
-| 404         | `COURSE_NOT_FOUND`            | Không tìm thấy khóa học theo ID               |
-| 404         | `LESSON_NOT_FOUND`            | Không tìm thấy bài học theo ID                |
-| 404         | `ENROLLMENT_NOT_FOUND`        | Không tìm thấy enrollment theo ID             |
-| 409         | `ENROLLMENT_ALREADY_EXISTS`   | Student đã đăng ký khóa học này rồi           |
-| 409         | `LESSON_ALREADY_COMPLETED`    | Bài học đã được đánh dấu hoàn thành trước đó  |
-| 409         | `INSTRUCTOR_ALREADY_ASSIGNED` | Giảng viên đã được phân công vào khóa học này |
-| 422         | `COURSE_NOT_ACTIVE`           | Khóa học chưa được kích hoạt (DRAFT)          |
-| 422         | `COURSE_HAS_NO_LESSON`        | Khóa học chưa có bài học nào                  |
-| 422         | `ENROLLMENT_ALREADY_COMPLETED`| Enrollment đã hoàn thành, không thể thao tác  |
-| 422         | `COURSE_CAPACITY_EXCEEDED`    | Khóa học đã đủ số lượng học viên              |
-| 500         | `INTERNAL_ERROR`              | Lỗi server                                    |
+| HTTP | Code | Nguyên nhân |
+| ---: | --- | --- |
+| 400 | `VALIDATION_ERROR` | Body/query không hợp lệ |
+| 404 | `COURSE_NOT_FOUND` | Không tìm thấy khóa học |
+| 404 | `LESSON_NOT_FOUND` | Không tìm thấy bài học |
+| 404 | `ENROLLMENT_NOT_FOUND` | Không tìm thấy enrollment |
+| 409 | `ENROLLMENT_ALREADY_EXISTS` | Student đã đăng ký khóa học |
+| 409 | `INSTRUCTOR_ALREADY_ASSIGNED` | Instructor đã được gán |
+| 422 | `COURSE_NOT_ACTIVE` | Khóa học chưa active |
+| 422 | `COURSE_HAS_NO_LESSON` | Khóa học chưa có bài học |
+| 422 | `ENROLLMENT_ALREADY_COMPLETED` | Enrollment đã completed |
+| 422 | `COURSE_CAPACITY_EXCEEDED` | Vượt quá sức chứa khóa học |
 
 ---
 
 ## Enums
 
-### LicenseCategory
-
-| Value | Ý nghĩa       |
-| ----- | ------------- |
-| `A1`  | Xe máy ≤ 50cc |
-| `A2`  | Xe máy > 50cc |
-| `B1`  | Ô tô số tự động (không kinh doanh) |
-| `B2`  | Ô tô số sàn (không kinh doanh) |
-| `C`   | Xe tải ≤ 3,5 tấn |
-| `D`   | Xe chở người ≤ 30 chỗ |
-| `E`   | Xe chở người > 30 chỗ |
-| `F`   | Xe chuyên dùng |
-
-### CourseStatus
-
-| Value    | Ý nghĩa                              |
-| -------- | ------------------------------------ |
-| `DRAFT`  | Đang soạn thảo, chưa mở đăng ký     |
-| `ACTIVE` | Đã kích hoạt, cho phép đăng ký học  |
-
-### EnrollmentStatus
-
-| Value       | Ý nghĩa                        |
-| ----------- | ------------------------------ |
-| `ACTIVE`    | Đang học                       |
-| `COMPLETED` | Đã hoàn thành toàn bộ bài học  |
-| `DROPPED`   | Đã bỏ học                      |
+`LicenseCategory`: `A1` | `A2` | `B1` | `B2` | `C` | `D` | `E` | `F`  
+`CourseStatus`: `DRAFT` | `ACTIVE`  
+`EnrollmentStatus`: `ACTIVE` | `COMPLETED` | `DROPPED`
 
 ---
 
-## Shared Types
+## Endpoints
 
-### CourseResponse
+### POST `/admin/courses`
+
+Tạo khóa học mới. `createdById` lấy từ `sub` trong JWT của caller.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Body**
 
 ```json
 {
-  "id": "uuid",
-  "title": "Khóa học B2 – Nâng cao",
-  "description": "Mô tả khóa học",
+  "title": "Khóa học B2 cơ bản",
   "licenseCategory": "B2",
-  "thumbnailUrl": "https://...",
-  "totalLessons": 12,
+  "description": "Mô tả khóa học",
   "duration": "3 tháng",
   "tuitionFee": 5000000,
   "capacity": 30,
-  "status": "ACTIVE",
-  "createdById": "uuid-of-instructor",
-  "createdAt": "2026-01-01T00:00:00.000Z",
-  "updatedAt": "2026-01-01T00:00:00.000Z",
-  "lessons": [
-    {
-      "id": "uuid",
-      "courseId": "uuid",
-      "title": "Bài 1 – Biển báo giao thông",
-      "content": "Nội dung markdown...",
-      "videoUrl": "https://...",
-      "durationMinutes": 45,
-      "order": 1,
-      "createdAt": "2026-01-01T00:00:00.000Z"
-    }
-  ],
-  "instructorIds": ["uuid-instructor-1", "uuid-instructor-2"],
-  "requirement": {
-    "id": "uuid",
-    "minAge": 18,
-    "prerequisites": "Có giấy phép B1",
-    "attendanceRate": 80,
-    "minPassScore": 80,
-    "requiredExams": 2
-  },
-  "materials": [
-    {
-      "id": "uuid",
-      "title": "Tài liệu học lý thuyết",
-      "fileUrl": "https://...",
-      "type": "PDF",
-      "createdAt": "2026-01-01T00:00:00.000Z"
-    }
-  ]
-}
-```
-
-> `requirement` là `null` nếu chưa được cài đặt.
-
-### EnrollmentResponse
-
-```json
-{
-  "id": "uuid",
-  "courseId": "uuid",
-  "studentId": "uuid",
-  "status": "ACTIVE",
-  "progress": 42,
-  "enrolledAt": "2026-01-01T00:00:00.000Z",
-  "completedAt": null,
-  "lessonProgress": [
-    {
-      "id": "uuid",
-      "lessonId": "uuid",
-      "completedAt": "2026-01-02T00:00:00.000Z",
-      "watchedSeconds": 2700,
-      "isCompleted": true
-    }
-  ]
-}
-```
-
----
-
-## Endpoints — Courses
-
----
-
-### POST /courses
-
-> Tạo khóa học mới. `createdById` lấy từ Kong header `x-user-id`.
-
-**Auth:** Yêu cầu JWT (INSTRUCTOR hoặc ADMIN)
-**Kong header:** `x-user-id` (auto-injected)
-
-**Request Body:**
-
-```json
-{
-  "title": "Khóa học B2 – Cơ bản",
-  "licenseCategory": "B2",
-  "description": "Mô tả khóa học",
-  "thumbnailUrl": "https://...",
-  "duration": "3 tháng",
-  "tuitionFee": 5000000,
-  "capacity": 30,
-  "instructorIds": ["uuid-instructor-1"],
+  "instructorIds": ["550e8400-e29b-41d4-a716-446655440000"],
   "requirement": {
     "minAge": 18,
-    "prerequisites": "Có giấy phép B1",
+    "prerequisites": "Có GPLX B1",
     "attendanceRate": 80,
     "minPassScore": 80,
     "requiredExams": 2
@@ -216,63 +117,100 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 }
 ```
 
-| Field            | Type              | Required | Validation                        |
-| ---------------- | ----------------- | -------- | --------------------------------- |
-| `title`          | string            | ✅       | Non-empty                         |
-| `licenseCategory`| LicenseCategory   | ✅       | Enum LicenseCategory              |
-| `description`    | string            | ❌       |                                   |
-| `thumbnailUrl`   | string            | ❌       | URL ảnh thumbnail                 |
-| `duration`       | string            | ❌       | Text tự do, vd: "3 tháng"         |
-| `tuitionFee`     | number            | ❌       | ≥ 0, mặc định 0                   |
-| `capacity`       | number            | ❌       | ≥ 1, null = không giới hạn        |
-| `instructorIds`  | string[]          | ❌       | Mảng UUID của giảng viên          |
-| `requirement`    | CourseRequirement | ❌       | Yêu cầu đầu vào của khóa học      |
-
-**CourseRequirement fields:**
-
-| Field            | Type   | Default | Validation |
-| ---------------- | ------ | ------- | ---------- |
-| `minAge`         | number | null    | ≥ 0        |
-| `prerequisites`  | string | null    |            |
-| `attendanceRate` | number | 80      | ≥ 0        |
-| `minPassScore`   | number | 80      | ≥ 0        |
-| `requiredExams`  | number | 0       | ≥ 0        |
-
-**Response `201`:**
+**Response `201 Created`**
 
 ```json
 {
   "success": true,
   "code": "SUCCESS",
-  "data": { /* CourseResponse */ }
+  "message": "Created",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/admin/courses",
+  "data": {
+    "id": "course-uuid",
+    "title": "Khóa học B2 cơ bản",
+    "description": "Mô tả khóa học",
+    "licenseCategory": "B2",
+    "totalLessons": 0,
+    "duration": "3 tháng",
+    "tuitionFee": 5000000,
+    "capacity": 30,
+    "status": "DRAFT",
+    "createdById": "creator-uuid",
+    "createdAt": "2026-05-14T10:00:00.000Z",
+    "updatedAt": "2026-05-14T10:00:00.000Z",
+    "lessons": [],
+    "instructorIds": ["550e8400-e29b-41d4-a716-446655440000"],
+    "requirement": {
+      "id": "requirement-uuid",
+      "minAge": 18,
+      "prerequisites": "Có GPLX B1",
+      "attendanceRate": 80,
+      "minPassScore": 80,
+      "requiredExams": 2
+    },
+    "materials": []
+  }
 }
 ```
 
-> Khóa học mới tạo luôn có `status = DRAFT` và `totalLessons = 0`.
-
 ---
 
-### GET /courses
+### GET `/admin/courses`
 
-> Danh sách khóa học có phân trang và lọc. Không yêu cầu auth.
+Danh sách khóa học cho admin dashboard.
 
-**Query Parameters:**
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
 
-| Param             | Type            | Default | Validation                  | Mô tả                  |
-| ----------------- | --------------- | ------- | --------------------------- | ---------------------- |
-| `page`            | number          | 1       | ≥ 1                         | Số trang               |
-| `size`            | number          | 20      | ≥ 1                         | Số item mỗi trang      |
-| `licenseCategory` | LicenseCategory | —       | Enum LicenseCategory        | Lọc theo hạng bằng     |
-| `status`          | CourseStatus    | —       | Enum CourseStatus           | Lọc theo trạng thái    |
+**Query**
 
-**Response `200`:**
+| Param | Type | Default | Validation |
+| --- | --- | ---: | --- |
+| `page` | number | 1 | integer, `>= 1` |
+| `size` | number | 20 | integer, `>= 1` |
+| `licenseCategory` | LicenseCategory | - | enum |
+| `status` | CourseStatus | - | enum |
+
+**Response `200 OK`**
 
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/admin/courses",
   "data": {
-    "items": [ /* CourseResponse[] */ ],
-    "total": 42,
+    "items": [
+      {
+        "id": "course-uuid",
+        "title": "Khóa học B2 cơ bản",
+        "description": "Mô tả khóa học",
+        "licenseCategory": "B2",
+        "totalLessons": 1,
+        "duration": "3 tháng",
+        "tuitionFee": 5000000,
+        "capacity": 30,
+        "status": "ACTIVE",
+        "createdById": "creator-uuid",
+        "createdAt": "2026-05-14T10:00:00.000Z",
+        "updatedAt": "2026-05-14T10:00:00.000Z",
+        "lessons": [
+          {
+            "id": "lesson-uuid",
+            "courseId": "course-uuid",
+            "title": "Bài 1 - Biển báo giao thông",
+            "content": "Nội dung markdown",
+            "order": 1,
+            "createdAt": "2026-05-14T10:00:00.000Z"
+          }
+        ],
+        "instructorIds": ["instructor-uuid"],
+        "requirement": null,
+        "materials": []
+      }
+    ],
+    "total": 1,
     "page": 1,
     "size": 20
   }
@@ -281,219 +219,470 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 ---
 
-### GET /courses/:id
+### GET `/admin/courses/:id`
 
-> Chi tiết khóa học đầy đủ (bao gồm lessons, instructors, requirement, materials).
+Lấy chi tiết khóa học cho admin dashboard.
 
-**Response `200`:**
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Response `200 OK`**
 
 ```json
 {
   "success": true,
-  "data": { /* CourseResponse đầy đủ */ }
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/admin/courses/course-uuid",
+  "data": {
+    "id": "course-uuid",
+    "title": "Khóa học B2 cơ bản",
+    "description": "Mô tả khóa học",
+    "licenseCategory": "B2",
+    "totalLessons": 1,
+    "duration": "3 tháng",
+    "tuitionFee": 5000000,
+    "capacity": 30,
+    "status": "ACTIVE",
+    "createdById": "creator-uuid",
+    "createdAt": "2026-05-14T10:00:00.000Z",
+    "updatedAt": "2026-05-14T10:00:00.000Z",
+    "lessons": [
+      {
+        "id": "lesson-uuid",
+        "courseId": "course-uuid",
+        "title": "Bài 1 - Biển báo giao thông",
+        "content": "Nội dung markdown",
+        "order": 1,
+        "createdAt": "2026-05-14T10:00:00.000Z"
+      }
+    ],
+    "instructorIds": ["instructor-uuid"],
+    "requirement": null,
+    "materials": []
+  }
 }
 ```
 
-**Errors:**
-
-| Status | code               | Nguyên nhân             |
-| ------ | ------------------ | ----------------------- |
-| 404    | `COURSE_NOT_FOUND` | Không tìm thấy khóa học |
-
 ---
 
-### PATCH /courses/:id
+### GET `/courses`
 
-> Cập nhật thông tin khóa học. Không thay đổi được `licenseCategory` hoặc `status` qua endpoint này.
+Danh sách khóa học có phân trang và filter.
 
-**Auth:** Yêu cầu JWT (INSTRUCTOR hoặc ADMIN)
+**Auth:** JWT hợp lệ.
 
-**Request Body** (tất cả optional):
+**Query:** giống `GET /admin/courses`.
+
+**Response `200 OK`**
 
 ```json
 {
-  "title": "Tên mới",
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/courses",
+  "data": {
+    "items": [
+      {
+        "id": "course-uuid",
+        "title": "Khóa học B2 cơ bản",
+        "description": "Mô tả khóa học",
+        "licenseCategory": "B2",
+        "totalLessons": 1,
+        "duration": "3 tháng",
+        "tuitionFee": 5000000,
+        "capacity": 30,
+        "status": "ACTIVE",
+        "createdById": "creator-uuid",
+        "createdAt": "2026-05-14T10:00:00.000Z",
+        "updatedAt": "2026-05-14T10:00:00.000Z",
+        "lessons": [],
+        "instructorIds": ["instructor-uuid"],
+        "requirement": null,
+        "materials": []
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 20
+  }
+}
+```
+
+---
+
+### GET `/courses/:id`
+
+Lấy chi tiết khóa học.
+
+**Auth:** JWT hợp lệ.
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/courses/course-uuid",
+  "data": {
+    "id": "course-uuid",
+    "title": "Khóa học B2 cơ bản",
+    "description": "Mô tả khóa học",
+    "licenseCategory": "B2",
+    "totalLessons": 1,
+    "duration": "3 tháng",
+    "tuitionFee": 5000000,
+    "capacity": 30,
+    "status": "ACTIVE",
+    "createdById": "creator-uuid",
+    "createdAt": "2026-05-14T10:00:00.000Z",
+    "updatedAt": "2026-05-14T10:00:00.000Z",
+    "lessons": [],
+    "instructorIds": ["instructor-uuid"],
+    "requirement": null,
+    "materials": []
+  }
+}
+```
+
+---
+
+### PATCH `/admin/courses/:id`
+
+Cập nhật thông tin khóa học. Endpoint này không nhận `licenseCategory`, `status`, `thumbnailUrl`, hoặc `instructorIds`.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Body**
+
+```json
+{
+  "title": "Tên khóa học mới",
   "description": "Mô tả mới",
-  "thumbnailUrl": "https://...",
   "duration": "4 tháng",
   "tuitionFee": 6000000,
   "capacity": 25,
-  "requirement": { ... }
+  "requirement": {
+    "minAge": 18,
+    "attendanceRate": 85,
+    "minPassScore": 80,
+    "requiredExams": 2
+  }
 }
 ```
 
-**Response `200`** — Trả về course đã cập nhật.
-
-**Errors:**
-
-| Status | code               | Nguyên nhân             |
-| ------ | ------------------ | ----------------------- |
-| 404    | `COURSE_NOT_FOUND` | Không tìm thấy khóa học |
-
----
-
-### PATCH /courses/:id/activate
-
-> Kích hoạt khóa học từ `DRAFT` → `ACTIVE`. Yêu cầu khóa học phải có ít nhất 1 bài học.
-
-**Auth:** Yêu cầu JWT (INSTRUCTOR hoặc ADMIN)
-
-**Response `200`** — Trả về course đã được activate (`status = ACTIVE`).
-
-**Errors:**
-
-| Status | code                    | Nguyên nhân                      |
-| ------ | ----------------------- | -------------------------------- |
-| 404    | `COURSE_NOT_FOUND`      | Không tìm thấy khóa học          |
-| 422    | `COURSE_HAS_NO_LESSON`  | Chưa có bài học, không thể ACTIVE|
-
----
-
-### POST /courses/:id/lessons
-
-> Thêm bài học vào khóa học.
-
-**Auth:** Yêu cầu JWT (INSTRUCTOR hoặc ADMIN)
-
-**Request Body:**
+**Response `200 OK`**
 
 ```json
 {
-  "title": "Bài 1 – Biển báo giao thông",
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/admin/courses/course-uuid",
+  "data": {
+    "id": "course-uuid",
+    "title": "Tên khóa học mới",
+    "description": "Mô tả mới",
+    "licenseCategory": "B2",
+    "totalLessons": 1,
+    "duration": "4 tháng",
+    "tuitionFee": 6000000,
+    "capacity": 25,
+    "status": "DRAFT",
+    "createdById": "creator-uuid",
+    "createdAt": "2026-05-14T10:00:00.000Z",
+    "updatedAt": "2026-05-14T10:05:00.000Z",
+    "lessons": [],
+    "instructorIds": ["instructor-uuid"],
+    "requirement": {
+      "id": "requirement-uuid",
+      "minAge": 18,
+      "prerequisites": null,
+      "attendanceRate": 85,
+      "minPassScore": 80,
+      "requiredExams": 2
+    },
+    "materials": []
+  }
+}
+```
+
+---
+
+### PATCH `/admin/courses/:id/activate`
+
+Kích hoạt khóa học từ `DRAFT` sang `ACTIVE`. Domain yêu cầu khóa học có ít nhất một lesson.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/admin/courses/course-uuid/activate",
+  "data": {
+    "id": "course-uuid",
+    "title": "Khóa học B2 cơ bản",
+    "description": "Mô tả khóa học",
+    "licenseCategory": "B2",
+    "totalLessons": 1,
+    "duration": "3 tháng",
+    "tuitionFee": 5000000,
+    "capacity": 30,
+    "status": "ACTIVE",
+    "createdById": "creator-uuid",
+    "createdAt": "2026-05-14T10:00:00.000Z",
+    "updatedAt": "2026-05-14T10:05:00.000Z",
+    "lessons": [
+      {
+        "id": "lesson-uuid",
+        "courseId": "course-uuid",
+        "title": "Bài 1 - Biển báo giao thông",
+        "content": "Nội dung markdown",
+        "order": 1,
+        "createdAt": "2026-05-14T10:00:00.000Z"
+      }
+    ],
+    "instructorIds": ["instructor-uuid"],
+    "requirement": null,
+    "materials": []
+  }
+}
+```
+
+---
+
+### POST `/admin/courses/:id/lessons`
+
+Thêm bài học vào khóa học. DTO hiện tại không nhận `videoUrl` hoặc `durationMinutes`.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Body**
+
+```json
+{
+  "title": "Bài 1 - Biển báo giao thông",
   "order": 1,
-  "content": "Nội dung markdown...",
-  "videoUrl": "https://...",
-  "durationMinutes": 45
+  "content": "Nội dung markdown"
 }
 ```
 
-| Field             | Type   | Required | Validation         |
-| ----------------- | ------ | -------- | ------------------ |
-| `title`           | string | ✅       | Non-empty          |
-| `order`           | number | ✅       | ≥ 1, số thứ tự    |
-| `content`         | string | ❌       | Markdown text      |
-| `videoUrl`        | string | ❌       | URL video          |
-| `durationMinutes` | number | ❌       | ≥ 0, mặc định 0   |
-
-**Response `201`** — Trả về course đầy đủ với `totalLessons` tăng lên.
-
-**Errors:**
-
-| Status | code               | Nguyên nhân             |
-| ------ | ------------------ | ----------------------- |
-| 404    | `COURSE_NOT_FOUND` | Không tìm thấy khóa học |
-
----
-
-### DELETE /courses/:id/lessons/:lessonId
-
-> Xóa bài học khỏi khóa học.
-
-**Auth:** Yêu cầu JWT (INSTRUCTOR hoặc ADMIN)
-
-**Response `200`** — Trả về course đầy đủ với `totalLessons` giảm đi.
-
-**Errors:**
-
-| Status | code               | Nguyên nhân             |
-| ------ | ------------------ | ----------------------- |
-| 404    | `COURSE_NOT_FOUND` | Không tìm thấy khóa học |
-| 404    | `LESSON_NOT_FOUND` | Không tìm thấy bài học  |
-
----
-
-### POST /courses/:id/materials
-
-> Thêm tài liệu học tập vào khóa học.
-
-**Auth:** Yêu cầu JWT (INSTRUCTOR hoặc ADMIN)
-
-**Request Body:**
+**Response `201 Created`**
 
 ```json
 {
-  "title": "Giáo trình lý thuyết B2",
-  "fileUrl": "https://...",
+  "success": true,
+  "code": "SUCCESS",
+  "message": "Created",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/admin/courses/course-uuid/lessons",
+  "data": {
+    "id": "course-uuid",
+    "title": "Khóa học B2 cơ bản",
+    "description": "Mô tả khóa học",
+    "licenseCategory": "B2",
+    "totalLessons": 1,
+    "duration": "3 tháng",
+    "tuitionFee": 5000000,
+    "capacity": 30,
+    "status": "DRAFT",
+    "createdById": "creator-uuid",
+    "createdAt": "2026-05-14T10:00:00.000Z",
+    "updatedAt": "2026-05-14T10:05:00.000Z",
+    "lessons": [
+      {
+        "id": "lesson-uuid",
+        "courseId": "course-uuid",
+        "title": "Bài 1 - Biển báo giao thông",
+        "content": "Nội dung markdown",
+        "order": 1,
+        "createdAt": "2026-05-14T10:05:00.000Z"
+      }
+    ],
+    "instructorIds": ["instructor-uuid"],
+    "requirement": null,
+    "materials": []
+  }
+}
+```
+
+---
+
+### DELETE `/admin/courses/:id/lessons/:lessonId`
+
+Xóa bài học khỏi khóa học.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/admin/courses/course-uuid/lessons/lesson-uuid",
+  "data": {
+    "id": "course-uuid",
+    "title": "Khóa học B2 cơ bản",
+    "description": "Mô tả khóa học",
+    "licenseCategory": "B2",
+    "totalLessons": 0,
+    "duration": "3 tháng",
+    "tuitionFee": 5000000,
+    "capacity": 30,
+    "status": "DRAFT",
+    "createdById": "creator-uuid",
+    "createdAt": "2026-05-14T10:00:00.000Z",
+    "updatedAt": "2026-05-14T10:10:00.000Z",
+    "lessons": [],
+    "instructorIds": ["instructor-uuid"],
+    "requirement": null,
+    "materials": []
+  }
+}
+```
+
+---
+
+### POST `/admin/courses/:id/materials`
+
+Thêm tài liệu học tập. Nếu có `mediaFileId`, course-service phát event `course.material.linked`.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Body**
+
+```json
+{
+  "title": "Giáo trình B2",
+  "fileUrl": "https://storage.blob.core.windows.net/media/docs/b2.pdf",
+  "mediaFileId": "550e8400-e29b-41d4-a716-446655440000",
   "type": "PDF"
 }
 ```
 
-| Field     | Type   | Required | Validation                       |
-| --------- | ------ | -------- | -------------------------------- |
-| `title`   | string | ✅       | Non-empty                        |
-| `fileUrl` | string | ❌       | URL file tài liệu                |
-| `type`    | string | ❌       | Loại tài liệu: `PDF`, `VIDEO`, `LINK`, v.v. |
-
-**Response `201`** — Trả về course đầy đủ với materials mới.
-
-**Errors:**
-
-| Status | code               | Nguyên nhân             |
-| ------ | ------------------ | ----------------------- |
-| 404    | `COURSE_NOT_FOUND` | Không tìm thấy khóa học |
-
----
-
-### POST /courses/:id/enroll
-
-> Đăng ký khóa học. `studentId` lấy từ Kong header `x-user-id`. Không cần request body.
-
-**Auth:** Yêu cầu JWT (STUDENT)
-**Kong header:** `x-user-id` (auto-injected — dùng làm `studentId`)
-
-**Response `201`:**
+**Response `201 Created`**
 
 ```json
 {
   "success": true,
-  "data": { /* EnrollmentResponse */ }
+  "code": "SUCCESS",
+  "message": "Created",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/admin/courses/course-uuid/materials",
+  "data": {
+    "id": "course-uuid",
+    "title": "Khóa học B2 cơ bản",
+    "description": "Mô tả khóa học",
+    "licenseCategory": "B2",
+    "totalLessons": 1,
+    "duration": "3 tháng",
+    "tuitionFee": 5000000,
+    "capacity": 30,
+    "status": "DRAFT",
+    "createdById": "creator-uuid",
+    "createdAt": "2026-05-14T10:00:00.000Z",
+    "updatedAt": "2026-05-14T10:05:00.000Z",
+    "lessons": [],
+    "instructorIds": ["instructor-uuid"],
+    "requirement": null,
+    "materials": [
+      {
+        "id": "material-uuid",
+        "title": "Giáo trình B2",
+        "fileUrl": "https://storage.blob.core.windows.net/media/docs/b2.pdf",
+        "mediaFileId": "550e8400-e29b-41d4-a716-446655440000",
+        "type": "PDF",
+        "createdAt": "2026-05-14T10:05:00.000Z"
+      }
+    ]
+  }
 }
 ```
 
-**Errors:**
-
-| Status | code                        | Nguyên nhân                            |
-| ------ | --------------------------- | -------------------------------------- |
-| 404    | `COURSE_NOT_FOUND`          | Không tìm thấy khóa học                |
-| 409    | `ENROLLMENT_ALREADY_EXISTS` | Student đã đăng ký khóa học này rồi    |
-| 422    | `COURSE_NOT_ACTIVE`         | Khóa học chưa ACTIVE                   |
-| 422    | `COURSE_CAPACITY_EXCEEDED`  | Đã đủ số lượng học viên theo `capacity`|
-
-> **Domain Event phát ra:**
->
-> - Event name: `course.enrollment.created`
-> - Payload: `{ enrollmentId, studentId, courseId }`
-> - Consumed bởi: `notification-service` (gửi thông báo xác nhận đăng ký)
+**Event published when `mediaFileId` is present:** `course.material.linked`.
 
 ---
 
-## Endpoints — Enrollments
+### POST `/courses/:id/enroll`
 
----
+Đăng ký khóa học. `studentId` lấy từ `sub` trong JWT của caller; endpoint không cần request body.
 
-### GET /enrollments
+**Auth:** `STUDENT`
 
-> Danh sách enrollment của student hiện tại (phân trang).
-
-**Auth:** Yêu cầu JWT (STUDENT)
-**Kong header:** `x-user-id` (auto-injected — dùng làm `studentId`)
-
-**Query Parameters:**
-
-| Param    | Type             | Default | Mô tả                   |
-| -------- | ---------------- | ------- | ----------------------- |
-| `page`   | number           | 1       | Số trang                |
-| `size`   | number           | 20      | Số item mỗi trang       |
-| `status` | EnrollmentStatus | —       | Lọc theo trạng thái     |
-
-**Response `200`:**
+**Response `201 Created`**
 
 ```json
 {
   "success": true,
+  "code": "SUCCESS",
+  "message": "Created",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/courses/course-uuid/enroll",
   "data": {
-    "items": [ /* EnrollmentResponse[] */ ],
-    "total": 5,
+    "id": "enrollment-uuid",
+    "courseId": "course-uuid",
+    "studentId": "student-uuid",
+    "status": "ACTIVE",
+    "progress": 0,
+    "enrolledAt": "2026-05-14T10:00:00.000Z",
+    "completedAt": null
+  }
+}
+```
+
+**Event published:** `course.enrollment.created`.
+
+---
+
+### GET `/enrollments`
+
+Danh sách enrollment của student hiện tại.
+
+**Auth:** `STUDENT`
+
+**Query**
+
+| Param | Type | Default | Validation |
+| --- | --- | ---: | --- |
+| `page` | number | 1 | integer, `>= 1` |
+| `size` | number | 20 | integer, `>= 1` |
+| `status` | EnrollmentStatus | - | enum |
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/enrollments",
+  "data": {
+    "items": [
+      {
+        "id": "enrollment-uuid",
+        "courseId": "course-uuid",
+        "studentId": "student-uuid",
+        "status": "ACTIVE",
+        "progress": 42,
+        "enrolledAt": "2026-05-14T10:00:00.000Z",
+        "completedAt": null
+      }
+    ],
+    "total": 1,
     "page": 1,
     "size": 20
   }
@@ -502,96 +691,143 @@ Tất cả response đều theo cấu trúc sau (bao gồm cả lỗi):
 
 ---
 
-### GET /enrollments/:id
+### GET `/enrollments/:id`
 
-> Chi tiết enrollment và tiến độ học từng bài.
+Lấy chi tiết enrollment.
 
-**Response `200`:**
+**Auth:** `STUDENT`, `ADMIN`, `CENTER_MANAGER`
+
+**Response `200 OK`**
 
 ```json
 {
   "success": true,
-  "data": { /* EnrollmentResponse đầy đủ với lessonProgress */ }
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/enrollments/enrollment-uuid",
+  "data": {
+    "id": "enrollment-uuid",
+    "courseId": "course-uuid",
+    "studentId": "student-uuid",
+    "status": "ACTIVE",
+    "progress": 42,
+    "enrolledAt": "2026-05-14T10:00:00.000Z",
+    "completedAt": null
+  }
 }
 ```
 
-**Errors:**
-
-| Status | code                   | Nguyên nhân                  |
-| ------ | ---------------------- | ---------------------------- |
-| 404    | `ENROLLMENT_NOT_FOUND` | Không tìm thấy enrollment    |
-
 ---
 
-### POST /enrollments/:id/lessons/:lessonId/complete
+### POST `/enrollments/:id/lessons/:lessonId/complete`
 
-> Đánh dấu hoàn thành một bài học. Tự động tính lại `progress` (0–100). Nếu `progress` đạt 100%, enrollment chuyển sang `COMPLETED`.
+Đánh dấu hoàn thành bài học. Endpoint hiện tại không đọc request body.
 
-**Request Body:**
+**Auth:** `STUDENT`
 
-```json
-{ "watchedSeconds": 2700 }
-```
+**Body:** không gửi body.
 
-| Field           | Type   | Required | Validation |
-| --------------- | ------ | -------- | ---------- |
-| `watchedSeconds`| number | ❌       | ≥ 0        |
-
-**Response `200`** — Trả về enrollment đã cập nhật.
-
-**Errors:**
-
-| Status | code                           | Nguyên nhân                              |
-| ------ | ------------------------------ | ---------------------------------------- |
-| 404    | `ENROLLMENT_NOT_FOUND`         | Không tìm thấy enrollment                |
-| 404    | `LESSON_NOT_FOUND`             | Bài học không thuộc khóa học này         |
-| 409    | `LESSON_ALREADY_COMPLETED`     | Bài học đã được hoàn thành trước đó      |
-| 422    | `ENROLLMENT_ALREADY_COMPLETED` | Enrollment đã completed, không thể thao tác |
-
-> **Domain Events phát ra:**
->
-> - `course.lesson.completed` — luôn phát (payload: `{ lessonId, studentId, durationMinutes }`)
-> - `course.enrollment.completed` — chỉ phát khi `progress = 100%` (payload: `{ enrollmentId, studentId, courseId }`)
-> - Consumed bởi: `notification-service`, `analytics-service`
-
----
-
-## Luồng event từ user-service
-
-Course-service lắng nghe event từ RabbitMQ queue `course_service_events`:
-
-### `user.student.license-assigned`
-
-Phát ra bởi user-service khi admin gán hạng bằng lái cho student.
-
-**Payload:**
+**Response `200 OK`**
 
 ```json
 {
-  "studentId": "uuid",
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/enrollments/enrollment-uuid/lessons/lesson-uuid/complete",
+  "data": {
+    "id": "enrollment-uuid",
+    "courseId": "course-uuid",
+    "studentId": "student-uuid",
+    "status": "ACTIVE",
+    "progress": 100,
+    "enrolledAt": "2026-05-14T10:00:00.000Z",
+    "completedAt": "2026-05-14T10:30:00.000Z"
+  }
+}
+```
+
+**Events published:**
+
+| Event | Khi nào |
+| --- | --- |
+| `course.lesson.completed` | Khi hoàn thành một lesson |
+| `course.enrollment.completed` | Khi progress đạt 100% |
+
+---
+
+## Events Consumed
+
+Course-service consume queue `course_service_events`.
+
+### `user.student.license-assigned`
+
+```json
+{
+  "eventName": "user.student.license-assigned",
+  "studentId": "student-uuid",
   "newTier": "B2",
   "oldTier": null
 }
 ```
 
-**Xử lý:** Nhận và ack message (MVP scope — logic mở rộng sau).
+### `media.file.deleted`
+
+```json
+{
+  "eventName": "media.file.deleted",
+  "fileId": "media-file-uuid",
+  "storageKey": "uploads/2026/05/doc.pdf",
+  "deletedById": "user-uuid"
+}
+```
 
 ---
 
-## Domain Events phát ra
+## Events Published
 
-| Event name                     | Trigger                         | Payload                                    |
-| ------------------------------ | ------------------------------- | ------------------------------------------ |
-| `course.enrollment.created`    | Student đăng ký khóa học        | `{ enrollmentId, studentId, courseId }`    |
-| `course.enrollment.completed`  | Hoàn thành 100% bài học         | `{ enrollmentId, studentId, courseId }`    |
-| `course.lesson.completed`      | Hoàn thành 1 bài học            | `{ lessonId, studentId, durationMinutes }` |
+### `course.material.linked`
 
----
+```json
+{
+  "eventName": "course.material.linked",
+  "courseId": "course-uuid",
+  "materialId": "material-uuid",
+  "mediaFileId": "media-file-uuid"
+}
+```
 
-## Swagger UI
+### `course.enrollment.created`
 
-| Môi trường    | URL                                                         |
-| ------------- | ----------------------------------------------------------- |
-| Local         | `http://localhost:3004/docs`                                |
-| Qua Kong      | `http://localhost:8000/course-service/docs` (cần JWT)       |
-| Centralized   | `http://localhost:3009/docs` (docs-service)                 |
+```json
+{
+  "eventName": "course.enrollment.created",
+  "enrollmentId": "enrollment-uuid",
+  "studentId": "student-uuid",
+  "courseId": "course-uuid"
+}
+```
+
+### `course.lesson.completed`
+
+```json
+{
+  "eventName": "course.lesson.completed",
+  "lessonId": "lesson-uuid",
+  "studentId": "student-uuid",
+  "courseId": "course-uuid"
+}
+```
+
+### `course.enrollment.completed`
+
+```json
+{
+  "eventName": "course.enrollment.completed",
+  "enrollmentId": "enrollment-uuid",
+  "studentId": "student-uuid",
+  "courseId": "course-uuid"
+}
+```

@@ -12,6 +12,7 @@ build/
 .next/
 out/
 .turbo
+**/*.tsbuildinfo
 
 # Local env files (Chặn file môi trường ở mọi nơi)
 .env
@@ -20,6 +21,8 @@ out/
 
 # Consul seed production (chứa secrets thật - không commit)
 consul-seed-production.json
+consul-seed-development.json
+consul-seed-development-local.json
 
 # Logs & Debug
 **/*.log

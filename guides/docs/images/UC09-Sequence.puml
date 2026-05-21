@@ -1,0 +1,77 @@
+@startuml UC09-Sequence
+title UC09 - Update Course
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Admin/Manager" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "CourseController" as CourseController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+participant "Audit Service" as AuditService
+
+ActorAdmin -> Client: Select course + edit fields + submit
+Client -> APIGateway: PUT /api/v1/courses/{courseId}
+APIGateway -> CourseController: Forward request
+activate CourseController
+CourseController -> AuthService: Validate JWT
+AuthService --> CourseController: Token valid/invalid
+
+alt JWT invalid
+  CourseController --> APIGateway: 403 Error\n(MSG31)
+  deactivate CourseController
+  APIGateway --> Client: Error Response
+else JWT valid
+  AuthService -> CourseController: Check RBAC permission
+  
+  alt RBAC denied
+    CourseController --> APIGateway: 403 Error\n(MSG31)
+    deactivate CourseController
+    APIGateway --> Client: Error Response
+  else RBAC granted
+    CourseController -> Database: Query course by courseId where isDeleted=false
+    Database --> CourseController: Course record or null
+    
+    alt course not found
+      CourseController --> APIGateway: 404 Error\n(MSG23)
+      deactivate CourseController
+      APIGateway --> Client: Error Response
+    else course found
+      CourseController -> CourseController: Validate mutable fields + check version
+      
+      alt version mismatch
+        CourseController --> APIGateway: 409 Error\n(MSG32)
+        deactivate CourseController
+        APIGateway --> Client: Error Response
+      else version ok
+        CourseController -> Database: Update course record (increment version)
+        Database --> CourseController: Commit success
+        CourseController -> AuditService: Write update audit
+        AuditService --> CourseController: Stored
+        CourseController --> APIGateway: 200 OK\n(MSG33)
+        deactivate CourseController
+        APIGateway --> Client: Success Response
+      end
+    end
+  end
+end
+
+@enduml

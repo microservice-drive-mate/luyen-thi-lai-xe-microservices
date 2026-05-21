@@ -20,6 +20,7 @@ export interface RawUserProfileRow {
   phoneNumber: string | null;
   dateOfBirth: Date | null;
   avatarUrl: string | null;
+  mediaFileId: string | null;
   gender: string | null;
   address: string | null;
   role: string;
@@ -38,6 +39,7 @@ export const UserProfileMapper = {
       phoneNumber: raw.phoneNumber,
       dateOfBirth: raw.dateOfBirth,
       avatarUrl: raw.avatarUrl,
+      mediaFileId: raw.mediaFileId,
       gender: raw.gender as Gender | null,
       address: raw.address,
       role: raw.role as UserRole,

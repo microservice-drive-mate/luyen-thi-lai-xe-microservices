@@ -1,0 +1,69 @@
+@startuml UC29-Sequence
+title UC29 - Send Academic Warnings
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Instructor/Admin" as ActorInstructor
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "WarningController" as WarningController
+participant "Auth Service" as AuthService
+participant "MessageQueue" as MessageQueue
+database "Database\n(PostgreSQL)" as Database
+
+ActorInstructor -> Client: Send academic warning
+Client -> APIGateway: POST /api/v1/warnings
+APIGateway -> WarningController: Forward request
+activate WarningController
+WarningController -> AuthService: Validate JWT + permission
+AuthService --> WarningController: Valid/Invalid
+
+alt JWT invalid
+  WarningController --> APIGateway: 403 Error\n(MSG110)
+  deactivate WarningController
+  APIGateway --> Client: Error Response
+else JWT valid
+  WarningController -> WarningController: Validate payload
+  
+  alt invalid
+    WarningController --> APIGateway: 400 Error\n(MSG109)
+    deactivate WarningController
+    APIGateway --> Client: Error Response
+  else valid
+    WarningController -> Database: Load students
+    Database --> WarningController: Students or empty
+    
+    alt not found
+      WarningController --> APIGateway: 404 Error\n(MSG111)
+      deactivate WarningController
+      APIGateway --> Client: Error Response
+    else found
+      WarningController -> Database: Insert warnings
+      Database --> WarningController: Committed
+      WarningController -> MessageQueue: Enqueue notifications
+      MessageQueue --> WarningController: Queued
+      WarningController --> APIGateway: 201 Created\n(MSG112)
+      deactivate WarningController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

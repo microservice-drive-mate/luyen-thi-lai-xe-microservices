@@ -127,12 +127,12 @@ ADMIN_ID      = admin-uuid-0003
 
 ---
 
-### 4.1 POST /courses — Tạo khóa học
+### 4.1 POST /admin/courses — Tạo khóa học
 
 **Happy path — tạo khóa học đầy đủ:**
 
 ```bash
-curl -s -X POST http://localhost:3004/courses \
+curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
   -d '{
@@ -159,18 +159,28 @@ curl -s -X POST http://localhost:3004/courses \
 {
   "success": true,
   "code": "SUCCESS",
+  "message": "Created",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/courses",
   "data": {
     "id": "<course-uuid>",
     "title": "Khóa học B2 – Cơ bản",
+    "description": "Khóa học lý thuyết và thực hành thi bằng B2",
     "licenseCategory": "B2",
     "status": "DRAFT",
     "totalLessons": 0,
+    "duration": "3 tháng",
     "tuitionFee": 5000000,
     "capacity": 30,
+    "createdById": "instructor-uuid-0001",
+    "createdAt": "2026-05-14T10:00:00.000Z",
+    "updatedAt": "2026-05-14T10:00:00.000Z",
     "lessons": [],
     "instructorIds": ["instructor-uuid-0001"],
     "requirement": {
+      "id": "<requirement-uuid>",
       "minAge": 18,
+      "prerequisites": "Có giấy phép B1",
       "attendanceRate": 80,
       "minPassScore": 80,
       "requiredExams": 2
@@ -184,7 +194,7 @@ curl -s -X POST http://localhost:3004/courses \
 
 ```bash
 # Lưu course ID
-COURSE_ID=$(curl -s -X POST http://localhost:3004/courses \
+COURSE_ID=$(curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
   -d '{"title":"Test Course","licenseCategory":"B1"}' \
@@ -195,7 +205,7 @@ echo "COURSE_ID=$COURSE_ID"
 **Tạo thêm course A1 để test list/filter:**
 
 ```bash
-curl -s -X POST http://localhost:3004/courses \
+curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
   -d '{
@@ -208,7 +218,7 @@ curl -s -X POST http://localhost:3004/courses \
 **Case: Thiếu field bắt buộc (expect 400):**
 
 ```bash
-curl -s -X POST http://localhost:3004/courses \
+curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
   -d '{"title": "Không có licenseCategory"}' | jq .
@@ -217,7 +227,11 @@ curl -s -X POST http://localhost:3004/courses \
 ```json
 {
   "success": false,
-  "code": "VALIDATION_ERROR"
+  "code": "VALIDATION_ERROR",
+  "message": "Validation failed",
+  "timestamp": "...",
+  "path": "/courses",
+  "errors": ["licenseCategory should not be empty"]
 }
 ```
 
@@ -228,7 +242,7 @@ curl -s -X POST http://localhost:3004/courses \
 **Lấy tất cả:**
 
 ```bash
-curl -s "http://localhost:3004/courses" | jq '.data | {total, page, size}'
+curl -s "http://localhost:3004/admin/courses" | jq '.data | {total, page, size}'
 ```
 
 **Lọc theo hạng bằng:**
@@ -273,13 +287,16 @@ curl -s "http://localhost:3004/courses/non-existent-uuid" | jq .
 ```json
 {
   "success": false,
-  "code": "COURSE_NOT_FOUND"
+  "code": "COURSE_NOT_FOUND",
+  "message": "Course with id non-existent-uuid not found",
+  "timestamp": "...",
+  "path": "/courses/non-existent-uuid"
 }
 ```
 
 ---
 
-### 4.4 PATCH /courses/:id — Cập nhật khóa học
+### 4.4 PATCH /admin/courses/:id — Cập nhật khóa học
 
 **Cập nhật metadata:**
 
@@ -310,12 +327,12 @@ curl -s -X PATCH "http://localhost:3004/courses/$COURSE_ID" \
 
 ---
 
-### 4.5 POST /courses/:id/lessons — Thêm bài học
+### 4.5 POST /admin/courses/:id/lessons — Thêm bài học
 
 **Thêm bài học 1:**
 
 ```bash
-curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/lessons" \
+curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Bài 1 – Biển báo giao thông",
@@ -327,7 +344,7 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/lessons" \
 **Thêm bài học 2:**
 
 ```bash
-curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/lessons" \
+curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Bài 2 – Kỹ năng lái xe",
@@ -339,7 +356,7 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/lessons" \
 **Thêm bài học 3 (để test complete enrollment):**
 
 ```bash
-LESSON_1_ID=$(curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/lessons" \
+LESSON_1_ID=$(curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{"title":"Lesson A","order":1}' | jq -r '.data.lessons[0].id')
 
@@ -352,39 +369,41 @@ curl -s "http://localhost:3004/courses/$COURSE_ID" | jq '.data.lessons | map({id
 **Case: Thiếu field bắt buộc (expect 400):**
 
 ```bash
-curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/lessons" \
+curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{"content": "Không có title và order"}' | jq .
 ```
 
 ---
 
-### 4.6 PATCH /courses/:id/activate — Kích hoạt khóa học
+### 4.6 PATCH /admin/courses/:id/activate — Kích hoạt khóa học
 
 **Case: Kích hoạt khi chưa có lesson (expect 422):**
 
 ```bash
 # Tạo course rỗng rồi thử activate
-EMPTY_COURSE_ID=$(curl -s -X POST http://localhost:3004/courses \
+EMPTY_COURSE_ID=$(curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
   -d '{"title":"Empty Course","licenseCategory":"C"}' | jq -r '.data.id')
 
-curl -s -X PATCH "http://localhost:3004/courses/$EMPTY_COURSE_ID/activate" | jq .
+curl -s -X PATCH "http://localhost:3004/admin/courses/$EMPTY_COURSE_ID/activate" | jq .
 ```
 
 ```json
 {
   "success": false,
   "code": "COURSE_HAS_NO_LESSON",
-  "message": "Course must have at least one lesson before activation"
+  "message": "Course must have at least one lesson before activation",
+  "timestamp": "...",
+  "path": "/courses/.../activate"
 }
 ```
 
 **Happy path — Kích hoạt course có lesson:**
 
 ```bash
-curl -s -X PATCH "http://localhost:3004/courses/$COURSE_ID/activate" | jq '.data.status'
+curl -s -X PATCH "http://localhost:3004/admin/courses/$COURSE_ID/activate" | jq '.data.status'
 # Kết quả mong đợi: "ACTIVE"
 ```
 
@@ -397,37 +416,40 @@ curl -s "http://localhost:3004/courses?status=ACTIVE" | jq '.data.items | map(.t
 
 ---
 
-### 4.7 DELETE /courses/:id/lessons/:lessonId — Xóa bài học
+### 4.7 DELETE /admin/courses/:id/lessons/:lessonId — Xóa bài học
 
 ```bash
 # Lấy lessonId từ course
 LESSON_ID=$(curl -s "http://localhost:3004/courses/$COURSE_ID" | jq -r '.data.lessons[-1].id')
 
-curl -s -X DELETE "http://localhost:3004/courses/$COURSE_ID/lessons/$LESSON_ID" \
+curl -s -X DELETE "http://localhost:3004/admin/courses/$COURSE_ID/lessons/$LESSON_ID" \
   | jq '.data | {totalLessons}'
 ```
 
 **Case: Lesson không tồn tại (expect 404):**
 
 ```bash
-curl -s -X DELETE "http://localhost:3004/courses/$COURSE_ID/lessons/non-existent-lesson-id" | jq .
+curl -s -X DELETE "http://localhost:3004/admin/courses/$COURSE_ID/lessons/non-existent-lesson-id" | jq .
 ```
 
 ```json
 {
   "success": false,
-  "code": "LESSON_NOT_FOUND"
+  "code": "LESSON_NOT_FOUND",
+  "message": "Lesson with id non-existent-lesson-id not found",
+  "timestamp": "...",
+  "path": "/courses/.../lessons/non-existent-lesson-id"
 }
 ```
 
 ---
 
-### 4.8 POST /courses/:id/materials — Thêm tài liệu
+### 4.8 POST /admin/courses/:id/materials — Thêm tài liệu
 
 **Thêm PDF:**
 
 ```bash
-curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/materials" \
+curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/materials" \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Giáo trình lý thuyết B2",
@@ -439,7 +461,7 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/materials" \
 **Thêm video:**
 
 ```bash
-curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/materials" \
+curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/materials" \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Video hướng dẫn thực hành",
@@ -491,7 +513,10 @@ curl -s -X POST "http://localhost:3004/courses/$EMPTY_COURSE_ID/enroll" \
 ```json
 {
   "success": false,
-  "code": "COURSE_NOT_ACTIVE"
+  "code": "COURSE_NOT_ACTIVE",
+  "message": "Course is not active",
+  "timestamp": "...",
+  "path": "/courses/.../enroll"
 }
 ```
 
@@ -505,7 +530,10 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
 ```json
 {
   "success": false,
-  "code": "ENROLLMENT_ALREADY_EXISTS"
+  "code": "ENROLLMENT_ALREADY_EXISTS",
+  "message": "Student is already enrolled in this course",
+  "timestamp": "...",
+  "path": "/courses/.../enroll"
 }
 ```
 
@@ -513,16 +541,16 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
 
 ```bash
 # Tạo course với capacity=1 và đăng ký student thứ 2
-SMALL_COURSE_ID=$(curl -s -X POST http://localhost:3004/courses \
+SMALL_COURSE_ID=$(curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
   -d '{"title":"Small Course","licenseCategory":"C","capacity":1}' | jq -r '.data.id')
 
 # Thêm lesson và activate
-curl -s -X POST "http://localhost:3004/courses/$SMALL_COURSE_ID/lessons" \
+curl -s -X POST "http://localhost:3004/admin/courses/$SMALL_COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{"title":"Only lesson","order":1}' > /dev/null
-curl -s -X PATCH "http://localhost:3004/courses/$SMALL_COURSE_ID/activate" > /dev/null
+curl -s -X PATCH "http://localhost:3004/admin/courses/$SMALL_COURSE_ID/activate" > /dev/null
 
 # Đăng ký student 1 (thành công)
 curl -s -X POST "http://localhost:3004/courses/$SMALL_COURSE_ID/enroll" \
@@ -536,7 +564,10 @@ curl -s -X POST "http://localhost:3004/courses/$SMALL_COURSE_ID/enroll" \
 ```json
 {
   "success": false,
-  "code": "COURSE_CAPACITY_EXCEEDED"
+  "code": "COURSE_CAPACITY_EXCEEDED",
+  "message": "Course capacity has been exceeded",
+  "timestamp": "...",
+  "path": "/courses/.../enroll"
 }
 ```
 
@@ -649,7 +680,10 @@ curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSO
 ```json
 {
   "success": false,
-  "code": "ENROLLMENT_ALREADY_COMPLETED"
+  "code": "ENROLLMENT_ALREADY_COMPLETED",
+  "message": "Enrollment is already completed",
+  "timestamp": "...",
+  "path": "/enrollments/.../lessons/.../complete"
 }
 ```
 
@@ -844,7 +878,7 @@ INSTRUCTOR="instructor-test-001"
 STUDENT="student-test-002"
 
 # 1. Tạo course
-COURSE_ID=$(curl -s -X POST $BASE/courses \
+COURSE_ID=$(curl -s -X POST $BASE/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: $INSTRUCTOR" \
   -d '{"title":"Test Course","licenseCategory":"B1","capacity":10}' \
@@ -852,10 +886,10 @@ COURSE_ID=$(curl -s -X POST $BASE/courses \
 echo "✓ Course created: $COURSE_ID"
 
 # 2. Thêm 2 lessons
-curl -s -X POST "$BASE/courses/$COURSE_ID/lessons" \
+curl -s -X POST "$BASE/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{"title":"Lesson 1","order":1}' > /dev/null
-curl -s -X POST "$BASE/courses/$COURSE_ID/lessons" \
+curl -s -X POST "$BASE/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{"title":"Lesson 2","order":2}' > /dev/null
 echo "✓ 2 lessons added"

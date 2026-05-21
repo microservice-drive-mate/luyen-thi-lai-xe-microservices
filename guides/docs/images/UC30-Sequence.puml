@@ -1,0 +1,64 @@
+@startuml UC30-Sequence
+title UC30 - View Maneuver Checkpoint Details
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Student" as ActorStudent
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "CheckpointController" as CheckpointController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorStudent -> Client: Click checkpoint
+Client -> APIGateway: GET /api/v1/checkpoints
+APIGateway -> CheckpointController: Forward request
+activate CheckpointController
+CheckpointController -> AuthService: Validate JWT + permission
+AuthService --> CheckpointController: Valid/Invalid
+
+alt JWT invalid
+  CheckpointController --> APIGateway: 403 Error\n(MSG114)
+  deactivate CheckpointController
+  APIGateway --> Client: Error Response
+else JWT valid
+  CheckpointController -> CheckpointController: Validate filter
+  
+  alt invalid
+    CheckpointController --> APIGateway: 400 Error\n(MSG113)
+    deactivate CheckpointController
+    APIGateway --> Client: Error Response
+  else valid
+    CheckpointController -> Database: Load checkpoints
+    Database --> CheckpointController: Checkpoints or empty
+    
+    alt empty
+      CheckpointController --> APIGateway: 404 Error\n(MSG115)
+      deactivate CheckpointController
+      APIGateway --> Client: Error Response
+    else found
+      CheckpointController --> APIGateway: 200 OK\n(MSG116)
+      deactivate CheckpointController
+      APIGateway --> Client: Success Response
+    end
+  end
+end
+
+@enduml

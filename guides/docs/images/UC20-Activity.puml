@@ -1,0 +1,40 @@
+@startuml UC20-Activity
+title UC20 - Delete Question
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/Manager|
+start
+:(1) Click [btnDeleteQuestion] and confirm;
+
+|System|
+:(2) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(3) Check [Delete_Question] permission;
+  if (Has permission?) then (Yes)
+    :(4) Validate delete policy;
+    if (Policy satisfied?) then (Yes)
+      :(5) Load question and usage refs;
+      if (Exists?) then (Yes)
+        :(6) Soft delete (set isDeleted=true);
+        :(7) Invalidate cache/index;
+        :(8) Return MSG77 (HTTP 200);
+      else (No)
+        :(9) Return MSG73 (HTTP 404);
+      endif
+    else (No)
+      :(10) Return MSG75 (HTTP 400);
+    endif
+  else (No)
+    :(11) Return MSG76 (HTTP 403);
+  endif
+else (No)
+  :(12) Return MSG76 (HTTP 403);
+endif
+
+|Admin/Manager|
+:(13) See result;
+stop
+@enduml

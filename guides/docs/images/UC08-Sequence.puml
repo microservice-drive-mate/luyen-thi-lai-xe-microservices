@@ -1,0 +1,77 @@
+@startuml UC08-Sequence
+title UC08 - Create Course
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Admin/Manager" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "CourseController" as CourseController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+participant "Audit Service" as AuditService
+
+ActorAdmin -> Client: Click Create Course + submit form
+Client -> APIGateway: POST /api/v1/courses
+APIGateway -> CourseController: Forward request
+activate CourseController
+CourseController -> AuthService: Validate JWT
+AuthService --> CourseController: Token valid/invalid
+
+alt JWT invalid
+  CourseController --> APIGateway: 403 Error\n(MSG27)
+  deactivate CourseController
+  APIGateway --> Client: Error Response
+else JWT valid
+  AuthService -> CourseController: Check RBAC permission
+  
+  alt RBAC denied
+    CourseController --> APIGateway: 403 Error\n(MSG27)
+    deactivate CourseController
+    APIGateway --> Client: Error Response
+  else RBAC granted
+    CourseController -> CourseController: Validate courseCode, courseName, licenseCategory, status
+    
+    alt invalid fields
+      CourseController --> APIGateway: 400 Error\n(MSG26 or MSG29)
+      deactivate CourseController
+      APIGateway --> Client: Error Response
+    else valid fields
+      CourseController -> Database: Check existsByCourseCode(courseCode)
+      Database --> CourseController: Exists or Not
+      
+      alt duplicate
+        CourseController --> APIGateway: 409 Error\n(MSG28)
+        deactivate CourseController
+        APIGateway --> Client: Error Response
+      else unique
+        CourseController -> Database: Insert course record
+        Database --> CourseController: Created
+        CourseController -> AuditService: Write create audit
+        AuditService --> CourseController: Stored
+        CourseController --> APIGateway: 201 Created\n(MSG30)
+        deactivate CourseController
+        APIGateway --> Client: Success Response
+      end
+    end
+  end
+end
+
+@enduml

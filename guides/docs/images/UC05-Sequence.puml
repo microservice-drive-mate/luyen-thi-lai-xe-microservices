@@ -1,0 +1,77 @@
+@startuml UC05-Sequence
+title UC05 - Lock Student Account
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+actor "Admin/Manager" as ActorAdmin
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "AccountController" as AccountController
+participant "Auth Service" as AuthService
+database "Database\n(PostgreSQL)" as Database
+
+ActorAdmin -> Client: Click Lock Account Button
+Client -> APIGateway: POST /api/students/{studentId}/lock
+APIGateway -> AccountController: Forward request
+activate AccountController
+
+AccountController -> AuthService: Validate JWT
+AuthService --> AccountController: JWT valid?
+
+alt JWT invalid or expired
+  AccountController --> APIGateway: 403 Forbidden\n(MSG20)
+  deactivate AccountController
+  APIGateway --> Client: Error Response
+else JWT valid
+  AccountController -> AuthService: Check RBAC permission\n(role: Admin/Manager)
+  AuthService --> AccountController: Permission granted?
+  
+  alt RBAC permission denied
+    AccountController --> APIGateway: 403 Forbidden\n(MSG20)
+    deactivate AccountController
+    APIGateway --> Client: Error Response
+  else RBAC permission granted
+    AccountController -> Database: Query student by ID
+    Database --> AccountController: Student record
+    
+    alt student not found
+      AccountController --> APIGateway: 404 Not Found\n(MSG12)
+      deactivate AccountController
+      APIGateway --> Client: Error Response
+    else student exists
+      AccountController -> AccountController: Check account status
+      
+      alt isLocked=true (Already Locked)
+        AccountController --> APIGateway: 400 Bad Request\n(MSG24)
+        deactivate AccountController
+        APIGateway --> Client: Error Response
+      else isLocked=false (Account Active)
+        AccountController -> Database: Set isLocked=true\nRecord lock metadata
+        Database --> AccountController: Commit success
+        AccountController --> APIGateway: 200 OK\n(MSG128)
+        deactivate AccountController
+        APIGateway --> Client: Success Response
+      end
+    end
+  end
+end
+
+@enduml
+
+

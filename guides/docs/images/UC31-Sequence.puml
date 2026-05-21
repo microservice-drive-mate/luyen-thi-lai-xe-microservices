@@ -1,0 +1,67 @@
+@startuml UC31-Sequence
+title UC31 - View General Maneuver Errors
+
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 12
+skinparam ActorBorderColor #666666
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #666666
+skinparam ParticipantBackgroundColor #EFEFEF
+skinparam DatabaseBorderColor #666666
+skinparam DatabaseBackgroundColor #EFEFEF
+skinparam LifeLineBorderColor #999999
+skinparam LifeLineBackgroundColor #FFFFFF
+skinparam GroupBorderColor #666666
+skinparam GroupBackgroundColor #FFFFFF
+skinparam ArrowColor #444444
+skinparam ActivationBackgroundColor #FFFFFF
+skinparam ActivationBorderColor #666666
+
+actor "Student" as ActorStudent
+participant "Client\n(Browser/App)" as Client
+participant "API Gateway" as APIGateway
+participant "ErrorController" as ErrorController
+participant "Auth Service" as AuthService
+participant "Cache\n(Redis)" as Cache
+database "Database\n(PostgreSQL)" as Database
+
+ActorStudent -> Client: Click errors
+Client -> APIGateway: GET /api/v1/errors
+APIGateway -> ErrorController: Forward request
+activate ErrorController
+ErrorController -> AuthService: Validate JWT + permission
+AuthService --> ErrorController: Valid/Invalid
+
+alt JWT invalid
+  ErrorController --> APIGateway: 403 Error\n(MSG118)
+  deactivate ErrorController
+  APIGateway --> Client: Error Response
+else JWT valid
+  ErrorController -> Cache: Lookup errors
+  
+  alt cache hit
+    Cache --> ErrorController: Data
+  else cache miss
+    ErrorController -> Database: Query ErrorReference
+    Database --> ErrorController: Data or empty
+    
+    alt empty
+      ErrorController --> APIGateway: 404 Error\n(MSG119)
+      deactivate ErrorController
+      APIGateway --> Client: Error Response
+    else found
+      ErrorController -> Cache: Store errors
+      Cache --> ErrorController: OK
+    end
+  end
+  
+  ErrorController -> ErrorController: Categorize & sort
+  ErrorController --> APIGateway: 200 OK\n(MSG120)
+  deactivate ErrorController
+  APIGateway --> Client: Success Response
+end
+
+@enduml

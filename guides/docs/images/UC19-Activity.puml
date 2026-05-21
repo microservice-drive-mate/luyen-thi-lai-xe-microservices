@@ -1,0 +1,45 @@
+@startuml UC19-Activity
+title UC19 - Update Question
+
+skinparam shadowing false
+skinparam handwritten false
+skinparam backgroundColor white
+
+|Admin/Manager|
+start
+:(1) Edit question fields;
+:(2) Click [btnUpdateQuestion];
+
+|System|
+:(3) Validate JWT;
+if (JWT valid?) then (Yes)
+  :(4) Check [Update_Question] permission;
+  if (Has permission?) then (Yes)
+    :(5) Validate mutable fields and version;
+    if (Valid?) then (Yes)
+      if (Version mismatch?) then (Yes)
+        :(6) Return MSG71 (HTTP 409);
+      else (No)
+        :(7) Load target question;
+        if (Exists?) then (Yes)
+          :(8) Update question record;
+          :(9) Increment version;
+          :(10) Return MSG74 (HTTP 200);
+        else (No)
+          :(11) Return MSG73 (HTTP 404);
+        endif
+      endif
+    else (No)
+      :(12) Return MSG69 (HTTP 400);
+    endif
+  else (No)
+    :(13) Return MSG70 (HTTP 403);
+  endif
+else (No)
+  :(14) Return MSG70 (HTTP 403);
+endif
+
+|Admin/Manager|
+:(15) See result;
+stop
+@enduml

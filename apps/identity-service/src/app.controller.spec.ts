@@ -1,29 +1,31 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { AppController } from './app.controller';
+import { AuthController } from './presentation/http/auth.controller';
 import { AppService } from './app.service';
 
-describe('AppController', () => {
-  let appController: AppController;
+describe('AuthController', () => {
+  let authController: AuthController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [AppController],
+      controllers: [AuthController],
       providers: [
         {
           provide: AppService,
-          // Mock toàn bộ AppService, không khởi tạo thật
-          // → không cần NOTI_SERVICE hay PrismaService
           useValue: {
-            getHello: jest.fn().mockReturnValue('Hello World!'),
+            login: jest.fn(),
+            logout: jest.fn(),
+            refreshToken: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    appController = module.get<AppController>(AppController);
+    authController = module.get<AuthController>(AuthController);
   });
 
-  it('should return "Hello World!"', () => {
-    expect(appController.getHello()).toBe('Hello World!');
+  it('should return public message', () => {
+    expect(authController.getPublic()).toEqual({
+      message: 'Đây là API Public, ai cũng xem được!',
+    });
   });
 });
