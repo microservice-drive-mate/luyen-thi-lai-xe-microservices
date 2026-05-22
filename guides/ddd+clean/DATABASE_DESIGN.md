@@ -154,7 +154,7 @@ file_objects
 
 ---
 
-## Service 3: question-service → `question_db` ⏳ (chưa implement)
+## Service 3: question-service → `question_db` ✅ (implemented)
 
 **Bounded Context:** Question Bank Management
 
@@ -212,7 +212,7 @@ question_options
 
 ---
 
-## Service 4: exam-service → `exam_db` ⏳ (chưa implement)
+## Service 4: exam-service → `exam_db` ✅ (implemented)
 
 **Bounded Context:** Exam Scheduling & Session Management
 
@@ -409,44 +409,50 @@ course_enrollments
 
 ---
 
-## Service 6: simulation-service → `simulation_db` ⏳ (chưa implement)
+## Service 6: simulation-service → `simulation_db` ✅ (MVP implemented)
 
 **Bounded Context:** Driving Scenario Simulation (Sa hình)
 
 > Sa hình: student xem video/ảnh tình huống thực tế và chọn hành động đúng. Có 120 tình huống theo quy định.
 
-### Aggregate Root: `Scenario`
+### Aggregate Root: `Maneuver`
 
 > Content tĩnh, do ADMIN/INSTRUCTOR tạo.
 
 ```
-scenarios
+maneuvers
 ├── id               UUID PK
 ├── title            TEXT NOT NULL
-├── description      TEXT
+├── description      TEXT NOT NULL
 ├── licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
-├── type             ENUM(INTERSECTION, HIGHWAY, URBAN, PARKING, ROUNDABOUT, WEATHER, NIGHT)
-├── difficulty       ENUM(EASY, MEDIUM, HARD)
-├── videoUrl         TEXT NULLABLE
-├── imageUrl         TEXT NULLABLE
-├── thumbnailUrl     TEXT
-├── order            INT NOT NULL   ← thứ tự trong bộ 120 tình huống
+├── displayOrder     INT NOT NULL
 ├── isActive         BOOLEAN DEFAULT true
-├── createdById      UUID NOT NULL
 ├── createdAt        TIMESTAMPTZ
 └── updatedAt        TIMESTAMPTZ
 ```
 
-### Entity (thuộc Scenario): `ScenarioOption`
+### Entity (thuộc Maneuver): `ManeuverCheckpoint`
 
 ```
-scenario_options
+maneuver_checkpoints
 ├── id            UUID PK
-├── scenarioId    UUID NOT NULL FK → scenarios.id
-├── content       TEXT NOT NULL
-├── isCorrect     BOOLEAN NOT NULL
-├── explanation   TEXT           ← giải thích tại sao đúng/sai
+├── maneuverId    UUID NOT NULL FK → maneuvers.id
+├── title         TEXT NOT NULL
+├── instruction   TEXT NOT NULL
+├── penalty       TEXT NULLABLE
 └── displayOrder  INT NOT NULL
+```
+
+### Entity: `ManeuverError`
+
+```
+maneuver_errors
+├── id               UUID PK
+├── licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
+├── code             TEXT NOT NULL
+├── description      TEXT NOT NULL
+├── severity         TEXT NOT NULL
+└── createdAt        TIMESTAMPTZ
 ```
 
 ### Aggregate Root: `SimulationSession`
@@ -476,8 +482,7 @@ simulation_answers
 ├── scenarioId        UUID NOT NULL FK → scenarios.id
 ├── selectedOptionId  UUID NULLABLE   ← null = bỏ qua
 ├── isCorrect         BOOLEAN NULLABLE
-├── timeSpentSeconds  INT DEFAULT 0
-└── answeredAt        TIMESTAMPTZ NULLABLE
+└── answeredAt        TIMESTAMPTZ
 ```
 
 ### Domain Events phát ra
@@ -488,21 +493,25 @@ simulation_answers
 
 ---
 
-## Service 7: notification-service → `notification_db` ⏳ (chưa implement)
+## Service 7: notification-service → `notification_db` ✅ (MVP implemented)
 
 **Bounded Context:** Notification Delivery
 
-### Aggregate Root: `NotificationTemplate`
+### Current MVP scope
+
+Notification-service persists in-app notifications and academic warning audit records. Template/preference/channel delivery tables are extension points, not part of the current schema.
+
+### Aggregate Root: `AcademicWarning`
 
 ```
-notification_templates
-├── id            UUID PK
-├── code          TEXT UNIQUE NOT NULL  ← e.g. EXAM_PASSED, WELCOME, EXAM_FAILED
-├── type          ENUM(IN_APP, EMAIL, PUSH, SMS)
-├── titleTemplate TEXT NOT NULL         ← Handlebars: "Xin chào {{fullName}}!"
-├── bodyTemplate  TEXT NOT NULL
-├── isActive      BOOLEAN DEFAULT true
-└── createdAt     TIMESTAMPTZ
+academic_warnings
+├── id          UUID PK
+├── studentId   UUID NOT NULL
+├── reason      TEXT NOT NULL
+├── severity    TEXT NOT NULL
+├── message     TEXT NOT NULL
+├── createdById UUID NOT NULL
+└── createdAt   TIMESTAMPTZ
 ```
 
 ### Aggregate Root: `Notification`
@@ -521,7 +530,7 @@ notifications
 └── createdAt TIMESTAMPTZ
 ```
 
-### Aggregate Root: `NotificationPreference`
+### Future extension: `NotificationPreference`
 
 ```
 notification_preferences
@@ -547,7 +556,7 @@ notification_preferences
 
 ---
 
-## Service 8: analytics-service → `analytics_db` ⏳ (chưa implement)
+## Service 8: analytics-service → `analytics_db` ✅ (MVP implemented)
 
 **Bounded Context:** Learning Analytics & Progress Tracking
 
@@ -565,12 +574,11 @@ student_learning_profiles
 ├── totalExamAttempts INT DEFAULT 0
 ├── passedExams       INT DEFAULT 0
 ├── avgExamScore      FLOAT DEFAULT 0
-├── totalSimSessions  INT DEFAULT 0
-├── passedSimSessions INT DEFAULT 0
-├── avgSimScore       FLOAT DEFAULT 0
 ├── coursesEnrolled   INT DEFAULT 0
 ├── coursesCompleted  INT DEFAULT 0
 ├── lastActivityAt    TIMESTAMPTZ
+├── resetAt           TIMESTAMPTZ NULLABLE
+├── createdAt         TIMESTAMPTZ
 └── updatedAt         TIMESTAMPTZ
 ```
 
@@ -667,15 +675,15 @@ weak_area_reports
 
 | Service | Database | Aggregate Roots | Ghi chú |
 | --- | --- | --- | --- |
-| identity-service | **Keycloak** | — | Placeholder schema tồn tại nhưng không dùng cho business |
+| identity-service | identity_db + **Keycloak** | IdentityUser | Keycloak là source of truth auth; identity_db giữ audit/read model demo |
 | user-service | user_db | UserProfile | ✅ Có StudentDetail + LicenseAssignmentAudit |
 | media-service | media_db | FileObject | ✅ Azure Blob metadata, UNLINKED/LINKED status |
-| question-service | question_db | Question, QuestionTopic | ⏳ Chưa implement |
-| exam-service | exam_db | ExamTemplate, ExamSession, ExamSchedule | ⏳ Chưa implement — snapshot câu hỏi |
+| question-service | question_db | Question, QuestionTopic, QuestionVersion | ✅ Có soft delete/versioning |
+| exam-service | exam_db | ExamTemplate, ExamSession, ExamSchedule | ✅ Có immutable snapshot câu hỏi/template |
 | course-service | course_db | Course, CourseEnrollment | ✅ Có CourseInstructor, CourseRequirement, CourseMaterial |
-| simulation-service | simulation_db | Scenario, SimulationSession | ⏳ Chưa implement — 120 tình huống |
-| notification-service | notification_db | Notification, NotificationTemplate, NotificationPreference | ⏳ Chưa implement — pure consumer |
-| analytics-service | analytics_db | StudentLearningProfile, QuestionAccuracyTracker, WeakAreaReport | ⏳ Chưa implement — pure read model |
+| simulation-service | simulation_db | Maneuver, SimulationSession | ✅ Maneuver/checkpoint/error + state machine MVP |
+| notification-service | notification_db | Notification, AcademicWarning | ✅ In-app notification + academic warning |
+| analytics-service | analytics_db | StudentLearningProfile, DailyActivity, QuestionAccuracyTracker | ✅ CQRS read model + Redis cache |
 
 ---
 

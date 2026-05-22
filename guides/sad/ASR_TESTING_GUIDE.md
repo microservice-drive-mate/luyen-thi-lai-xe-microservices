@@ -67,9 +67,9 @@ Có 2 cách demo:
 | Mode | Khi dùng | Base URL |
 | --- | --- | --- |
 | Qua Kong | Demo giống production hơn, có JWT thật | `http://localhost:8000` |
-| Direct service | Debug nhanh từng service, một số endpoint dùng `x-user-id` fallback | `http://localhost:3003`, `3004`, `3005` |
+| Direct service | Debug nhanh từng service bằng JWT thật trên port local | `http://localhost:3001` đến `3008` |
 
-Khuyến nghị demo với thầy: **qua Kong** cho các API cần auth. Nếu đang debug hoặc thiếu token, dùng direct service để chứng minh behavior kỹ thuật.
+Khuyến nghị demo với thầy: **qua Kong** cho các API cần auth. Frontend và demo chuẩn chỉ gửi `Authorization: Bearer <access_token>`; không tự gửi `x-user-id`. Một số guide cũ có thể nhắc fallback header cho debug legacy, nhưng không dùng nó làm flow chính.
 
 ## 4. Start Infrastructure
 
@@ -952,7 +952,7 @@ Xem:
 - `guides/testing/identity-service-test-guide.md`
 - `guides/api/identity-user-flow.md`
 
-Nếu chỉ debug direct service, một số endpoint hỗ trợ `x-user-id`, nhưng demo chuẩn nên dùng JWT.
+Nếu debug direct service, vẫn ưu tiên dùng JWT thật vì các service mới đọc actor từ `JWT.sub`. Chỉ dùng fallback header khi một endpoint cũ ghi rõ hỗ trợ debug legacy.
 
 ### Course Enroll Báo `STUDENT_LICENSE_NOT_ASSIGNED`
 

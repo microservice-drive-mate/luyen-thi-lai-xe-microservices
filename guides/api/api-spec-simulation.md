@@ -406,4 +406,10 @@ The API depends on seeded maneuver content:
 - `maneuver_checkpoints`
 - `maneuver_errors`
 
-Without seed data, `GET /simulation/maneuvers` and `GET /simulation/maneuver-errors` correctly return empty arrays. Add a simulation seed script before frontend demo so the UI has enough maneuver/checkpoint content after running root `npm run db:seed`.
+Run the root seed before frontend demo:
+
+```powershell
+npm.cmd run db:seed
+```
+
+The simulation seed inserts deterministic maneuver/checkpoint/error content for demo license categories. Without seed data, `GET /simulation/maneuvers` and `GET /simulation/maneuver-errors` correctly return empty arrays, so the frontend should treat an empty list as “no content seeded yet”, not as an API failure.

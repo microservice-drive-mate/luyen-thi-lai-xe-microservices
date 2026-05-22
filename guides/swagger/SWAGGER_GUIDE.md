@@ -115,9 +115,9 @@ Port mặc định cho từng service (đề xuất):
 | exam-service         | 3001       |
 | question-service     | 3002       |
 | course-service       | 3003       |
-| notification-service | 3004       |
-| analytics-service    | 3005       |
-| simulation-service   | 3006       |
+| notification-service | 3006       |
+| analytics-service    | 3007       |
+| simulation-service   | 3008       |
 | **docs-service**     | **3009**   |
 
 ---

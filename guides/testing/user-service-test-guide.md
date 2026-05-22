@@ -107,14 +107,14 @@ curl http://localhost:3002/docs-json
 Client (curl/Postman)
     │
     ├─── DIRECT (dev/debug) ──→ http://localhost:3002  ←── Port user-service local
-    │                            (Không cần JWT, có thể set x-user-id thủ công)
+    │                            (Ưu tiên JWT thật; x-user-id chỉ là fallback legacy)
     │
     └─── VIA KONG ────────────→ http://localhost:8000  ←── Kong gateway
                                  (Cần JWT hợp lệ từ Keycloak)
-                                 Kong inject: x-user-id, x-user-role
+                                 Service đọc actor từ JWT.sub
 ```
 
-> **Lưu ý:** user-service KHÔNG tự validate JWT — đó là việc của Kong. Khi test trực tiếp (port 3002), bạn phải tự set header `x-user-id` trong request nếu endpoint cần nó.
+> **Lưu ý:** user-service hiện validate JWT/RBAC tại service và đọc actor từ `@AuthenticatedUser()`. Middleware vẫn có thể map `JWT.sub` sang `x-user-id` để tương thích code cũ, nhưng frontend/demo chuẩn không tự gửi `x-user-id`.
 
 ---
 
@@ -216,8 +216,7 @@ curl -s -X POST http://localhost:3001/admin/identity-users \
 
 ## 4. Test từng endpoint
 
-> Tất cả các lệnh curl sau đây gọi **trực tiếp** vào user-service (port 3002), không qua Kong.
-> Header `x-user-id` được set thủ công khi cần.
+> Tất cả các lệnh curl sau đây gọi **trực tiếp** vào user-service (port 3002), không qua Kong. Khi demo chuẩn, dùng `Authorization: Bearer <access_token>`. Các ví dụ còn dùng `x-user-id` là debug legacy cho endpoint/case cũ, không phải contract cho frontend.
 
 ---
 
@@ -365,13 +364,13 @@ curl -s "http://localhost:3002/admin/users?size=200" | jq .
 
 ### 4.3 GET /users/me — Lấy profile của chính mình
 
-> Endpoint này đọc `x-user-id` header. Set thủ công khi test trực tiếp.
+> Endpoint này lấy user hiện tại từ `JWT.sub` qua `@AuthenticatedUser()`.
 
 **Happy path:**
 
 ```bash
 curl -s http://localhost:3002/users/me \
-  -H "x-user-id: student-uuid-0003" | jq .
+  -H "Authorization: Bearer <STUDENT_TOKEN>" | jq .
 ```
 
 **Kết quả mong đợi (200):**
@@ -404,11 +403,11 @@ curl -s http://localhost:3002/users/me \
 }
 ```
 
-**Case: x-user-id không tồn tại (expect 404):**
+**Case: token hợp lệ nhưng profile tương ứng chưa tồn tại (expect 404):**
 
 ```bash
 curl -s http://localhost:3002/users/me \
-  -H "x-user-id: non-existent-uuid" | jq .
+  -H "Authorization: Bearer <TOKEN_WITHOUT_USER_PROFILE>" | jq .
 ```
 
 ```json
@@ -447,14 +446,14 @@ curl -s http://localhost:3002/admin/users/does-not-exist | jq .
 
 ### 4.5 PATCH /users/me — Cập nhật profile bản thân
 
-> Set `x-user-id` header để xác định user.
+> User được xác định bằng `JWT.sub`.
 
 **Cập nhật một số field:**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/users/me \
   -H "Content-Type: application/json" \
-  -H "x-user-id: student-uuid-0003" \
+  -H "Authorization: Bearer <STUDENT_TOKEN>" \
   -d '{
     "fullName": "Lê Học Viên (Updated)",
     "address": "456 Đường Mới, Hà Nội",
@@ -585,14 +584,14 @@ curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/lock \
 
 ### 4.8 PATCH /admin/users/:id/license-tier — Gán hạng bằng lái
 
-> Endpoint này đọc `x-user-id` làm `changedById` (người thực hiện) để ghi audit.
+> Endpoint này lấy `changedById` từ `JWT.sub` của ADMIN/CENTER_MANAGER để ghi audit.
 
 **Gán hạng B2 cho student:**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/license-tier \
   -H "Content-Type: application/json" \
-  -H "x-user-id: admin-uuid-0001" \
+  -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" \
   -d '{ "licenseTier": "B2" }' | jq '.data.studentDetail.licenseTier'
 # Kết quả mong đợi: "B2"
 ```
@@ -830,7 +829,7 @@ curl -s http://localhost:8000/users/me \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
-> Kong tự inject `x-user-id` và `x-user-role` từ JWT claims vào request trước khi forward xuống user-service.
+> Frontend chỉ gửi `Authorization`. Service tự validate token và lấy actor từ `JWT.sub`.
 
 ---
 
@@ -956,16 +955,16 @@ curl -s -X POST $BASE/users -H "Content-Type: application/json" \
 # 2. Lấy profile bằng ID
 curl -s $BASE/users/test-001 | jq '.data.role'  # → "STUDENT"
 
-# 3. Lấy profile /me
-curl -s $BASE/users/me -H "x-user-id: test-001" | jq '.data.email'  # → "test-001@test.com"
+# 3. Lấy profile /me - cần token có sub = test-001 nếu guard đang bật
+curl -s $BASE/users/me -H "Authorization: Bearer <STUDENT_TOKEN>" | jq '.data.email'
 
 # 4. Update profile
-curl -s -X PATCH $BASE/users/me -H "Content-Type: application/json" -H "x-user-id: test-001" \
+curl -s -X PATCH $BASE/users/me -H "Content-Type: application/json" -H "Authorization: Bearer <STUDENT_TOKEN>" \
   -d '{"address":"123 Test St"}' | jq '.data.address'  # → "123 Test St"
 
 # 5. Gán license tier
 curl -s -X PATCH $BASE/admin/users/test-001/license-tier \
-  -H "Content-Type: application/json" -H "x-user-id: test-001" \
+  -H "Content-Type: application/json" -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" \
   -d '{"licenseTier":"B2"}' | jq '.data.studentDetail.licenseTier'  # → "B2"
 
 # 6. Verify license tier

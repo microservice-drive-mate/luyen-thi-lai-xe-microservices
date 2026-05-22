@@ -605,11 +605,10 @@ Sau khi tạo user ở bước 4.1, user-service phải tự động tạo `User
 ### 5.1 — Kiểm tra UserProfile được tạo
 
 ```bash
-# Cần ADMIN token của user-service (x-user-id header)
+# Cần ADMIN token; user-service đọc actor từ JWT.sub.
 # Gọi trực tiếp user-service (port 3002)
 curl "http://localhost:3002/users/$USER_ID" \
-  -H "x-user-id: <admin_keycloak_id>" \
-  -H "x-user-role: ADMIN"
+  -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
 **Kết quả mong đợi `200`:**
@@ -643,8 +642,7 @@ Sau bước 4.3 (đổi sang INSTRUCTOR):
 
 ```bash
 curl "http://localhost:3002/users/$USER_ID" \
-  -H "x-user-id: <admin_keycloak_id>" \
-  -H "x-user-role: ADMIN"
+  -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
 **Kết quả mong đợi:** `"role": "INSTRUCTOR"`, `"studentDetail": null`
@@ -655,8 +653,7 @@ Sau bước 4.9 (cập nhật email + fullName):
 
 ```bash
 curl "http://localhost:3002/users/$USER_ID" \
-  -H "x-user-id: <admin_keycloak_id>" \
-  -H "x-user-role: ADMIN"
+  -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
 **Kết quả mong đợi:** `"email": "student1-updated@gm.uit.edu.vn"`, `"fullName": "Nguyễn Văn A (updated)"`.
@@ -667,8 +664,7 @@ Sau bước 4.4 (lock user):
 
 ```bash
 curl "http://localhost:3002/users/$USER_ID" \
-  -H "x-user-id: <admin_keycloak_id>" \
-  -H "x-user-role: ADMIN"
+  -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
 **Kết quả mong đợi:** `"isActive": false`.
@@ -683,8 +679,7 @@ Sau bước 4.10 (soft delete):
 
 ```bash
 curl "http://localhost:3002/users/$USER_ID" \
-  -H "x-user-id: <admin_keycloak_id>" \
-  -H "x-user-role: ADMIN"
+  -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
 **Kết quả mong đợi:** `"isActive": false` (profile bị deactivate nhưng vẫn tồn tại trong user-service).

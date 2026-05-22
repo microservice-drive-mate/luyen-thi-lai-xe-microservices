@@ -18,7 +18,9 @@ Consul được seed cả hai bộ config.
 1. Bật infrastructure:
 
 ```powershell
-docker compose up -d consul consul-init rabbitmq db-user db-exam
+docker compose up -d consul consul-init keycloak redis rabbitmq \
+  db-identity db-user db-media db-question db-exam db-course \
+  db-notification db-analytics db-simulation
 ```
 
 2. Chạy service local bình thường:
@@ -65,6 +67,27 @@ Khi chạy local, code sẽ tự chọn `development-local` nếu `CONSUL_URL` �
 - `redis.url`: `redis://redis:6379` trong `development`
 
 Cache TTL mac dinh la 600 giay. Khi Redis loi hoac chua chay, service fallback ve PostgreSQL va khong doi response shape.
+
+## Analytics/simulation cache config
+
+`analytics-service` uses Redis cache-aside for progress dashboard reads. Event consumers invalidate the affected student's key after projection updates.
+
+`simulation-service` uses Redis cache-aside for maneuver error reads. When Redis is unavailable, it falls back to PostgreSQL and keeps response shape unchanged.
+
+- `redis.url`: `redis://localhost:6379` trong `development-local`
+- `redis.url`: `redis://redis:6379` trong `development`
+
+## Demo seed data
+
+After Consul and databases are up, run the root seed from the workspace:
+
+```powershell
+npm.cmd run db:seed
+```
+
+This applies deterministic demo data across identity, user, course, question, exam, analytics, notification, and simulation services. Identity seed also creates demo users in Keycloak when Keycloak is running; set `SKIP_KEYCLOAK_SEED=1` only when intentionally seeding DB records without touching Keycloak.
+
+Demo account password is `123456`. Use real JWT access tokens for frontend and Swagger flows; do not send `x-user-id` from frontend code.
 
 ## Vì sao cách này tốt hơn `.env` từng service
 

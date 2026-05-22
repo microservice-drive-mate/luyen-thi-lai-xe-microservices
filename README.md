@@ -104,7 +104,7 @@ npm run consul:get /config/development/identity-service/database.url
 - /courses -> course-service
 - /notifications -> notification-service
 - /analytics -> analytics-service
-- /simulations -> simulation-service
+- /simulation -> simulation-service
 
 ## 6. Chạy local để code/debug
 
@@ -147,21 +147,34 @@ npm run check-types
 npm run format
 ```
 
-Lệnh DB cho identity-service:
+Lệnh DB/seed demo:
 
 ```bash
-npm run db:generate -w identity-service
-npm run db:migrate -w identity-service
-npm run db:seed -w identity-service
+# Generate Prisma clients for all services
+npm run db:generate
+
+# Apply migrations for all service databases
+npm run db:migrate
+
+# Seed deterministic demo data for all services.
+# This also seeds demo users into Keycloak when Keycloak is running.
+npm run db:seed
+
+# Optional: parse seed/600-cau-hoi.docx, upload/link question images to Azure Blob
+npm run db:seed:question-images
 ```
 
 Nếu chạy bằng Docker network nội bộ:
 
 ```bash
-docker compose up -d db-identity
+docker compose up -d consul consul-init keycloak redis rabbitmq \
+  db-identity db-user db-media db-question db-exam db-course \
+  db-notification db-analytics db-simulation
 docker compose run --rm identity-service npm run db:deploy -w identity-service
 docker compose run --rm identity-service npm run db:seed -w identity-service
 ```
+
+Demo accounts được seed vào Keycloak và các service DB dùng chung password `123456`.
 
 ## 7. Cách tạo service mới
 

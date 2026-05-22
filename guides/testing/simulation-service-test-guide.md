@@ -5,10 +5,13 @@
 ```powershell
 docker compose up -d db-simulation redis consul consul-init
 npm --workspace=apps/simulation-service run db:deploy
+npm run db:seed
 npm --workspace=apps/simulation-service run start:dev
 ```
 
-Seed at least one maneuver and one maneuver error in `simulation_db`.
+The root seed creates deterministic maneuver/checkpoint/error data. If this guide is run against an empty database without seed data, read APIs return empty arrays by design.
+
+Use a real Keycloak token. Frontend and Swagger calls should send `Authorization: Bearer <access_token>`; do not send `x-user-id`.
 
 ## Maneuver Read APIs
 

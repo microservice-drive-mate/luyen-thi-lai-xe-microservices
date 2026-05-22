@@ -23,6 +23,7 @@ Course-service validate JWT/RBAC tại service bằng Keycloak guard. Frontend g
 | `GET /admin/courses` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 | `GET /admin/courses/:id` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 | `PATCH /admin/courses/:id` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `DELETE /admin/courses/:id` | `ADMIN`, `CENTER_MANAGER` |
 | `PATCH /admin/courses/:id/activate` | `ADMIN`, `CENTER_MANAGER` |
 | `POST /admin/courses/:id/lessons` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 | `DELETE /admin/courses/:id/lessons/:lessonId` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
@@ -33,6 +34,7 @@ Course-service validate JWT/RBAC tại service bằng Keycloak guard. Frontend g
 | `GET /enrollments` | `STUDENT` |
 | `GET /enrollments/:id` | `STUDENT`, `ADMIN`, `CENTER_MANAGER` |
 | `POST /enrollments/:id/lessons/:lessonId/complete` | `STUDENT` |
+| `POST /enrollments/:id/reset-progress` | `STUDENT`, owner only |
 
 ---
 
@@ -840,6 +842,7 @@ Course-service lưu event này vào read model `student_license_profiles` để 
   "courseId": "course-uuid"
 }
 ```
+
 ## ASR Additions: Course Archive And Progress Reset
 
 ### DELETE `/admin/courses/{id}`
@@ -847,6 +850,10 @@ Course-service lưu event này vào read model `student_license_profiles` để 
 Archives a course instead of hard deleting it. Archived courses are excluded from list endpoints unless explicitly filtered by status.
 
 Response contains the archived course with `status = "ARCHIVED"`.
+
+**Response `200`**
+
+Same `Course` shape as `GET /admin/courses/:id`, with `status = "ARCHIVED"`.
 
 ### POST `/enrollments/{id}/reset-progress`
 
@@ -859,3 +866,7 @@ Resets only the current student's enrollment progress to baseline:
 - `completedAt = null`
 - historical exam sessions are preserved
 - publishes `course.enrollment.progress-reset` for analytics invalidation
+
+**Response `200`**
+
+Same `Enrollment` shape as `GET /enrollments/:id`, with `progress = 0`, `status = "ACTIVE"`, and `completedAt = null`.

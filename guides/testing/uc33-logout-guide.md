@@ -7,7 +7,7 @@ UC33 Logout đã được triển khai tại `identity-service` với các thàn
 - Endpoint: `POST /logout`
 - Yêu cầu: JWT access token (Authorization header) + refresh token (request body)
 - Response: Thông báo logout thành công với hướng dẫn xóa token
-- Backend: Revoke session trên Keycloak + in-memory blacklist (sẵn sàng upgrade sang Redis)
+- Backend: Revoke session trên Keycloak + Redis blacklist theo `jti`/token TTL
 
 ## Architecture
 
@@ -26,8 +26,8 @@ Client → POST /logout
            • Thêm access token vào blacklist với TTL
            ↓
          TokenBlacklistService
-           • Lưu token vào in-memory Map
-           • Set timeout tự động cleanup
+           • Lưu key `bl:<jti>` vào Redis
+           • TTL theo `exp` của access token
            ↓
          LogoutResponseDto (MSG130)
            ↓
@@ -211,36 +211,27 @@ curl -X POST http://localhost:3001/logout \
   -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
 
 # Lúc này, token vẫn hợp lệ về cấu trúc, nhưng đã bị blacklist
-# Khi gọi API private endpoint, gateway sẽ check blacklist
-# (Hiện tại chỉ có in-memory blacklist ở identity-service)
-# TODO: Khi integrate Kong + Redis, sẽ enforce ở gateway level
+# Khi gọi protected API của identity-service, TokenBlacklistGuard check Redis
+# Expected: 401 Token has been revoked
 ```
 
 ## Integration Points
 
-### Kong Gateway (Chưa implement)
+### Current enforcement
 
-Khi Kong được cấu hình đầy đủ:
+Hiện tại blacklist được enforce ở service layer của `identity-service` bằng global `TokenBlacklistGuard` và Redis. Kong vẫn validate/route request nhưng không tự check Redis blacklist.
 
-1. Kong JWT plugin sẽ validate JWT trên mọi request
-2. Kong Redis plugin sẽ check token blacklist O(1)
-3. Nếu token bị blacklist → Kong trả 401, không forward tới backend
+1. `POST /logout` decode access token, lấy `exp`, revoke refresh token/session trên Keycloak.
+2. `TokenBlacklistService` lưu key `bl:<jti>` vào Redis với TTL đến khi access token hết hạn.
+3. Protected API trong `identity-service` reject token đã logout bằng `401`.
 
-**Files to update khi integrate Kong**:
+### Gateway/backlog note
 
-- `kong/kong.dev.yaml` — Thêm Redis plugin config
-- `kong/kong.yaml` — Thêm Redis plugin config
-- `identity-service` → Publish logout event tới Redis (global blacklist)
+Nếu muốn chặn token đã logout trước khi request tới mọi service, cần thêm blacklist guard/plugin dùng chung ở API gateway hoặc shared guard trong từng service. Đây là hardening mở rộng, không giả định frontend phải gửi header nào khác ngoài `Authorization`.
 
-### Redis Integration (In Progress)
+### Redis Integration
 
-Hiện tại: In-memory Map trong TokenBlacklistService
-Tiếp theo: Thay bằng Redis ioredis client
-
-**Files to create**:
-
-- `apps/identity-service/src/infrastructure/redis/redis.module.ts`
-- `apps/identity-service/src/infrastructure/redis/redis.service.ts`
+Hiện tại: `TokenBlacklistService` dùng `ioredis` client được inject từ `identity-service` app module.
 
 **Cấu hình**:
 

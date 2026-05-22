@@ -131,13 +131,13 @@ Swagger UI: http://localhost:3005/docs
 ```
 Client
   |-- DIRECT --> http://localhost:3005
-  |              Tự set x-user-id khi cần audit user
+  |              Ưu tiên JWT thật; x-user-id chỉ là fallback legacy
   |
   |-- KONG ----> http://localhost:8000/admin/questions
-                 Kong validate JWT và inject x-user-id/x-user-role
+                 Service đọc actor từ JWT.sub
 ```
 
-Trong local hybrid mode, Kong container `kong-dev` đọc `kong/kong.dev.yaml` và forward `/admin/questions` về `host.docker.internal:3005`. Vì vậy frontend/Postman nên test qua `http://localhost:8000` để giống production path hơn.
+Trong local hybrid mode, Kong container `kong-dev` đọc `kong/kong.dev.yaml` và forward `/admin/questions` về `host.docker.internal:3005`. Vì vậy frontend/Postman nên test qua `http://localhost:8000` để giống production path hơn. Các lệnh `x-user-id` trong guide này chỉ còn dùng cho debug legacy; frontend/demo chuẩn gửi `Authorization: Bearer <access_token>`.
 
 Kiểm tra Kong đã nạp route:
 

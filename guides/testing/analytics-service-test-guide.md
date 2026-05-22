@@ -5,8 +5,11 @@
 ```powershell
 docker compose up -d db-analytics redis rabbitmq consul consul-init
 npm --workspace=apps/analytics-service run db:deploy
+npm run db:seed
 npm --workspace=apps/analytics-service run start:dev
 ```
+
+Use a real Keycloak token. Frontend and Swagger calls should send `Authorization: Bearer <access_token>`; do not send `x-user-id`.
 
 ## Demo Flow
 

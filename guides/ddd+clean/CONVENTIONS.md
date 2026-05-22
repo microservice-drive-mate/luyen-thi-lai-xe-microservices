@@ -418,7 +418,7 @@ export abstract class ExamSessionRepository {
 export class SubmitExamCommand {
   constructor(
     readonly sessionId: string,
-    readonly studentId: string, // từ x-user-id header
+    readonly studentId: string, // từ JWT.sub qua @AuthenticatedUser()
     readonly answers: Array<{
       questionId: string;
       selectedOptionId: string;
@@ -434,7 +434,7 @@ export class SubmitExamCommand {
 export class GetExamResultQuery {
   constructor(
     readonly sessionId: string,
-    readonly requesterId: string, // từ x-user-id header (để check ownership)
+    readonly requesterId: string, // từ JWT.sub qua @AuthenticatedUser() để check ownership
   ) {}
 }
 ```
@@ -851,15 +851,16 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Param,
   Post,
 } from "@nestjs/common";
-import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { AuthenticatedUser } from "@repo/common";
 
 @ApiTags("Exams")
+@ApiBearerAuth()
 @Controller("exams")
 export class ExamController {
   constructor(
@@ -871,16 +872,12 @@ export class ExamController {
   @Post("start")
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Start a new exam session" })
-  @ApiHeader({
-    name: "x-user-id",
-    description: "Injected by Kong after JWT validation",
-  })
   async startExam(
-    @Headers("x-user-id") studentId: string,
+    @AuthenticatedUser() user: { sub: string },
     @Body() dto: CreateExamRequestDto,
   ): Promise<ExamSessionResponseDto> {
     const result = await this.startExamUseCase.execute(
-      new StartExamCommand(dto.examId, studentId),
+      new StartExamCommand(dto.examId, user.sub),
     );
     return ExamSessionResponseDto.fromResult(result);
   }
@@ -888,17 +885,13 @@ export class ExamController {
   @Post(":sessionId/submit")
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Submit exam answers" })
-  @ApiHeader({
-    name: "x-user-id",
-    description: "Injected by Kong after JWT validation",
-  })
   async submitExam(
     @Param("sessionId") sessionId: string,
-    @Headers("x-user-id") studentId: string,
+    @AuthenticatedUser() user: { sub: string },
     @Body() dto: SubmitExamRequestDto,
   ): Promise<void> {
     await this.submitExamUseCase.execute(
-      new SubmitExamCommand(sessionId, studentId, dto.answers),
+      new SubmitExamCommand(sessionId, user.sub, dto.answers),
     );
   }
 
@@ -1207,7 +1200,7 @@ Khi thêm một use case mới (ví dụ: `grade-exam`):
       □ Thêm endpoint vào controller (HTTP hoặc @EventPattern)
       □ Thêm/cập nhật request DTO
       □ Thêm/cập nhật response DTO (có static fromResult())
-      □ Thêm @ApiHeader({ name: 'x-user-id' }) CHỈ ở endpoint cần header này
+      □ Thêm @ApiBearerAuth() cho endpoint protected; actor id lấy từ JWT.sub qua @AuthenticatedUser()
 
 □ 5. Module
       □ Register use case trong providers[]

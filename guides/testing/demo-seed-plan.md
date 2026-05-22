@@ -26,6 +26,14 @@ Seed riêng question bank nếu chỉ cần reset 600 câu hỏi:
 npm.cmd run db:seed:question
 ```
 
+Seed/link ảnh câu hỏi từ `seed/600-cau-hoi.docx` lên Azure Blob:
+
+```powershell
+npm.cmd run db:seed:question-images
+```
+
+Lệnh này dùng key/path deterministic trên Azure Blob. Nếu blob đã tồn tại, nội dung có thể được upload lại vào cùng key và DB được upsert/re-link, nhưng xóa container/volume local không tự xóa dữ liệu đã nằm trên Azure.
+
 Root seed hiện chạy theo thứ tự phụ thuộc:
 
 1. `identity-service`
@@ -97,7 +105,7 @@ npm.cmd --workspace=apps/identity-service run db:seed
 | `analytics-service` | Đã có seed script | Seed read model trực tiếp cho demo speed. |
 | `notification-service` | Đã có seed script | Seed warning/notification demo. |
 | `simulation-service` | Đã có seed script | Seed `maneuvers`, `maneuver_checkpoints`, `maneuver_errors`. |
-| `media-service` | Chưa có seed script | Có thể để sau nếu demo chưa cần file thật. |
+| `media-service` | Seed qua `db:seed:question-images` | Upload/link ảnh câu hỏi lên Azure Blob và upsert metadata khi cần demo media thật. |
 
 Root seed runner `scripts/prisma-seed-all.ts` hiện discover service có `db:seed` và sort theo thứ tự phụ thuộc tường minh để tránh service sau cần dữ liệu từ service trước.
 
@@ -255,7 +263,7 @@ Suggested B1/B2 dataset:
 
 - `npm run db:deploy` then `npm run db:seed` completes from repo root without manual per-service commands. Verified with `npm.cmd run db:seed`.
 - The seed is safe to rerun. Verified by running `npm.cmd run db:seed` twice.
-- No seed depends on external HTTP services unless explicitly documented.
+- External dependencies are documented: identity seed calls Keycloak Admin API unless `SKIP_KEYCLOAK_SEED=1`; question image seed calls Azure Blob/media storage.
 - Frontend can load useful data immediately for course, exam, analytics, notification, and simulation screens.
 - Simulation maneuver APIs return non-empty data for at least `B1` and `B2`.
 - Course enrollment demo does not fail with `STUDENT_LICENSE_NOT_ASSIGNED` after seed.

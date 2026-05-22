@@ -5,8 +5,11 @@
 ```powershell
 docker compose up -d db-notification rabbitmq consul consul-init
 npm --workspace=apps/notification-service run db:deploy
+npm run db:seed
 npm --workspace=apps/notification-service run start:dev
 ```
+
+Use a real Keycloak token. Frontend and Swagger calls should send `Authorization: Bearer <access_token>`; do not send `x-user-id`.
 
 ## Send Academic Warning
 

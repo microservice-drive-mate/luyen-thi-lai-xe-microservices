@@ -98,14 +98,14 @@ curl http://localhost:3004/docs-json
 Client (curl/Postman)
     │
     ├─── DIRECT (dev/debug) ──→ http://localhost:3004  ←── Port course-service local
-    │                            (Không cần JWT, set x-user-id thủ công)
+    │                            (Ưu tiên JWT thật; x-user-id chỉ là fallback legacy)
     │
     └─── VIA KONG ────────────→ http://localhost:8000  ←── Kong gateway
                                  (Cần JWT hợp lệ từ Keycloak)
-                                 Kong inject: x-user-id, x-user-role
+                                 Service đọc actor từ JWT.sub
 ```
 
-> **Lưu ý:** course-service KHÔNG tự validate JWT — đó là việc của Kong. Khi test trực tiếp (port 3004), tự set header `x-user-id` bằng bất kỳ UUID nào.
+> **Lưu ý:** course-service hiện validate JWT/RBAC tại service và đọc user từ `@AuthenticatedUser()`. Các lệnh `x-user-id` trong guide này chỉ còn dùng cho debug legacy khi endpoint vẫn có fallback; frontend và demo chuẩn phải gửi `Authorization: Bearer <access_token>`.
 
 ---
 
@@ -127,7 +127,7 @@ ADMIN_ID      = admin-uuid-0003
 
 > Course list/detail uses Redis cache-aside with 600-second TTL. If Redis is unavailable, requests fall back to PostgreSQL and keep the same response shape.
 
-> Tất cả các lệnh curl sau gọi **trực tiếp** vào course-service (port 3004).
+> Tất cả các lệnh curl sau gọi **trực tiếp** vào course-service (port 3004). Khi demo chuẩn, thay các header `x-user-id` bằng `Authorization: Bearer <access_token>` lấy từ Keycloak.
 
 ---
 
@@ -994,7 +994,6 @@ echo "All checks passed!"
 ```http
 POST http://localhost:3004/enrollments/{enrollmentId}/reset-progress
 Authorization: Bearer <student_token>
-x-user-id: <studentId>
 ```
 
 Expected:
