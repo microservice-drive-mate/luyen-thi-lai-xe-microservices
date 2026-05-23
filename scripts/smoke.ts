@@ -9,14 +9,15 @@ const gatewayUrl = process.env.SMOKE_GATEWAY_URL ?? 'http://localhost:8000';
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? '3000');
 
 const checks: RouteCheck[] = [
-  { name: 'identity-service', basePath: '/auth' },
-  { name: 'user-service', basePath: '/users' },
-  { name: 'exam-service', basePath: '/exams' },
-  { name: 'course-service', basePath: '/courses' },
-  { name: 'question-service', basePath: '/questions' },
-  { name: 'notification-service', basePath: '/notifications' },
-  { name: 'analytics-service', basePath: '/analytics' },
-  { name: 'simulation-service', basePath: '/simulations' },
+  { name: 'identity-service', basePath: '/identity-service' },
+  { name: 'user-service', basePath: '/user-service' },
+  { name: 'exam-service', basePath: '/exam-service' },
+  { name: 'course-service', basePath: '/course-service' },
+  { name: 'question-service', basePath: '/question-service' },
+  { name: 'notification-service', basePath: '/notification-service' },
+  { name: 'analytics-service', basePath: '/analytics-service' },
+  { name: 'simulation-service', basePath: '/simulation-service' },
+  { name: 'media-service', basePath: '/media-service' },
 ];
 
 async function main(): Promise<void> {

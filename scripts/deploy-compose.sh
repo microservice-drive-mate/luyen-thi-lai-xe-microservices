@@ -30,17 +30,24 @@ remote_env_file="${remote_root}/${DEPLOY_ENV}.env"
 remote_compose_file="${remote_root}/docker-compose.deploy.yml"
 remote_kong_dir="${remote_root}/kong"
 remote_kong_file="${remote_kong_dir}/kong.yaml"
+remote_consul_dir="${remote_root}/docker/consul"
+remote_consul_init_file="${remote_consul_dir}/init.sh"
+remote_keycloak_dir="${remote_root}/docker/keycloak"
+remote_keycloak_realm_file="${remote_keycloak_dir}/realm-export.json"
 
 ssh_opts=(
   -o StrictHostKeyChecking=no
 )
 
 echo "Preparing remote directory on ${DEPLOY_HOST}"
-ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" "mkdir -p '${remote_root}' '${remote_kong_dir}'"
+ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+  "mkdir -p '${remote_root}' '${remote_kong_dir}' '${remote_consul_dir}' '${remote_keycloak_dir}'"
 
 echo "Uploading deployment assets"
 scp "${ssh_opts[@]}" docker-compose.deploy.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_compose_file}"
 scp "${ssh_opts[@]}" kong/kong.yaml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_kong_file}"
+scp "${ssh_opts[@]}" docker/consul/init.sh "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_consul_init_file}"
+scp "${ssh_opts[@]}" docker/keycloak/realm-export.json "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_keycloak_realm_file}"
 
 echo "Deploying ${IMAGE_TAG} to ${DEPLOY_ENV}"
 ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
@@ -59,10 +66,18 @@ echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-std
 infra_services=(
   db-identity
   db-user
+  db-exam
   db-course
+  db-question
+  db-notification
+  db-analytics
+  db-simulation
+  db-media
   db-keycloak
   rabbitmq
+  redis
   consul
+  consul-init
   keycloak
 )
 
@@ -75,7 +90,20 @@ app_services=(
   notification-service
   analytics-service
   simulation-service
+  media-service
   kong
+)
+
+migration_services=(
+  identity-service
+  user-service
+  exam-service
+  course-service
+  question-service
+  notification-service
+  analytics-service
+  simulation-service
+  media-service
 )
 
 compose_cmd=(
@@ -89,12 +117,52 @@ export GHCR_OWNER IMAGE_TAG
 "${compose_cmd[@]}" pull
 "${compose_cmd[@]}" up -d "${infra_services[@]}"
 
-"${compose_cmd[@]}" run --rm --no-deps identity-service npx prisma migrate deploy --schema ./apps/identity-service/prisma/schema.prisma
-"${compose_cmd[@]}" run --rm --no-deps user-service npx prisma migrate deploy --schema ./apps/user-service/prisma/schema.prisma
-"${compose_cmd[@]}" run --rm --no-deps course-service npx prisma migrate deploy --schema ./apps/course-service/prisma/schema.prisma
+for service in "${migration_services[@]}"; do
+  "${compose_cmd[@]}" run --rm --no-deps "${service}" \
+    npx prisma migrate deploy --schema "./apps/${service}/prisma/schema.prisma"
+done
 
 "${compose_cmd[@]}" up -d --remove-orphans "${app_services[@]}"
 "${compose_cmd[@]}" ps
+
+set -a
+. "${REMOTE_ENV_FILE}"
+set +a
+
+gateway_port="${KONG_PROXY_PORT:-8000}"
+health_routes=(
+  identity-service
+  user-service
+  exam-service
+  course-service
+  question-service
+  notification-service
+  analytics-service
+  simulation-service
+  media-service
+)
+
+check_gateway_route() {
+  local service="$1"
+  local suffix="$2"
+  local url="http://127.0.0.1:${gateway_port}/${service}/health/${suffix}"
+
+  for attempt in $(seq 1 30); do
+    if curl --silent --show-error --fail "${url}" > /dev/null; then
+      echo "[smoke] ${service} ${suffix} OK"
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "[smoke] ${service} ${suffix} failed via ${url}" >&2
+  return 1
+}
+
+for service in "${health_routes[@]}"; do
+  check_gateway_route "${service}" live
+  check_gateway_route "${service}" ready
+done
 
 printf '%s\n' "${IMAGE_TAG}" > .last-deployed-tag
 docker logout ghcr.io || true

@@ -32,7 +32,15 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     AppLoggerModule,
     HealthModule.register({
       serviceName: 'notification-service',
-      dependencies: [{ name: 'rabbitmq', configKey: 'rabbitmq.url' }],
+      dependencies: [
+        { name: 'database', configKey: 'database.url' },
+        { name: 'rabbitmq', configKey: 'rabbitmq.url' },
+        {
+          name: 'keycloak',
+          configKey: 'keycloak.authServerUrl',
+          kind: 'http',
+        },
+      ],
     }),
     ConfigModule.forRoot({
       load: [
@@ -47,6 +55,11 @@ import { MessagingController } from './presentation/messaging/messaging.controll
               )
               .default('development'),
             port: Joi.number().default(3000),
+            database: Joi.object({
+              url: Joi.string().required(),
+              poolSize: Joi.number().default(10),
+              connectionTimeout: Joi.number().default(5000),
+            }).optional(),
             rabbitmq: Joi.object({
               url: Joi.string().required(),
               username: Joi.string().default('guest'),
