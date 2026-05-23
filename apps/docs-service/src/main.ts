@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from '@repo/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
@@ -31,6 +33,6 @@ async function bootstrap() {
   });
 
   await app.listen(port);
-  console.log(`✓ Docs Service running at http://localhost:${port}/docs`);
+  logger.log(`Docs Service running at http://localhost:${port}/docs`);
 }
 bootstrap();

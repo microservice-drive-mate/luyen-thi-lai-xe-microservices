@@ -20,6 +20,9 @@ const studentLicenseById = new Map(
   DEMO_USERS.students.map((student) => [student.id, student.licenseTier]),
 );
 
+const legacyAdminId = 'seed-user-admin-0001';
+const legacyStudentId = 'seed-user-student-0001';
+
 async function main() {
   for (const user of allDemoUsers()) {
     await prisma.userProfile.upsert({
@@ -74,6 +77,53 @@ async function main() {
       },
     });
   }
+
+  await prisma.userProfile.upsert({
+    where: { email: 'seed-admin@local.dev' },
+    update: {
+      fullName: 'Seed Admin',
+      role: Role.ADMIN,
+      isActive: true,
+    },
+    create: {
+      id: legacyAdminId,
+      fullName: 'Seed Admin',
+      email: 'seed-admin@local.dev',
+      role: Role.ADMIN,
+      gender: Gender.OTHER,
+      isActive: true,
+    },
+  });
+
+  await prisma.userProfile.upsert({
+    where: { email: 'seed-student@local.dev' },
+    update: {
+      fullName: 'Seed Student',
+      role: Role.STUDENT,
+      isActive: true,
+    },
+    create: {
+      id: legacyStudentId,
+      fullName: 'Seed Student',
+      email: 'seed-student@local.dev',
+      role: Role.STUDENT,
+      gender: Gender.MALE,
+      isActive: true,
+    },
+  });
+
+  await prisma.studentDetail.upsert({
+    where: { studentId: legacyStudentId },
+    update: {
+      licenseTier: LicenseTier.B2,
+      notes: 'Seeded local student profile',
+    },
+    create: {
+      studentId: legacyStudentId,
+      licenseTier: LicenseTier.B2,
+      notes: 'Seeded local student profile',
+    },
+  });
 
   console.log(
     `Seeded user_db: ${allDemoUsers().length} profiles, ${DEMO_USERS.students.length} student details`,

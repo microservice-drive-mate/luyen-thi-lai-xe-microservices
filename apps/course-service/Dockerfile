@@ -31,6 +31,7 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/course-service/dist ./apps/course-service/dist
 COPY --from=builder --chown=node:node /app/apps/course-service/package.json ./apps/course-service/
+COPY --from=builder --chown=node:node /app/apps/course-service/prisma ./apps/course-service/prisma
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json

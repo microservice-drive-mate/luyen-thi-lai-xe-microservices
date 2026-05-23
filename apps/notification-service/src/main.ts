@@ -5,15 +5,19 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { Logger } from '@nestjs/common';
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
   setupMicroserviceSwagger,
+  WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
   const configService = app.get(ConfigService);
   const rabbitmqUrl =
     configService.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672';
@@ -41,6 +45,6 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
   await app.listen(port);
-  console.log(`âœ“ Notification Service listening on port ${port}`);
+  logger.log(`Notification Service listening on port ${port}`);
 }
 void bootstrap();

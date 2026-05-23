@@ -273,11 +273,13 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db-user:5432/user_db
       - CONSUL_URL=http://consul:8500
+      - LOGSTASH_HOST=logstash
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+      - LOGSTASH_HOST=logstash
     ports:
       - "3002:3000"
     depends_on:
@@ -304,6 +306,7 @@ services:
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
       - QUESTION_SERVICE_URL=http://question-service:3000
       - USER_SERVICE_URL=http://user-service:3000
+      - LOGSTASH_HOST=logstash
     ports:
       - "3003:3000"
     depends_on:
@@ -328,6 +331,7 @@ services:
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+      - LOGSTASH_HOST=logstash
     ports:
       - "3004:3000"
     depends_on:
@@ -352,6 +356,7 @@ services:
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+      - LOGSTASH_HOST=logstash
     ports:
       - "3005:3000"
     depends_on:
@@ -369,8 +374,8 @@ services:
       context: .
       dockerfile: ./apps/notification-service/Dockerfile
     environment:
-      - DATABASE_URL=postgresql://user:password@db-notification:5432/notification_db
       - CONSUL_URL=http://consul:8500
+      - LOGSTASH_HOST=logstash
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
@@ -393,8 +398,8 @@ services:
       context: .
       dockerfile: ./apps/analytics-service/Dockerfile
     environment:
-      - DATABASE_URL=postgresql://user:password@db-analytics:5432/analytics_db
       - CONSUL_URL=http://consul:8500
+      - LOGSTASH_HOST=logstash
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - REDIS_URL=redis://redis:6379
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
@@ -419,8 +424,8 @@ services:
       context: .
       dockerfile: ./apps/simulation-service/Dockerfile
     environment:
-      - DATABASE_URL=postgresql://user:password@db-simulation:5432/simulation_db
       - CONSUL_URL=http://consul:8500
+      - LOGSTASH_HOST=logstash
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - REDIS_URL=redis://redis:6379
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
@@ -457,6 +462,7 @@ services:
       - STORAGE_ACCOUNT_KEY=${STORAGE_ACCOUNT_KEY:-}
       - STORAGE_CONTAINER_NAME=${STORAGE_CONTAINER_NAME:-media}
       - STORAGE_PRESIGNED_URL_EXPIRY=${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
+      - LOGSTASH_HOST=logstash
     ports:
       - "3010:3000"
     depends_on:

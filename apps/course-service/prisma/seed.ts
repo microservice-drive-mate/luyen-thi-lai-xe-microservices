@@ -67,6 +67,10 @@ function instructorIdsForCourse(courseSlug: string): string[] {
   return [DEMO_USERS.instructors[0].id];
 }
 
+const legacyCourseId = 'seed-course-b2-0001';
+const legacyLessonId = 'seed-lesson-b2-0001';
+const legacyAdminId = 'seed-user-admin-0001';
+
 async function seedCourse(course: (typeof DEMO_COURSES)[number]) {
   const courseId = DEMO_IDS.course(course.slug);
 
@@ -218,6 +222,42 @@ async function main() {
       },
     });
   }
+
+  await prisma.course.upsert({
+    where: { id: legacyCourseId },
+    update: {
+      title: 'Khoi dong khoa B2',
+      status: CourseStatus.ACTIVE,
+      totalLessons: 1,
+    },
+    create: {
+      id: legacyCourseId,
+      title: 'Khoi dong khoa B2',
+      description: 'Du lieu seed local cho course-service',
+      licenseCategory: LicenseCategory.B2,
+      totalLessons: 1,
+      duration: '30 ngay',
+      tuitionFee: '1500000',
+      capacity: 30,
+      status: CourseStatus.ACTIVE,
+      createdById: legacyAdminId,
+    },
+  });
+
+  await prisma.lesson.upsert({
+    where: { id: legacyLessonId },
+    update: {
+      title: 'Buoi hoc dau tien',
+      order: 1,
+    },
+    create: {
+      id: legacyLessonId,
+      courseId: legacyCourseId,
+      title: 'Buoi hoc dau tien',
+      content: 'Gioi thieu tong quan khoa hoc va lo trinh hoc',
+      order: 1,
+    },
+  });
 
   console.log(
     `Seeded course_db: ${DEMO_COURSES.length} courses, ${DEMO_USERS.students.length} student license profiles`,

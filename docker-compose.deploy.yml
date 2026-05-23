@@ -1,0 +1,220 @@
+services:
+  db-identity:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${IDENTITY_DB_NAME:-identity_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_identity_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${IDENTITY_DB_NAME:-identity_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-user:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${USER_DB_NAME:-user_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_user_data:/var/lib/postgresql/data
+
+  db-course:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${COURSE_DB_NAME:-course_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_course_data:/var/lib/postgresql/data
+
+  db-keycloak:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak_db}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - db_keycloak_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+
+  consul:
+    image: hashicorp/consul:1.19
+    restart: unless-stopped
+    command: agent -server -ui -bootstrap-expect=1 -client=0.0.0.0
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    ports:
+      - "${CONSUL_PORT:-8500}:8500"
+    volumes:
+      - consul_data:/consul/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    restart: unless-stopped
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db-keycloak:5432/${KEYCLOAK_DB_NAME:-keycloak_db}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    depends_on:
+      - db-keycloak
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+
+  identity-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-identity-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-identity:5432/${IDENTITY_DB_NAME:-identity_db}
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+    depends_on:
+      - db-identity
+      - rabbitmq
+      - consul
+      - keycloak
+
+  user-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-user-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-user:5432/${USER_DB_NAME:-user_db}
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      - db-user
+      - rabbitmq
+      - consul
+
+  exam-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-exam-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - consul
+
+  course-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-course-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-course:5432/${COURSE_DB_NAME:-course_db}
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      - db-course
+      - rabbitmq
+      - consul
+
+  question-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-question-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - consul
+
+  notification-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-notification-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - consul
+
+  analytics-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-analytics-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - consul
+
+  simulation-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-simulation-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - consul
+
+  kong:
+    image: kong:3.7
+    restart: unless-stopped
+    user: "root"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yaml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+    depends_on:
+      - identity-service
+      - user-service
+      - exam-service
+      - course-service
+      - question-service
+      - notification-service
+      - analytics-service
+      - simulation-service
+    ports:
+      - "${KONG_PROXY_PORT:-8000}:8000"
+      - "${KONG_ADMIN_PORT:-8001}:8001"
+    volumes:
+      - ./kong:/usr/local/kong/declarative:ro
+
+volumes:
+  db_identity_data:
+  db_user_data:
+  db_course_data:
+  db_keycloak_data:
+  consul_data:

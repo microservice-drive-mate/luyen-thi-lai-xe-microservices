@@ -1,0 +1,57 @@
+{
+  "development-local": {
+    "shared": {
+      "log.level": "debug",
+      "log.format": "text",
+      "node_env": "development-local"
+    },
+    "identity-service": {
+      "port": "3001",
+      "database.url": "postgresql://user:password@localhost:5432/identity_db",
+      "database.pool_size": "10",
+      "database.connection_timeout": "5000",
+      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "rabbitmq.url": "amqp://localhost:5672",
+      "rabbitmq.username": "guest",
+      "rabbitmq.password": "guest",
+      "rabbitmq.vhost": "/"
+    },
+    "user-service": {
+      "port": "3002",
+      "database.url": "postgresql://user:password@localhost:5433/user_db",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "exam-service": {
+      "port": "3003",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "question-service": {
+      "port": "3005",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "course-service": {
+      "port": "3004",
+      "database.url": "postgresql://user:password@localhost:5435/course_db",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "notification-service": {
+      "port": "3006",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "analytics-service": {
+      "port": "3007",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "simulation-service": {
+      "port": "3008",
+      "rabbitmq.url": "amqp://localhost:5672"
+    },
+    "docs-service": {
+      "port": "3009",
+      "swagger.services": "identity-service:3001,user-service:3002,exam-service:3003,course-service:3004,question-service:3005,notification-service:3006,analytics-service:3007,simulation-service:3008"
+    }
+  }
+}

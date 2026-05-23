@@ -34,6 +34,7 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/identity-service/dist ./apps/identity-service/dist
 COPY --from=builder --chown=node:node /app/apps/identity-service/package.json ./apps/identity-service/
+COPY --from=builder --chown=node:node /app/apps/identity-service/prisma ./apps/identity-service/prisma
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json

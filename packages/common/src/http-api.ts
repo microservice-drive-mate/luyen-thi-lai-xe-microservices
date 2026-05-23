@@ -21,6 +21,7 @@ export type ApiErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'CONFLICT'
+  | 'SERVICE_UNAVAILABLE'
   | 'TOO_MANY_REQUESTS'
   | 'INTERNAL_ERROR';
 
@@ -36,6 +37,8 @@ export function mapStatusToErrorCode(status: number): ApiErrorCode {
       return 'NOT_FOUND';
     case HttpStatus.CONFLICT:
       return 'CONFLICT';
+    case HttpStatus.SERVICE_UNAVAILABLE:
+      return 'SERVICE_UNAVAILABLE';
     case HttpStatus.TOO_MANY_REQUESTS:
       return 'TOO_MANY_REQUESTS';
     default:

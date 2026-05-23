@@ -139,16 +139,6 @@ services:
         paths:
           - /media-service
         strip_path: true
-
-  # 9. Swagger UI tập trung
-  - name: docs-service
-    url: http://docs-service:3000
-    routes:
-      - name: docs-route
-        paths:
-          - /docs
-        strip_path: false
-
 # ========================================================
 # Cấu hình Plugins chung (Optional)
 # ========================================================

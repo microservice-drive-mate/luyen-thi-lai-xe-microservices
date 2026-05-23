@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
@@ -15,6 +15,7 @@ import { DomainExceptionFilter } from './infrastructure/filters/domain-exception
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
@@ -33,6 +34,6 @@ async function bootstrap() {
   const port = configService.get<number>('port') ?? 3000;
 
   await app.listen(port);
-  console.log(`✓ Identity Service listening on port ${port}`);
+  logger.log(`Identity Service listening on port ${port}`);
 }
 void bootstrap();

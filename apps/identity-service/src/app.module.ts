@@ -14,7 +14,11 @@ import { JwtAuthGuard } from './infrastructure/guards/jwt-auth.guard';
 import { JwtRoleGuard } from './infrastructure/guards/jwt-role.guard';
 import Redis from 'ioredis';
 import Joi from 'joi';
-import { AppLoggerModule, ConsulConfigFactory } from '@repo/common';
+import {
+  AppLoggerModule,
+  ConsulConfigFactory,
+  HealthModule,
+} from '@repo/common';
 
 import { AuthController } from './presentation/http/auth.controller';
 import { AdminController } from './presentation/http/admin.controller';
@@ -36,6 +40,18 @@ import {
 @Module({
   imports: [
     AppLoggerModule,
+    HealthModule.register({
+      serviceName: 'identity-service',
+      dependencies: [
+        { name: 'database', configKey: 'database.url' },
+        { name: 'rabbitmq', configKey: 'rabbitmq.url' },
+        {
+          name: 'keycloak',
+          configKey: 'keycloak.authServerUrl',
+          kind: 'http',
+        },
+      ],
+    }),
     HttpModule,
     ConfigModule.forRoot({
       load: [

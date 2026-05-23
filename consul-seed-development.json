@@ -1,0 +1,53 @@
+{
+  "development": {
+    "shared": {
+      "log.level": "debug",
+      "log.format": "text",
+      "node_env": "development"
+    },
+    "identity-service": {
+      "port": "3000",
+      "database.url": "postgresql://user:password@db-identity:5432/identity_db",
+      "database.pool_size": "10",
+      "database.connection_timeout": "5000",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "rabbitmq.url": "amqp://rabbitmq:5672",
+      "rabbitmq.username": "guest",
+      "rabbitmq.password": "guest",
+      "rabbitmq.vhost": "/"
+    },
+    "user-service": {
+      "port": "3000",
+      "database.url": "postgresql://user:password@db-user:5432/user_db",
+      "rabbitmq.url": "amqp://rabbitmq:5672"
+    },
+    "exam-service": {
+      "port": "3000",
+      "rabbitmq.url": "amqp://rabbitmq:5672"
+    },
+    "question-service": {
+      "port": "3000",
+      "rabbitmq.url": "amqp://rabbitmq:5672"
+    },
+    "course-service": {
+      "port": "3000",
+      "database.url": "postgresql://user:password@db-course:5432/course_db",
+      "rabbitmq.url": "amqp://rabbitmq:5672"
+    },
+    "notification-service": {
+      "port": "3000",
+      "rabbitmq.url": "amqp://rabbitmq:5672"
+    },
+    "analytics-service": {
+      "port": "3000",
+      "rabbitmq.url": "amqp://rabbitmq:5672"
+    },
+    "simulation-service": {
+      "port": "3000",
+      "rabbitmq.url": "amqp://rabbitmq:5672"
+    }
+  }
+}
