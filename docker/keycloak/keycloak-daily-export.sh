@@ -7,8 +7,10 @@ KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 KEYCLOAK_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:-admin}"
 KEYCLOAK_EXPORT_ROOT="${KEYCLOAK_EXPORT_ROOT:-/backups/keycloak}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
+BACKUP_WEEKLY_RETENTION_WEEKS="${BACKUP_WEEKLY_RETENTION_WEEKS:-4}"
 BACKUP_INTERVAL_SECONDS="${BACKUP_INTERVAL_SECONDS:-86400}"
 BACKUP_RUN_ONCE="${BACKUP_RUN_ONCE:-false}"
+KEYCLOAK_WEEKLY_EXPORT_ROOT="${KEYCLOAK_WEEKLY_EXPORT_ROOT:-${KEYCLOAK_EXPORT_ROOT}/weekly}"
 NODE_ENV="${NODE_ENV:-development-local}"
 
 log() {
@@ -56,8 +58,17 @@ export_realm_once() {
   sha256sum "${backup_dir}"/*.json > "${backup_dir}/SHA256SUMS"
   printf 'realm,realm.json\nusers,users.json\nclients,clients.json\nroles,roles.json\nchecksums,SHA256SUMS\n' >> "${manifest_file}"
 
-  find "${KEYCLOAK_EXPORT_ROOT}" -type f \( -name '*.json' -o -name 'SHA256SUMS' -o -name 'manifest.csv' \) -mtime +"${BACKUP_RETENTION_DAYS}" -delete
-  find "${KEYCLOAK_EXPORT_ROOT}" -type d -empty -delete
+  find "${KEYCLOAK_EXPORT_ROOT}/${NODE_ENV}" -type f \( -name '*.json' -o -name 'SHA256SUMS' -o -name 'manifest.csv' \) -mtime +"${BACKUP_RETENTION_DAYS}" -delete
+  find "${KEYCLOAK_EXPORT_ROOT}/${NODE_ENV}" -type d -empty -delete
+  find "${KEYCLOAK_WEEKLY_EXPORT_ROOT}/${NODE_ENV}" -mindepth 1 -maxdepth 1 -type d -mtime +"$((BACKUP_WEEKLY_RETENTION_WEEKS * 7))" -exec rm -rf {} \; 2>/dev/null || true
+
+  if [ "$(date -u +%u)" = "7" ]; then
+    weekly_dir="${KEYCLOAK_WEEKLY_EXPORT_ROOT}/${NODE_ENV}/$(date -u +%G-W%V)"
+    mkdir -p "$(dirname "${weekly_dir}")"
+    rm -rf "${weekly_dir}"
+    cp -a "${backup_dir}" "${weekly_dir}"
+    log "[keycloak-backup] Wrote weekly snapshot ${weekly_dir}"
+  fi
 
   log "[keycloak-backup] Completed successfully; backup_dir=${backup_dir}"
 }

@@ -9,6 +9,7 @@ Tài liệu này mô tả phần gia cố RabbitMQ cho Phase 7.
 - Retry dùng backoff theo các retry queue có TTL: `5s -> 30s -> 120s`.
 - Sau khi vượt quá số lần retry, message được đưa vào DLQ để vận hành kiểm tra hoặc replay thủ công.
 - Consumer dùng `noAck: false` và ack message theo kết quả xử lý.
+- Consumer có lớp idempotency theo `messageId`, `eventId` hoặc `metadata.eventId` để tránh xử lý trùng trong retry/redelivery.
 - Prometheus/Grafana theo dõi retry, DLQ và RabbitMQ queue depth.
 - Alertmanager cảnh báo khi DLQ có message hoặc retry backlog tăng cao.
 
@@ -74,6 +75,10 @@ Các helper chính:
 - `RabbitMqRetryInterceptor`: ack message thành công, hoặc chuyển message lỗi sang retry queue/DLQ.
 
 Consumer thành công sẽ được `ack`. Consumer lỗi sẽ được publish sang retry queue hoặc DLQ rồi `ack` message gốc để tránh loop vô hạn trong queue chính.
+
+Interceptor cũng lưu khóa idempotency thành công trong memory TTL 24 giờ. Nếu RabbitMQ gửi lại cùng message trong cửa sổ này, service sẽ `ack` và bỏ qua handler để không tạo side effect trùng lặp. Khóa ưu tiên theo thứ tự: AMQP `messageId`, payload `eventId`, payload `id`, `metadata.eventId`.
+
+Lưu ý: cơ chế này chống duplicate trong phạm vi instance đang chạy. Nếu cần exactly-once bền vững qua restart, từng service nên bổ sung bảng processed-message riêng hoặc unique constraint nghiệp vụ.
 
 ## Phase 7.4 - Service Rollout
 

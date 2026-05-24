@@ -86,6 +86,8 @@ interface AmqpModule {
 }
 
 const nodeRequire = createRequire(__filename);
+const processedMessageKeys = new Map<string, number>();
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 
 export function getRabbitMqUrl(config: ConfigService): string {
   return (
@@ -204,8 +206,19 @@ export class RabbitMqRetryInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    const messageKey = resolveMessageKey(context, this.options.queue);
+    if (messageKey && isProcessedMessage(messageKey)) {
+      this.logger.warn(`RabbitMQ duplicate message skipped: ${messageKey}`);
+      this.metricsService?.recordRabbitMqMessage(this.options.queue, 'success');
+      this.ack(context);
+      return EMPTY;
+    }
+
     return next.handle().pipe(
       tap(() => {
+        if (messageKey) {
+          markProcessedMessage(messageKey);
+        }
         this.metricsService?.recordRabbitMqMessage(
           this.options.queue,
           'success',
@@ -294,4 +307,69 @@ function readRetryCount(headers: Record<string, unknown>): number {
   }
 
   return 0;
+}
+
+function resolveMessageKey(
+  context: ExecutionContext,
+  queue: string,
+): string | undefined {
+  const rmq = context.switchToRpc().getContext<RmqContext>();
+  const message = rmq.getMessage() as RabbitMqMessage;
+  const payload = context.switchToRpc().getData<unknown>();
+  const messageId =
+    readString(message.properties.messageId) ??
+    readStringFromRecord(payload, 'eventId') ??
+    readStringFromRecord(payload, 'id') ??
+    readNestedStringFromRecord(payload, 'metadata', 'eventId');
+
+  return messageId ? `${queue}:${messageId}` : undefined;
+}
+
+function isProcessedMessage(messageKey: string): boolean {
+  pruneProcessedMessages();
+  const expiresAt = processedMessageKeys.get(messageKey);
+  return typeof expiresAt === 'number' && expiresAt > Date.now();
+}
+
+function markProcessedMessage(messageKey: string): void {
+  processedMessageKeys.set(messageKey, Date.now() + IDEMPOTENCY_TTL_MS);
+  pruneProcessedMessages();
+}
+
+function pruneProcessedMessages(): void {
+  const now = Date.now();
+  for (const [messageKey, expiresAt] of processedMessageKeys) {
+    if (expiresAt <= now) {
+      processedMessageKeys.delete(messageKey);
+    }
+  }
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+}
+
+function readStringFromRecord(value: unknown, key: string): string | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  return readString((value as Record<string, unknown>)[key]);
+}
+
+function readNestedStringFromRecord(
+  value: unknown,
+  parentKey: string,
+  childKey: string,
+): string | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  return readStringFromRecord(
+    (value as Record<string, unknown>)[parentKey],
+    childKey,
+  );
 }

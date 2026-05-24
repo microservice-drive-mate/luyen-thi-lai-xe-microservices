@@ -21,6 +21,7 @@
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
       "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.timeoutMs": "3000",
       "rabbitmq.url": "amqp://rabbitmq:5672",
       "rabbitmq.username": "guest",
       "rabbitmq.password": "guest",
@@ -39,8 +40,11 @@
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
       "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.timeoutMs": "3000",
       "services.question.baseUrl": "http://question-service:3000",
-      "services.user.baseUrl": "http://user-service:3000"
+      "services.question.timeoutMs": "3000",
+      "services.user.baseUrl": "http://user-service:3000",
+      "services.user.timeoutMs": "3000"
     },
     "question-service": {
       "port": "3000",
@@ -49,7 +53,8 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.timeoutMs": "3000"
     },
     "course-service": {
       "port": "3000",
@@ -59,7 +64,8 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.timeoutMs": "3000"
     },
     "notification-service": {
       "port": "3000",
@@ -68,7 +74,8 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.timeoutMs": "3000"
     },
     "analytics-service": {
       "port": "3000",
@@ -78,7 +85,8 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.timeoutMs": "3000"
     },
     "simulation-service": {
       "port": "3000",
@@ -88,7 +96,8 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.timeoutMs": "3000"
     },
     "media-service": {
       "port": "3000",
@@ -98,6 +107,7 @@
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
       "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.timeoutMs": "3000",
       "storage.accountName": "",
       "storage.accountKey": "",
       "storage.containerName": "media",
@@ -110,7 +120,12 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.timeoutMs": "3000"
+    },
+    "docs-service": {
+      "port": "3000",
+      "swagger.services": "identity-service:3000,user-service:3000,exam-service:3000,course-service:3000,question-service:3000,notification-service:3000,analytics-service:3000,simulation-service:3000,media-service:3000,audit-service:3000"
     }
   }
 }

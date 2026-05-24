@@ -1,9 +1,9 @@
 {
-  "production": {
+  "staging": {
     "shared": {
-      "log.level": "warn",
+      "log.level": "info",
       "log.format": "json",
-      "node_env": "production",
+      "node_env": "staging",
       "observability.logstash.host": "${LOGSTASH_HOST}",
       "observability.logstash.port": "${LOGSTASH_PORT}",
       "observability.elasticsearch.url": "${ELASTICSEARCH_URL}",
@@ -15,8 +15,8 @@
     "identity-service": {
       "port": "3000",
       "database.url": "${SECRET_IDENTITY_DB_URL}",
-      "database.pool_size": "20",
-      "database.connection_timeout": "10000",
+      "database.pool_size": "10",
+      "database.connection_timeout": "5000",
       "rabbitmq.url": "${SECRET_RABBITMQ_URL}",
       "rabbitmq.username": "${SECRET_RABBITMQ_USERNAME}",
       "rabbitmq.password": "${SECRET_RABBITMQ_PASSWORD}",

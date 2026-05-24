@@ -2,7 +2,7 @@ name: CI/CD Pipeline for Microservices
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "staging"]
   pull_request:
     branches: ["main"]
 
@@ -40,6 +40,29 @@ jobs:
 
       - name: Run Tests
         run: npx turbo run test
+
+  staging-migrations:
+    name: Deploy Prisma Migrations to Staging
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    timeout-minutes: 15
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Run Prisma migrate deploy
+        env:
+          CONSUL_URL: ${{ secrets.STAGING_CONSUL_URL }}
+          NODE_ENV: staging
+        run: npm run db:deploy -- staging
 
   detect-changes:
     name: Detect Changed Services

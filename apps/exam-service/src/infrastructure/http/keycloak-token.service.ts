@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { resilientFetch } from '@repo/common';
 
 @Injectable()
 export class KeycloakTokenService {
@@ -26,12 +27,18 @@ export class KeycloakTokenService {
     params.append('client_id', clientId);
     params.append('client_secret', clientSecret);
 
-    const response = await fetch(
+    const response = await resilientFetch(
       `${authServerUrl}/realms/${realm}/protocol/openid-connect/token`,
       {
         method: 'POST',
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
         body: params.toString(),
+      },
+      {
+        serviceName: 'exam-service',
+        dependencyName: 'keycloak',
+        timeoutMs:
+          this.configService.get<number>('keycloak.timeoutMs') ?? 3_000,
       },
     );
     if (!response.ok)

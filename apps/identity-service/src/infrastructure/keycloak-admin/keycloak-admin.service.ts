@@ -9,6 +9,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { AxiosError, AxiosResponse } from 'axios';
+import { configureAxiosResilience } from '@repo/common';
 import {
   ExternalIdentityUser,
   IdentityProviderPort,
@@ -54,6 +55,11 @@ export class KeycloakAdminService extends IdentityProviderPort {
     private readonly configService: ConfigService,
   ) {
     super();
+    configureAxiosResilience(this.httpService.axiosRef, {
+      serviceName: 'identity-service',
+      dependencyName: 'keycloak',
+      timeoutMs: this.configService.get<number>('keycloak.timeoutMs') ?? 3_000,
+    });
   }
 
   // ─── Public Methods ───────────────────────────────────────────────────────

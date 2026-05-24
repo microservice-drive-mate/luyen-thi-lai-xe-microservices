@@ -1,8 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { Logger } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from '@repo/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import {
+  AccessLogInterceptor,
+  ApiExceptionFilter,
+  ApiResponseInterceptor,
+  CorrelationIdInterceptor,
+  CorrelationIdMiddleware,
+  WINSTON_MODULE_NEST_PROVIDER,
+} from '@repo/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -10,6 +17,14 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+  app.use(new CorrelationIdMiddleware().use);
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  app.useGlobalInterceptors(
+    new CorrelationIdInterceptor(),
+    new AccessLogInterceptor({ serviceName: 'docs-service' }),
+    new ApiResponseInterceptor(),
+  );
+  app.useGlobalFilters(new ApiExceptionFilter());
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('port') ?? 3009;

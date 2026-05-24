@@ -68,6 +68,7 @@ Mặc định service sẽ:
 - Backup ngay khi container khởi động.
 - Lặp lại mỗi `86400` giây, tương đương hằng ngày.
 - Xóa backup cũ theo `BACKUP_RETENTION_DAYS`.
+- Mỗi Chủ nhật tạo thêm weekly snapshot và giữ theo `BACKUP_WEEKLY_RETENTION_WEEKS`.
 
 Biến môi trường chính:
 
@@ -75,10 +76,20 @@ Biến môi trường chính:
 | ---- | -------- | ------- |
 | `BACKUP_ROOT` | `/backups/postgres` | Thư mục backup trong container |
 | `BACKUP_RETENTION_DAYS` | `7` | Số ngày giữ backup |
+| `BACKUP_WEEKLY_RETENTION_WEEKS` | `4` | Số tuần giữ weekly snapshot |
 | `BACKUP_INTERVAL_SECONDS` | `86400` | Khoảng cách giữa 2 lần backup |
 | `BACKUP_RUN_ONCE` | `false` | Chạy một lần rồi thoát |
 
 Staging giữ mặc định 7 ngày. Production example đặt 14 ngày.
+
+Weekly snapshot được lưu riêng:
+
+```text
+backups/postgres/weekly/<env>/<yyyy-Www>/
+backups/keycloak/weekly/<env>/<yyyy-Www>/
+```
+
+Chính sách hiện tại đáp ứng yêu cầu tối thiểu: daily backup giữ 7-14 ngày tùy môi trường, weekly snapshot giữ 4 tuần.
 
 ## Cách chạy local
 
@@ -145,6 +156,8 @@ Artifact Keycloak export nằm ở:
 ```text
 backups/keycloak/<env>/<timestamp>/
 ```
+
+Weekly export của Keycloak cũng được tạo vào Chủ nhật và giữ theo `BACKUP_WEEKLY_RETENTION_WEEKS`.
 
 Các file được tạo:
 

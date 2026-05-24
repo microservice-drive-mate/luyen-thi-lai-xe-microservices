@@ -3,8 +3,10 @@ set -eu
 
 BACKUP_ROOT="${BACKUP_ROOT:-/backups/postgres}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
+BACKUP_WEEKLY_RETENTION_WEEKS="${BACKUP_WEEKLY_RETENTION_WEEKS:-4}"
 BACKUP_INTERVAL_SECONDS="${BACKUP_INTERVAL_SECONDS:-86400}"
 BACKUP_RUN_ONCE="${BACKUP_RUN_ONCE:-false}"
+WEEKLY_BACKUP_ROOT="${WEEKLY_BACKUP_ROOT:-${BACKUP_ROOT}/weekly}"
 NODE_ENV="${NODE_ENV:-development-local}"
 
 log() {
@@ -75,12 +77,21 @@ run_backup_once() {
   backup_target "audit-service" "db-audit" "5432" "${AUDIT_DB_NAME:-audit_db}" "${POSTGRES_USER:-user}" "${POSTGRES_PASSWORD:-password}" "${timestamp}" "${backup_dir}" "${manifest_file}" || failures=$((failures + 1))
   backup_target "keycloak" "db-keycloak" "5432" "${KEYCLOAK_DB_NAME:-keycloak_db}" "${KEYCLOAK_DB_USER:-keycloak}" "${KEYCLOAK_DB_PASSWORD:-password}" "${timestamp}" "${backup_dir}" "${manifest_file}" || failures=$((failures + 1))
 
-  find "${BACKUP_ROOT}" -type f \( -name '*.dump' -o -name '*.sha256' -o -name 'manifest.csv' \) -mtime +"${BACKUP_RETENTION_DAYS}" -delete
-  find "${BACKUP_ROOT}" -type d -empty -delete
+  find "${BACKUP_ROOT}/${NODE_ENV}" -type f \( -name '*.dump' -o -name '*.sha256' -o -name 'manifest.csv' \) -mtime +"${BACKUP_RETENTION_DAYS}" -delete
+  find "${BACKUP_ROOT}/${NODE_ENV}" -type d -empty -delete
+  find "${WEEKLY_BACKUP_ROOT}/${NODE_ENV}" -mindepth 1 -maxdepth 1 -type d -mtime +"$((BACKUP_WEEKLY_RETENTION_WEEKS * 7))" -exec rm -rf {} \; 2>/dev/null || true
 
   if [ "${failures}" -gt 0 ]; then
     log "[backup] Completed with ${failures} failure(s); backup_dir=${backup_dir}"
     return 1
+  fi
+
+  if [ "$(date -u +%u)" = "7" ]; then
+    weekly_dir="${WEEKLY_BACKUP_ROOT}/${NODE_ENV}/$(date -u +%G-W%V)"
+    mkdir -p "$(dirname "${weekly_dir}")"
+    rm -rf "${weekly_dir}"
+    cp -a "${backup_dir}" "${weekly_dir}"
+    log "[backup] Wrote weekly snapshot ${weekly_dir}"
   fi
 
   log "[backup] Completed successfully; backup_dir=${backup_dir}"

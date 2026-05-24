@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { resilientFetch } from '@repo/common';
 import {
   StudentProfile,
   UserProfileClient,
@@ -19,9 +20,19 @@ export class HttpUserProfileClient extends UserProfileClient {
     const baseUrl =
       this.configService.get<string>('services.user.baseUrl') ??
       'http://localhost:3002';
-    const response = await fetch(`${baseUrl}/users/me`, {
-      headers: { authorization: `Bearer ${accessToken}` },
-    });
+    const timeoutMs =
+      this.configService.get<number>('services.user.timeoutMs') ?? 3_000;
+    const response = await resilientFetch(
+      `${baseUrl}/users/me`,
+      {
+        headers: { authorization: `Bearer ${accessToken}` },
+      },
+      {
+        serviceName: 'exam-service',
+        dependencyName: 'user-service',
+        timeoutMs,
+      },
+    );
     if (!response.ok)
       throw new Error(`User profile request failed: ${response.status}`);
     const envelope = (await response.json()) as ApiEnvelope<StudentProfile>;

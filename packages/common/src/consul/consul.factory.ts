@@ -206,6 +206,9 @@ export class ConsulConfigFactory {
               realm: env.KEYCLOAK_REALM,
               clientId: env.KEYCLOAK_CLIENT_ID,
               clientSecret: env.KEYCLOAK_CLIENT_SECRET,
+              timeoutMs: env.KEYCLOAK_TIMEOUT_MS
+                ? parseInt(env.KEYCLOAK_TIMEOUT_MS, 10)
+                : undefined,
             }
           : undefined,
       redis: env.REDIS_URL
@@ -227,15 +230,35 @@ export class ConsulConfigFactory {
                 : undefined,
             }
           : undefined,
+      swagger: env.SWAGGER_SERVICES
+        ? {
+            services: env.SWAGGER_SERVICES,
+          }
+        : undefined,
       services:
-        env.QUESTION_SERVICE_URL || env.USER_SERVICE_URL
+        env.QUESTION_SERVICE_URL ||
+        env.USER_SERVICE_URL ||
+        env.QUESTION_SERVICE_TIMEOUT_MS ||
+        env.USER_SERVICE_TIMEOUT_MS
           ? {
-              question: env.QUESTION_SERVICE_URL
-                ? { baseUrl: env.QUESTION_SERVICE_URL }
-                : undefined,
-              user: env.USER_SERVICE_URL
-                ? { baseUrl: env.USER_SERVICE_URL }
-                : undefined,
+              question:
+                env.QUESTION_SERVICE_URL || env.QUESTION_SERVICE_TIMEOUT_MS
+                  ? {
+                      baseUrl: env.QUESTION_SERVICE_URL,
+                      timeoutMs: env.QUESTION_SERVICE_TIMEOUT_MS
+                        ? parseInt(env.QUESTION_SERVICE_TIMEOUT_MS, 10)
+                        : undefined,
+                    }
+                  : undefined,
+              user:
+                env.USER_SERVICE_URL || env.USER_SERVICE_TIMEOUT_MS
+                  ? {
+                      baseUrl: env.USER_SERVICE_URL,
+                      timeoutMs: env.USER_SERVICE_TIMEOUT_MS
+                        ? parseInt(env.USER_SERVICE_TIMEOUT_MS, 10)
+                        : undefined,
+                    }
+                  : undefined,
             }
           : undefined,
     };
