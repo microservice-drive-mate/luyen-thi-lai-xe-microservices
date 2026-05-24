@@ -5,6 +5,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type {
   ArgumentsHost,
   CallHandler,
@@ -61,6 +62,8 @@ export class ApiResponseInterceptor<T>
       }
     >
 {
+  constructor(private readonly reflector?: Reflector) {}
+
   intercept(
     context: ExecutionContext,
     next: CallHandler<T>,
@@ -86,6 +89,24 @@ export class ApiResponseInterceptor<T>
     const httpContext = context.switchToHttp();
     const request = httpContext.getRequest<Request>();
     const response = httpContext.getResponse<Response>();
+    const skipApiResponse =
+      request.originalUrl?.startsWith('/metrics') ||
+      request.url.startsWith('/metrics') ||
+      this.reflector?.getAllAndOverride<boolean>('skip-api-response', [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+
+    if (skipApiResponse) {
+      return next.handle() as Observable<{
+        success: boolean;
+        code: string;
+        message: string;
+        timestamp: string;
+        path: string;
+        data: T;
+      }>;
+    }
 
     return next.handle().pipe(
       map((data) => {

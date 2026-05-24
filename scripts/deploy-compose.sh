@@ -34,6 +34,20 @@ remote_consul_dir="${remote_root}/docker/consul"
 remote_consul_init_file="${remote_consul_dir}/init.sh"
 remote_keycloak_dir="${remote_root}/docker/keycloak"
 remote_keycloak_realm_file="${remote_keycloak_dir}/realm-export.json"
+remote_logstash_dir="${remote_root}/docker/logstash"
+remote_logstash_pipeline_file="${remote_logstash_dir}/logstash.conf"
+remote_alertmanager_dir="${remote_root}/docker/alertmanager"
+remote_alertmanager_file="${remote_alertmanager_dir}/alertmanager.yml"
+remote_prometheus_dir="${remote_root}/docker/prometheus"
+remote_prometheus_file="${remote_prometheus_dir}/prometheus.yml"
+remote_prometheus_alerts_file="${remote_prometheus_dir}/alerts.yml"
+remote_grafana_dir="${remote_root}/docker/grafana"
+remote_grafana_datasource_dir="${remote_grafana_dir}/provisioning/datasources"
+remote_grafana_dashboard_provider_dir="${remote_grafana_dir}/provisioning/dashboards"
+remote_grafana_dashboards_dir="${remote_grafana_dir}/dashboards"
+remote_grafana_datasource_file="${remote_grafana_datasource_dir}/prometheus.yml"
+remote_grafana_dashboard_provider_file="${remote_grafana_dashboard_provider_dir}/dashboards.yml"
+remote_grafana_dashboard_file="${remote_grafana_dashboards_dir}/microservices-observability.json"
 
 ssh_opts=(
   -o StrictHostKeyChecking=no
@@ -41,13 +55,20 @@ ssh_opts=(
 
 echo "Preparing remote directory on ${DEPLOY_HOST}"
 ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-  "mkdir -p '${remote_root}' '${remote_kong_dir}' '${remote_consul_dir}' '${remote_keycloak_dir}'"
+  "mkdir -p '${remote_root}' '${remote_kong_dir}' '${remote_consul_dir}' '${remote_keycloak_dir}' '${remote_logstash_dir}' '${remote_alertmanager_dir}' '${remote_prometheus_dir}' '${remote_grafana_datasource_dir}' '${remote_grafana_dashboard_provider_dir}' '${remote_grafana_dashboards_dir}'"
 
 echo "Uploading deployment assets"
 scp "${ssh_opts[@]}" docker-compose.deploy.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_compose_file}"
 scp "${ssh_opts[@]}" kong/kong.yaml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_kong_file}"
 scp "${ssh_opts[@]}" docker/consul/init.sh "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_consul_init_file}"
 scp "${ssh_opts[@]}" docker/keycloak/realm-export.json "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_keycloak_realm_file}"
+scp "${ssh_opts[@]}" docker/logstash/logstash.conf "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_logstash_pipeline_file}"
+scp "${ssh_opts[@]}" docker/alertmanager/alertmanager.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_alertmanager_file}"
+scp "${ssh_opts[@]}" docker/prometheus/prometheus.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_prometheus_file}"
+scp "${ssh_opts[@]}" docker/prometheus/alerts.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_prometheus_alerts_file}"
+scp "${ssh_opts[@]}" docker/grafana/provisioning/datasources/prometheus.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_grafana_datasource_file}"
+scp "${ssh_opts[@]}" docker/grafana/provisioning/dashboards/dashboards.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_grafana_dashboard_provider_file}"
+scp "${ssh_opts[@]}" docker/grafana/dashboards/microservices-observability.json "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_grafana_dashboard_file}"
 
 echo "Deploying ${IMAGE_TAG} to ${DEPLOY_ENV}"
 ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
@@ -80,6 +101,12 @@ infra_services=(
   consul
   consul-init
   keycloak
+  elasticsearch
+  logstash
+  kibana
+  alertmanager
+  prometheus
+  grafana
 )
 
 app_services=(

@@ -9,6 +9,7 @@ import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
   AccessLogInterceptor,
+  CorrelationIdInterceptor,
   CorrelationIdMiddleware,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
@@ -25,20 +26,23 @@ async function bootstrap() {
   const rabbitmqUrl =
     configService.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672';
 
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.RMQ,
-    options: {
-      urls: [rabbitmqUrl],
-      queue: 'question_service_events',
-      queueOptions: { durable: true },
-      noAck: false,
-    },
-  });
+  app
+    .connectMicroservice<MicroserviceOptions>({
+      transport: Transport.RMQ,
+      options: {
+        urls: [rabbitmqUrl],
+        queue: 'question_service_events',
+        queueOptions: { durable: true },
+        noAck: false,
+      },
+    })
+    .useGlobalInterceptors(new CorrelationIdInterceptor());
 
   app.enableCors();
   app.use(new CorrelationIdMiddleware().use);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalInterceptors(
+    new CorrelationIdInterceptor(),
     new AccessLogInterceptor({ serviceName: 'question-service' }),
     new ApiResponseInterceptor(),
   );

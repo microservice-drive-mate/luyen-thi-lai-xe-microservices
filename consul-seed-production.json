@@ -1,0 +1,89 @@
+{
+  "production": {
+    "shared": {
+      "log.level": "warn",
+      "log.format": "json",
+      "node_env": "production",
+      "observability.logstash.host": "${LOGSTASH_HOST}",
+      "observability.logstash.port": "${LOGSTASH_PORT}",
+      "observability.elasticsearch.url": "${ELASTICSEARCH_URL}",
+      "observability.kibana.url": "${KIBANA_URL}",
+      "observability.prometheus.url": "${PROMETHEUS_URL}",
+      "observability.alertmanager.url": "${ALERTMANAGER_URL}",
+      "observability.grafana.url": "${GRAFANA_URL}"
+    },
+    "identity-service": {
+      "port": "3000",
+      "database.url": "${SECRET_IDENTITY_DB_URL}",
+      "database.pool_size": "20",
+      "database.connection_timeout": "10000",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}",
+      "rabbitmq.username": "${SECRET_RABBITMQ_USERNAME}",
+      "rabbitmq.password": "${SECRET_RABBITMQ_PASSWORD}",
+      "rabbitmq.vhost": "/"
+    },
+    "user-service": {
+      "port": "3000",
+      "database.url": "${SECRET_USER_DB_URL}",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}"
+    },
+    "exam-service": {
+      "port": "3000",
+      "database.url": "${SECRET_EXAM_DB_URL}",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}",
+      "keycloak.authServerUrl": "${KEYCLOAK_AUTH_SERVER_URL}",
+      "keycloak.realm": "${KEYCLOAK_REALM}",
+      "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
+      "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
+      "services.question.baseUrl": "${QUESTION_SERVICE_URL}",
+      "services.user.baseUrl": "${USER_SERVICE_URL}"
+    },
+    "question-service": {
+      "port": "3000",
+      "database.url": "${SECRET_QUESTION_DB_URL}",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}"
+    },
+    "course-service": {
+      "port": "3000",
+      "database.url": "${SECRET_COURSE_DB_URL}",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}"
+    },
+    "notification-service": {
+      "port": "3000",
+      "database.url": "${SECRET_NOTIFICATION_DB_URL}",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}"
+    },
+    "analytics-service": {
+      "port": "3000",
+      "database.url": "${SECRET_ANALYTICS_DB_URL}",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}"
+    },
+    "simulation-service": {
+      "port": "3000",
+      "database.url": "${SECRET_SIMULATION_DB_URL}",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}"
+    },
+    "media-service": {
+      "port": "3000",
+      "database.url": "${SECRET_MEDIA_DB_URL}",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}",
+      "keycloak.authServerUrl": "${KEYCLOAK_AUTH_SERVER_URL}",
+      "keycloak.realm": "${KEYCLOAK_REALM}",
+      "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
+      "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
+      "storage.accountName": "${STORAGE_ACCOUNT_NAME}",
+      "storage.accountKey": "${SECRET_STORAGE_ACCOUNT_KEY}",
+      "storage.containerName": "${STORAGE_CONTAINER_NAME}",
+      "storage.presignedUrlExpiry": "${STORAGE_PRESIGNED_URL_EXPIRY}"
+    },
+    "audit-service": {
+      "port": "3000",
+      "database.url": "${SECRET_AUDIT_DB_URL}",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}",
+      "keycloak.authServerUrl": "${KEYCLOAK_AUTH_SERVER_URL}",
+      "keycloak.realm": "${KEYCLOAK_REALM}",
+      "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
+      "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}"
+    }
+  }
+}

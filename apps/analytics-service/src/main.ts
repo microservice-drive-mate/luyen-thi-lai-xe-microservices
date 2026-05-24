@@ -9,6 +9,7 @@ import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
   AccessLogInterceptor,
+  CorrelationIdInterceptor,
   CorrelationIdMiddleware,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
@@ -25,6 +26,7 @@ async function bootstrap() {
 
   app.use(new CorrelationIdMiddleware().use);
   app.useGlobalInterceptors(
+    new CorrelationIdInterceptor(),
     new AccessLogInterceptor({ serviceName: 'analytics-service' }),
     new ApiResponseInterceptor(),
   );
@@ -40,15 +42,17 @@ async function bootstrap() {
 
   const port = configService.get<number>('port') ?? 3000;
 
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.RMQ,
-    options: {
-      urls: [rabbitmqUrl],
-      queue: 'analytics_service_events',
-      queueOptions: { durable: true },
-      noAck: false,
-    },
-  });
+  app
+    .connectMicroservice<MicroserviceOptions>({
+      transport: Transport.RMQ,
+      options: {
+        urls: [rabbitmqUrl],
+        queue: 'analytics_service_events',
+        queueOptions: { durable: true },
+        noAck: false,
+      },
+    })
+    .useGlobalInterceptors(new CorrelationIdInterceptor());
 
   await app.startAllMicroservices();
   await app.listen(port);

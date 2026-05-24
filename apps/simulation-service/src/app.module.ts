@@ -15,6 +15,7 @@ import {
   AppLoggerModule,
   ConsulConfigFactory,
   HealthModule,
+  MetricsModule,
 } from '@repo/common';
 import Joi from 'joi';
 import {
@@ -50,6 +51,7 @@ import { SimulationController } from './presentation/http/simulation.controller'
         },
       ],
     }),
+    MetricsModule.register({ serviceName: 'simulation-service' }),
     ConfigModule.forRoot({
       load: [
         ConsulConfigFactory.create(

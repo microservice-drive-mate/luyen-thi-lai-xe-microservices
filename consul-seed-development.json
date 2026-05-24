@@ -3,7 +3,14 @@
     "shared": {
       "log.level": "debug",
       "log.format": "text",
-      "node_env": "development"
+      "node_env": "development",
+      "observability.logstash.host": "logstash",
+      "observability.logstash.port": "5044",
+      "observability.elasticsearch.url": "http://elasticsearch:9200",
+      "observability.kibana.url": "http://kibana:5601",
+      "observability.prometheus.url": "http://prometheus:9090",
+      "observability.alertmanager.url": "http://alertmanager:9093",
+      "observability.grafana.url": "http://grafana:3000"
     },
     "identity-service": {
       "port": "3000",

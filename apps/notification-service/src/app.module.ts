@@ -14,6 +14,7 @@ import {
   AppLoggerModule,
   ConsulConfigFactory,
   HealthModule,
+  MetricsModule,
 } from '@repo/common';
 import Joi from 'joi';
 import {
@@ -42,6 +43,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
         },
       ],
     }),
+    MetricsModule.register({ serviceName: 'notification-service' }),
     ConfigModule.forRoot({
       load: [
         ConsulConfigFactory.create(

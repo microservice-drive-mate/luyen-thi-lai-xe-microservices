@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { getCurrentCorrelationId } from '../http/correlation-context';
 import { AuditEventEnvelope, CreateAuditEventInput } from './audit.types';
 
 const SENSITIVE_KEY_PATTERN =
@@ -27,7 +28,7 @@ export function createAuditEvent(
     resourceId: input.resourceId,
     outcome: input.outcome ?? 'SUCCESS',
     occurredAt: new Date().toISOString(),
-    correlationId: context?.correlationId,
+    correlationId: context?.correlationId ?? getCurrentCorrelationId(),
     ipAddress: context?.ipAddress,
     userAgent: context?.userAgent,
     requestPath: context?.requestPath,

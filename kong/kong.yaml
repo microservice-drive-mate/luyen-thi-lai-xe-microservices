@@ -176,12 +176,19 @@ plugins:
         - Content-Type
         - Origin
         - X-Requested-With
+        - x-correlation-id
         - x-user-id
         - x-user-role
       exposed_headers:
         - Authorization
+        - x-correlation-id
       credentials: true
       max_age: 3600
+  - name: correlation-id
+    config:
+      header_name: x-correlation-id
+      generator: uuid#counter
+      echo_downstream: true
   - name: rate-limiting
     config:
       second: 100

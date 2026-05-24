@@ -10,6 +10,7 @@ import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
   AccessLogInterceptor,
+  CorrelationIdInterceptor,
   CorrelationIdMiddleware,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
@@ -27,6 +28,7 @@ async function bootstrap() {
 
   app.use(new CorrelationIdMiddleware().use);
   app.useGlobalInterceptors(
+    new CorrelationIdInterceptor(),
     new AccessLogInterceptor({ serviceName: 'notification-service' }),
     new ApiResponseInterceptor(),
   );
@@ -39,15 +41,17 @@ async function bootstrap() {
     description: 'Quản lý thông báo và cập nhật trạng thái thi cho người dùng',
   });
 
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.RMQ,
-    options: {
-      urls: [rabbitmqUrl],
-      queue: 'notification_service_events',
-      queueOptions: { durable: true },
-      noAck: false,
-    },
-  });
+  app
+    .connectMicroservice<MicroserviceOptions>({
+      transport: Transport.RMQ,
+      options: {
+        urls: [rabbitmqUrl],
+        queue: 'notification_service_events',
+        queueOptions: { durable: true },
+        noAck: false,
+      },
+    })
+    .useGlobalInterceptors(new CorrelationIdInterceptor());
 
   await app.startAllMicroservices();
   await app.listen(port);

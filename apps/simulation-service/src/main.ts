@@ -9,6 +9,7 @@ import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
   AccessLogInterceptor,
+  CorrelationIdInterceptor,
   CorrelationIdMiddleware,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
@@ -23,6 +24,7 @@ async function bootstrap() {
 
   app.use(new CorrelationIdMiddleware().use);
   app.useGlobalInterceptors(
+    new CorrelationIdInterceptor(),
     new AccessLogInterceptor({ serviceName: 'simulation-service' }),
     new ApiResponseInterceptor(),
   );

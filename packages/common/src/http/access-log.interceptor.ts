@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Observable, tap } from 'rxjs';
+import {
+  CORRELATION_ID_HEADER,
+  getCurrentCorrelationId,
+} from './correlation-context';
 
 interface AccessLogOptions {
   serviceName: string;
@@ -55,7 +59,9 @@ export class AccessLogInterceptor implements NestInterceptor {
       logType: 'access',
       serviceName: this.options.serviceName,
       correlationId:
-        request.correlationId ?? getHeader(request, 'x-correlation-id'),
+        request.correlationId ??
+        getHeader(request, CORRELATION_ID_HEADER) ??
+        getCurrentCorrelationId(),
       method: request.method,
       path: request.originalUrl ?? request.url,
       statusCode: response.statusCode,

@@ -17,6 +17,7 @@ Tài liệu này mô tả luồng CI/CD đã được căn chỉnh để triển
 - `scripts/deploy-staging.sh`
 - `scripts/deploy-prod.sh`
 - `scripts/deploy-compose.sh`
+- `docker/logstash/logstash.conf`
 
 ## 3. Jenkins cần có gì
 
@@ -58,6 +59,7 @@ Trên mỗi server:
 sudo mkdir -p /opt/luyen-thi-lai-xe/kong
 sudo mkdir -p /opt/luyen-thi-lai-xe/docker/consul
 sudo mkdir -p /opt/luyen-thi-lai-xe/docker/keycloak
+sudo mkdir -p /opt/luyen-thi-lai-xe/docker/logstash
 sudo chown -R deploy:deploy /opt/luyen-thi-lai-xe
 ```
 
@@ -126,9 +128,11 @@ Script triển khai sẽ:
 2. Upload `kong/kong.yaml`
 3. Upload `docker/consul/init.sh`
 4. Upload `docker/keycloak/realm-export.json`
-5. Pull image từ GHCR
-6. Khởi động infrastructure: Postgres, RabbitMQ, Redis, Consul, Consul init, Keycloak
-7. Chạy `prisma migrate deploy` cho toàn bộ 10 service có Prisma:
+5. Upload `docker/logstash/logstash.conf`
+6. Pull image từ GHCR
+7. Khởi động infrastructure: Postgres, RabbitMQ, Redis, Consul, Consul init, Keycloak
+8. Khởi động ELK: Elasticsearch, Logstash, Kibana
+9. Chạy `prisma migrate deploy` cho toàn bộ 10 service có Prisma:
    - `identity-service`
    - `user-service`
    - `exam-service`
@@ -139,8 +143,8 @@ Script triển khai sẽ:
    - `simulation-service`
    - `media-service`
    - `audit-service`
-8. Khởi động app services + Kong
-9. Smoke check `health/live` và `health/ready` của từng service qua Kong
+10. Khởi động app services + Kong
+11. Smoke check `health/live` và `health/ready` của từng service qua Kong
 
 Smoke check sử dụng service-prefix route:
 

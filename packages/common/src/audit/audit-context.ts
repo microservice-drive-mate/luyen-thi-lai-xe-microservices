@@ -1,4 +1,8 @@
 import type { Request } from 'express';
+import {
+  CORRELATION_ID_HEADER,
+  getCurrentCorrelationId,
+} from '../http/correlation-context';
 import { AuditRequestContext } from './audit.types';
 
 export interface JwtLikeUser {
@@ -25,8 +29,9 @@ export function buildAuditRequestContext(
   user: JwtLikeUser | undefined,
 ): AuditRequestContext {
   const correlationId =
-    getHeader(request, 'x-correlation-id') ??
-    (request as Request & { correlationId?: string }).correlationId;
+    getHeader(request, CORRELATION_ID_HEADER) ??
+    (request as Request & { correlationId?: string }).correlationId ??
+    getCurrentCorrelationId();
 
   return {
     correlationId,

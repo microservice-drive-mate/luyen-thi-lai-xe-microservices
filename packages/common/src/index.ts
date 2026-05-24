@@ -1,5 +1,7 @@
 export * from './http-api';
 export * from './http/access-log.interceptor';
+export * from './http/correlation-context';
+export * from './http/correlation-id.interceptor';
 export * from './http/correlation-id.middleware';
 export * from './audit/audit-context';
 export * from './audit/audit-event.factory';
@@ -22,6 +24,9 @@ export { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 // ============== HEALTH ==========================
 export * from './health';
+
+// ============== METRICS =========================
+export * from './metrics';
 
 // ============== SWAGGER =========================
 export * from './config/swagger.setup';

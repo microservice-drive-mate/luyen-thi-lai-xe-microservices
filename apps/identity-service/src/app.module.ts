@@ -18,6 +18,7 @@ import {
   AppLoggerModule,
   ConsulConfigFactory,
   HealthModule,
+  MetricsModule,
 } from '@repo/common';
 
 import { AuthController } from './presentation/http/auth.controller';
@@ -66,6 +67,7 @@ import { DeleteIdentityUserUseCase } from './application/use-cases/delete-identi
         },
       ],
     }),
+    MetricsModule.register({ serviceName: 'identity-service' }),
     HttpModule,
     ConfigModule.forRoot({
       load: [

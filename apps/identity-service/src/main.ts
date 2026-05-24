@@ -8,6 +8,7 @@ import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
   AccessLogInterceptor,
+  CorrelationIdInterceptor,
   CorrelationIdMiddleware,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
@@ -24,6 +25,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
   app.useGlobalInterceptors(
+    new CorrelationIdInterceptor(),
     new AccessLogInterceptor({ serviceName: 'identity-service' }),
     new ApiResponseInterceptor(),
   );

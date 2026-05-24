@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { DomainEvent } from '@repo/common';
+import { DomainEvent, withCorrelationId } from '@repo/common';
 import { lastValueFrom } from 'rxjs';
 import { EventPublisher } from '../../application/ports/event-publisher.port';
 
@@ -29,15 +29,19 @@ export class RabbitMqEventPublisher extends EventPublisher {
   }
 
   async publish(event: DomainEvent): Promise<void> {
+    const payload = withCorrelationId(event);
+
     try {
       if (ANALYTICS_EVENTS.has(event.eventName)) {
-        await lastValueFrom(this.analyticsClient.emit(event.eventName, event));
+        await lastValueFrom(
+          this.analyticsClient.emit(event.eventName, payload),
+        );
       } else if (NOTIFICATION_EVENTS.has(event.eventName)) {
         await lastValueFrom(
-          this.notificationClient.emit(event.eventName, event),
+          this.notificationClient.emit(event.eventName, payload),
         );
       } else {
-        await lastValueFrom(this.client.emit(event.eventName, event));
+        await lastValueFrom(this.client.emit(event.eventName, payload));
       }
       this.logger.log(`Published event: ${event.eventName}`);
     } catch (error) {

@@ -5,6 +5,7 @@ import {
   AppLoggerModule,
   ConsulConfigFactory,
   HealthModule,
+  MetricsModule,
 } from '@repo/common';
 import Joi from 'joi';
 import {
@@ -33,6 +34,7 @@ import { MediaModule } from './media.module';
         },
       ],
     }),
+    MetricsModule.register({ serviceName: 'media-service' }),
     ConfigModule.forRoot({
       load: [
         ConsulConfigFactory.create(
