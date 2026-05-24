@@ -4,6 +4,7 @@ import {
   AppLoggerModule,
   ConsulConfigFactory,
   HealthModule,
+  MetricsModule,
 } from '@repo/common';
 import Joi from 'joi';
 import {
@@ -33,6 +34,7 @@ import { UserModule } from './user.module';
         },
       ],
     }),
+    MetricsModule.register({ serviceName: 'user-service' }),
     ConfigModule.forRoot({
       load: [
         ConsulConfigFactory.create(

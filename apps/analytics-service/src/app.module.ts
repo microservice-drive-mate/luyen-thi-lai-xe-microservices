@@ -15,6 +15,7 @@ import {
   AppLoggerModule,
   ConsulConfigFactory,
   HealthModule,
+  MetricsModule,
 } from '@repo/common';
 import Joi from 'joi';
 import { LearningProgressRepository } from './domain/repositories/learning-progress.repository';
@@ -45,6 +46,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
         },
       ],
     }),
+    MetricsModule.register({ serviceName: 'analytics-service' }),
     ConfigModule.forRoot({
       load: [
         ConsulConfigFactory.create(

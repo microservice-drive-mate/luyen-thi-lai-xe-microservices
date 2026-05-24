@@ -25,5 +25,8 @@ export { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 // ============== HEALTH ==========================
 export * from './health';
 
+// ============== METRICS =========================
+export * from './metrics';
+
 // ============== SWAGGER =========================
 export * from './config/swagger.setup';

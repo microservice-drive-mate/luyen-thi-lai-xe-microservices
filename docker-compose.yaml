@@ -659,6 +659,45 @@ services:
       - "5601:5601"
     depends_on:
       - elasticsearch
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    depends_on:
+      - identity-service
+      - user-service
+      - exam-service
+      - course-service
+      - question-service
+      - notification-service
+      - analytics-service
+      - simulation-service
+      - media-service
+      - audit-service
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "30000:3000"
+    depends_on:
+      - prometheus
   # ========================================================
   # 6. Keycloak 
   # ========================================================
@@ -767,3 +806,5 @@ volumes:
   elasticsearch_data:
   db_keycloak_data:
   redis_data:
+  prometheus_data:
+  grafana_data:

@@ -362,6 +362,39 @@ services:
       elasticsearch:
         condition: service_healthy
 
+  # ── Observability (Metrics) ───────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./docker/prometheus/prometheus.local.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "30000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes:
   db_identity_data:
   db_user_data:
@@ -377,3 +410,5 @@ volumes:
   db_keycloak_data:
   redis_data:
   elasticsearch_data:
+  prometheus_data:
+  grafana_data:
