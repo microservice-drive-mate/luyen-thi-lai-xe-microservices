@@ -11,9 +11,39 @@ interface ConsulKVEntry {
   value: string;
 }
 
+loadDotEnvFile();
+
 const CONSUL_URL = process.env.CONSUL_URL || 'http://localhost:8500';
 const DEFAULT_ENV = process.env.ENV || 'development';
 const ENV_PLACEHOLDER_PATTERN = /\$\{([A-Z0-9_]+)(?::-(.*?))?\}/g;
+
+function loadDotEnvFile(): void {
+  const envFile = path.join(process.cwd(), '.env');
+  if (!fs.existsSync(envFile)) {
+    return;
+  }
+
+  const lines = fs.readFileSync(envFile, 'utf8').split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    const rawValue = trimmed.slice(separatorIndex + 1).trim();
+    if (process.env[key] !== undefined) {
+      continue;
+    }
+
+    process.env[key] = rawValue.replace(/^(['"])(.*)\1$/, '$2');
+  }
+}
 
 async function flatten(
   obj: ConsulSeedConfig,

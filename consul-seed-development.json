@@ -24,7 +24,7 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
       "keycloak.timeoutMs": "3000",
       "rabbitmq.url": "amqp://rabbitmq:5672",
       "rabbitmq.username": "guest",
@@ -34,7 +34,12 @@
     "user-service": {
       "port": "3000",
       "database.url": "postgresql://user:password@db-user:5432/user_db",
-      "rabbitmq.url": "amqp://rabbitmq:5672"
+      "rabbitmq.url": "amqp://rabbitmq:5672",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
+      "keycloak.timeoutMs": "3000"
     },
     "exam-service": {
       "port": "3000",
@@ -43,7 +48,7 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
       "keycloak.timeoutMs": "3000",
       "services.question.baseUrl": "http://question-service:3000",
       "services.question.timeoutMs": "3000",
@@ -57,7 +62,7 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
       "keycloak.timeoutMs": "3000"
     },
     "course-service": {
@@ -68,7 +73,7 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
       "keycloak.timeoutMs": "3000"
     },
     "notification-service": {
@@ -78,7 +83,7 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
       "keycloak.timeoutMs": "3000"
     },
     "analytics-service": {
@@ -89,7 +94,7 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
       "keycloak.timeoutMs": "3000"
     },
     "simulation-service": {
@@ -100,7 +105,7 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
       "keycloak.timeoutMs": "3000"
     },
     "media-service": {
@@ -110,12 +115,12 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
       "keycloak.timeoutMs": "3000",
-      "storage.accountName": "",
-      "storage.accountKey": "",
-      "storage.containerName": "media",
-      "storage.presignedUrlExpiry": "3600"
+      "storage.accountName": "${STORAGE_ACCOUNT_NAME:-}",
+      "storage.accountKey": "${SECRET_STORAGE_ACCOUNT_KEY:-}",
+      "storage.containerName": "${STORAGE_CONTAINER_NAME:-media}",
+      "storage.presignedUrlExpiry": "${STORAGE_PRESIGNED_URL_EXPIRY:-3600}"
     },
     "audit-service": {
       "port": "3000",
@@ -124,7 +129,7 @@
       "keycloak.authServerUrl": "http://keycloak:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
-      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
       "keycloak.timeoutMs": "3000"
     },
     "docs-service": {
