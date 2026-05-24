@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { resilientFetch } from '@repo/common';
 import {
   QuestionPoolClient,
   QuestionPoolItem,
@@ -24,15 +25,25 @@ export class HttpQuestionPoolClient extends QuestionPoolClient {
     const baseUrl =
       this.configService.get<string>('services.question.baseUrl') ??
       'http://localhost:3005';
+    const timeoutMs =
+      this.configService.get<number>('services.question.timeoutMs') ?? 3_000;
     const token = await this.tokenService.getServiceToken();
-    const response = await fetch(`${baseUrl}/admin/questions/pool`, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${token}`,
-        'content-type': 'application/json',
+    const response = await resilientFetch(
+      `${baseUrl}/admin/questions/pool`,
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(request),
       },
-      body: JSON.stringify(request),
-    });
+      {
+        serviceName: 'exam-service',
+        dependencyName: 'question-service',
+        timeoutMs,
+      },
+    );
     if (!response.ok) {
       const responseBody = await response.text();
       throw new Error(

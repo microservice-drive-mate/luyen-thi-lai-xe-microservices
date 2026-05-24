@@ -7,10 +7,9 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
 import { META_UNPROTECTED } from 'nest-keycloak-connect';
 import * as jwt from 'jsonwebtoken';
-import { firstValueFrom } from 'rxjs';
+import { resilientFetch } from '@repo/common';
 
 interface KeycloakRealmInfo {
   public_key: string;
@@ -24,7 +23,6 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly configService: ConfigService,
-    private readonly httpService: HttpService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -80,10 +78,18 @@ export class JwtAuthGuard implements CanActivate {
     const url = `${authServerUrl}/realms/${realm}`;
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<KeycloakRealmInfo>(url),
+      const response = await resilientFetch(
+        url,
+        {},
+        {
+          serviceName: 'identity-service',
+          dependencyName: 'keycloak',
+          timeoutMs:
+            this.configService.get<number>('keycloak.timeoutMs') ?? 3_000,
+        },
       );
-      const rawKey = response.data.public_key;
+      const data = (await response.json()) as KeycloakRealmInfo;
+      const rawKey = data.public_key;
       this.cachedPublicKey = `-----BEGIN PUBLIC KEY-----\n${rawKey}\n-----END PUBLIC KEY-----`;
       return this.cachedPublicKey;
     } catch (err) {

@@ -1,8 +1,8 @@
-# Phase 8 - Backup Strategy, Keycloak Backup và Restore Test
+# Backup Strategy, Keycloak Backup và Restore Test
 
 Tài liệu này mô tả phạm vi backup, cơ chế tự động backup hằng ngày, backup Keycloak và kiểm tra restore.
 
-## Phase 8.1 - Backup Strategy & Scope
+## Backup Strategy & Scope
 
 Các database được backup:
 
@@ -49,7 +49,7 @@ backups/postgres/<env>/<timestamp>/
 
 `backups/` bị ignore bởi Git vì chứa dữ liệu thật.
 
-## Phase 8.2 - Automated Daily Backup
+## Automated Daily Backup
 
 Service `postgres-backup` đã được thêm vào:
 
@@ -68,6 +68,7 @@ Mặc định service sẽ:
 - Backup ngay khi container khởi động.
 - Lặp lại mỗi `86400` giây, tương đương hằng ngày.
 - Xóa backup cũ theo `BACKUP_RETENTION_DAYS`.
+- Mỗi Chủ nhật tạo thêm weekly snapshot và giữ theo `BACKUP_WEEKLY_RETENTION_WEEKS`.
 
 Biến môi trường chính:
 
@@ -75,10 +76,20 @@ Biến môi trường chính:
 | ---- | -------- | ------- |
 | `BACKUP_ROOT` | `/backups/postgres` | Thư mục backup trong container |
 | `BACKUP_RETENTION_DAYS` | `7` | Số ngày giữ backup |
+| `BACKUP_WEEKLY_RETENTION_WEEKS` | `4` | Số tuần giữ weekly snapshot |
 | `BACKUP_INTERVAL_SECONDS` | `86400` | Khoảng cách giữa 2 lần backup |
 | `BACKUP_RUN_ONCE` | `false` | Chạy một lần rồi thoát |
 
 Staging giữ mặc định 7 ngày. Production example đặt 14 ngày.
+
+Weekly snapshot được lưu riêng:
+
+```text
+backups/postgres/weekly/<env>/<yyyy-Www>/
+backups/keycloak/weekly/<env>/<yyyy-Www>/
+```
+
+Chính sách hiện tại đáp ứng yêu cầu tối thiểu: daily backup giữ 7-14 ngày tùy môi trường, weekly snapshot giữ 4 tuần.
 
 ## Cách chạy local
 
@@ -126,9 +137,9 @@ Liệt kê metadata bằng `pg_restore`:
 pg_restore --list backups/postgres/<env>/<timestamp>/<file>.dump
 ```
 
-Diễn tập restore đầy đủ sẽ được xử lý ở Phase 8.4.
+Diễn tập restore đầy đủ được mô tả ở phần Restore Test.
 
-## Phase 8.3 - Keycloak Backup
+## Keycloak Backup
 
 Keycloak được backup theo 2 lớp:
 
@@ -146,6 +157,8 @@ Artifact Keycloak export nằm ở:
 backups/keycloak/<env>/<timestamp>/
 ```
 
+Weekly export của Keycloak cũng được tạo vào Chủ nhật và giữ theo `BACKUP_WEEKLY_RETENTION_WEEKS`.
+
 Các file được tạo:
 
 | File | Nội dung |
@@ -159,7 +172,7 @@ Các file được tạo:
 
 Lưu ý: source khôi phục đầy đủ nhất cho Keycloak vẫn là `keycloak_db` dump. Realm export giúp review cấu hình, phục hồi thủ công một phần và kiểm tra nhanh drift cấu hình.
 
-## Phase 8.4 - Restore Test
+## Restore Test
 
 Script test restore:
 

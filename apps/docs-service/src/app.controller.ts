@@ -1,4 +1,4 @@
-import { Controller, Get, Logger } from '@nestjs/common';
+import { Controller, Get, Logger, SetMetadata } from '@nestjs/common';
 import { AppService, ServiceCandidate } from './app.service';
 
 interface SwaggerUiConfig {
@@ -18,6 +18,7 @@ export class AppController {
    * reflects reality without restarting docs-service.
    */
   @Get('docs-config')
+  @SetMetadata('skip-api-response', true)
   async getDocsConfig(): Promise<SwaggerUiConfig> {
     let candidates = this.appService.buildCandidatesFromConfig();
 

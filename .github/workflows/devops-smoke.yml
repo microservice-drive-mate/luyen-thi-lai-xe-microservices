@@ -1,0 +1,145 @@
+name: DevOps Smoke Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Smoke suite to run"
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - observability
+          - rabbitmq
+          - restore
+      runner_label:
+        description: "Runner label. Use self-hosted if the target infra is local/private."
+        type: string
+        required: true
+        default: ubuntu-latest
+      timeout_ms:
+        description: "HTTP timeout in milliseconds for smoke checks"
+        type: string
+        required: true
+        default: "5000"
+      obs_prometheus_url:
+        description: "Prometheus base URL"
+        type: string
+        required: false
+        default: "http://localhost:9090"
+      obs_alertmanager_url:
+        description: "Alertmanager base URL"
+        type: string
+        required: false
+        default: "http://localhost:9093"
+      obs_grafana_url:
+        description: "Grafana base URL"
+        type: string
+        required: false
+        default: "http://localhost:30000"
+      obs_elasticsearch_url:
+        description: "Elasticsearch base URL"
+        type: string
+        required: false
+        default: "http://localhost:9200"
+      obs_kibana_url:
+        description: "Kibana base URL"
+        type: string
+        required: false
+        default: "http://localhost:5601"
+      obs_service_metrics_urls:
+        description: "Optional comma-separated service /metrics URLs"
+        type: string
+        required: false
+        default: ""
+      rabbitmq_management_url:
+        description: "RabbitMQ Management base URL"
+        type: string
+        required: false
+        default: "http://localhost:15672"
+      rabbitmq_prometheus_url:
+        description: "RabbitMQ Prometheus exporter base URL"
+        type: string
+        required: false
+        default: "http://localhost:15692"
+      rabbitmq_management_user:
+        description: "RabbitMQ Management username"
+        type: string
+        required: false
+        default: "guest"
+      rabbitmq_consumer_queues:
+        description: "Optional comma-separated queue names to verify"
+        type: string
+        required: false
+        default: ""
+      restore_test_backup_file:
+        description: "Optional path to a PostgreSQL custom dump file on the runner"
+        type: string
+        required: false
+        default: ""
+      skip_restore_without_backup:
+        description: "Skip restore test if no dump file exists on the runner"
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  devops-smoke:
+    name: DevOps Smoke Tests
+    runs-on: ${{ inputs.runner_label }}
+    timeout-minutes: 20
+    env:
+      OBS_SMOKE_TIMEOUT_MS: ${{ inputs.timeout_ms }}
+      OBS_PROMETHEUS_URL: ${{ inputs.obs_prometheus_url }}
+      OBS_ALERTMANAGER_URL: ${{ inputs.obs_alertmanager_url }}
+      OBS_GRAFANA_URL: ${{ inputs.obs_grafana_url }}
+      OBS_ELASTICSEARCH_URL: ${{ inputs.obs_elasticsearch_url }}
+      OBS_KIBANA_URL: ${{ inputs.obs_kibana_url }}
+      OBS_SERVICE_METRICS_URLS: ${{ inputs.obs_service_metrics_urls }}
+      RABBITMQ_SMOKE_TIMEOUT_MS: ${{ inputs.timeout_ms }}
+      RABBITMQ_MANAGEMENT_URL: ${{ inputs.rabbitmq_management_url }}
+      RABBITMQ_PROMETHEUS_URL: ${{ inputs.rabbitmq_prometheus_url }}
+      RABBITMQ_MANAGEMENT_USER: ${{ inputs.rabbitmq_management_user }}
+      RABBITMQ_MANAGEMENT_PASSWORD: ${{ secrets.RABBITMQ_MANAGEMENT_PASSWORD || 'guest' }}
+      RABBITMQ_CONSUMER_QUEUES: ${{ inputs.rabbitmq_consumer_queues }}
+      RESTORE_TEST_BACKUP_FILE: ${{ inputs.restore_test_backup_file }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Observability smoke
+        if: ${{ inputs.suite == 'all' || inputs.suite == 'observability' }}
+        run: npm run observability:smoke
+
+      - name: RabbitMQ resilience smoke
+        if: ${{ inputs.suite == 'all' || inputs.suite == 'rabbitmq' }}
+        run: npm run rabbitmq:smoke
+
+      - name: Restore test smoke
+        if: ${{ inputs.suite == 'all' || inputs.suite == 'restore' }}
+        shell: pwsh
+        run: |
+          $hasBackupPath = -not [string]::IsNullOrWhiteSpace($env:RESTORE_TEST_BACKUP_FILE)
+          $dumpCount = 0
+          if (Test-Path "backups/postgres") {
+            $dumpCount = @(Get-ChildItem -Path "backups/postgres" -Recurse -File -Filter "*.dump" -ErrorAction SilentlyContinue).Count
+          }
+
+          if (-not $hasBackupPath -and $dumpCount -eq 0 -and "${{ inputs.skip_restore_without_backup }}" -eq "true") {
+            Write-Host "[devops-smoke] Skip restore test because no backup dump was provided or found."
+            exit 0
+          }
+
+          npm run db:restore:test

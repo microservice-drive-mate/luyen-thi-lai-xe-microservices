@@ -1,4 +1,4 @@
-# Phase 8.5-8.6 - Runbook xử lý sự cố
+# Runbook xử lý sự cố
 
 Tài liệu này ghi các bước xử lý khi hệ thống gặp sự cố vận hành.
 

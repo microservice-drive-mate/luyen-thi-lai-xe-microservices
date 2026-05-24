@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
+  readFileSync,
   readdirSync,
   rmSync,
   statSync,
@@ -87,6 +88,9 @@ const backupTargets: BackupTarget[] = [
 ];
 
 const retentionDays = Number(process.env.BACKUP_RETENTION_DAYS ?? '7');
+const weeklyRetentionWeeks = Number(
+  process.env.BACKUP_WEEKLY_RETENTION_WEEKS ?? '4',
+);
 const nodeEnv = process.env.NODE_ENV ?? 'development-local';
 
 function timestamp(): string {
@@ -161,7 +165,39 @@ function main(): void {
     return;
   }
 
+  writeWeeklySnapshot(backupDir, backupRoot, weeklyRetentionWeeks);
   console.log(`[backup] Completed local backups in ${backupDir}`);
+}
+
+function writeWeeklySnapshot(
+  backupDir: string,
+  backupRoot: string,
+  retentionWeeks: number,
+): void {
+  const now = new Date();
+  if (now.getUTCDay() !== 0) {
+    return;
+  }
+
+  const weekId = `${now.getUTCFullYear()}-W${String(getUtcWeek(now)).padStart(2, '0')}`;
+  const weeklyRoot = join(backupRoot, 'weekly');
+  const weeklyDir = join(weeklyRoot, weekId);
+
+  rmSync(weeklyDir, { recursive: true, force: true });
+  mkdirSync(weeklyDir, { recursive: true });
+
+  for (const entry of readdirSync(backupDir, { withFileTypes: true })) {
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    const source = join(backupDir, entry.name);
+    const target = join(weeklyDir, entry.name);
+    writeFileSync(target, readFileSync(source));
+  }
+
+  pruneOldBackups(weeklyRoot, retentionWeeks * 7);
+  console.log(`[backup] Wrote weekly snapshot ${weeklyDir}`);
 }
 
 function pruneOldBackups(backupRoot: string, days: number): void {
@@ -175,7 +211,7 @@ function pruneOldBackups(backupRoot: string, days: number): void {
   }) as Dirent[];
 
   for (const entry of entries) {
-    if (!entry.isDirectory()) {
+    if (!entry.isDirectory() || entry.name === 'weekly') {
       continue;
     }
 
@@ -186,6 +222,18 @@ function pruneOldBackups(backupRoot: string, days: number): void {
       console.log(`[backup] Pruned old backup directory ${fullPath}`);
     }
   }
+}
+
+function getUtcWeek(date: Date): number {
+  const copied = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+  const day = copied.getUTCDay() || 7;
+  copied.setUTCDate(copied.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(copied.getUTCFullYear(), 0, 1));
+  return Math.ceil(
+    ((copied.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
+  );
 }
 
 main();

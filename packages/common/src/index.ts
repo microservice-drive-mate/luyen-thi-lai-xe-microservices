@@ -3,6 +3,7 @@ export * from './http/access-log.interceptor';
 export * from './http/correlation-context';
 export * from './http/correlation-id.interceptor';
 export * from './http/correlation-id.middleware';
+export * from './http/resilient-http-client';
 export * from './audit/audit-context';
 export * from './audit/audit-event.factory';
 export * from './audit/audit.types';
