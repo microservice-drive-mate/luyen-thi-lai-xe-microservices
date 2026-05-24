@@ -32,6 +32,7 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/analytics-service/dist ./apps/analytics-service/dist
 COPY --from=builder --chown=node:node /app/apps/analytics-service/package.json ./apps/analytics-service/
+COPY --from=builder --chown=node:node /app/apps/analytics-service/prisma ./apps/analytics-service/prisma
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/apps/analytics-service/node_modules ./apps/analytics-service/node_modules
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist

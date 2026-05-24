@@ -12,7 +12,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${IDENTITY_DB_NAME:-identity_db}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
 
   db-user:
     image: postgres:15-alpine
@@ -23,6 +23,26 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - db_user_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${USER_DB_NAME:-user_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-exam:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EXAM_DB_NAME:-exam_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_exam_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${EXAM_DB_NAME:-exam_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   db-course:
     image: postgres:15-alpine
@@ -33,6 +53,101 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - db_course_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${COURSE_DB_NAME:-course_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-question:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${QUESTION_DB_NAME:-question_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_question_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${QUESTION_DB_NAME:-question_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-notification:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${NOTIFICATION_DB_NAME:-notification_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_notification_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${NOTIFICATION_DB_NAME:-notification_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-analytics:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${ANALYTICS_DB_NAME:-analytics_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_analytics_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${ANALYTICS_DB_NAME:-analytics_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-simulation:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${SIMULATION_DB_NAME:-simulation_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_simulation_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${SIMULATION_DB_NAME:-simulation_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-media:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${MEDIA_DB_NAME:-media_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_media_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${MEDIA_DB_NAME:-media_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-audit:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${AUDIT_DB_NAME:-audit_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_audit_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${AUDIT_DB_NAME:-audit_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   db-keycloak:
     image: postgres:15-alpine
@@ -43,12 +158,39 @@ services:
       POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
     volumes:
       - db_keycloak_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d ${KEYCLOAK_DB_NAME:-keycloak_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
     restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-app}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-change-me}
     ports:
       - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   consul:
     image: hashicorp/consul:1.19
@@ -60,11 +202,33 @@ services:
       - "${CONSUL_PORT:-8500}:8500"
     volumes:
       - consul_data:/consul/data
+    healthcheck:
+      test: ["CMD", "consul", "info"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  consul-init:
+    image: curlimages/curl:latest
+    restart: "no"
+    volumes:
+      - ./docker/consul/init.sh:/consul/init.sh:ro
+    environment:
+      CONSUL_URL: http://consul:8500
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      STORAGE_ACCOUNT_NAME: ${STORAGE_ACCOUNT_NAME}
+      STORAGE_ACCOUNT_KEY: ${STORAGE_ACCOUNT_KEY}
+      STORAGE_CONTAINER_NAME: ${STORAGE_CONTAINER_NAME:-media}
+      STORAGE_PRESIGNED_URL_EXPIRY: ${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
+    depends_on:
+      consul:
+        condition: service_healthy
+    command: sh /consul/init.sh
 
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
     restart: unless-stopped
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://db-keycloak:5432/${KEYCLOAK_DB_NAME:-keycloak_db}
@@ -75,9 +239,12 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
     depends_on:
-      - db-keycloak
+      db-keycloak:
+        condition: service_healthy
     ports:
       - "${KEYCLOAK_PORT:-8080}:8080"
+    volumes:
+      - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
 
   identity-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-identity-service:${IMAGE_TAG}
@@ -87,16 +254,25 @@ services:
       PORT: 3000
       CONSUL_URL: http://consul:8500
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-identity:5432/${IDENTITY_DB_NAME:-identity_db}
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
       KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
     depends_on:
-      - db-identity
-      - rabbitmq
-      - consul
-      - keycloak
+      db-identity:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
 
   user-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-user-service:${IMAGE_TAG}
@@ -106,11 +282,22 @@ services:
       PORT: 3000
       CONSUL_URL: http://consul:8500
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-user:5432/${USER_DB_NAME:-user_db}
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
     depends_on:
-      - db-user
-      - rabbitmq
-      - consul
+      db-user:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
 
   exam-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-exam-service:${IMAGE_TAG}
@@ -119,10 +306,25 @@ services:
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-exam:5432/${EXAM_DB_NAME:-exam_db}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      QUESTION_SERVICE_URL: http://question-service:3000
+      USER_SERVICE_URL: http://user-service:3000
     depends_on:
-      - rabbitmq
-      - consul
+      db-exam:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
 
   course-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-course-service:${IMAGE_TAG}
@@ -132,11 +334,25 @@ services:
       PORT: 3000
       CONSUL_URL: http://consul:8500
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-course:5432/${COURSE_DB_NAME:-course_db}
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
     depends_on:
-      - db-course
-      - rabbitmq
-      - consul
+      db-course:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
 
   question-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-question-service:${IMAGE_TAG}
@@ -145,10 +361,23 @@ services:
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-question:5432/${QUESTION_DB_NAME:-question_db}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
     depends_on:
-      - rabbitmq
-      - consul
+      db-question:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
 
   notification-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-notification-service:${IMAGE_TAG}
@@ -157,10 +386,23 @@ services:
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-notification:5432/${NOTIFICATION_DB_NAME:-notification_db}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
     depends_on:
-      - rabbitmq
-      - consul
+      db-notification:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
 
   analytics-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-analytics-service:${IMAGE_TAG}
@@ -169,10 +411,26 @@ services:
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-analytics:5432/${ANALYTICS_DB_NAME:-analytics_db}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
     depends_on:
-      - rabbitmq
-      - consul
+      db-analytics:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
 
   simulation-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-simulation-service:${IMAGE_TAG}
@@ -181,10 +439,80 @@ services:
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
-      RABBITMQ_URL: amqp://rabbitmq:5672
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-simulation:5432/${SIMULATION_DB_NAME:-simulation_db}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
     depends_on:
-      - rabbitmq
-      - consul
+      db-simulation:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
+
+  media-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-media-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-media:5432/${MEDIA_DB_NAME:-media_db}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      STORAGE_ACCOUNT_NAME: ${STORAGE_ACCOUNT_NAME}
+      STORAGE_ACCOUNT_KEY: ${STORAGE_ACCOUNT_KEY}
+      STORAGE_CONTAINER_NAME: ${STORAGE_CONTAINER_NAME:-media}
+      STORAGE_PRESIGNED_URL_EXPIRY: ${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
+    depends_on:
+      db-media:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
+
+  audit-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-audit-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-audit:5432/${AUDIT_DB_NAME:-audit_db}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+    depends_on:
+      db-audit:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
 
   kong:
     image: kong:3.7
@@ -206,15 +534,26 @@ services:
       - notification-service
       - analytics-service
       - simulation-service
+      - media-service
+      - audit-service
     ports:
       - "${KONG_PROXY_PORT:-8000}:8000"
       - "${KONG_ADMIN_PORT:-8001}:8001"
     volumes:
-      - ./kong:/usr/local/kong/declarative:ro
+      - ./kong/kong.yaml:/usr/local/kong/declarative/kong.yaml:ro
 
 volumes:
   db_identity_data:
   db_user_data:
+  db_exam_data:
   db_course_data:
+  db_question_data:
+  db_notification_data:
+  db_analytics_data:
+  db_simulation_data:
+  db_media_data:
+  db_audit_data:
   db_keycloak_data:
+  rabbitmq_data:
+  redis_data:
   consul_data:

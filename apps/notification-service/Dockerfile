@@ -32,6 +32,7 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/notification-service/dist ./apps/notification-service/dist
 COPY --from=builder --chown=node:node /app/apps/notification-service/package.json ./apps/notification-service/
+COPY --from=builder --chown=node:node /app/apps/notification-service/prisma ./apps/notification-service/prisma
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/apps/notification-service/node_modules ./apps/notification-service/node_modules
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist

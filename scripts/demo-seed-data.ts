@@ -133,6 +133,7 @@ export const DEMO_IDS = {
     deterministicUuid(`demo-simulation-session-${studentId}-${slug}`),
   simulationAnswer: (sessionId: string, scenarioId: string) =>
     deterministicUuid(`demo-simulation-answer-${sessionId}-${scenarioId}`),
+  mediaFile: (slug: string) => deterministicUuid(`demo-media-file-${slug}`),
 };
 
 export const DEMO_COURSES = [

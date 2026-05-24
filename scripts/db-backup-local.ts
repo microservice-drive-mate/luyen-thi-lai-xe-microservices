@@ -11,7 +11,14 @@ type BackupTarget = {
 const backupTargets: BackupTarget[] = [
   { container: 'db-identity', database: 'identity_db', user: 'user' },
   { container: 'db-user', database: 'user_db', user: 'user' },
+  { container: 'db-exam', database: 'exam_db', user: 'user' },
   { container: 'db-course', database: 'course_db', user: 'user' },
+  { container: 'db-question', database: 'question_db', user: 'user' },
+  { container: 'db-notification', database: 'notification_db', user: 'user' },
+  { container: 'db-analytics', database: 'analytics_db', user: 'user' },
+  { container: 'db-simulation', database: 'simulation_db', user: 'user' },
+  { container: 'db-media', database: 'media_db', user: 'user' },
+  { container: 'db-audit', database: 'audit_db', user: 'user' },
   { container: 'db-keycloak', database: 'keycloak_db', user: 'keycloak' },
 ];
 

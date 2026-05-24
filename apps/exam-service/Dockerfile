@@ -32,6 +32,7 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/exam-service/dist ./apps/exam-service/dist
 COPY --from=builder --chown=node:node /app/apps/exam-service/package.json ./apps/exam-service/
+COPY --from=builder --chown=node:node /app/apps/exam-service/prisma ./apps/exam-service/prisma
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/apps/exam-service/node_modules ./apps/exam-service/node_modules
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist

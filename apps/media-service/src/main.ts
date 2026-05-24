@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
@@ -15,6 +15,8 @@ import { DomainExceptionFilter } from './infrastructure/filters/domain-exception
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   const configService = app.get(ConfigService);
@@ -49,6 +51,6 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
   await app.listen(port);
-  console.log(`✓ Media Service listening on port ${port}`);
+  logger.log(`Media Service listening on port ${port}`);
 }
 void bootstrap();

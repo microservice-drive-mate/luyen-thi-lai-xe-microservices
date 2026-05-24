@@ -17,6 +17,7 @@ const appsDir = path.resolve(process.cwd(), 'apps');
 const preferredSeedOrder = [
   'identity-service',
   'user-service',
+  'media-service',
   'question-service',
   'exam-service',
   'course-service',

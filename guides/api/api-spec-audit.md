@@ -1,12 +1,12 @@
 # Audit Service API Specification
 
-**Service:** `audit-service`  
-**Base URL qua Kong:** `http://localhost:8000`  
-**Service paths:** `/admin/audit-logs`  
-**Direct local:** `http://localhost:3011`  
-**Swagger UI:** `http://localhost:3011/docs`  
-**Swagger UI qua Kong:** `http://localhost:8000/audit-service/docs`  
-**OpenAPI JSON:** `http://localhost:3011/docs-json`  
+**Service:** `audit-service`
+**Base URL qua Kong:** `http://localhost:8000`
+**Service paths:** `/admin/audit-logs`
+**Direct local:** `http://localhost:3011`
+**Swagger UI:** `http://localhost:3011/docs`
+**Swagger UI qua Kong:** `http://localhost:8000/audit-service/docs`
+**OpenAPI JSON:** `http://localhost:3011/docs-json`
 **OpenAPI JSON qua Kong:** `http://localhost:8000/audit-service/docs-json`
 
 Audit-service là source of truth cho centralized audit trail. Service này không ghi access log thay cho ELK; nó chỉ lưu các hành động security/business quan trọng dưới dạng append-only.

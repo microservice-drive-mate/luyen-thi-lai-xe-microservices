@@ -27,6 +27,7 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/audit-service/dist ./apps/audit-service/dist
 COPY --from=builder --chown=node:node /app/apps/audit-service/package.json ./apps/audit-service/
+COPY --from=builder --chown=node:node /app/apps/audit-service/prisma ./apps/audit-service/prisma
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/apps/audit-service/node_modules ./apps/audit-service/node_modules
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist

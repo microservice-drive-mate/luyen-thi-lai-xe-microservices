@@ -1,14 +1,14 @@
 # Jenkins + GHCR + Docker Compose
 
-Tai lieu nay scaffold cho luong DevOps co ban nhung deploy duoc that voi repo hien tai.
+Tài liệu này mô tả luồng CI/CD đã được căn chỉnh để triển khai được với repo hiện tại.
 
-## 1. Muc tieu
+## 1. Mục tiêu
 
-- Pull Request: chi chay `lint`, `check-types`, `test`, `build`
-- Merge `main`: build image, push len GHCR, deploy `staging`
-- Tag release `v*`: build image, approve tay, deploy `production`
+- Pull Request: chạy `lint`, `check-types`, `test`, `build`
+- Merge `main`: build image, push lên GHCR, triển khai `staging`
+- Tag release `v*`: build image, phê duyệt thủ công, triển khai `production`
 
-## 2. File da duoc them
+## 2. File liên quan
 
 - `Jenkinsfile`
 - `docker-compose.deploy.yml`
@@ -18,16 +18,16 @@ Tai lieu nay scaffold cho luong DevOps co ban nhung deploy duoc that voi repo hi
 - `scripts/deploy-prod.sh`
 - `scripts/deploy-compose.sh`
 
-## 3. Jenkins can co gi
+## 3. Jenkins cần có gì
 
-Node/agent Jenkins can co:
+Node/agent Jenkins cần có:
 
 - Node.js 20+
-- Docker + Docker Compose plugin
+- Docker Engine + Docker Compose plugin
 - Git
 - SSH client
 
-Plugin Jenkins nen co:
+Plugin Jenkins nên có:
 
 - Pipeline
 - Git
@@ -35,64 +35,63 @@ Plugin Jenkins nen co:
 - SSH Agent
 - AnsiColor
 
-Agent label trong `Jenkinsfile` dang la `docker-node20`.
-Neu agent cua ban dung label khac, sua lai ngay trong `Jenkinsfile`.
+`Jenkinsfile` đang dùng label `docker-node20`. Nếu agent của bạn dùng label khác, sửa lại label này.
 
-## 4. Credentials can tao trong Jenkins
-
-Tao cac credential sau:
+## 4. Credentials cần tạo trong Jenkins
 
 - `ghcr-credentials`
   - Type: Username with password
-  - Username: tai khoan GitHub hoac bot account
-  - Password: GitHub Personal Access Token co quyen `write:packages`
-
+  - Username: tài khoản GitHub hoặc bot account
+  - Password: GitHub Personal Access Token có quyền `write:packages`
 - `deploy-ssh-key`
   - Type: SSH Username with private key
-  - Private key cua user deploy tren server
+  - Private key của user deploy trên server
 
-## 5. Chuan bi server staging/prod
+## 5. Chuẩn bị server staging/prod
 
-Tren moi server:
+Trên mỗi server:
 
-1. Cai Docker Engine va Docker Compose plugin
-2. Tao thu muc deploy, vi du:
+1. Cài Docker Engine và Docker Compose plugin
+2. Tạo thư mục triển khai:
 
 ```bash
 sudo mkdir -p /opt/luyen-thi-lai-xe/kong
+sudo mkdir -p /opt/luyen-thi-lai-xe/docker/consul
+sudo mkdir -p /opt/luyen-thi-lai-xe/docker/keycloak
 sudo chown -R deploy:deploy /opt/luyen-thi-lai-xe
 ```
 
-3. Copy file env mau thanh file that:
+3. Copy file env mẫu thành file thật:
 
 ```bash
 cp deploy/staging.env.example /opt/luyen-thi-lai-xe/staging.env
 cp deploy/production.env.example /opt/luyen-thi-lai-xe/production.env
 ```
 
-4. Dien gia tri secrets that vao file env tren server
+4. Điền giá trị secrets thật vào file env trên server
 
-Can dien it nhat:
+Cần điền ít nhất:
 
 - `POSTGRES_PASSWORD`
+- `RABBITMQ_DEFAULT_PASS`
 - `KEYCLOAK_DB_PASSWORD`
 - `KEYCLOAK_ADMIN_PASSWORD`
 - `KEYCLOAK_CLIENT_SECRET`
+- `STORAGE_ACCOUNT_NAME`
+- `STORAGE_ACCOUNT_KEY`
 
-`IMAGE_TAG` trong file env chi la placeholder. Jenkins se override bang tag commit/tag release moi.
+`IMAGE_TAG` trong file env chỉ là placeholder. Jenkins sẽ ghi đè bằng tag mới ở mỗi lần triển khai.
 
-## 6. Webhook va branch flow
+## 6. Webhook và luồng branch
 
-- Bat multibranch pipeline trong Jenkins
-- Noi webhook GitHub/GitLab vao Jenkins
-- Quy uoc:
-  - PR -> chi verify
-  - `main` -> deploy staging
-  - tag `v1.0.0` -> deploy production
+- Bật multibranch pipeline trong Jenkins
+- Nối webhook GitHub/GitLab vào Jenkins
+- Quy ước:
+  - PR -> chỉ kiểm tra
+  - `main` -> triển khai staging
+  - tag `v1.0.0` -> triển khai production
 
-## 7. Cac bien can sua trong Jenkinsfile
-
-Sua cac gia tri nay cho dung ha tang that:
+## 7. Các biến cần sửa trong Jenkinsfile
 
 - `GHCR_OWNER`
 - `STAGING_HOST`
@@ -102,50 +101,73 @@ Sua cac gia tri nay cho dung ha tang that:
 - `PRODUCTION_USER`
 - `PRODUCTION_DEPLOY_PATH`
 
-## 8. Tai sao Dockerfile Prisma da duoc sua
+## 8. Những gì pipeline đã xử lý
 
-Ba service:
+Pipeline hiện tại build và push image cho 10 service:
 
 - `identity-service`
 - `user-service`
+- `exam-service`
 - `course-service`
+- `question-service`
+- `notification-service`
+- `analytics-service`
+- `simulation-service`
+- `media-service`
+- `audit-service`
 
-da duoc copy them thu muc `prisma/` vao runner image.
-Neu khong co buoc nay, lenh migrate production se fail vi container runtime khong co schema Prisma.
+Runner image của tất cả service dùng Prisma đã copy kèm thư mục `prisma/`, vì vậy `prisma migrate deploy` có thể chạy trực tiếp trên server.
 
-## 9. Cach deploy
+## 9. Luồng triển khai
 
-### Deploy staging
+Script triển khai sẽ:
 
-- Merge code vao `main`
-- Jenkins build image va push GHCR
-- Jenkins SSH vao server staging
-- Pull compose + `kong.yaml`
-- Start infrastructure
-- Chay `prisma migrate deploy`
-- Start app services + Kong
+1. Upload `docker-compose.deploy.yml`
+2. Upload `kong/kong.yaml`
+3. Upload `docker/consul/init.sh`
+4. Upload `docker/keycloak/realm-export.json`
+5. Pull image từ GHCR
+6. Khởi động infrastructure: Postgres, RabbitMQ, Redis, Consul, Consul init, Keycloak
+7. Chạy `prisma migrate deploy` cho toàn bộ 10 service có Prisma:
+   - `identity-service`
+   - `user-service`
+   - `exam-service`
+   - `course-service`
+   - `question-service`
+   - `notification-service`
+   - `analytics-service`
+   - `simulation-service`
+   - `media-service`
+   - `audit-service`
+8. Khởi động app services + Kong
+9. Smoke check `health/live` và `health/ready` của từng service qua Kong
 
-### Deploy production
+Smoke check sử dụng service-prefix route:
 
-- Tao tag release, vi du `v1.0.0`
-- Jenkins build image
-- Cho approve tay
-- Jenkins deploy len production
+- `/identity-service`
+- `/user-service`
+- `/exam-service`
+- `/course-service`
+- `/question-service`
+- `/notification-service`
+- `/analytics-service`
+- `/simulation-service`
+- `/media-service`
+- `/audit-service`
 
 ## 10. Rollback
 
-Rollback nhanh nhat:
+Rollback nhanh nhất:
 
-1. Chay lai job Jenkins voi tag cu
-2. Hoac doi `IMAGE_TAG` trong `/opt/luyen-thi-lai-xe/production.env`
-3. Chay lai script deploy
+1. Chạy lại job Jenkins với tag cũ
+2. Hoặc đổi `IMAGE_TAG` trong `/opt/luyen-thi-lai-xe/production.env`
+3. Chạy lại script triển khai
 
-File `.last-deployed-tag` tren server giup biet ban gan nhat da deploy tag nao.
+File `.last-deployed-tag` trên server giúp biết image tag gần nhất đã triển khai.
 
-## 11. Viec nen lam tiep sau scaffold nay
+## 11. Việc nên làm tiếp sau Phase 2
 
-- Them health endpoint `/health` cho tung service de smoke check sau deploy
-- Tach backup Postgres thanh cron job rieng
-- Them TLS/reverse proxy truoc Kong neu expose ra Internet
-- Them monitoring va alerting
-- Tach pipeline chi build service thay doi neu can toi uu thoi gian
+- Thêm TLS/reverse proxy trước Kong nếu expose ra Internet
+- Bổ sung backup Postgres và diễn tập restore
+- Thêm monitoring/alerting cho host, container, DB, RabbitMQ
+- Tối ưu pipeline chỉ build service thay đổi nếu cần giảm thời gian build

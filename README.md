@@ -27,6 +27,7 @@ File roadmap việc tiếp theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
   - `analytics-service`
   - `simulation-service`
   - `audit-service`
+  - `audit-service`
 - Supporting services:
   - `media-service`
   - `docs-service` dùng cho tài liệu / Swagger tổng hợp khi cần
@@ -210,22 +211,25 @@ Hướng dẫn chi tiết: [guides/consul/WORKFLOW.md](./guides/consul/WORKFLOW.
 ```bash
 docker compose up -d consul consul-init keycloak redis rabbitmq \
   db-identity db-user db-media db-question db-exam db-course \
-  db-notification db-analytics db-simulation
+  db-notification db-analytics db-simulation db-audit
 docker compose run --rm identity-service npm run db:deploy -w identity-service
 docker compose run --rm identity-service npm run db:seed -w identity-service
 ```
 
 Demo accounts được seed vào Keycloak và các service DB dùng chung password `123456`.
 
-## 10. DevOps Notes
+## 10. Ghi chú DevOps
 
 - Health endpoints chuẩn:
   - `/health`
   - `/health/live`
   - `/health/ready`
-- Root smoke test ở [scripts/smoke.ts](./scripts/smoke.ts)
-- Local DB backup script ở [scripts/db-backup-local.ts](./scripts/db-backup-local.ts)
-- Jenkins / GHCR / deploy compose scaffold ở:
+- Smoke test cấp root ở [scripts/smoke.ts](./scripts/smoke.ts)
+- Bộ điều phối migration cấp root ở [scripts/prisma-migrate-all.ts](./scripts/prisma-migrate-all.ts)
+- Bộ điều phối seed cấp root ở [scripts/prisma-seed-all.ts](./scripts/prisma-seed-all.ts)
+- Script sao lưu DB local ở [scripts/db-backup-local.ts](./scripts/db-backup-local.ts)
+  - Backup đủ các DB local: `identity`, `user`, `exam`, `course`, `question`, `notification`, `analytics`, `simulation`, `media`, `audit`, `keycloak`
+- Scaffold Jenkins / GHCR / Docker Compose deploy ở:
   - [Jenkinsfile](./Jenkinsfile)
   - [docker-compose.deploy.yml](./docker-compose.deploy.yml)
   - [guides/devops/JENKINS-DOCKER-COMPOSE.md](./guides/devops/JENKINS-DOCKER-COMPOSE.md)
@@ -237,29 +241,30 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 3. Chạy `npm run check-types` và `npm run build` trước khi push
 4. Nếu có thay đổi API hoặc infra, chạy thêm `npm run smoke`
 5. Mở PR và chỉ merge khi CI pass
-## 12. Availability Tactic: Health Check + Restart
 
-Tactic dang ap dung:
+## 12. Chiến thuật Availability: Health Check + Restart
 
-- Detect Faults: Ping/Echo qua `/health/live`, sanity checking qua `/health/ready`, monitor nhanh bang `npm run smoke`.
-- Recover from Faults: Docker Compose dung `restart: unless-stopped` de tu chay lai service khi process/container chet.
-- Docker healthcheck danh dau service `healthy/unhealthy` trong `docker compose ps`; Docker Compose khong tu restart container chi vi healthcheck bi `unhealthy` neu process van dang chay.
+Tactic đang áp dụng:
 
-Kiem tra health qua Kong:
+- Phát hiện lỗi: Ping/Echo qua `/health/live`, sanity checking qua `/health/ready`, monitor nhanh bằng `npm run smoke`.
+- Khôi phục sau lỗi: Docker Compose dùng `restart: unless-stopped` để tự chạy lại service khi process/container chết.
+- Docker healthcheck đánh dấu service `healthy/unhealthy` trong `docker compose ps`; Docker Compose không tự restart container chỉ vì healthcheck bị `unhealthy` nếu process vẫn đang chạy.
+
+Kiểm tra health qua Kong:
 
 ```powershell
 docker compose up -d --build kong identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service
 npm.cmd run smoke
 ```
 
-`npm run smoke` mac dinh cho 300ms giua moi request de khong cham rate-limit cua Kong khi demo. Neu can chay nhanh hon trong moi truong da tat/nang rate-limit:
+`npm run smoke` mặc định chờ 300ms giữa mỗi request để không chạm rate-limit của Kong khi demo. Nếu cần chạy nhanh hơn trong môi trường đã tắt hoặc nâng rate-limit:
 
 ```powershell
 $env:SMOKE_DELAY_MS=0
 npm.cmd run smoke
 ```
 
-Kiem tra truc tiep service:
+Kiểm tra trực tiếp service:
 
 ```powershell
 curl http://localhost:3001/health/live
@@ -267,7 +272,7 @@ curl http://localhost:3001/health/ready
 curl http://localhost:3010/health/ready
 ```
 
-Demo dependency fault:
+Demo lỗi dependency:
 
 ```powershell
 docker compose stop db-user
