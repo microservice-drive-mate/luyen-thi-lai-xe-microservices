@@ -19,6 +19,7 @@ out/
 .env.*
 *.env
 !.env.example
+!.env.vps.example
 
 # Consul seed production (chứa secrets thật - không commit)
 consul-seed-production.json

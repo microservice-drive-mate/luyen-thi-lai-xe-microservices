@@ -13,6 +13,7 @@ interface ConsulKVEntry {
 
 const CONSUL_URL = process.env.CONSUL_URL || 'http://localhost:8500';
 const DEFAULT_ENV = process.env.ENV || 'development';
+const ENV_PLACEHOLDER_PATTERN = /\$\{([A-Z0-9_]+)(?::-(.*?))?\}/g;
 
 async function flatten(
   obj: ConsulSeedConfig,
@@ -26,11 +27,41 @@ async function flatten(
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       entries.push(...(await flatten(value as ConsulSeedConfig, fullKey)));
     } else {
-      entries.push({ key: fullKey, value: JSON.stringify(value) });
+      entries.push({
+        key: fullKey,
+        value: JSON.stringify(resolveEnvPlaceholders(value, fullKey)),
+      });
     }
   }
 
   return entries;
+}
+
+function resolveEnvPlaceholders(
+  value: string | number | boolean | ConsulSeedConfig,
+  key: string,
+): string | number | boolean | ConsulSeedConfig {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  return value.replace(
+    ENV_PLACEHOLDER_PATTERN,
+    (_match, variableName: string, defaultValue: string | undefined) => {
+      const envValue = process.env[variableName];
+      if (envValue !== undefined) {
+        return envValue;
+      }
+
+      if (defaultValue !== undefined) {
+        return defaultValue;
+      }
+
+      throw new Error(
+        `Missing environment variable ${variableName} for Consul key ${key}`,
+      );
+    },
+  );
 }
 
 async function cleanConsulPrefix(prefix: string): Promise<void> {
