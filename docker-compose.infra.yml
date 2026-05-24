@@ -353,6 +353,25 @@ services:
       - mailpit
     restart: "no"
 
+  keycloak-backup:
+    image: quay.io/keycloak/keycloak:24.0
+    volumes:
+      - ./docker/keycloak/keycloak-daily-export.sh:/opt/keycloak/keycloak-daily-export.sh:ro
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "/opt/keycloak/keycloak-daily-export.sh"]
+    environment:
+      NODE_ENV: development-local
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: luyen-thi-lai-xe-realm
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_EXPORT_ROOT: /backups/keycloak
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    depends_on:
+      - keycloak
+    restart: unless-stopped
+
   kong-dev:
     image: kong:latest
     user: "root"

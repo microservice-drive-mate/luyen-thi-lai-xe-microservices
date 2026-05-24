@@ -1,6 +1,6 @@
-# Phase 8.1-8.2 - Backup Strategy và Automated Daily Backup
+# Phase 8 - Backup Strategy, Keycloak Backup và Restore Test
 
-Tài liệu này mô tả phạm vi backup và cơ chế tự động backup hằng ngày cho PostgreSQL và Keycloak DB.
+Tài liệu này mô tả phạm vi backup, cơ chế tự động backup hằng ngày, backup Keycloak và kiểm tra restore.
 
 ## Phase 8.1 - Backup Strategy & Scope
 
@@ -94,6 +94,12 @@ Backup one-shot bằng chính container backup:
 npm run db:backup:once
 ```
 
+Backup Keycloak realm one-shot:
+
+```bash
+npm run keycloak:backup:once
+```
+
 Chạy tự động cùng infra:
 
 ```bash
@@ -121,3 +127,64 @@ pg_restore --list backups/postgres/<env>/<timestamp>/<file>.dump
 ```
 
 Diễn tập restore đầy đủ sẽ được xử lý ở Phase 8.4.
+
+## Phase 8.3 - Keycloak Backup
+
+Keycloak được backup theo 2 lớp:
+
+- `keycloak_db` được backup bằng `pg_dump --format=custom` giống các PostgreSQL DB khác.
+- Realm runtime config được export hằng ngày bằng `kcadm.sh` từ service `keycloak-backup`.
+
+Service `keycloak-backup` đã được thêm vào:
+
+- `docker-compose.infra.yml`
+- `docker-compose.deploy.yml`
+
+Artifact Keycloak export nằm ở:
+
+```text
+backups/keycloak/<env>/<timestamp>/
+```
+
+Các file được tạo:
+
+| File | Nội dung |
+| ---- | -------- |
+| `realm.json` | Cấu hình realm |
+| `users.json` | Danh sách users |
+| `clients.json` | Danh sách clients |
+| `roles.json` | Realm roles |
+| `SHA256SUMS` | Checksum các file JSON |
+| `manifest.csv` | Danh sách artifact |
+
+Lưu ý: source khôi phục đầy đủ nhất cho Keycloak vẫn là `keycloak_db` dump. Realm export giúp review cấu hình, phục hồi thủ công một phần và kiểm tra nhanh drift cấu hình.
+
+## Phase 8.4 - Restore Test
+
+Script test restore:
+
+```bash
+npm run db:restore:test
+```
+
+Mặc định script tìm file `.dump` mới nhất trong:
+
+```text
+backups/postgres/
+```
+
+Hoặc chỉ định file cụ thể:
+
+```bash
+RESTORE_TEST_BACKUP_FILE=backups/postgres/development-local/<timestamp>/user-service_development-local_<timestamp>.dump npm run db:restore:test
+```
+
+Script sẽ:
+
+- Tạo PostgreSQL container tạm bằng image `postgres:15-alpine`.
+- Chờ DB tạm sẵn sàng.
+- Chạy `pg_restore --list` để kiểm tra metadata backup.
+- Restore thật vào DB tạm bằng `pg_restore`.
+- Xóa container tạm sau khi test xong.
+
+Kết quả pass của `npm run db:restore:test` là bằng chứng backup có thể dùng được ở mức kỹ thuật. Khi test production thật, nên chọn một backup mới nhất và ghi lại timestamp/file đã test trong log vận hành.

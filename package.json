@@ -17,6 +17,8 @@
     "db:seed:question-images": "tsx scripts/seed-question-images.ts",
     "db:backup:local": "tsx scripts/db-backup-local.ts",
     "db:backup:once": "docker compose -f docker-compose.infra.yml run --rm -e BACKUP_RUN_ONCE=true postgres-backup",
+    "keycloak:backup:once": "docker compose -f docker-compose.infra.yml run --rm -e BACKUP_RUN_ONCE=true keycloak-backup",
+    "db:restore:test": "tsx scripts/db-restore-test.ts",
     "smoke": "tsx scripts/smoke.ts",
     "observability:smoke": "tsx scripts/observability-smoke.ts",
     "rabbitmq:smoke": "tsx scripts/rabbitmq-resilience-smoke.ts",
