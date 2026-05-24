@@ -233,7 +233,8 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - [Jenkinsfile](./Jenkinsfile)
   - [docker-compose.deploy.yml](./docker-compose.deploy.yml)
   - [guides/devops/JENKINS-DOCKER-COMPOSE.md](./guides/devops/JENKINS-DOCKER-COMPOSE.md)
-- Phase 6.1-6.3 Logging + ELK + Correlation ID + Metrics ở [guides/devops/OBSERVABILITY-ELK.md](./guides/devops/OBSERVABILITY-ELK.md)
+- Phase 6.1-6.5 Logging + ELK + Correlation ID + Metrics + Alerting ở [guides/devops/OBSERVABILITY-ELK.md](./guides/devops/OBSERVABILITY-ELK.md)
+- Runbook Observability ở [guides/devops/OBSERVABILITY-RUNBOOK.md](./guides/devops/OBSERVABILITY-RUNBOOK.md)
 
 ## 11. Quy trình làm việc
 

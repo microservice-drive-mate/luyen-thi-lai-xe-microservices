@@ -1,6 +1,6 @@
-# Phase 6.1-6.3 - Logging, ELK, Correlation ID và Metrics
+# Phase 6.1-6.5 - Logging, ELK, Correlation ID, Metrics và Alerting
 
-Tài liệu này mô tả phần logging tập trung bằng ELK cho Phase 6.1, truy vết request bằng Correlation ID cho Phase 6.2 và thu thập metrics bằng Prometheus/Grafana cho Phase 6.3.
+Tài liệu này mô tả phần logging tập trung bằng ELK cho Phase 6.1, truy vết request bằng Correlation ID cho Phase 6.2, thu thập metrics bằng Prometheus/Grafana cho Phase 6.3, route cảnh báo bằng Alertmanager cho Phase 6.4 và smoke test/runbook vận hành cho Phase 6.5.
 
 ## Mục tiêu
 
@@ -15,6 +15,8 @@ Tài liệu này mô tả phần logging tập trung bằng ELK cho Phase 6.1, t
 - Prometheus scrape CPU, RAM, request rate, tỷ lệ lỗi và latency từ các service.
 - Grafana tự provision datasource Prometheus và dashboard `Microservices Observability`.
 - Prometheus rule cảnh báo khi service down, tỷ lệ lỗi 5xx cao, latency cao, CPU/RAM cao.
+- Alertmanager nhận cảnh báo từ Prometheus, gom nhóm và route tới webhook vận hành.
+- Có script `npm run observability:smoke` để kiểm tra nhanh Prometheus, Alertmanager, Grafana, Elasticsearch, Kibana và endpoint metrics.
 
 ## Thành phần
 
@@ -25,6 +27,7 @@ Tài liệu này mô tả phần logging tập trung bằng ELK cho Phase 6.1, t
 | `Elasticsearch` | Lưu log tập trung | `http://localhost:9200` |
 | `Kibana` | Truy vấn và visualize log | `http://localhost:5601` |
 | `Prometheus` | Thu thập metrics từ `/metrics` của service | `http://localhost:9090` |
+| `Alertmanager` | Gom nhóm, chống trùng lặp và route cảnh báo | `http://localhost:9093` |
 | `Grafana` | Dashboard metrics và trạng thái cảnh báo | `http://localhost:30000` |
 
 ## Luồng log
@@ -66,7 +69,8 @@ NestJS service
   -> GET /metrics
   -> Prometheus scrape mỗi 15 giây
   -> Prometheus alert rules
-  -> Grafana dashboard
+  -> Alertmanager notification routing
+  -> Grafana dashboard / Alertmanager UI
 ```
 
 Metrics chính:
@@ -108,6 +112,7 @@ Prometheus/Grafana:
 
 ```text
 Prometheus: http://localhost:9090
+Alertmanager: http://localhost:9093
 Grafana: http://localhost:30000
 Grafana mặc định local: admin / admin
 ```
@@ -258,6 +263,60 @@ Các panel chính:
 - CPU Usage
 - Firing Alerts
 
+## Verify Phase 6.4
+
+Kiểm tra Prometheus đã kết nối Alertmanager:
+
+```text
+http://localhost:9090/status
+```
+
+Kiểm tra Alertmanager:
+
+```text
+http://localhost:9093
+```
+
+Kỳ vọng:
+
+- Alertmanager UI mở được.
+- Prometheus có alertmanager target `alertmanager:9093`.
+- Cảnh báo firing trong Prometheus được gửi sang Alertmanager.
+
+File cấu hình:
+
+- `docker/prometheus/alerts.yml`: rule cảnh báo.
+- `docker/alertmanager/alertmanager.yml`: gom nhóm, inhibit warning khi có critical cùng service và route tới webhook.
+
+Webhook local mặc định:
+
+```text
+http://host.docker.internal:9099/alertmanager
+```
+
+Khi triển khai thật, thay webhook này bằng Slack/Discord/Teams hoặc webhook nội bộ của team.
+
+## Verify Phase 6.5
+
+Chạy smoke test cho stack quan sát:
+
+```powershell
+npm.cmd run observability:smoke
+```
+
+Kiểm tra thêm metrics endpoint của service:
+
+```powershell
+$env:OBS_SERVICE_METRICS_URLS = "http://localhost:3002/metrics,http://localhost:3004/metrics"
+npm.cmd run observability:smoke
+```
+
+Runbook xử lý sự cố nằm ở:
+
+```text
+guides/devops/OBSERVABILITY-RUNBOOK.md
+```
+
 ## Deploy staging/production
 
 `docker-compose.deploy.yml` đã có:
@@ -266,9 +325,11 @@ Các panel chính:
 - `logstash`
 - `kibana`
 - `prometheus`
+- `alertmanager`
 - `grafana`
 - volume `elasticsearch_data`
 - volume `prometheus_data`
+- volume `alertmanager_data`
 - volume `grafana_data`
 - biến logging dùng chung cho service: `LOGSTASH_HOST=logstash`, `LOGSTASH_PORT=5044`, `LOG_CONSOLE_FORMAT=json`
 
@@ -278,6 +339,7 @@ Các file env mẫu có thể chỉnh port public:
 ELASTICSEARCH_PORT=9200
 LOGSTASH_HOST_PORT=5044
 KIBANA_PORT=5601
+ALERTMANAGER_PORT=9093
 PROMETHEUS_PORT=9090
 GRAFANA_PORT=30000
 GRAFANA_ADMIN_USER=admin
@@ -317,3 +379,18 @@ Với Grafana/Prometheus cũng nên giới hạn public access tương tự; ít
 - Grafana tự provision Prometheus datasource.
 - Grafana tự provision dashboard `Microservices Observability`.
 - Deploy script upload Prometheus/Grafana config lên server.
+
+## Checklist hoàn thành Phase 6.4
+
+- Prometheus có cấu hình `alerting.alertmanagers`.
+- `alertmanager` chạy trong hybrid, full Docker và deploy compose.
+- Deploy script upload `docker/alertmanager/alertmanager.yml`.
+- File env mẫu có `ALERTMANAGER_PORT`.
+- Alertmanager có route mặc định và inhibit rule cơ bản để giảm nhiễu cảnh báo.
+
+## Checklist hoàn thành Phase 6.5
+
+- Có script `npm run observability:smoke`.
+- Smoke test kiểm tra Prometheus ready, alert rules, Alertmanager ready, Grafana health, Elasticsearch health và Kibana status.
+- Smoke test hỗ trợ kiểm tra thêm URL `/metrics` qua biến `OBS_SERVICE_METRICS_URLS`.
+- Có runbook `guides/devops/OBSERVABILITY-RUNBOOK.md` cho service down, 5xx cao, latency cao, CPU/RAM cao.
