@@ -5,13 +5,17 @@ import { ValidationPipe } from '@nestjs/common';
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
+  AccessLogInterceptor,
+  CorrelationIdMiddleware,
   setupMicroserviceSwagger,
+  WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   const configService = app.get(ConfigService);
   const rabbitmqUrl =
@@ -28,8 +32,12 @@ async function bootstrap() {
   });
 
   app.enableCors();
+  app.use(new CorrelationIdMiddleware().use);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-  app.useGlobalInterceptors(new ApiResponseInterceptor());
+  app.useGlobalInterceptors(
+    new AccessLogInterceptor({ serviceName: 'media-service' }),
+    new ApiResponseInterceptor(),
+  );
   app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
 
   setupMicroserviceSwagger(app, {

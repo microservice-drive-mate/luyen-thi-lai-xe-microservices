@@ -23,6 +23,7 @@ const preferredSeedOrder = [
   'analytics-service',
   'notification-service',
   'simulation-service',
+  'audit-service',
 ];
 
 function readPackageJson(packageJsonPath: string): PackageJson {

@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { AuditEventEnvelope } from '@repo/common';
+import { Prisma } from '@prisma/course-client';
 import { Course } from '../../../domain/aggregates/course/course.aggregate';
 import {
   CourseRepository,
@@ -72,7 +74,7 @@ export class PrismaCourseRepository extends CourseRepository {
     });
   }
 
-  async save(course: Course): Promise<void> {
+  async save(course: Course, auditEvent?: AuditEventEnvelope): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await tx.course.upsert({
         where: { id: course.id },
@@ -163,6 +165,15 @@ export class PrismaCourseRepository extends CourseRepository {
             type: m.type,
             createdAt: m.createdAt,
           })),
+        });
+      }
+
+      if (auditEvent) {
+        await tx.outboxMessage.create({
+          data: {
+            eventName: auditEvent.eventName,
+            payload: auditEvent as unknown as Prisma.InputJsonValue,
+          },
         });
       }
     });

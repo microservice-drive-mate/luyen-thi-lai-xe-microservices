@@ -13,7 +13,8 @@
 5. [Test Enrollment endpoints](#5-test-enrollment-endpoints)
 6. [Test luồng RabbitMQ event](#6-test-luồng-rabbitmq-event)
 7. [Kiểm tra Database trực tiếp](#7-kiểm-tra-database-trực-tiếp)
-8. [Troubleshooting](#8-troubleshooting)
+8. [Test Security Audit Và Outbox](#8-test-security-audit-và-outbox)
+9. [Troubleshooting](#9-troubleshooting)
 
 ---
 
@@ -856,7 +857,104 @@ GROUP BY "courseId";
 
 ---
 
-## 8. Troubleshooting
+## 8. Test Security Audit Và Outbox
+
+Mục tiêu: chứng minh các course mutation quan trọng ghi audit event bằng transactional outbox và xuất hiện trong `audit-service`.
+
+### 8.1 Audited actions cần cover
+
+| API | Expected audit action |
+| --- | --- |
+| `POST /admin/courses` | `COURSE_CREATED` |
+| `PATCH /admin/courses/:id` | `COURSE_UPDATED` |
+| `PATCH /admin/courses/:id/activate` | `COURSE_ACTIVATED` |
+| `DELETE /admin/courses/:id` | `COURSE_ARCHIVED` |
+| `POST /admin/courses/:id/lessons` | `COURSE_LESSON_ADDED` |
+| `DELETE /admin/courses/:id/lessons/:lessonId` | `COURSE_LESSON_REMOVED` |
+| `POST /admin/courses/:id/materials` | `COURSE_MATERIAL_ADDED` |
+| `POST /enrollments/:id/reset-progress` | `ENROLLMENT_PROGRESS_RESET` |
+
+### 8.2 Gọi một mutation và lấy correlation id
+
+Ví dụ archive course:
+
+```bash
+curl -i -X DELETE http://localhost:8000/admin/courses/<course-id> \
+  -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>"
+```
+
+Expected:
+
+- HTTP `200`.
+- Response header có `x-correlation-id`.
+- Course được archive/soft delete theo behavior hiện tại.
+
+### 8.3 Verify outbox trong `course_db`
+
+```sql
+SELECT
+  payload->>'action' AS action,
+  payload->>'resourceType' AS resource_type,
+  payload->>'resourceId' AS resource_id,
+  status,
+  attempts,
+  "publishedAt",
+  "lastError"
+FROM outbox_messages
+ORDER BY "createdAt" DESC
+LIMIT 10;
+```
+
+Expected:
+
+- Có row `action = COURSE_ARCHIVED`.
+- `resource_type = COURSE`.
+- `resource_id = <course-id>`.
+- Bình thường sau vài giây `status = PUBLISHED`.
+
+### 8.4 Verify centralized audit-service
+
+```bash
+curl -s "http://localhost:8000/admin/audit-logs?serviceName=course-service&resourceId=<course-id>" \
+  -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" | jq .
+```
+
+Expected:
+
+- Có item `serviceName = course-service`.
+- `action` đúng với API vừa gọi.
+- `correlationId` tồn tại để join với access log.
+- `metadata` đúng theo action, ví dụ `COURSE_ARCHIVED` có `{ "status": "ARCHIVED" }`.
+
+### 8.5 Verify outbox retry khi RabbitMQ lỗi
+
+```bash
+docker compose stop rabbitmq
+
+# Gọi một audited mutation, ví dụ update course title
+curl -i -X PATCH http://localhost:8000/admin/courses/<course-id> \
+  -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{ "title": "Course updated while RabbitMQ down" }'
+```
+
+Expected:
+
+- Business update vẫn thành công nếu request path không cần RabbitMQ trực tiếp.
+- `course_db.outbox_messages` có row `PENDING` hoặc sau retry thành `FAILED`.
+- `audit_db.audit_logs` chưa có ngay record mới.
+
+Start RabbitMQ lại:
+
+```bash
+docker compose start rabbitmq
+```
+
+Expected: relay publish lại message còn `PENDING`; audit log xuất hiện trong `audit-service`.
+
+---
+
+## 9. Troubleshooting
 
 ### Service không start — PrismaClientConstructorValidationError
 

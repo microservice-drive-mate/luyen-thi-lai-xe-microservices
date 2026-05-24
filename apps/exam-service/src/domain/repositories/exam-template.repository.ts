@@ -1,3 +1,4 @@
+import { AuditEventEnvelope } from '@repo/common';
 import { ExamTemplate } from '../aggregates/exam-template/exam-template.aggregate';
 import { LicenseCategory } from '../aggregates/exam-template/exam-template.types';
 
@@ -20,5 +21,8 @@ export abstract class ExamTemplateRepository {
     filter: ListExamTemplatesFilter,
   ): Promise<ListExamTemplatesPage>;
   abstract hasSessions(templateId: string): Promise<boolean>;
-  abstract save(template: ExamTemplate): Promise<void>;
+  abstract save(
+    template: ExamTemplate,
+    auditEvent?: AuditEventEnvelope,
+  ): Promise<void>;
 }

@@ -1,0 +1,37 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../node_modules/@prisma/audit-client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  eventId       String   @unique
+  schemaVersion Int
+  serviceName   String
+  actorId       String
+  actorRole     String?
+  action        String
+  resourceType  String
+  resourceId    String
+  outcome       String
+  occurredAt    DateTime
+  correlationId String?
+  ipAddress     String?
+  userAgent     String?  @db.Text
+  requestPath   String?  @db.Text
+  httpMethod    String?
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now())
+
+  @@index([actorId, occurredAt])
+  @@index([action, occurredAt])
+  @@index([resourceType, resourceId])
+  @@index([serviceName, occurredAt])
+  @@index([correlationId])
+  @@map("audit_logs")
+}

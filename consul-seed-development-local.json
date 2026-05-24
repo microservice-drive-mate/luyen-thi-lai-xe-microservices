@@ -26,32 +26,88 @@
     },
     "exam-service": {
       "port": "3003",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@localhost:5434/exam_db",
+      "rabbitmq.url": "amqp://localhost:5672",
+      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "services.question.baseUrl": "http://localhost:3005",
+      "services.user.baseUrl": "http://localhost:3002"
     },
     "question-service": {
       "port": "3005",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@localhost:5436/question_db",
+      "rabbitmq.url": "amqp://localhost:5672",
+      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     },
     "course-service": {
       "port": "3004",
       "database.url": "postgresql://user:password@localhost:5435/course_db",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "rabbitmq.url": "amqp://localhost:5672",
+      "redis.url": "redis://localhost:6379",
+      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     },
     "notification-service": {
       "port": "3006",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@localhost:5437/notification_db",
+      "rabbitmq.url": "amqp://localhost:5672",
+      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     },
     "analytics-service": {
       "port": "3007",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@localhost:5438/analytics_db",
+      "rabbitmq.url": "amqp://localhost:5672",
+      "redis.url": "redis://localhost:6379",
+      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     },
     "simulation-service": {
       "port": "3008",
-      "rabbitmq.url": "amqp://localhost:5672"
+      "database.url": "postgresql://user:password@localhost:5439/simulation_db",
+      "rabbitmq.url": "amqp://localhost:5672",
+      "redis.url": "redis://localhost:6379",
+      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
+    },
+    "media-service": {
+      "port": "3010",
+      "database.url": "postgresql://user:password@localhost:5440/media_db",
+      "rabbitmq.url": "amqp://localhost:5672",
+      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "storage.accountName": "",
+      "storage.accountKey": "",
+      "storage.containerName": "media",
+      "storage.presignedUrlExpiry": "3600"
+    },
+    "audit-service": {
+      "port": "3011",
+      "database.url": "postgresql://user:password@localhost:5441/audit_db",
+      "rabbitmq.url": "amqp://localhost:5672",
+      "keycloak.authServerUrl": "http://localhost:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     },
     "docs-service": {
       "port": "3009",
-      "swagger.services": "identity-service:3001,user-service:3002,exam-service:3003,course-service:3004,question-service:3005,notification-service:3006,analytics-service:3007,simulation-service:3008"
+      "swagger.services": "identity-service:3001,user-service:3002,exam-service:3003,course-service:3004,question-service:3005,notification-service:3006,analytics-service:3007,simulation-service:3008,media-service:3010,audit-service:3011"
     }
   }
 }

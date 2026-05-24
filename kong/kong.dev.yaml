@@ -111,7 +111,7 @@ services:
     routes:
       - name: simulation-route
         paths:
-          - /simulations
+          - /simulation
         strip_path: false
       - name: simulation-swagger-route
         paths:
@@ -132,6 +132,18 @@ services:
       - name: media-swagger-route
         paths:
           - /media-service
+        strip_path: true
+
+  - name: audit-service
+    url: http://host.docker.internal:3011
+    routes:
+      - name: audit-admin-route
+        paths:
+          - /admin/audit-logs
+        strip_path: false
+      - name: audit-swagger-route
+        paths:
+          - /audit-service
         strip_path: true
 
 plugins:

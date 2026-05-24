@@ -1,3 +1,4 @@
+import { AuditRequestContext } from '@repo/common';
 import { ExamTopicDistributionItem } from '../../../domain/aggregates/exam-template/exam-template.types';
 
 export class UpdateTemplateCommand {
@@ -14,5 +15,7 @@ export class UpdateTemplateCommand {
     readonly shuffleQuestions?: boolean,
     readonly topicDistribution?: ExamTopicDistributionItem[],
     readonly isActive?: boolean,
+    readonly actorId?: string,
+    readonly auditContext?: AuditRequestContext,
   ) {}
 }

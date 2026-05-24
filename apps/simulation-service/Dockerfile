@@ -14,13 +14,14 @@ WORKDIR /app
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/package-lock.json ./
 RUN --mount=type=cache,id=npm,target=/root/.npm,sharing=locked \
-    npm ci
+    npm ci --legacy-peer-deps
 
 # Giai đoạn 3: Build
 FROM node:20-alpine AS builder
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=installer /app/node_modules ./node_modules
+COPY --from=installer /app/apps/simulation-service/node_modules ./apps/simulation-service/node_modules
 COPY --from=pruner /app/out/full/ .
 RUN npx prisma generate --schema=apps/simulation-service/prisma/schema.prisma
 RUN npx turbo build --filter=simulation-service
@@ -32,6 +33,7 @@ WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/simulation-service/dist ./apps/simulation-service/dist
 COPY --from=builder --chown=node:node /app/apps/simulation-service/package.json ./apps/simulation-service/
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/apps/simulation-service/node_modules ./apps/simulation-service/node_modules
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json
 USER node

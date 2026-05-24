@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
+import { createAuditEvent, IUseCase } from '@repo/common';
 import {
   ExamTemplateInUseException,
   ExamTemplateNotFoundException,
@@ -21,7 +21,18 @@ export class DeleteTemplateUseCase
       throw new ExamTemplateInUseException(command.id);
     }
     template.softDelete(command.expectedVersion);
-    await this.templateRepository.save(template);
+    await this.templateRepository.save(
+      template,
+      createAuditEvent({
+        serviceName: 'exam-service',
+        actorId: command.actorId ?? template.createdById,
+        action: 'EXAM_TEMPLATE_DELETED',
+        resourceType: 'EXAM_TEMPLATE',
+        resourceId: template.id,
+        requestContext: command.auditContext,
+        metadata: { name: template.name, version: template.version },
+      }),
+    );
     return ExamTemplateResult.fromAggregate(template);
   }
 }

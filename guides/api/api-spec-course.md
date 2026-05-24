@@ -89,7 +89,7 @@ Lỗi domain:
 ## Enums
 
 `LicenseCategory`: `A1` | `A2` | `B1` | `B2` | `C` | `D` | `E` | `F`  
-`CourseStatus`: `DRAFT` | `ACTIVE`  
+`CourseStatus`: `DRAFT` | `ACTIVE` | `ARCHIVED`  
 `EnrollmentStatus`: `ACTIVE` | `COMPLETED` | `DROPPED`
 
 ---
@@ -798,6 +798,63 @@ Course-service lưu event này vào read model `student_license_profiles` để 
 ---
 
 ## Events Published
+
+## Security Audit
+
+Access logging is emitted for every HTTP request. Successful audited mutations write `security.audit.recorded` into `course_db.outbox_messages` in the same transaction as the business change. The outbox relay publishes it to RabbitMQ, and `audit-service` persists it into `audit_db.audit_logs`.
+
+Frontend does not call audit-service for write operations. The audit trail is a backend side effect. Admin screens may later query audit-service for investigation/history.
+
+| Endpoint | Audit action | Resource | Metadata |
+| --- | --- | --- | --- |
+| `POST /admin/courses` | `COURSE_CREATED` | `COURSE/:id` | `{ "title": "...", "licenseCategory": "B1" }` |
+| `PATCH /admin/courses/:id` | `COURSE_UPDATED` | `COURSE/:id` | `{ "title": "..." }` |
+| `PATCH /admin/courses/:id/activate` | `COURSE_ACTIVATED` | `COURSE/:id` | `{ "status": "ACTIVE" }` |
+| `DELETE /admin/courses/:id` | `COURSE_ARCHIVED` | `COURSE/:id` | `{ "status": "ARCHIVED" }` |
+| `POST /admin/courses/:id/lessons` | `COURSE_LESSON_ADDED` | `COURSE/:id` | `{ "title": "...", "order": 1 }` |
+| `DELETE /admin/courses/:id/lessons/:lessonId` | `COURSE_LESSON_REMOVED` | `COURSE/:id` | `{ "lessonId": "lesson-id" }` |
+| `POST /admin/courses/:id/materials` | `COURSE_MATERIAL_ADDED` | `COURSE/:id` | `{ "title": "...", "mediaFileId": "media-file-id" }` |
+| `POST /enrollments/:id/reset-progress` | `ENROLLMENT_PROGRESS_RESET` | `COURSE_ENROLLMENT/:id` | `{ "courseId": "course-id" }` |
+
+Example audit event persisted from course-service:
+
+```json
+{
+  "eventId": "audit-event-uuid",
+  "eventName": "security.audit.recorded",
+  "schemaVersion": 1,
+  "serviceName": "course-service",
+  "actorId": "admin-keycloak-sub",
+  "actorRole": "ADMIN",
+  "action": "COURSE_ARCHIVED",
+  "resourceType": "COURSE",
+  "resourceId": "course-id",
+  "outcome": "SUCCESS",
+  "occurredAt": "2026-05-24T10:00:00.000Z",
+  "correlationId": "request-correlation-id",
+  "requestPath": "/admin/courses/course-id",
+  "httpMethod": "DELETE",
+  "metadata": {
+    "status": "ARCHIVED"
+  }
+}
+```
+
+Verification:
+
+```sql
+SELECT payload->>'action' AS action, status, attempts, "publishedAt", "lastError"
+FROM outbox_messages
+ORDER BY "createdAt" DESC
+LIMIT 10;
+```
+
+Centralized query:
+
+```http
+GET /admin/audit-logs?serviceName=course-service&resourceId=<course-id>
+Authorization: Bearer <admin_access_token>
+```
 
 ### `course.material.linked`
 

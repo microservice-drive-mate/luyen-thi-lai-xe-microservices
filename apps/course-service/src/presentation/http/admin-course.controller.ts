@@ -10,7 +10,10 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
+import { buildAuditRequestContext } from '@repo/common';
+import type { Request } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { ActivateCourseCommand } from '../../application/use-cases/activate-course/activate-course.command';
@@ -79,10 +82,12 @@ export class AdminCourseController {
     @AuthenticatedUser() user: JwtPayload,
     @Headers('x-user-id') headerUserId: string | undefined,
     @Body() dto: CreateCourseRequestDto,
+    @Req() request: Request,
   ): Promise<CourseResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
     const result = await this.createCourseUseCase.execute(
       new CreateCourseCommand(
-        resolveActorId(user, headerUserId),
+        actorId,
         dto.title,
         dto.licenseCategory,
         dto.description,
@@ -91,6 +96,7 @@ export class AdminCourseController {
         dto.capacity,
         dto.instructorIds,
         dto.requirement,
+        buildAuditRequestContext(request, user),
       ),
     );
     return CourseResponseDto.fromResult(result);
@@ -127,7 +133,11 @@ export class AdminCourseController {
   async updateCourse(
     @Param('id') id: string,
     @Body() dto: UpdateCourseRequestDto,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
   ): Promise<CourseResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
     const result = await this.updateCourseUseCase.execute(
       new UpdateCourseCommand(
         id,
@@ -137,6 +147,8 @@ export class AdminCourseController {
         dto.tuitionFee,
         dto.capacity,
         dto.requirement,
+        actorId,
+        buildAuditRequestContext(request, user),
       ),
     );
     return CourseResponseDto.fromResult(result);
@@ -145,9 +157,19 @@ export class AdminCourseController {
   @Patch(':id/activate')
   @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @ApiOperation({ summary: 'Activate course' })
-  async activateCourse(@Param('id') id: string): Promise<CourseResponseDto> {
+  async activateCourse(
+    @Param('id') id: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
+  ): Promise<CourseResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
     const result = await this.activateCourseUseCase.execute(
-      new ActivateCourseCommand(id),
+      new ActivateCourseCommand(
+        id,
+        actorId,
+        buildAuditRequestContext(request, user),
+      ),
     );
     return CourseResponseDto.fromResult(result);
   }
@@ -159,9 +181,20 @@ export class AdminCourseController {
   async addLesson(
     @Param('id') courseId: string,
     @Body() dto: AddLessonRequestDto,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
   ): Promise<CourseResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
     const result = await this.addLessonUseCase.execute(
-      new AddLessonCommand(courseId, dto.title, dto.order, dto.content),
+      new AddLessonCommand(
+        courseId,
+        dto.title,
+        dto.order,
+        dto.content,
+        actorId,
+        buildAuditRequestContext(request, user),
+      ),
     );
     return CourseResponseDto.fromResult(result);
   }
@@ -172,9 +205,18 @@ export class AdminCourseController {
   async removeLesson(
     @Param('id') courseId: string,
     @Param('lessonId') lessonId: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
   ): Promise<CourseResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
     const result = await this.removeLessonUseCase.execute(
-      new RemoveLessonCommand(courseId, lessonId),
+      new RemoveLessonCommand(
+        courseId,
+        lessonId,
+        actorId,
+        buildAuditRequestContext(request, user),
+      ),
     );
     return CourseResponseDto.fromResult(result);
   }
@@ -186,7 +228,11 @@ export class AdminCourseController {
   async addMaterial(
     @Param('id') courseId: string,
     @Body() dto: AddCourseMaterialRequestDto,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
   ): Promise<CourseResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
     const result = await this.addCourseMaterialUseCase.execute(
       new AddCourseMaterialCommand(
         courseId,
@@ -194,6 +240,8 @@ export class AdminCourseController {
         dto.fileUrl,
         dto.mediaFileId,
         dto.type,
+        actorId,
+        buildAuditRequestContext(request, user),
       ),
     );
     return CourseResponseDto.fromResult(result);
@@ -202,9 +250,19 @@ export class AdminCourseController {
   @Delete(':id')
   @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
   @ApiOperation({ summary: 'Archive course' })
-  async deleteCourse(@Param('id') id: string): Promise<CourseResponseDto> {
+  async deleteCourse(
+    @Param('id') id: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
+  ): Promise<CourseResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
     const result = await this.deleteCourseUseCase.execute(
-      new DeleteCourseCommand(id),
+      new DeleteCourseCommand(
+        id,
+        actorId,
+        buildAuditRequestContext(request, user),
+      ),
     );
     return CourseResponseDto.fromResult(result);
   }

@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { AuditEventEnvelope } from '@repo/common';
+import { Prisma } from '@prisma/course-client';
 import { CourseEnrollment } from '../../../domain/aggregates/course-enrollment/course-enrollment.aggregate';
 import {
   CourseEnrollmentRepository,
@@ -57,23 +59,37 @@ export class PrismaCourseEnrollmentRepository extends CourseEnrollmentRepository
     };
   }
 
-  async save(enrollment: CourseEnrollment): Promise<void> {
-    await this.prisma.courseEnrollment.upsert({
-      where: { id: enrollment.id },
-      create: {
-        id: enrollment.id,
-        courseId: enrollment.courseId,
-        studentId: enrollment.studentId,
-        status: enrollment.status,
-        progress: enrollment.progress,
-        enrolledAt: enrollment.enrolledAt,
-        completedAt: enrollment.completedAt,
-      },
-      update: {
-        status: enrollment.status,
-        progress: enrollment.progress,
-        completedAt: enrollment.completedAt,
-      },
+  async save(
+    enrollment: CourseEnrollment,
+    auditEvent?: AuditEventEnvelope,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.courseEnrollment.upsert({
+        where: { id: enrollment.id },
+        create: {
+          id: enrollment.id,
+          courseId: enrollment.courseId,
+          studentId: enrollment.studentId,
+          status: enrollment.status,
+          progress: enrollment.progress,
+          enrolledAt: enrollment.enrolledAt,
+          completedAt: enrollment.completedAt,
+        },
+        update: {
+          status: enrollment.status,
+          progress: enrollment.progress,
+          completedAt: enrollment.completedAt,
+        },
+      });
+
+      if (auditEvent) {
+        await tx.outboxMessage.create({
+          data: {
+            eventName: auditEvent.eventName,
+            payload: auditEvent as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
     });
   }
 }

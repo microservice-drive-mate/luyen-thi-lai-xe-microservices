@@ -77,3 +77,25 @@ model LicenseAssignmentAudit {
 
   @@map("license_assignment_audits")
 }
+
+enum OutboxMessageStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
+
+model OutboxMessage {
+  id            String              @id @default(uuid())
+  eventName     String
+  payload       Json
+  status        OutboxMessageStatus @default(PENDING)
+  attempts      Int                 @default(0)
+  nextAttemptAt DateTime            @default(now())
+  publishedAt   DateTime?
+  lastError     String?             @db.Text
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@map("outbox_messages")
+}

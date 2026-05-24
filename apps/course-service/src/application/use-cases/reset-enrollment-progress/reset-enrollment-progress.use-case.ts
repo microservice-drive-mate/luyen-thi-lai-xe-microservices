@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
+import { createAuditEvent, IUseCase } from '@repo/common';
 import { EnrollmentNotFoundException } from '../../../domain/exceptions/enrollment-not-found.exception';
 import { EnrollmentUnauthorizedException } from '../../../domain/exceptions/enrollment-unauthorized.exception';
 import { CourseEnrollmentRepository } from '../../../domain/repositories/course-enrollment.repository';
@@ -29,7 +29,18 @@ export class ResetEnrollmentProgressUseCase
     }
 
     enrollment.resetProgress();
-    await this.enrollmentRepository.save(enrollment);
+    await this.enrollmentRepository.save(
+      enrollment,
+      createAuditEvent({
+        serviceName: 'course-service',
+        actorId: command.studentId,
+        action: 'ENROLLMENT_PROGRESS_RESET',
+        resourceType: 'COURSE_ENROLLMENT',
+        resourceId: enrollment.id,
+        requestContext: command.auditContext,
+        metadata: { courseId: enrollment.courseId },
+      }),
+    );
 
     const events = enrollment.getDomainEvents();
     await this.eventPublisher.publishAll(events);

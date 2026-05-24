@@ -139,6 +139,19 @@ services:
         paths:
           - /media-service
         strip_path: true
+
+  # 10. Centralized security audit trail
+  - name: audit-service
+    url: http://audit-service:3000
+    routes:
+      - name: audit-admin-route
+        paths:
+          - /admin/audit-logs
+        strip_path: false
+      - name: audit-swagger-route
+        paths:
+          - /audit-service
+        strip_path: true
 # ========================================================
 # Cấu hình Plugins chung (Optional)
 # ========================================================

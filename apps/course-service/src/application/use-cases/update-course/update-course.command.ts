@@ -1,3 +1,4 @@
+import { AuditRequestContext } from '@repo/common';
 import { CreateCourseRequirementFields } from '../create-course/create-course.command';
 
 export class UpdateCourseCommand {
@@ -9,5 +10,7 @@ export class UpdateCourseCommand {
     readonly tuitionFee?: number,
     readonly capacity?: number | null,
     readonly requirement?: CreateCourseRequirementFields | null,
+    readonly actorId?: string,
+    readonly auditContext?: AuditRequestContext,
   ) {}
 }

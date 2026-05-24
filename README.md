@@ -26,6 +26,7 @@ File roadmap việc tiếp theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
   - `notification-service`
   - `analytics-service`
   - `simulation-service`
+  - `audit-service`
 - Supporting services:
   - `media-service`
   - `docs-service` dùng cho tài liệu / Swagger tổng hợp khi cần
@@ -202,6 +203,7 @@ Hướng dẫn chi tiết: [guides/consul/WORKFLOW.md](./guides/consul/WORKFLOW.
 - `/analytics` -> `analytics-service`
 - `/simulation` -> `simulation-service`
 - `/media` -> `media-service`
+- `/admin/audit-logs` -> `audit-service`
 
 ## 9. Seed demo data khi chạy bằng Docker
 

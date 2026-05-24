@@ -111,6 +111,90 @@ docker compose ps user-service
 
 Expected: `user-service` duoc Docker Compose start lai do `restart: unless-stopped`. Luu y Docker Compose healthcheck chi danh dau `healthy/unhealthy`; no khong tu restart container chi vi healthcheck fail neu process van dang chay. Khong dung `docker compose stop` de demo restart policy vi day la thao tac dung thu cong co chu dich.
 
+### 2.2 Security: Access Logging + Audit Trail + Transactional Outbox
+
+Security tactic phase nay tach thanh 3 tang:
+
+- Access log: moi HTTP request duoc log metadata vao Winston/Logstash/Elasticsearch voi `correlationId`.
+- Transactional outbox: audited business mutation va audit event duoc ghi trong cung database transaction.
+- Centralized audit log: cac hanh dong security/business quan trong duoc ghi immutable trong `audit-service`.
+
+Design pattern ap dung:
+
+- **Transactional Outbox Pattern** cho audit events o `user-service`, `course-service`, `exam-service`.
+- **Idempotent Consumer** o `audit-service` bang unique `eventId`.
+- **Correlation Id** de join access log trong ELK voi audit trail trong `audit_db`.
+
+Scope phase hien tai:
+
+| Service | Vai tro | Evidence |
+| --- | --- | --- |
+| `@repo/common` | Correlation id + access log | Response co `x-correlation-id`, log co `logType=access`. |
+| `user-service` | Producer audit cho assign license | `user_db.outbox_messages`, action `USER_LICENSE_ASSIGNED`. |
+| `course-service` | Producer audit cho course/enrollment mutations | `course_db.outbox_messages`, action `COURSE_*` hoac `ENROLLMENT_PROGRESS_RESET`. |
+| `exam-service` | Producer audit cho exam-template mutations | `exam_db.outbox_messages`, action `EXAM_TEMPLATE_*`. |
+| `audit-service` | Consumer/source of truth audit trail | `audit_db.audit_logs`, API `/admin/audit-logs`. |
+
+Audited actions:
+
+| Service | Actions |
+| --- | --- |
+| `user-service` | `USER_LICENSE_ASSIGNED` |
+| `course-service` | `COURSE_CREATED`, `COURSE_UPDATED`, `COURSE_ARCHIVED`, `COURSE_ACTIVATED`, `COURSE_LESSON_ADDED`, `COURSE_LESSON_REMOVED`, `COURSE_MATERIAL_ADDED`, `ENROLLMENT_PROGRESS_RESET` |
+| `exam-service` | `EXAM_TEMPLATE_CREATED`, `EXAM_TEMPLATE_UPDATED`, `EXAM_TEMPLATE_DELETED` |
+
+Demo nhanh:
+
+```powershell
+# Goi mot audited action, vi du assign license tier
+curl -X PATCH http://localhost:8000/admin/users/<student-id>/license-tier `
+  -H "Authorization: Bearer <admin_access_token>" `
+  -H "Content-Type: application/json" `
+  -d "{ \"licenseTier\": \"B1\" }"
+
+# Query centralized audit trail
+curl "http://localhost:8000/admin/audit-logs?action=USER_LICENSE_ASSIGNED" `
+  -H "Authorization: Bearer <admin_access_token>"
+```
+
+Expected:
+
+- Response audited action co header `x-correlation-id`.
+- `outbox_messages` trong `user_db` co row `security.audit.recorded`, `status = PUBLISHED`.
+- `audit_db.audit_logs` co record `USER_LICENSE_ASSIGNED`.
+- Access log trong ELK co cung `correlationId`.
+
+Verify bang DB:
+
+```powershell
+docker compose exec db-user psql -U user -d user_db -c "SELECT payload->>'action' AS action, status, attempts, \"publishedAt\" FROM outbox_messages ORDER BY \"createdAt\" DESC LIMIT 5;"
+docker compose exec db-audit psql -U user -d audit_db -c "SELECT \"serviceName\", action, \"resourceType\", \"resourceId\", \"correlationId\" FROM audit_logs ORDER BY \"occurredAt\" DESC LIMIT 5;"
+```
+
+Demo outbox khi RabbitMQ loi:
+
+```powershell
+docker compose stop rabbitmq
+# Goi audited action
+# Kiem tra outbox_messages van giu event PENDING/FAILED de retry
+docker compose start rabbitmq
+# Kiem tra event duoc publish lai va audit log xuat hien
+```
+
+Expected khi RabbitMQ down:
+
+- Business mutation van commit neu request path khong phu thuoc RabbitMQ truc tiep.
+- Producer DB co outbox row `PENDING` hoac `FAILED`.
+- Audit-service chua co record moi cho den khi broker hoat dong lai va relay publish thanh cong.
+
+Chi tiet API va test:
+
+- `guides/api/api-spec-audit.md`
+- `guides/testing/audit-service-test-guide.md`
+- `guides/api/api-spec-user.md` phan Security Audit
+- `guides/api/api-spec-course.md` phan Security Audit
+- `guides/api/api-spec-exam.md` phan Security Audit
+
 ## 3. Prerequisites
 
 Cần chuẩn bị:

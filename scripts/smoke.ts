@@ -19,6 +19,7 @@ const checks: RouteCheck[] = [
   { name: 'analytics-service', routePrefix: '/analytics-service' },
   { name: 'simulation-service', routePrefix: '/simulation-service' },
   { name: 'media-service', routePrefix: '/media-service' },
+  { name: 'audit-service', routePrefix: '/audit-service' },
 ];
 
 async function main(): Promise<void> {

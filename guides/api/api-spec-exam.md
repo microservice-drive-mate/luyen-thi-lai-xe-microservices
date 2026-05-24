@@ -995,6 +995,59 @@ Frontend note: use this endpoint for result screen refresh/deep link; use submit
 
 ## Events Published
 
+## Security Audit
+
+Access logging is emitted for every HTTP request. Successful exam-template mutations write `security.audit.recorded` into `exam_db.outbox_messages` in the same transaction as the template change. The outbox relay publishes it to RabbitMQ, and `audit-service` persists it into `audit_db.audit_logs`.
+
+Student exam answers/session operations are not in audit phase 1; they are already persisted as business records in `exam_db`. Phase 1 focuses on admin template mutations because these affect exam structure and grading rules.
+
+| Endpoint | Audit action | Resource | Metadata |
+| --- | --- | --- | --- |
+| `POST /admin/exams/templates` | `EXAM_TEMPLATE_CREATED` | `EXAM_TEMPLATE/:id` | `{ "name": "...", "licenseCategory": "B1" }` |
+| `PATCH /admin/exams/templates/:id` | `EXAM_TEMPLATE_UPDATED` | `EXAM_TEMPLATE/:id` | `{ "name": "...", "version": 2 }` |
+| `DELETE /admin/exams/templates/:id` | `EXAM_TEMPLATE_DELETED` | `EXAM_TEMPLATE/:id` | `{ "name": "...", "version": 3 }` |
+
+Example audit event:
+
+```json
+{
+  "eventId": "audit-event-uuid",
+  "eventName": "security.audit.recorded",
+  "schemaVersion": 1,
+  "serviceName": "exam-service",
+  "actorId": "admin-keycloak-sub",
+  "actorRole": "ADMIN",
+  "action": "EXAM_TEMPLATE_UPDATED",
+  "resourceType": "EXAM_TEMPLATE",
+  "resourceId": "template-id",
+  "outcome": "SUCCESS",
+  "occurredAt": "2026-05-24T10:00:00.000Z",
+  "correlationId": "request-correlation-id",
+  "requestPath": "/admin/exams/templates/template-id",
+  "httpMethod": "PATCH",
+  "metadata": {
+    "name": "Đề thi B1 cập nhật",
+    "version": 2
+  }
+}
+```
+
+Verification:
+
+```sql
+SELECT payload->>'action' AS action, status, attempts, "publishedAt", "lastError"
+FROM outbox_messages
+ORDER BY "createdAt" DESC
+LIMIT 10;
+```
+
+Centralized query:
+
+```http
+GET /admin/audit-logs?serviceName=exam-service&resourceId=<template-id>
+Authorization: Bearer <admin_access_token>
+```
+
 ### `exam.session.completed`
 
 ```json

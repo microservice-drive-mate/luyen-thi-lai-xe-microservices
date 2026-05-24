@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { AuditEventEnvelope } from '@repo/common';
 import { Prisma } from '@prisma/exam-client';
 import { ExamTemplate } from '../../../domain/aggregates/exam-template/exam-template.aggregate';
 import {
@@ -51,45 +52,59 @@ export class PrismaExamTemplateRepository extends ExamTemplateRepository {
     return count > 0;
   }
 
-  async save(template: ExamTemplate): Promise<void> {
-    await this.prisma.examTemplate.upsert({
-      where: { id: template.id },
-      create: {
-        id: template.id,
-        name: template.name,
-        description: template.description,
-        licenseCategory: template.licenseCategory,
-        totalQuestions: template.totalQuestions,
-        passingScore: template.passingScore,
-        durationMinutes: template.durationMinutes,
-        criticalQuestions: template.criticalQuestions,
-        maxCriticalMistakes: template.maxCriticalMistakes,
-        shuffleQuestions: template.shuffleQuestions,
-        topicDistribution:
-          template.topicDistribution as unknown as Prisma.InputJsonValue,
-        isActive: template.isActive,
-        isDeleted: template.isDeleted,
-        version: template.version,
-        createdById: template.createdById,
-        createdAt: template.createdAt,
-        updatedAt: template.updatedAt,
-      },
-      update: {
-        name: template.name,
-        description: template.description,
-        totalQuestions: template.totalQuestions,
-        passingScore: template.passingScore,
-        durationMinutes: template.durationMinutes,
-        criticalQuestions: template.criticalQuestions,
-        maxCriticalMistakes: template.maxCriticalMistakes,
-        shuffleQuestions: template.shuffleQuestions,
-        topicDistribution:
-          template.topicDistribution as unknown as Prisma.InputJsonValue,
-        isActive: template.isActive,
-        isDeleted: template.isDeleted,
-        version: template.version,
-        updatedAt: template.updatedAt,
-      },
+  async save(
+    template: ExamTemplate,
+    auditEvent?: AuditEventEnvelope,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.examTemplate.upsert({
+        where: { id: template.id },
+        create: {
+          id: template.id,
+          name: template.name,
+          description: template.description,
+          licenseCategory: template.licenseCategory,
+          totalQuestions: template.totalQuestions,
+          passingScore: template.passingScore,
+          durationMinutes: template.durationMinutes,
+          criticalQuestions: template.criticalQuestions,
+          maxCriticalMistakes: template.maxCriticalMistakes,
+          shuffleQuestions: template.shuffleQuestions,
+          topicDistribution:
+            template.topicDistribution as unknown as Prisma.InputJsonValue,
+          isActive: template.isActive,
+          isDeleted: template.isDeleted,
+          version: template.version,
+          createdById: template.createdById,
+          createdAt: template.createdAt,
+          updatedAt: template.updatedAt,
+        },
+        update: {
+          name: template.name,
+          description: template.description,
+          totalQuestions: template.totalQuestions,
+          passingScore: template.passingScore,
+          durationMinutes: template.durationMinutes,
+          criticalQuestions: template.criticalQuestions,
+          maxCriticalMistakes: template.maxCriticalMistakes,
+          shuffleQuestions: template.shuffleQuestions,
+          topicDistribution:
+            template.topicDistribution as unknown as Prisma.InputJsonValue,
+          isActive: template.isActive,
+          isDeleted: template.isDeleted,
+          version: template.version,
+          updatedAt: template.updatedAt,
+        },
+      });
+
+      if (auditEvent) {
+        await tx.outboxMessage.create({
+          data: {
+            eventName: auditEvent.eventName,
+            payload: auditEvent as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
     });
   }
 }

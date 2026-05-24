@@ -165,6 +165,23 @@ services:
       retries: 20
       start_period: 45s
 
+  db-audit:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: audit_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5441:5432"
+    volumes:
+      - db_audit_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d audit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
   # ========================================================
   # 2. MESSAGE BROKER (Giao tiếp liên dịch vụ)
   # ========================================================
@@ -241,7 +258,9 @@ services:
   identity-service:
     build:
       context: .
-      dockerfile: ./apps/identity-service/Dockerfile
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE_NAME: identity-service
     environment:
       - DATABASE_URL=postgresql://user:password@db-identity:5432/identity_db
       - CONSUL_URL=http://consul:8500
@@ -276,7 +295,9 @@ services:
   user-service:
     build:
       context: .
-      dockerfile: ./apps/user-service/Dockerfile
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE_NAME: user-service
     environment:
       - DATABASE_URL=postgresql://user:password@db-user:5432/user_db
       - CONSUL_URL=http://consul:8500
@@ -286,7 +307,6 @@ services:
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
-      - LOGSTASH_HOST=logstash
     ports:
       - "3002:3000"
     restart: unless-stopped
@@ -309,7 +329,9 @@ services:
   exam-service:
     build:
       context: .
-      dockerfile: ./apps/exam-service/Dockerfile
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE_NAME: exam-service
     environment:
       - DATABASE_URL=postgresql://user:password@db-exam:5432/exam_db
       - CONSUL_URL=http://consul:8500
@@ -343,7 +365,9 @@ services:
   course-service:
     build:
       context: .
-      dockerfile: ./apps/course-service/Dockerfile
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE_NAME: course-service
     environment:
       - DATABASE_URL=postgresql://user:password@db-course:5432/course_db
       - CONSUL_URL=http://consul:8500
@@ -375,7 +399,9 @@ services:
   question-service:
     build:
       context: .
-      dockerfile: ./apps/question-service/Dockerfile
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE_NAME: question-service
     environment:
       - DATABASE_URL=postgresql://user:password@db-question:5432/question_db
       - CONSUL_URL=http://consul:8500
@@ -407,8 +433,11 @@ services:
   notification-service:
     build:
       context: .
-      dockerfile: ./apps/notification-service/Dockerfile
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE_NAME: notification-service
     environment:
+      - DATABASE_URL=postgresql://user:password@db-notification:5432/notification_db
       - CONSUL_URL=http://consul:8500
       - LOGSTASH_HOST=logstash
       - RABBITMQ_URL=amqp://rabbitmq:5672
@@ -438,8 +467,11 @@ services:
   analytics-service:
     build:
       context: .
-      dockerfile: ./apps/analytics-service/Dockerfile
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE_NAME: analytics-service
     environment:
+      - DATABASE_URL=postgresql://user:password@db-analytics:5432/analytics_db
       - CONSUL_URL=http://consul:8500
       - LOGSTASH_HOST=logstash
       - RABBITMQ_URL=amqp://rabbitmq:5672
@@ -471,8 +503,11 @@ services:
   simulation-service:
     build:
       context: .
-      dockerfile: ./apps/simulation-service/Dockerfile
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE_NAME: simulation-service
     environment:
+      - DATABASE_URL=postgresql://user:password@db-simulation:5432/simulation_db
       - CONSUL_URL=http://consul:8500
       - LOGSTASH_HOST=logstash
       - RABBITMQ_URL=amqp://rabbitmq:5672
@@ -505,7 +540,9 @@ services:
   media-service:
     build:
       context: .
-      dockerfile: ./apps/media-service/Dockerfile
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE_NAME: media-service
     environment:
       - DATABASE_URL=postgresql://user:password@db-media:5432/media_db
       - CONSUL_URL=http://consul:8500
@@ -524,6 +561,40 @@ services:
     restart: unless-stopped
     depends_on:
       db-media:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  audit-service:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.service
+      args:
+        SERVICE_NAME: audit-service
+    environment:
+      - DATABASE_URL=postgresql://user:password@db-audit:5432/audit_db
+      - CONSUL_URL=http://consul:8500
+      - LOGSTASH_HOST=logstash
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
+      - KEYCLOAK_CLIENT_ID=nestjs-backend
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+    ports:
+      - "3011:3000"
+    restart: unless-stopped
+    depends_on:
+      db-audit:
         condition: service_healthy
       consul:
         condition: service_healthy
@@ -690,6 +761,7 @@ volumes:
   db_analytics_data:
   db_simulation_data:
   db_media_data:
+  db_audit_data:
   consul_data:
   rabbitmq_data:
   elasticsearch_data:

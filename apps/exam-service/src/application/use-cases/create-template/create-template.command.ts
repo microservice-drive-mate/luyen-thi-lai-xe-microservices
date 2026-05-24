@@ -1,3 +1,4 @@
+import { AuditRequestContext } from '@repo/common';
 import {
   ExamTopicDistributionItem,
   LicenseCategory,
@@ -16,5 +17,6 @@ export class CreateTemplateCommand {
     readonly shuffleQuestions: boolean,
     readonly topicDistribution: ExamTopicDistributionItem[],
     readonly createdById: string,
+    readonly auditContext?: AuditRequestContext,
   ) {}
 }

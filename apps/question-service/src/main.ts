@@ -8,6 +8,8 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
+  AccessLogInterceptor,
+  CorrelationIdMiddleware,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
@@ -34,8 +36,12 @@ async function bootstrap() {
   });
 
   app.enableCors();
+  app.use(new CorrelationIdMiddleware().use);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-  app.useGlobalInterceptors(new ApiResponseInterceptor());
+  app.useGlobalInterceptors(
+    new AccessLogInterceptor({ serviceName: 'question-service' }),
+    new ApiResponseInterceptor(),
+  );
   app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
 
   setupMicroserviceSwagger(app, {

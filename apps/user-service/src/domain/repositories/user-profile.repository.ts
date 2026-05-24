@@ -1,3 +1,4 @@
+import { AuditEventEnvelope } from '@repo/common';
 import { UserProfile } from '../aggregates/user-profile/user-profile.aggregate';
 import { UserRole } from '../aggregates/user-profile/user-profile.types';
 
@@ -20,6 +21,9 @@ export abstract class UserProfileRepository {
   abstract findByMediaFileId(mediaFileId: string): Promise<UserProfile | null>;
   abstract existsById(id: string): Promise<boolean>;
   abstract existsByEmail(email: string): Promise<boolean>;
-  abstract save(profile: UserProfile): Promise<void>;
+  abstract save(
+    profile: UserProfile,
+    auditEvent?: AuditEventEnvelope,
+  ): Promise<void>;
   abstract list(filter: ListUsersFilter): Promise<ListUsersPage>;
 }
