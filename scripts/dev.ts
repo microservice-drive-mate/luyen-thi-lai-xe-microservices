@@ -11,6 +11,8 @@ const result = spawnSync(
     env: {
       ...process.env,
       CONSUL_URL: process.env.CONSUL_URL || 'http://127.0.0.1:8500',
+      LOGSTASH_HOST: process.env.LOGSTASH_HOST ?? '127.0.0.1',
+      LOGSTASH_PORT: process.env.LOGSTASH_PORT ?? '5044',
       NODE_ENV: 'development-local',
     },
   },

@@ -34,6 +34,8 @@ remote_consul_dir="${remote_root}/docker/consul"
 remote_consul_init_file="${remote_consul_dir}/init.sh"
 remote_keycloak_dir="${remote_root}/docker/keycloak"
 remote_keycloak_realm_file="${remote_keycloak_dir}/realm-export.json"
+remote_logstash_dir="${remote_root}/docker/logstash"
+remote_logstash_pipeline_file="${remote_logstash_dir}/logstash.conf"
 
 ssh_opts=(
   -o StrictHostKeyChecking=no
@@ -41,13 +43,14 @@ ssh_opts=(
 
 echo "Preparing remote directory on ${DEPLOY_HOST}"
 ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-  "mkdir -p '${remote_root}' '${remote_kong_dir}' '${remote_consul_dir}' '${remote_keycloak_dir}'"
+  "mkdir -p '${remote_root}' '${remote_kong_dir}' '${remote_consul_dir}' '${remote_keycloak_dir}' '${remote_logstash_dir}'"
 
 echo "Uploading deployment assets"
 scp "${ssh_opts[@]}" docker-compose.deploy.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_compose_file}"
 scp "${ssh_opts[@]}" kong/kong.yaml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_kong_file}"
 scp "${ssh_opts[@]}" docker/consul/init.sh "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_consul_init_file}"
 scp "${ssh_opts[@]}" docker/keycloak/realm-export.json "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_keycloak_realm_file}"
+scp "${ssh_opts[@]}" docker/logstash/logstash.conf "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_logstash_pipeline_file}"
 
 echo "Deploying ${IMAGE_TAG} to ${DEPLOY_ENV}"
 ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
@@ -80,6 +83,9 @@ infra_services=(
   consul
   consul-init
   keycloak
+  elasticsearch
+  logstash
+  kibana
 )
 
 app_services=(

@@ -1,3 +1,8 @@
+x-observability-env: &observability-env
+  LOGSTASH_HOST: logstash
+  LOGSTASH_PORT: 5044
+  LOG_CONSOLE_FORMAT: json
+
 services:
   db-identity:
     image: postgres:15-alpine
@@ -246,10 +251,55 @@ services:
     volumes:
       - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms512m -Xmx512m}
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.3
+    restart: unless-stopped
+    volumes:
+      - ./docker/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    ports:
+      - "${LOGSTASH_HOST_PORT:-5044}:5044"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.3
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
   identity-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-identity-service:${IMAGE_TAG}
     restart: unless-stopped
     environment:
+      <<: *observability-env
+      SERVICE_NAME: identity-service
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
@@ -278,6 +328,8 @@ services:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-user-service:${IMAGE_TAG}
     restart: unless-stopped
     environment:
+      <<: *observability-env
+      SERVICE_NAME: user-service
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
@@ -303,6 +355,8 @@ services:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-exam-service:${IMAGE_TAG}
     restart: unless-stopped
     environment:
+      <<: *observability-env
+      SERVICE_NAME: exam-service
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
@@ -330,6 +384,8 @@ services:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-course-service:${IMAGE_TAG}
     restart: unless-stopped
     environment:
+      <<: *observability-env
+      SERVICE_NAME: course-service
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
@@ -358,6 +414,8 @@ services:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-question-service:${IMAGE_TAG}
     restart: unless-stopped
     environment:
+      <<: *observability-env
+      SERVICE_NAME: question-service
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
@@ -383,6 +441,8 @@ services:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-notification-service:${IMAGE_TAG}
     restart: unless-stopped
     environment:
+      <<: *observability-env
+      SERVICE_NAME: notification-service
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
@@ -408,6 +468,8 @@ services:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-analytics-service:${IMAGE_TAG}
     restart: unless-stopped
     environment:
+      <<: *observability-env
+      SERVICE_NAME: analytics-service
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
@@ -436,6 +498,8 @@ services:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-simulation-service:${IMAGE_TAG}
     restart: unless-stopped
     environment:
+      <<: *observability-env
+      SERVICE_NAME: simulation-service
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
@@ -464,6 +528,8 @@ services:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-media-service:${IMAGE_TAG}
     restart: unless-stopped
     environment:
+      <<: *observability-env
+      SERVICE_NAME: media-service
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
@@ -493,6 +559,8 @@ services:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-audit-service:${IMAGE_TAG}
     restart: unless-stopped
     environment:
+      <<: *observability-env
+      SERVICE_NAME: audit-service
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       CONSUL_URL: http://consul:8500
@@ -557,3 +625,4 @@ volumes:
   rabbitmq_data:
   redis_data:
   consul_data:
+  elasticsearch_data:
