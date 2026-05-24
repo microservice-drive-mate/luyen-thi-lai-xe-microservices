@@ -1,8 +1,8 @@
-# Phase 8 - Backup Strategy, Keycloak Backup và Restore Test
+# Backup Strategy, Keycloak Backup và Restore Test
 
 Tài liệu này mô tả phạm vi backup, cơ chế tự động backup hằng ngày, backup Keycloak và kiểm tra restore.
 
-## Phase 8.1 - Backup Strategy & Scope
+## Backup Strategy & Scope
 
 Các database được backup:
 
@@ -49,7 +49,7 @@ backups/postgres/<env>/<timestamp>/
 
 `backups/` bị ignore bởi Git vì chứa dữ liệu thật.
 
-## Phase 8.2 - Automated Daily Backup
+## Automated Daily Backup
 
 Service `postgres-backup` đã được thêm vào:
 
@@ -137,9 +137,9 @@ Liệt kê metadata bằng `pg_restore`:
 pg_restore --list backups/postgres/<env>/<timestamp>/<file>.dump
 ```
 
-Diễn tập restore đầy đủ sẽ được xử lý ở Phase 8.4.
+Diễn tập restore đầy đủ được mô tả ở phần Restore Test.
 
-## Phase 8.3 - Keycloak Backup
+## Keycloak Backup
 
 Keycloak được backup theo 2 lớp:
 
@@ -172,7 +172,7 @@ Các file được tạo:
 
 Lưu ý: source khôi phục đầy đủ nhất cho Keycloak vẫn là `keycloak_db` dump. Realm export giúp review cấu hình, phục hồi thủ công một phần và kiểm tra nhanh drift cấu hình.
 
-## Phase 8.4 - Restore Test
+## Restore Test
 
 Script test restore:
 

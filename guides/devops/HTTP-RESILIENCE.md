@@ -1,4 +1,4 @@
-# Phase 7 - HTTP Client Resilience
+# HTTP Client Resilience
 
 Tài liệu này mô tả chuẩn timeout, retry và circuit breaker cho các lời gọi HTTP đồng bộ quan trọng.
 

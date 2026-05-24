@@ -1,6 +1,6 @@
-# Phase 7 - RabbitMQ Resilience, DLQ, Retry và Backoff
+# RabbitMQ Resilience, DLQ, Retry và Backoff
 
-Tài liệu này mô tả phần gia cố RabbitMQ cho Phase 7.
+Tài liệu này mô tả phần gia cố RabbitMQ để message lỗi không làm sập toàn bộ luồng xử lý.
 
 ## Mục tiêu
 
@@ -13,7 +13,7 @@ Tài liệu này mô tả phần gia cố RabbitMQ cho Phase 7.
 - Prometheus/Grafana theo dõi retry, DLQ và RabbitMQ queue depth.
 - Alertmanager cảnh báo khi DLQ có message hoặc retry backlog tăng cao.
 
-## Phase 7.1 - RabbitMQ Topology
+## RabbitMQ Topology
 
 Với queue chính `<service>_service_events`, hệ thống tạo thêm:
 
@@ -35,7 +35,7 @@ user_service_events.retry.3
 user_service_events.dlq
 ```
 
-## Phase 7.2 - Retry và Backoff
+## Retry và Backoff
 
 ```text
 Message -> queue chính -> handler
@@ -59,7 +59,7 @@ Các header được gắn thêm khi retry/DLQ:
 | `x-failed-at` | Thời điểm lỗi gần nhất |
 | `x-correlation-id` | Mã truy vết request/event nếu có |
 
-## Phase 7.3 - Shared Resilience Module
+## Shared Resilience Module
 
 Logic RabbitMQ resilience nằm trong `@repo/common`:
 
@@ -80,7 +80,7 @@ Interceptor cũng lưu khóa idempotency thành công trong memory TTL 24 giờ.
 
 Lưu ý: cơ chế này chống duplicate trong phạm vi instance đang chạy. Nếu cần exactly-once bền vững qua restart, từng service nên bổ sung bảng processed-message riêng hoặc unique constraint nghiệp vụ.
 
-## Phase 7.4 - Service Rollout
+## Service Rollout
 
 - `user-service`
 - `course-service`
@@ -95,7 +95,7 @@ Lưu ý: cơ chế này chống duplicate trong phạm vi instance đang chạy.
 
 Các handler cũ có `try/catch` đã được chỉnh để log lỗi rồi `throw` lại. Nếu handler nuốt lỗi, interceptor không thể đưa message vào retry queue hoặc DLQ.
 
-## Phase 7.5 - Metrics, Dashboard và Alert
+## Metrics, Dashboard và Alert
 
 App metrics expose qua `/metrics`:
 
@@ -125,7 +125,7 @@ Alert đã cấu hình:
 | `RabbitMqMessagesDeadLettered` | Service đưa message vào DLQ trong 5 phút gần nhất |
 | `RabbitMqRetryRateHigh` | Retry rate vượt 0.2 msg/s trong 5 phút |
 
-## Phase 7.6 - Smoke Test và Runbook
+## Smoke Test và Runbook
 
 Sau khi chạy infra và services:
 

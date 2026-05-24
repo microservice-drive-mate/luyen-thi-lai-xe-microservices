@@ -1,4 +1,4 @@
-# Runbook Observability - Phase 6.4-6.5
+# Runbook Observability
 
 Tài liệu này dùng khi hệ thống phát cảnh báo từ Prometheus/Alertmanager hoặc khi cần kiểm tra nhanh stack quan sát.
 

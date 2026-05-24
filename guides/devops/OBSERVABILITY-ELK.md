@@ -1,6 +1,6 @@
-# Phase 6.1-6.5 - Logging, ELK, Correlation ID, Metrics và Alerting
+# Observability - Logging, ELK, Correlation ID, Metrics và Alerting
 
-Tài liệu này mô tả phần logging tập trung bằng ELK cho Phase 6.1, truy vết request bằng Correlation ID cho Phase 6.2, thu thập metrics bằng Prometheus/Grafana cho Phase 6.3, route cảnh báo bằng Alertmanager cho Phase 6.4 và smoke test/runbook vận hành cho Phase 6.5.
+Tài liệu này mô tả phần logging tập trung bằng ELK, truy vết request bằng Correlation ID, thu thập metrics bằng Prometheus/Grafana, route cảnh báo bằng Alertmanager và smoke test/runbook vận hành.
 
 ## Mục tiêu
 
@@ -122,7 +122,7 @@ Grafana mặc định local: admin / admin
 Gửi một request qua Kong:
 
 ```powershell
-$cid = "demo-phase-6-1-" + [guid]::NewGuid().ToString()
+$cid = "demo-observability-" + [guid]::NewGuid().ToString()
 curl.exe -H "x-correlation-id: $cid" http://localhost:8000/user-service/health/live
 ```
 
@@ -161,15 +161,15 @@ logType: "access" and statusCode >= 500
 ```
 
 ```text
-correlationId: "demo-phase-6-1-*"
+correlationId: "demo-observability-*"
 ```
 
-## Verify Phase 6.2
+## Verify Correlation ID
 
 Case 1: Client tự truyền Correlation ID.
 
 ```powershell
-$cid = "phase-6-2-" + [guid]::NewGuid().ToString()
+$cid = "correlation-" + [guid]::NewGuid().ToString()
 curl.exe -i -H "x-correlation-id: $cid" http://localhost:8000/user-service/health/live
 curl.exe "http://localhost:9200/microservices-logs-*/_search?q=correlationId:$cid&pretty"
 ```
@@ -202,7 +202,7 @@ Kỳ vọng:
 - Service publish log có `correlationId`.
 - Service consume message cũng log cùng `correlationId`.
 
-## Verify Phase 6.3
+## Verify Metrics
 
 Kiểm tra metrics endpoint của một service:
 
@@ -263,7 +263,7 @@ Các panel chính:
 - CPU Usage
 - Firing Alerts
 
-## Verify Phase 6.4
+## Verify Alerting
 
 Kiểm tra Prometheus đã kết nối Alertmanager:
 
@@ -296,7 +296,7 @@ http://host.docker.internal:9099/alertmanager
 
 Khi triển khai thật, thay webhook này bằng Slack/Discord/Teams hoặc webhook nội bộ của team.
 
-## Verify Phase 6.5
+## Verify Smoke Test và Runbook
 
 Chạy smoke test cho stack quan sát:
 
@@ -350,7 +350,7 @@ ES_JAVA_OPTS=-Xms512m -Xmx512m
 Trong production thật, nên giới hạn public access tới Elasticsearch, Logstash và Kibana bằng firewall/VPN/reverse proxy có auth.
 Với Grafana/Prometheus cũng nên giới hạn public access tương tự; ít nhất đổi `GRAFANA_ADMIN_PASSWORD` trong file env thật.
 
-## Checklist hoàn thành Phase 6.1
+## Checklist Logging và ELK
 
 - `npm run infra:up` hoặc `npm run docker:up` khởi động được Elasticsearch, Logstash, Kibana.
 - Service gửi log JSON sang Logstash.
@@ -359,7 +359,7 @@ Với Grafana/Prometheus cũng nên giới hạn public access tương tự; ít
 - Access log query được theo `correlationId`.
 - Deploy compose có ELK và app services có biến `LOGSTASH_HOST`.
 
-## Checklist hoàn thành Phase 6.2
+## Checklist Correlation ID
 
 - Kong config có `correlation-id` plugin dùng header `x-correlation-id`.
 - CORS cho phép request header và expose response header `x-correlation-id`.
@@ -369,7 +369,7 @@ Với Grafana/Prometheus cũng nên giới hạn public access tương tự; ít
 - RabbitMQ event publisher enrich payload bằng `correlationId`.
 - Audit event fallback lấy correlation ID từ request context.
 
-## Checklist hoàn thành Phase 6.3
+## Checklist Metrics và Dashboard
 
 - `MetricsModule` được dùng chung từ `@repo/common`.
 - Tất cả service expose endpoint `/metrics`.
@@ -380,7 +380,7 @@ Với Grafana/Prometheus cũng nên giới hạn public access tương tự; ít
 - Grafana tự provision dashboard `Microservices Observability`.
 - Deploy script upload Prometheus/Grafana config lên server.
 
-## Checklist hoàn thành Phase 6.4
+## Checklist Alerting
 
 - Prometheus có cấu hình `alerting.alertmanagers`.
 - `alertmanager` chạy trong hybrid, full Docker và deploy compose.
@@ -388,7 +388,7 @@ Với Grafana/Prometheus cũng nên giới hạn public access tương tự; ít
 - File env mẫu có `ALERTMANAGER_PORT`.
 - Alertmanager có route mặc định và inhibit rule cơ bản để giảm nhiễu cảnh báo.
 
-## Checklist hoàn thành Phase 6.5
+## Checklist Smoke Test và Runbook
 
 - Có script `npm run observability:smoke`.
 - Smoke test kiểm tra Prometheus ready, alert rules, Alertmanager ready, Grafana health, Elasticsearch health và Kibana status.
