@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
+import { createAuditEvent, IUseCase } from '@repo/common';
 import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
 import { CourseRepository } from '../../../domain/repositories/course.repository';
 import { CourseCachePort } from '../../ports/course-cache.port';
@@ -28,7 +28,18 @@ export class AddCourseMaterialUseCase
       type: command.type,
     });
 
-    await this.courseRepository.save(course);
+    await this.courseRepository.save(
+      course,
+      createAuditEvent({
+        serviceName: 'course-service',
+        actorId: command.actorId ?? course.createdById,
+        action: 'COURSE_MATERIAL_ADDED',
+        resourceType: 'COURSE',
+        resourceId: course.id,
+        requestContext: command.auditContext,
+        metadata: { title: command.title, mediaFileId: command.mediaFileId },
+      }),
+    );
     await this.courseCache.invalidateCourse(course.id);
 
     await this.eventPublisher.publishAll(course.getDomainEvents());

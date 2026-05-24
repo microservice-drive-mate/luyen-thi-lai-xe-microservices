@@ -26,6 +26,8 @@ File roadmap việc tiếp theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
   - `notification-service`
   - `analytics-service`
   - `simulation-service`
+  - `audit-service`
+  - `audit-service`
 - Supporting services:
   - `media-service`
   - `docs-service` dùng cho tài liệu / Swagger tổng hợp khi cần
@@ -202,13 +204,14 @@ Hướng dẫn chi tiết: [guides/consul/WORKFLOW.md](./guides/consul/WORKFLOW.
 - `/analytics` -> `analytics-service`
 - `/simulation` -> `simulation-service`
 - `/media` -> `media-service`
+- `/admin/audit-logs` -> `audit-service`
 
 ## 9. Seed demo data khi chạy bằng Docker
 
 ```bash
 docker compose up -d consul consul-init keycloak redis rabbitmq \
   db-identity db-user db-media db-question db-exam db-course \
-  db-notification db-analytics db-simulation
+  db-notification db-analytics db-simulation db-audit
 docker compose run --rm identity-service npm run db:deploy -w identity-service
 docker compose run --rm identity-service npm run db:seed -w identity-service
 ```
@@ -225,7 +228,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 - Root migration orchestrator ở [scripts/prisma-migrate-all.ts](./scripts/prisma-migrate-all.ts)
 - Root seed orchestrator ở [scripts/prisma-seed-all.ts](./scripts/prisma-seed-all.ts)
 - Local DB backup script ở [scripts/db-backup-local.ts](./scripts/db-backup-local.ts)
-  - Backup đủ các DB local: `identity`, `user`, `exam`, `course`, `question`, `notification`, `analytics`, `simulation`, `media`, `keycloak`
+  - Backup đủ các DB local: `identity`, `user`, `exam`, `course`, `question`, `notification`, `analytics`, `simulation`, `media`, `audit`, `keycloak`
 - Jenkins / GHCR / deploy compose scaffold ở:
   - [Jenkinsfile](./Jenkinsfile)
   - [docker-compose.deploy.yml](./docker-compose.deploy.yml)
@@ -238,3 +241,48 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 3. Chạy `npm run check-types` và `npm run build` trước khi push
 4. Nếu có thay đổi API hoặc infra, chạy thêm `npm run smoke`
 5. Mở PR và chỉ merge khi CI pass
+## 12. Availability Tactic: Health Check + Restart
+
+Tactic dang ap dung:
+
+- Detect Faults: Ping/Echo qua `/health/live`, sanity checking qua `/health/ready`, monitor nhanh bang `npm run smoke`.
+- Recover from Faults: Docker Compose dung `restart: unless-stopped` de tu chay lai service khi process/container chet.
+- Docker healthcheck danh dau service `healthy/unhealthy` trong `docker compose ps`; Docker Compose khong tu restart container chi vi healthcheck bi `unhealthy` neu process van dang chay.
+
+Kiem tra health qua Kong:
+
+```powershell
+docker compose up -d --build kong identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service
+npm.cmd run smoke
+```
+
+`npm run smoke` mac dinh cho 300ms giua moi request de khong cham rate-limit cua Kong khi demo. Neu can chay nhanh hon trong moi truong da tat/nang rate-limit:
+
+```powershell
+$env:SMOKE_DELAY_MS=0
+npm.cmd run smoke
+```
+
+Kiem tra truc tiep service:
+
+```powershell
+curl http://localhost:3001/health/live
+curl http://localhost:3001/health/ready
+curl http://localhost:3010/health/ready
+```
+
+Demo dependency fault:
+
+```powershell
+docker compose stop db-user
+curl http://localhost:3002/health/ready
+docker compose start db-user
+curl http://localhost:3002/health/ready
+```
+
+Demo restart:
+
+```powershell
+docker compose exec user-service sh -c "kill -9 1"
+docker compose ps user-service
+```

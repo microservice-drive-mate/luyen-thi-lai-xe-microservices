@@ -14,6 +14,7 @@ const SERVICES = [
   'analytics-service',
   'simulation-service',
   'media-service',
+  'audit-service',
 ] as const;
 
 const CONSUL_URL = process.env.CONSUL_URL || 'http://127.0.0.1:8500';

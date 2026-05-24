@@ -116,7 +116,7 @@ services:
     routes:
       - name: simulation-route
         paths:
-          - /simulations
+          - /simulation
         strip_path: false
       - name: simulation-swagger-route
         paths:
@@ -138,6 +138,19 @@ services:
       - name: media-swagger-route
         paths:
           - /media-service
+        strip_path: true
+
+  # 10. Centralized security audit trail
+  - name: audit-service
+    url: http://audit-service:3000
+    routes:
+      - name: audit-admin-route
+        paths:
+          - /admin/audit-logs
+        strip_path: false
+      - name: audit-swagger-route
+        paths:
+          - /audit-service
         strip_path: true
 # ========================================================
 # Cấu hình Plugins chung (Optional)
@@ -171,6 +184,6 @@ plugins:
       max_age: 3600
   - name: rate-limiting
     config:
-      second: 5
+      second: 100
       hour: 1000
       policy: local

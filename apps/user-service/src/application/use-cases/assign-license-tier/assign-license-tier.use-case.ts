@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
+import { createAuditEvent, IUseCase } from '@repo/common';
 import { UserProfileNotFoundException } from '../../../domain/exceptions/user-profile-not-found.exception';
 import { UserProfileRepository } from '../../../domain/repositories/user-profile.repository';
 import { EventPublisher } from '../../ports/event-publisher.port';
@@ -27,7 +27,19 @@ export class AssignLicenseTierUseCase
 
     profile.assignLicenseTier(command.newLicenseTier, command.changedById);
 
-    await this.userProfileRepository.save(profile);
+    const auditEvent = createAuditEvent({
+      serviceName: 'user-service',
+      actorId: command.changedById,
+      action: 'USER_LICENSE_ASSIGNED',
+      resourceType: 'USER_PROFILE',
+      resourceId: profile.id,
+      requestContext: command.auditContext,
+      metadata: {
+        newLicenseTier: command.newLicenseTier,
+      },
+    });
+
+    await this.userProfileRepository.save(profile, auditEvent);
 
     const events = profile.getDomainEvents();
     profile.clearDomainEvents();

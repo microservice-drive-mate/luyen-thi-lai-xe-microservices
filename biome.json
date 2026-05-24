@@ -5,7 +5,13 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/.turbo", "!**/dist", "!**/node_modules"]
+    "includes": [
+      "**",
+      "!**/.claude",
+      "!**/.turbo",
+      "!**/dist",
+      "!**/node_modules"
+    ]
   },
   "formatter": {
     "enabled": true,

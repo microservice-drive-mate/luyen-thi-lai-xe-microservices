@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
+import { createAuditEvent, IUseCase } from '@repo/common';
 import { Course } from '../../../domain/aggregates/course/course.aggregate';
 import { CourseRepository } from '../../../domain/repositories/course.repository';
 import { CourseCachePort } from '../../ports/course-cache.port';
@@ -28,7 +28,21 @@ export class CreateCourseUseCase
       requirement: command.requirement ?? null,
     });
 
-    await this.courseRepository.save(course);
+    await this.courseRepository.save(
+      course,
+      createAuditEvent({
+        serviceName: 'course-service',
+        actorId: command.createdById,
+        action: 'COURSE_CREATED',
+        resourceType: 'COURSE',
+        resourceId: course.id,
+        requestContext: command.auditContext,
+        metadata: {
+          title: course.title,
+          licenseCategory: course.licenseCategory,
+        },
+      }),
+    );
     await this.courseCache.invalidateLists();
     return CourseResult.fromAggregate(course);
   }

@@ -3,11 +3,18 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { AxiosError, AxiosResponse } from 'axios';
+import {
+  ExternalIdentityUser,
+  IdentityProviderPort,
+  IdentityTokenSet,
+} from '../../application/ports/identity-provider.port';
+import { UserRole } from '../../domain/aggregates/identity-user/identity-user.types';
 
 interface AdminTokenCache {
   accessToken: string;
@@ -38,14 +45,16 @@ type KeycloakErrorBody =
     };
 
 @Injectable()
-export class KeycloakAdminService {
+export class KeycloakAdminService extends IdentityProviderPort {
   private readonly logger = new Logger(KeycloakAdminService.name);
   private adminTokenCache: AdminTokenCache | null = null;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    super();
+  }
 
   // ─── Public Methods ───────────────────────────────────────────────────────
 
@@ -92,6 +101,86 @@ export class KeycloakAdminService {
       return location.split('/').at(-1) as string;
     } catch (error) {
       this.handleKeycloakError(error, 'createUser');
+    }
+  }
+
+  async login(username: string, password: string): Promise<IdentityTokenSet> {
+    const url = this.tokenEndpoint;
+    const params = new URLSearchParams();
+    params.append('grant_type', 'password');
+    params.append('client_id', this.clientId);
+    params.append('client_secret', this.clientSecret);
+    params.append('username', username);
+    params.append('password', password);
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(url, params.toString(), {
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        }),
+      );
+      return this.toTokenSet(response.data);
+    } catch (error) {
+      const axiosError = error as AxiosError<{ error_description?: string }>;
+      const status = axiosError.response?.status;
+      const detail =
+        axiosError.response?.data?.error_description ?? axiosError.message;
+      this.logger.error(
+        `Login failed [${status ?? 'NO_RESPONSE'}] -> ${detail} | url=${url}`,
+      );
+
+      if (status === 401) {
+        throw new UnauthorizedException(
+          'Tai khoan hoac mat khau khong chinh xac',
+        );
+      }
+      throw new InternalServerErrorException(
+        `Keycloak login error [${status ?? 'NO_RESPONSE'}]: ${detail}`,
+      );
+    }
+  }
+
+  async refreshToken(refreshToken: string): Promise<IdentityTokenSet> {
+    const params = new URLSearchParams();
+    params.append('grant_type', 'refresh_token');
+    params.append('client_id', this.clientId);
+    params.append('client_secret', this.clientSecret);
+    params.append('refresh_token', refreshToken);
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(this.tokenEndpoint, params.toString(), {
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        }),
+      );
+      return this.toTokenSet(response.data);
+    } catch {
+      throw new UnauthorizedException(
+        'Refresh token khong hop le hoac da het han. Vui long dang nhap lai',
+      );
+    }
+  }
+
+  async revokeSession(refreshToken: string): Promise<void> {
+    const url = `${this.realmBaseUrl}/protocol/openid-connect/logout`;
+    const params = new URLSearchParams();
+    params.append('client_id', this.clientId);
+    params.append('client_secret', this.clientSecret);
+    params.append('refresh_token', refreshToken);
+
+    try {
+      await lastValueFrom(
+        this.httpService.post(url, params.toString(), {
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        }),
+      );
+    } catch (error) {
+      const status = (error as AxiosError).response?.status;
+      if (status !== 400) {
+        this.logger.warn(
+          `Keycloak session revocation failed [${status ?? 'NO_RESPONSE'}]`,
+        );
+      }
     }
   }
 
@@ -146,7 +235,7 @@ export class KeycloakAdminService {
    * Gán realm role cho user (replace toàn bộ roles hiện tại).
    * Gồm 2 bước: lấy role representation → assign.
    */
-  async assignRealmRole(userId: string, roleName: string): Promise<void> {
+  async assignRealmRole(userId: string, roleName: UserRole): Promise<void> {
     const token = await this.getAdminToken();
     const role = await this.getRealmRole(roleName, token);
     const currentRoles = await this.getUserRealmRoles(userId, token);
@@ -198,9 +287,7 @@ export class KeycloakAdminService {
 
   // ─── Private Helpers ──────────────────────────────────────────────────────
 
-  async findUserByEmail(
-    email: string,
-  ): Promise<KeycloakUserRepresentation | null> {
+  async findUserByEmail(email: string): Promise<ExternalIdentityUser | null> {
     const token = await this.getAdminToken();
     const url = `${this.adminBaseUrl}/users`;
 
@@ -249,6 +336,26 @@ export class KeycloakAdminService {
     );
     const realm = this.configService.getOrThrow<string>('keycloak.realm');
     return `${authServerUrl}/admin/realms/${realm}`;
+  }
+
+  private get realmBaseUrl(): string {
+    const authServerUrl = this.configService.getOrThrow<string>(
+      'keycloak.authServerUrl',
+    );
+    const realm = this.configService.getOrThrow<string>('keycloak.realm');
+    return `${authServerUrl}/realms/${realm}`;
+  }
+
+  private get tokenEndpoint(): string {
+    return `${this.realmBaseUrl}/protocol/openid-connect/token`;
+  }
+
+  private get clientId(): string {
+    return this.configService.getOrThrow<string>('keycloak.clientId');
+  }
+
+  private get clientSecret(): string {
+    return this.configService.getOrThrow<string>('keycloak.clientSecret');
   }
 
   /**
@@ -300,6 +407,24 @@ export class KeycloakAdminService {
         'Failed to obtain Keycloak admin token',
       );
     }
+  }
+
+  private toTokenSet(data: {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    refresh_expires_in: number;
+    token_type: string;
+    scope?: string;
+  }): IdentityTokenSet {
+    return {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresIn: data.expires_in,
+      refreshExpiresIn: data.refresh_expires_in,
+      tokenType: data.token_type,
+      scope: data.scope,
+    };
   }
 
   private async getRealmRole(

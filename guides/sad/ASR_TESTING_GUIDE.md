@@ -42,7 +42,160 @@ Nếu thời gian demo ngắn, ưu tiên các mục 1, 3, 4, 5, 8, 9.
 | Performance | `ASR-PERF-02`, `ASR-PERF-03`, `ASR-PERF-10`, `ASR-PERF-11` | List/search có pagination bounded `size <= 100` và DB index. |
 | Performance | `ASR-PERF-05` | Course list/detail dùng Redis cache-aside TTL 600s, invalidate khi mutation, fallback DB khi Redis lỗi. |
 
-## 2. Prerequisites
+> Availability tactic duoc tach rieng o section 2 de sau nay bo sung them Modifiability, Interoperability, Security, Reliability tactics theo cung format.
+
+## 2. Quality Attribute Tactics
+
+Section nay gom cac tactic kien truc da trien khai cho quality attributes. Khi bo sung tactic moi, them mot subsection moi theo format: scope, implementation, demo steps, expected evidence.
+
+### 2.1 Availability: Health Check + Restart
+
+Scope hien tai trien khai tactic **Detect Faults + Recover from Faults**:
+
+- Ping/Echo: `GET /health/live` xac nhan process con song.
+- Sanity Checking: `GET /health/ready` xac nhan dependency can thiet dang san sang.
+- Monitor: `npm.cmd run smoke` goi health qua Kong cho cac service.
+- Escalating Restart: Docker Compose cau hinh `restart: unless-stopped` de service tu chay lai khi container/process chet.
+
+Expected health contract:
+
+| Endpoint | Meaning | Expected |
+| --- | --- | --- |
+| `/health/live` | Process dang song | `200 OK` |
+| `/health/ready` | Service san sang nhan traffic | `200 OK` neu dependency OK, `503` neu dependency loi |
+| `/health` | Alias readiness | Giong `/health/ready` |
+
+Demo nhanh qua Kong:
+
+```powershell
+docker compose up -d --build kong identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service
+npm.cmd run smoke
+```
+
+Smoke script co delay mac dinh 300ms/request de tranh bi Kong rate-limit `429` trong luc demo. Neu moi truong da nang/tat rate-limit, co the chay nhanh bang:
+
+```powershell
+$env:SMOKE_DELAY_MS=0
+npm.cmd run smoke
+```
+
+Demo truc tiep service:
+
+```powershell
+curl http://localhost:3001/health/live
+curl http://localhost:3001/health/ready
+curl http://localhost:3002/health/ready
+curl http://localhost:3010/health/ready
+```
+
+Demo dependency fault:
+
+```powershell
+docker compose stop db-user
+curl http://localhost:3002/health/ready
+docker compose start db-user
+curl http://localhost:3002/health/ready
+```
+
+Expected:
+
+- Khi `db-user` stop: `user-service` readiness tra `503 SERVICE_UNAVAILABLE`.
+- Khi `db-user` start lai: readiness quay ve `200 OK`.
+
+Demo restart:
+
+```powershell
+docker compose exec user-service sh -c "kill -9 1"
+docker compose ps user-service
+```
+
+Expected: `user-service` duoc Docker Compose start lai do `restart: unless-stopped`. Luu y Docker Compose healthcheck chi danh dau `healthy/unhealthy`; no khong tu restart container chi vi healthcheck fail neu process van dang chay. Khong dung `docker compose stop` de demo restart policy vi day la thao tac dung thu cong co chu dich.
+
+### 2.2 Security: Access Logging + Audit Trail + Transactional Outbox
+
+Security tactic phase nay tach thanh 3 tang:
+
+- Access log: moi HTTP request duoc log metadata vao Winston/Logstash/Elasticsearch voi `correlationId`.
+- Transactional outbox: audited business mutation va audit event duoc ghi trong cung database transaction.
+- Centralized audit log: cac hanh dong security/business quan trong duoc ghi immutable trong `audit-service`.
+
+Design pattern ap dung:
+
+- **Transactional Outbox Pattern** cho audit events o `user-service`, `course-service`, `exam-service`.
+- **Idempotent Consumer** o `audit-service` bang unique `eventId`.
+- **Correlation Id** de join access log trong ELK voi audit trail trong `audit_db`.
+
+Scope phase hien tai:
+
+| Service | Vai tro | Evidence |
+| --- | --- | --- |
+| `@repo/common` | Correlation id + access log | Response co `x-correlation-id`, log co `logType=access`. |
+| `user-service` | Producer audit cho assign license | `user_db.outbox_messages`, action `USER_LICENSE_ASSIGNED`. |
+| `course-service` | Producer audit cho course/enrollment mutations | `course_db.outbox_messages`, action `COURSE_*` hoac `ENROLLMENT_PROGRESS_RESET`. |
+| `exam-service` | Producer audit cho exam-template mutations | `exam_db.outbox_messages`, action `EXAM_TEMPLATE_*`. |
+| `audit-service` | Consumer/source of truth audit trail | `audit_db.audit_logs`, API `/admin/audit-logs`. |
+
+Audited actions:
+
+| Service | Actions |
+| --- | --- |
+| `user-service` | `USER_LICENSE_ASSIGNED` |
+| `course-service` | `COURSE_CREATED`, `COURSE_UPDATED`, `COURSE_ARCHIVED`, `COURSE_ACTIVATED`, `COURSE_LESSON_ADDED`, `COURSE_LESSON_REMOVED`, `COURSE_MATERIAL_ADDED`, `ENROLLMENT_PROGRESS_RESET` |
+| `exam-service` | `EXAM_TEMPLATE_CREATED`, `EXAM_TEMPLATE_UPDATED`, `EXAM_TEMPLATE_DELETED` |
+
+Demo nhanh:
+
+```powershell
+# Goi mot audited action, vi du assign license tier
+curl -X PATCH http://localhost:8000/admin/users/<student-id>/license-tier `
+  -H "Authorization: Bearer <admin_access_token>" `
+  -H "Content-Type: application/json" `
+  -d "{ \"licenseTier\": \"B1\" }"
+
+# Query centralized audit trail
+curl "http://localhost:8000/admin/audit-logs?action=USER_LICENSE_ASSIGNED" `
+  -H "Authorization: Bearer <admin_access_token>"
+```
+
+Expected:
+
+- Response audited action co header `x-correlation-id`.
+- `outbox_messages` trong `user_db` co row `security.audit.recorded`, `status = PUBLISHED`.
+- `audit_db.audit_logs` co record `USER_LICENSE_ASSIGNED`.
+- Access log trong ELK co cung `correlationId`.
+
+Verify bang DB:
+
+```powershell
+docker compose exec db-user psql -U user -d user_db -c "SELECT payload->>'action' AS action, status, attempts, \"publishedAt\" FROM outbox_messages ORDER BY \"createdAt\" DESC LIMIT 5;"
+docker compose exec db-audit psql -U user -d audit_db -c "SELECT \"serviceName\", action, \"resourceType\", \"resourceId\", \"correlationId\" FROM audit_logs ORDER BY \"occurredAt\" DESC LIMIT 5;"
+```
+
+Demo outbox khi RabbitMQ loi:
+
+```powershell
+docker compose stop rabbitmq
+# Goi audited action
+# Kiem tra outbox_messages van giu event PENDING/FAILED de retry
+docker compose start rabbitmq
+# Kiem tra event duoc publish lai va audit log xuat hien
+```
+
+Expected khi RabbitMQ down:
+
+- Business mutation van commit neu request path khong phu thuoc RabbitMQ truc tiep.
+- Producer DB co outbox row `PENDING` hoac `FAILED`.
+- Audit-service chua co record moi cho den khi broker hoat dong lai va relay publish thanh cong.
+
+Chi tiet API va test:
+
+- `guides/api/api-spec-audit.md`
+- `guides/testing/audit-service-test-guide.md`
+- `guides/api/api-spec-user.md` phan Security Audit
+- `guides/api/api-spec-course.md` phan Security Audit
+- `guides/api/api-spec-exam.md` phan Security Audit
+
+## 3. Prerequisites
 
 Cần chuẩn bị:
 
@@ -60,7 +213,7 @@ docker --version
 docker compose version
 ```
 
-## 3. Demo Mode
+## 4. Demo Mode
 
 Có 2 cách demo:
 
@@ -71,7 +224,7 @@ Có 2 cách demo:
 
 Khuyến nghị demo với thầy: **qua Kong** cho các API cần auth. Frontend và demo chuẩn chỉ gửi `Authorization: Bearer <access_token>`; không tự gửi `x-user-id`. Một số guide cũ có thể nhắc fallback header cho debug legacy, nhưng không dùng nó làm flow chính.
 
-## 4. Start Infrastructure
+## 5. Start Infrastructure
 
 Từ root repo:
 
@@ -121,7 +274,7 @@ docker compose config --quiet
 
 Expected: command exit code `0`. Nếu Docker in warning về `%USERPROFILE%\.docker\config.json` nhưng exit code vẫn `0`, compose config vẫn hợp lệ.
 
-## 5. Generate Prisma Client And Apply Migrations
+## 6. Generate Prisma Client And Apply Migrations
 
 Chạy generate/deploy cho các service thuộc ASR:
 
@@ -149,7 +302,7 @@ Nếu course-service có thêm read model license tier, cũng apply migration:
 
 - `apps/course-service/prisma/migrations/20260521090000_add_student_license_profile_read_model`
 
-## 6. Seed Data
+## 7. Seed Data
 
 Khuyến nghị hiện tại cho demo đầy đủ là chạy root seed một lần sau migration:
 
@@ -159,7 +312,7 @@ npm.cmd run db:seed
 
 Lệnh này seed theo thứ tự phụ thuộc: identity, user, question, exam, course, analytics, notification, simulation. Dataset gồm demo users/license, 600 câu hỏi, exam templates, courses/enrollments, analytics read model, notifications và simulation maneuvers/checkpoints/errors. Chi tiết nằm ở `guides/testing/demo-seed-plan.md`.
 
-### 6.1 Seed Question Topics/Question Bank
+### 7.1 Seed Question Topics/Question Bank
 
 Nếu question-service có seed script:
 
@@ -188,7 +341,7 @@ Seed hiện tại dùng topic IDs deterministic UUID v5. Khi tạo exam template
 | Cấu tạo và sửa chữa xe | `d7a509c3-153f-5c03-9398-6a5626aa70d0` |
 | Hệ thống biển báo hiệu đường bộ | `0694bef4-6534-56d3-bc68-a3a0fb8f4f43` |
 
-### 6.2 Chuẩn Bị User Và License
+### 7.2 Chuẩn Bị User Và License
 
 Flow chuẩn:
 
@@ -231,7 +384,7 @@ WHERE "studentId" = '<student-id>';
 
 Nếu chưa có row, restart user-service/course-service rồi assign lại license để re-emit event.
 
-### 6.3 Chuẩn Bị Exam Template
+### 7.3 Chuẩn Bị Exam Template
 
 Cần có:
 
@@ -267,7 +420,7 @@ TIMER_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
   }' | jq -r '.data.id')
 ```
 
-## 7. Start Services
+## 8. Start Services
 
 Cách nhanh:
 
@@ -307,7 +460,7 @@ curl http://localhost:3004/docs-json
 curl http://localhost:3005/docs-json
 ```
 
-## 8. Prepare Demo Variables
+## 9. Prepare Demo Variables
 
 Trong Git Bash:
 
@@ -332,7 +485,7 @@ COURSE_BASE="$KONG_BASE"
 QUESTION_BASE="$KONG_BASE"
 ```
 
-## 9. Automated Quality Gates
+## 10. Automated Quality Gates
 
 Chạy trước khi demo:
 
@@ -360,11 +513,11 @@ Demo phrase:
 
 > "Trước khi test thủ công, em chạy quality gate để đảm bảo các service compile và unit tests của các behavior quan trọng vẫn pass."
 
-## 10. Security: Active Exam Does Not Leak Answer Data
+## 11. Security: Active Exam Does Not Leak Answer Data
 
 Mục tiêu: chứng minh `ASR-SEC-05`.
 
-### 10.1 Start Exam Session
+### 11.1 Start Exam Session
 
 ```bash
 SESSION_ID=$(curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -379,7 +532,7 @@ echo "$SESSION_ID"
 
 Expected: in ra UUID session.
 
-### 10.2 Inspect Active Questions
+### 11.2 Inspect Active Questions
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -420,7 +573,7 @@ Demo phrase:
 
 > "Frontend chỉ nhận dữ liệu đủ để hiển thị đề và lưu đáp án. Đáp án đúng, giải thích và cờ câu điểm liệt không xuất hiện ở active payload."
 
-## 11. Reliability: Autosave Is Idempotent
+## 12. Reliability: Autosave Is Idempotent
 
 Mục tiêu: chứng minh `ASR-REL-03`.
 
@@ -478,7 +631,7 @@ npm.cmd --workspace=apps/exam-service run db:studio
 
 Check `exam_session_questions`: one row per session-question, no duplicate.
 
-## 12. Reliability/Data Integrity: Submit Is Retry-Safe
+## 13. Reliability/Data Integrity: Submit Is Retry-Safe
 
 Mục tiêu: chứng minh `ASR-REL-04`, `ASR-REL-07`, `ASR-DI-01`.
 
@@ -531,7 +684,7 @@ Demo phrase:
 
 > "Submit là retry-safe. Nếu client mất mạng rồi bấm gửi lại, server trả lại result đã ghi, không chấm lại và không tạo trạng thái lệch."
 
-## 13. Timer: Server-Authoritative Timeout And Lazy Finalization
+## 14. Timer: Server-Authoritative Timeout And Lazy Finalization
 
 Mục tiêu: chứng minh `ASR-REL-02`, `ASR-REL-06`.
 
@@ -632,7 +785,7 @@ Demo phrase:
 
 > "Timer không phụ thuộc đồng hồ frontend. Server quyết định dựa trên `startedAt` và `expiresAt`; nếu client không submit đúng lúc, request kế tiếp như result hoặc autosave sẽ đóng phiên thành TIMED_OUT một cách nhất quán."
 
-## 14. Data Integrity: Kill-Question Logic
+## 15. Data Integrity: Kill-Question Logic
 
 Mục tiêu: chứng minh `ASR-DI-02`.
 
@@ -667,11 +820,11 @@ Demo phrase:
 
 > "Quy tắc câu điểm liệt là rule phía server. Frontend không thể né rule bằng cách sửa payload."
 
-## 15. Performance: Bounded Pagination
+## 16. Performance: Bounded Pagination
 
 Mục tiêu: chứng minh `ASR-PERF-02`, `ASR-PERF-03`, `ASR-PERF-10`, `ASR-PERF-11`.
 
-### 15.1 Valid Pagination
+### 16.1 Valid Pagination
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions?page=1&size=20" \
@@ -693,7 +846,7 @@ Expected:
 - Response có `total`, `page`, `size`.
 - Không trả unbounded full table.
 
-### 15.2 Invalid Pagination
+### 16.2 Invalid Pagination
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions?page=1&size=1000" \
@@ -711,7 +864,7 @@ Expected:
 - Validation error.
 - `size` max là `100`.
 
-### 15.3 DB Index Evidence
+### 16.3 DB Index Evidence
 
 Mở migration:
 
@@ -723,11 +876,11 @@ Demo phrase:
 
 > "Pagination giới hạn tải trả về, còn index hỗ trợ query filter/search để không scan bảng lớn khi dữ liệu tăng."
 
-## 16. Course Cache-Aside With Redis
+## 17. Course Cache-Aside With Redis
 
 Mục tiêu: chứng minh `ASR-PERF-05`.
 
-### 16.1 Confirm Redis
+### 17.1 Confirm Redis
 
 ```powershell
 docker compose -f docker-compose.infra.yml ps redis
@@ -746,7 +899,7 @@ Expected:
 PONG
 ```
 
-### 16.2 Clear Old Keys
+### 17.2 Clear Old Keys
 
 Xem key cũ:
 
@@ -762,7 +915,7 @@ docker exec -it <redis-container-name> redis-cli DEL "<course-cache-key>"
 
 Có thể bỏ qua bước xóa cache nếu chỉ cần chứng minh sau khi gọi API có key và TTL.
 
-### 16.3 Cache Miss Then Populate
+### 17.3 Cache Miss Then Populate
 
 Call course list:
 
@@ -800,7 +953,7 @@ Expected:
 
 - Có thêm key dạng `course:detail:<course-id>`.
 
-### 16.4 Cache Hit And TTL
+### 17.4 Cache Hit And TTL
 
 Call same URL again:
 
@@ -827,7 +980,7 @@ Expected:
 - TTL `> 0`.
 - TTL `<= 600`.
 
-### 16.5 Invalidation
+### 17.5 Invalidation
 
 Thực hiện một mutation làm đổi course public data:
 
@@ -850,7 +1003,7 @@ Expected:
 - List cache bị xóa.
 - Detail cache của course bị xóa hoặc sẽ được refresh ở request kế tiếp.
 
-### 16.6 Redis Failure Fallback
+### 17.6 Redis Failure Fallback
 
 Stop Redis:
 
@@ -882,7 +1035,7 @@ Demo phrase:
 
 > "Redis là cache-aside, không phải nguồn dữ liệu chính. Khi Redis lỗi, service fallback về PostgreSQL và giữ nguyên response shape."
 
-## 17. Evidence Checklist
+## 18. Evidence Checklist
 
 Trước demo, nên chuẩn bị screenshot hoặc terminal output cho:
 
@@ -900,7 +1053,7 @@ Trước demo, nên chuẩn bị screenshot hoặc terminal output cho:
 - Redis keys sau mutation bị clear.
 - Course list vẫn `success=true` khi Redis stop.
 
-## 18. Demo Script Ngắn
+## 19. Demo Script Ngắn
 
 Có thể nói theo flow này:
 
@@ -915,7 +1068,7 @@ Có thể nói theo flow này:
 9. "Performance: các list endpoint có bounded pagination và index."
 10. "Course-service dùng Redis cache-aside: có cache key/TTL, mutation invalidate, Redis down vẫn fallback DB."
 
-## 19. Troubleshooting
+## 20. Troubleshooting
 
 ### Consul Không Có Config
 

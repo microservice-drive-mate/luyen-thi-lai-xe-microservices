@@ -13,7 +13,8 @@
 5. [Test luồng RabbitMQ event](#5-test-luồng-rabbitmq-event)
 6. [Test qua Kong (production path)](#6-test-qua-kong-production-path)
 7. [Kiểm tra Database trực tiếp](#7-kiểm-tra-database-trực-tiếp)
-8. [Troubleshooting](#8-troubleshooting)
+8. [Test Security Audit Và Outbox](#8-test-security-audit-và-outbox)
+9. [Troubleshooting](#9-troubleshooting)
 
 ---
 
@@ -879,7 +880,79 @@ ORDER BY a."changedAt" DESC;
 
 ---
 
-## 8. Troubleshooting
+## 8. Test Security Audit Và Outbox
+
+Mục tiêu: chứng minh `PATCH /admin/users/:id/license-tier` vừa update profile thành công, vừa tạo centralized audit trail qua transactional outbox.
+
+### 8.1 Gọi audited action
+
+```bash
+curl -i -X PATCH http://localhost:8000/admin/users/<student-id>/license-tier \
+  -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{ "licenseTier": "B1" }'
+```
+
+Expected:
+
+- HTTP `200`.
+- Response header có `x-correlation-id`.
+- Response body có `data.studentDetail.licenseTier = "B1"`.
+
+### 8.2 Verify local bounded-context audit
+
+```sql
+SELECT "studentId", "oldLicenseTier", "newLicenseTier", "changedById", "changedAt"
+FROM license_assignment_audits
+WHERE "studentId" = '<student-id>'
+ORDER BY "changedAt" DESC
+LIMIT 5;
+```
+
+Expected: có row với `newLicenseTier = B1`.
+
+### 8.3 Verify transactional outbox
+
+```sql
+SELECT
+  payload->>'action' AS action,
+  payload->>'resourceId' AS resource_id,
+  status,
+  attempts,
+  "publishedAt",
+  "lastError"
+FROM outbox_messages
+ORDER BY "createdAt" DESC
+LIMIT 5;
+```
+
+Expected:
+
+- `action = USER_LICENSE_ASSIGNED`.
+- `resource_id = <student-id>`.
+- Bình thường sau vài giây `status = PUBLISHED`.
+- Nếu RabbitMQ đang down, row vẫn còn `PENDING` hoặc `FAILED`, không mất.
+
+### 8.4 Verify centralized audit-service
+
+```bash
+curl -s "http://localhost:8000/admin/audit-logs?action=USER_LICENSE_ASSIGNED&resourceId=<student-id>" \
+  -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" | jq .
+```
+
+Expected:
+
+- `data.total >= 1`.
+- Item mới nhất có:
+  - `serviceName = user-service`
+  - `resourceType = USER_PROFILE`
+  - `resourceId = <student-id>`
+  - `metadata.newLicenseTier = B1`
+  - `correlationId` khớp response header nếu copy lại lúc gọi API.
+
+---
+
+## 9. Troubleshooting
 
 ### Service không start được
 

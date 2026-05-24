@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/identity-client';
 import axios from 'axios';
@@ -281,42 +283,6 @@ async function removeConflictingKeycloakUsers(
       await deleteKeycloakUser(adminBaseUrl, token, existing.id);
     }
   }
-}
-
-async function upsertKeycloakUser(
-  adminBaseUrl: string,
-  token: string,
-  user: ReturnType<typeof allDemoUsers>[number],
-): Promise<void> {
-  const existing = await findKeycloakUserByEmail(
-    adminBaseUrl,
-    token,
-    user.email,
-  );
-
-  if (!existing) {
-    const name = splitFullName(user.fullName);
-    await axios.post(
-      `${adminBaseUrl}/users`,
-      {
-        username: user.email,
-        email: user.email,
-        firstName: name.firstName,
-        lastName: name.lastName,
-        enabled: true,
-        emailVerified: true,
-        requiredActions: [],
-        credentials: [
-          { type: 'password', value: DEMO_PASSWORD, temporary: false },
-        ],
-      },
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-    return;
-  }
-
-  await resetPassword(adminBaseUrl, token, existing.id);
-  await assignRealmRole(adminBaseUrl, token, existing.id, user.role);
 }
 
 async function seedIdentityDatabase() {

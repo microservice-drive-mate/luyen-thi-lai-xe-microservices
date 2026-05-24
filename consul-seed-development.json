@@ -26,28 +26,84 @@
     },
     "exam-service": {
       "port": "3000",
-      "rabbitmq.url": "amqp://rabbitmq:5672"
+      "database.url": "postgresql://user:password@db-exam:5432/exam_db",
+      "rabbitmq.url": "amqp://rabbitmq:5672",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "services.question.baseUrl": "http://question-service:3000",
+      "services.user.baseUrl": "http://user-service:3000"
     },
     "question-service": {
       "port": "3000",
-      "rabbitmq.url": "amqp://rabbitmq:5672"
+      "database.url": "postgresql://user:password@db-question:5432/question_db",
+      "rabbitmq.url": "amqp://rabbitmq:5672",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     },
     "course-service": {
       "port": "3000",
       "database.url": "postgresql://user:password@db-course:5432/course_db",
-      "rabbitmq.url": "amqp://rabbitmq:5672"
+      "rabbitmq.url": "amqp://rabbitmq:5672",
+      "redis.url": "redis://redis:6379",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     },
     "notification-service": {
       "port": "3000",
-      "rabbitmq.url": "amqp://rabbitmq:5672"
+      "database.url": "postgresql://user:password@db-notification:5432/notification_db",
+      "rabbitmq.url": "amqp://rabbitmq:5672",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     },
     "analytics-service": {
       "port": "3000",
-      "rabbitmq.url": "amqp://rabbitmq:5672"
+      "database.url": "postgresql://user:password@db-analytics:5432/analytics_db",
+      "rabbitmq.url": "amqp://rabbitmq:5672",
+      "redis.url": "redis://redis:6379",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     },
     "simulation-service": {
       "port": "3000",
-      "rabbitmq.url": "amqp://rabbitmq:5672"
+      "database.url": "postgresql://user:password@db-simulation:5432/simulation_db",
+      "rabbitmq.url": "amqp://rabbitmq:5672",
+      "redis.url": "redis://redis:6379",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
+    },
+    "media-service": {
+      "port": "3000",
+      "database.url": "postgresql://user:password@db-media:5432/media_db",
+      "rabbitmq.url": "amqp://rabbitmq:5672",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ",
+      "storage.accountName": "",
+      "storage.accountKey": "",
+      "storage.containerName": "media",
+      "storage.presignedUrlExpiry": "3600"
+    },
+    "audit-service": {
+      "port": "3000",
+      "database.url": "postgresql://user:password@db-audit:5432/audit_db",
+      "rabbitmq.url": "amqp://rabbitmq:5672",
+      "keycloak.authServerUrl": "http://keycloak:8080",
+      "keycloak.realm": "luyen-thi-lai-xe-realm",
+      "keycloak.clientId": "nestjs-backend",
+      "keycloak.clientSecret": "FkUamLTRQOOAcRyLN4qaiPceoM5g8dwJ"
     }
   }
 }

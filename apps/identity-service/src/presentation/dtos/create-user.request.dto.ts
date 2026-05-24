@@ -6,7 +6,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '../../types/user-role.enum';
+import { UserRole } from '../../domain/aggregates/identity-user/identity-user.types';
 
 export class CreateUserRequestDto {
   @ApiProperty({ example: 'nguyenvana@gm.uit.edu.vn' })

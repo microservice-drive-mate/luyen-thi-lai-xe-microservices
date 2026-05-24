@@ -1,5 +1,5 @@
 import { DomainEvent } from '@repo/common';
-import { UserRole } from '../../types/user-role.enum';
+import { UserRole } from '../aggregates/identity-user/identity-user.types';
 
 export class UserCreatedEvent extends DomainEvent {
   get eventName(): string {

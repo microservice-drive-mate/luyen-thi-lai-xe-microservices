@@ -8,7 +8,7 @@ import {
   IsString,
   Min,
 } from 'class-validator';
-import { UserRole } from '../../types/user-role.enum';
+import { UserRole } from '../../domain/aggregates/identity-user/identity-user.types';
 
 export class ListIdentityUsersQueryDto {
   @ApiPropertyOptional({ default: 1 })

@@ -1,10 +1,17 @@
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  ServiceUnavailableException,
+  SetMetadata,
+} from '@nestjs/common';
 import {
   HealthLivenessReport,
   HealthReadinessReport,
   HealthService,
 } from './health.service';
 
+@SetMetadata('unprotected', true)
+@SetMetadata('skip-auth', true)
 @Controller()
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}

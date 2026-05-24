@@ -17,6 +17,8 @@ export class DomainExceptionFilter implements ExceptionFilter {
     const statusMap: Record<string, number> = {
       IDENTITY_USER_NOT_FOUND: HttpStatus.NOT_FOUND,
       IDENTITY_USER_ALREADY_EXISTS: HttpStatus.CONFLICT,
+      IDENTITY_USER_ALREADY_DELETED: HttpStatus.CONFLICT,
+      INVALID_EMAIL: HttpStatus.BAD_REQUEST,
     };
 
     const status = statusMap[exception.code] ?? HttpStatus.BAD_REQUEST;

@@ -134,6 +134,21 @@ services:
       timeout: 5s
       retries: 20
 
+  db-audit:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${AUDIT_DB_NAME:-audit_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_audit_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${AUDIT_DB_NAME:-audit_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   db-keycloak:
     image: postgres:15-alpine
     restart: unless-stopped
@@ -474,6 +489,31 @@ services:
       keycloak:
         condition: service_started
 
+  audit-service:
+    image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-audit-service:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+      CONSUL_URL: http://consul:8500
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-audit:5432/${AUDIT_DB_NAME:-audit_db}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+    depends_on:
+      db-audit:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      consul-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
+
   kong:
     image: kong:3.7
     restart: unless-stopped
@@ -495,6 +535,7 @@ services:
       - analytics-service
       - simulation-service
       - media-service
+      - audit-service
     ports:
       - "${KONG_PROXY_PORT:-8000}:8000"
       - "${KONG_ADMIN_PORT:-8001}:8001"
@@ -511,6 +552,7 @@ volumes:
   db_analytics_data:
   db_simulation_data:
   db_media_data:
+  db_audit_data:
   db_keycloak_data:
   rabbitmq_data:
   redis_data:

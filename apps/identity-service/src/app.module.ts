@@ -22,9 +22,7 @@ import {
 
 import { AuthController } from './presentation/http/auth.controller';
 import { AdminController } from './presentation/http/admin.controller';
-import { AppService } from './app.service';
-import { AdminService } from './admin.service';
-import { PrismaService } from './prisma/prisma.service';
+import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import {
   TokenBlacklistService,
   REDIS_CLIENT,
@@ -36,6 +34,22 @@ import {
   USER_SERVICE_CLIENT,
   NOTI_SERVICE_CLIENT,
 } from './infrastructure/messaging/identity-event-publisher.service';
+import { IdentityProviderPort } from './application/ports/identity-provider.port';
+import { TokenBlacklistPort } from './application/ports/token-blacklist.port';
+import { IdentityEventPublisherPort } from './application/ports/identity-event-publisher.port';
+import { IdentityUserRepository } from './domain/repositories/identity-user.repository';
+import { PrismaIdentityUserRepository } from './infrastructure/persistence/prisma/prisma-identity-user.repository';
+import { LoginUseCase } from './application/use-cases/login/login.use-case';
+import { LogoutUseCase } from './application/use-cases/logout/logout.use-case';
+import { RefreshTokenUseCase } from './application/use-cases/refresh-token/refresh-token.use-case';
+import { ForgotPasswordUseCase } from './application/use-cases/forgot-password/forgot-password.use-case';
+import { CreateIdentityUserUseCase } from './application/use-cases/create-identity-user/create-identity-user.use-case';
+import { ListIdentityUsersUseCase } from './application/use-cases/list-identity-users/list-identity-users.use-case';
+import { GetIdentityUserUseCase } from './application/use-cases/get-identity-user/get-identity-user.use-case';
+import { UpdateIdentityUserUseCase } from './application/use-cases/update-identity-user/update-identity-user.use-case';
+import { ChangeUserRoleUseCase } from './application/use-cases/change-user-role/change-user-role.use-case';
+import { LockUserUseCase } from './application/use-cases/lock-user/lock-user.use-case';
+import { DeleteIdentityUserUseCase } from './application/use-cases/delete-identity-user/delete-identity-user.use-case';
 
 @Module({
   imports: [
@@ -143,12 +157,28 @@ import {
   ],
   controllers: [AuthController, AdminController],
   providers: [
-    AppService,
-    AdminService,
     PrismaService,
     KeycloakAdminService,
     IdentityEventPublisher,
     TokenBlacklistService,
+    { provide: IdentityProviderPort, useExisting: KeycloakAdminService },
+    { provide: TokenBlacklistPort, useExisting: TokenBlacklistService },
+    {
+      provide: IdentityEventPublisherPort,
+      useExisting: IdentityEventPublisher,
+    },
+    { provide: IdentityUserRepository, useClass: PrismaIdentityUserRepository },
+    LoginUseCase,
+    LogoutUseCase,
+    RefreshTokenUseCase,
+    ForgotPasswordUseCase,
+    CreateIdentityUserUseCase,
+    ListIdentityUsersUseCase,
+    GetIdentityUserUseCase,
+    UpdateIdentityUserUseCase,
+    ChangeUserRoleUseCase,
+    LockUserUseCase,
+    DeleteIdentityUserUseCase,
     {
       provide: REDIS_CLIENT,
       inject: [ConfigService],

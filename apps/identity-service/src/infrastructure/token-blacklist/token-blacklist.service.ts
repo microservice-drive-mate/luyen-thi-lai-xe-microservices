@@ -1,11 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
+import { TokenBlacklistPort } from '../../application/ports/token-blacklist.port';
 
 export const REDIS_CLIENT = 'REDIS_CLIENT';
 
 @Injectable()
-export class TokenBlacklistService {
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
+export class TokenBlacklistService extends TokenBlacklistPort {
+  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {
+    super();
+  }
 
   async addToBlacklist(token: string, expiresAt: number): Promise<void> {
     const now = Math.floor(Date.now() / 1000);

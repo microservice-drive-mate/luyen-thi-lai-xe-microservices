@@ -8,6 +8,8 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
+  AccessLogInterceptor,
+  CorrelationIdMiddleware,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
@@ -35,8 +37,12 @@ async function bootstrap() {
   });
 
   app.enableCors();
+  app.use(new CorrelationIdMiddleware().use);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-  app.useGlobalInterceptors(new ApiResponseInterceptor());
+  app.useGlobalInterceptors(
+    new AccessLogInterceptor({ serviceName: 'course-service' }),
+    new ApiResponseInterceptor(),
+  );
   app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
 
   setupMicroserviceSwagger(app, {

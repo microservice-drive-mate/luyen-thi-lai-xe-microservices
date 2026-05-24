@@ -10,7 +10,10 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
+import { buildAuditRequestContext } from '@repo/common';
+import type { Request } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { CreateTemplateCommand } from '../../application/use-cases/create-template/create-template.command';
@@ -60,7 +63,9 @@ export class ExamTemplateController {
     @AuthenticatedUser() user: JwtPayload,
     @Headers('x-user-id') headerUserId: string | undefined,
     @Body() dto: CreateTemplateRequestDto,
+    @Req() request: Request,
   ): Promise<ExamTemplateResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
     const result = await this.createTemplateUseCase.execute(
       new CreateTemplateCommand(
         dto.name,
@@ -73,7 +78,8 @@ export class ExamTemplateController {
         dto.maxCriticalMistakes,
         dto.shuffleQuestions,
         dto.topicDistribution,
-        resolveActorId(user, headerUserId),
+        actorId,
+        buildAuditRequestContext(request, user),
       ),
     );
     return ExamTemplateResponseDto.fromResult(result);
@@ -113,7 +119,11 @@ export class ExamTemplateController {
   async updateTemplate(
     @Param('id') id: string,
     @Body() dto: UpdateTemplateRequestDto,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
   ): Promise<ExamTemplateResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
     const result = await this.updateTemplateUseCase.execute(
       new UpdateTemplateCommand(
         id,
@@ -128,6 +138,8 @@ export class ExamTemplateController {
         dto.shuffleQuestions,
         dto.topicDistribution,
         dto.isActive,
+        actorId,
+        buildAuditRequestContext(request, user),
       ),
     );
     return ExamTemplateResponseDto.fromResult(result);
@@ -139,9 +151,18 @@ export class ExamTemplateController {
   async deleteTemplate(
     @Param('id') id: string,
     @Body() dto: DeleteTemplateRequestDto,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
   ): Promise<ExamTemplateResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
     const result = await this.deleteTemplateUseCase.execute(
-      new DeleteTemplateCommand(id, dto.version),
+      new DeleteTemplateCommand(
+        id,
+        dto.version,
+        actorId,
+        buildAuditRequestContext(request, user),
+      ),
     );
     return ExamTemplateResponseDto.fromResult(result);
   }

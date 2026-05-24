@@ -15,7 +15,7 @@ pipeline {
     GHCR_OWNER = 'nhactaohocbai'
     DOCKER_BUILDKIT = '1'
     COMPOSE_DOCKER_CLI_BUILD = '1'
-    SERVICES = 'identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service'
+    SERVICES = 'identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service audit-service'
     STAGING_HOST = 'staging.example.com'
     STAGING_USER = 'deploy'
     STAGING_DEPLOY_PATH = '/opt/luyen-thi-lai-xe'

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { AuditEventEnvelope } from '@repo/common';
 import {
   Gender as PrismaGender,
   LicenseTier as PrismaLicenseTier,
@@ -71,7 +72,10 @@ export class PrismaUserProfileRepository extends UserProfileRepository {
     return count > 0;
   }
 
-  async save(profile: UserProfile): Promise<void> {
+  async save(
+    profile: UserProfile,
+    auditEvent?: AuditEventEnvelope,
+  ): Promise<void> {
     const auditEntry = profile.pendingAuditEntry;
 
     await this.prisma.$transaction(async (tx) => {
@@ -137,6 +141,15 @@ export class PrismaUserProfileRepository extends UserProfileRepository {
           },
         });
         profile.clearPendingAuditEntry();
+      }
+
+      if (auditEvent) {
+        await tx.outboxMessage.create({
+          data: {
+            eventName: auditEvent.eventName,
+            payload: auditEvent as unknown as Prisma.InputJsonValue,
+          },
+        });
       }
     });
   }

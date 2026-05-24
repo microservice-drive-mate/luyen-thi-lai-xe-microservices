@@ -73,6 +73,7 @@ infra_services=(
   db-analytics
   db-simulation
   db-media
+  db-audit
   db-keycloak
   rabbitmq
   redis
@@ -91,6 +92,7 @@ app_services=(
   analytics-service
   simulation-service
   media-service
+  audit-service
   kong
 )
 
@@ -104,6 +106,7 @@ migration_services=(
   analytics-service
   simulation-service
   media-service
+  audit-service
 )
 
 compose_cmd=(
@@ -140,6 +143,7 @@ health_routes=(
   analytics-service
   simulation-service
   media-service
+  audit-service
 )
 
 check_gateway_route() {

@@ -1,3 +1,4 @@
+import { AuditRequestContext } from '@repo/common';
 import { LicenseCategory } from '../../../domain/aggregates/course/course.types';
 
 export interface CreateCourseRequirementFields {
@@ -19,5 +20,6 @@ export class CreateCourseCommand {
     readonly capacity?: number | null,
     readonly instructorIds?: string[],
     readonly requirement?: CreateCourseRequirementFields | null,
+    readonly auditContext?: AuditRequestContext,
   ) {}
 }

@@ -29,6 +29,10 @@ import {
   RABBITMQ_CLIENT,
   RabbitMqEventPublisher,
 } from './infrastructure/messaging/rabbitmq-event-publisher.service';
+import {
+  AUDIT_SERVICE_CLIENT,
+  AuditOutboxRelayService,
+} from './infrastructure/outbox/audit-outbox-relay.service';
 import { PrismaExamSessionRepository } from './infrastructure/persistence/prisma/prisma-exam-session.repository';
 import { PrismaExamTemplateRepository } from './infrastructure/persistence/prisma/prisma-exam-template.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
@@ -62,6 +66,10 @@ const rmqClientFactory = (queue: string) => ({
         name: NOTIFICATION_SERVICE_CLIENT,
         ...rmqClientFactory('notification_service_events'),
       },
+      {
+        name: AUDIT_SERVICE_CLIENT,
+        ...rmqClientFactory('audit_service_events'),
+      },
     ]),
   ],
   controllers: [
@@ -78,6 +86,7 @@ const rmqClientFactory = (queue: string) => ({
     { provide: ExamTemplateRepository, useClass: PrismaExamTemplateRepository },
     { provide: ExamSessionRepository, useClass: PrismaExamSessionRepository },
     { provide: EventPublisher, useClass: RabbitMqEventPublisher },
+    AuditOutboxRelayService,
     { provide: QuestionPoolClient, useClass: HttpQuestionPoolClient },
     { provide: UserProfileClient, useClass: HttpUserProfileClient },
     CreateTemplateUseCase,

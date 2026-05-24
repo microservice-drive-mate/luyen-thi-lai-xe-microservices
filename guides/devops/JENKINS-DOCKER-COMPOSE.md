@@ -103,7 +103,7 @@ Cần điền ít nhất:
 
 ## 8. Những gì pipeline đã xử lý
 
-Pipeline hiện tại build và push image cho 9 service:
+Pipeline hiện tại build và push image cho 10 service:
 
 - `identity-service`
 - `user-service`
@@ -114,6 +114,7 @@ Pipeline hiện tại build và push image cho 9 service:
 - `analytics-service`
 - `simulation-service`
 - `media-service`
+- `audit-service`
 
 Runner image của tất cả service dùng Prisma đã copy kèm thư mục `prisma/`, vì vậy `prisma migrate deploy` có thể chạy trực tiếp trên server.
 
@@ -127,7 +128,7 @@ Script deploy sẽ:
 4. Upload `docker/keycloak/realm-export.json`
 5. Pull image từ GHCR
 6. Start infrastructure: Postgres, RabbitMQ, Redis, Consul, Consul init, Keycloak
-7. Chạy `prisma migrate deploy` cho toàn bộ 9 service có Prisma:
+7. Chạy `prisma migrate deploy` cho toàn bộ 10 service có Prisma:
    - `identity-service`
    - `user-service`
    - `exam-service`
@@ -137,6 +138,7 @@ Script deploy sẽ:
    - `analytics-service`
    - `simulation-service`
    - `media-service`
+   - `audit-service`
 8. Start app services + Kong
 9. Smoke check `health/live` và `health/ready` của từng service qua Kong
 
@@ -151,6 +153,7 @@ Smoke check sử dụng service-prefix route:
 - `/analytics-service`
 - `/simulation-service`
 - `/media-service`
+- `/audit-service`
 
 ## 10. Rollback
 

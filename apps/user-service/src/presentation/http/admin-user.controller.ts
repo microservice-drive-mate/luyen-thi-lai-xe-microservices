@@ -8,7 +8,10 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
+import { buildAuditRequestContext } from '@repo/common';
+import type { Request } from 'express';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -149,9 +152,15 @@ export class AdminUserController {
     @Param('id') id: string,
     @Body() dto: AssignLicenseTierRequestDto,
     @AuthenticatedUser() user: JwtPayload,
+    @Req() request: Request,
   ): Promise<UserProfileResponseDto> {
     const result = await this.assignLicenseTierUseCase.execute(
-      new AssignLicenseTierCommand(id, dto.licenseTier, user.sub),
+      new AssignLicenseTierCommand(
+        id,
+        dto.licenseTier,
+        user.sub,
+        buildAuditRequestContext(request, user),
+      ),
     );
     return UserProfileResponseDto.fromResult(result);
   }

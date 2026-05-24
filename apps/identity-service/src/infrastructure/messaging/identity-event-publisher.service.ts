@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { DomainEvent } from '@repo/common';
 import { lastValueFrom } from 'rxjs';
+import { IdentityEventPublisherPort } from '../../application/ports/identity-event-publisher.port';
 
 export const USER_SERVICE_CLIENT = 'USER_SERVICE_CLIENT';
 export const NOTI_SERVICE_CLIENT = 'NOTI_SERVICE';
@@ -18,7 +19,7 @@ const USER_ONLY_EVENTS = new Set([
 ]);
 
 @Injectable()
-export class IdentityEventPublisher {
+export class IdentityEventPublisher extends IdentityEventPublisherPort {
   private readonly logger = new Logger(IdentityEventPublisher.name);
 
   constructor(
@@ -26,7 +27,9 @@ export class IdentityEventPublisher {
     private readonly userServiceClient: ClientProxy,
     @Inject(NOTI_SERVICE_CLIENT)
     private readonly notiServiceClient: ClientProxy,
-  ) {}
+  ) {
+    super();
+  }
 
   async publish(event: DomainEvent): Promise<void> {
     try {

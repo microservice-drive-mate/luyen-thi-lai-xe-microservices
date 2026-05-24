@@ -85,12 +85,15 @@ jobs:
             media-service:
               - 'apps/media-service/**'
               - 'packages/**'
+            audit-service:
+              - 'apps/audit-service/**'
+              - 'packages/**'
 
       - name: Build matrix
         id: set-matrix
         run: |
           CHANGED='${{ steps.filter.outputs.changes }}'
-          ALL_SERVICES='["identity-service","analytics-service","course-service","exam-service","notification-service","question-service","simulation-service","user-service","media-service"]'
+          ALL_SERVICES='["identity-service","analytics-service","course-service","exam-service","notification-service","question-service","simulation-service","user-service","media-service","audit-service"]'
           SERVICES="[]"
 
           for SERVICE in $(echo $ALL_SERVICES | jq -rc '.[]'); do

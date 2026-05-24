@@ -8,6 +8,8 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
+  AccessLogInterceptor,
+  CorrelationIdMiddleware,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
@@ -19,7 +21,11 @@ async function bootstrap() {
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
-  app.useGlobalInterceptors(new ApiResponseInterceptor());
+  app.use(new CorrelationIdMiddleware().use);
+  app.useGlobalInterceptors(
+    new AccessLogInterceptor({ serviceName: 'simulation-service' }),
+    new ApiResponseInterceptor(),
+  );
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new ApiExceptionFilter());
 

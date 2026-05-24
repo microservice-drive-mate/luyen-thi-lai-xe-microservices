@@ -19,7 +19,20 @@ import {
 } from '@nestjs/swagger';
 import { Roles } from 'nest-keycloak-connect';
 import { AuthenticatedUser } from 'nest-keycloak-connect';
-import { AdminService } from '../../admin.service';
+import { ChangeUserRoleCommand } from '../../application/use-cases/change-user-role/change-user-role.command';
+import { ChangeUserRoleUseCase } from '../../application/use-cases/change-user-role/change-user-role.use-case';
+import { CreateIdentityUserCommand } from '../../application/use-cases/create-identity-user/create-identity-user.command';
+import { CreateIdentityUserUseCase } from '../../application/use-cases/create-identity-user/create-identity-user.use-case';
+import { DeleteIdentityUserCommand } from '../../application/use-cases/delete-identity-user/delete-identity-user.command';
+import { DeleteIdentityUserUseCase } from '../../application/use-cases/delete-identity-user/delete-identity-user.use-case';
+import { GetIdentityUserQuery } from '../../application/use-cases/get-identity-user/get-identity-user.query';
+import { GetIdentityUserUseCase } from '../../application/use-cases/get-identity-user/get-identity-user.use-case';
+import { ListIdentityUsersQuery } from '../../application/use-cases/list-identity-users/list-identity-users.query';
+import { ListIdentityUsersUseCase } from '../../application/use-cases/list-identity-users/list-identity-users.use-case';
+import { LockUserCommand } from '../../application/use-cases/lock-user/lock-user.command';
+import { LockUserUseCase } from '../../application/use-cases/lock-user/lock-user.use-case';
+import { UpdateIdentityUserCommand } from '../../application/use-cases/update-identity-user/update-identity-user.command';
+import { UpdateIdentityUserUseCase } from '../../application/use-cases/update-identity-user/update-identity-user.use-case';
 import { CreateUserRequestDto } from '../dtos/create-user.request.dto';
 import { CreateUserResponseDto } from '../dtos/create-user.response.dto';
 import { ChangeRoleRequestDto } from '../dtos/change-role.request.dto';
@@ -41,7 +54,15 @@ interface JwtPayload {
 @ApiTags('Identity Users')
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly createIdentityUserUseCase: CreateIdentityUserUseCase,
+    private readonly listIdentityUsersUseCase: ListIdentityUsersUseCase,
+    private readonly getIdentityUserUseCase: GetIdentityUserUseCase,
+    private readonly updateIdentityUserUseCase: UpdateIdentityUserUseCase,
+    private readonly changeUserRoleUseCase: ChangeUserRoleUseCase,
+    private readonly lockUserUseCase: LockUserUseCase,
+    private readonly deleteIdentityUserUseCase: DeleteIdentityUserUseCase,
+  ) {}
 
   @Post('identity-users')
   @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
@@ -53,7 +74,14 @@ export class AdminController {
   async createUser(
     @Body() body: CreateUserRequestDto,
   ): Promise<CreateUserResponseDto> {
-    return this.adminService.createUser(body);
+    return this.createIdentityUserUseCase.execute(
+      new CreateIdentityUserCommand(
+        body.email,
+        body.fullName,
+        body.role,
+        body.temporaryPassword,
+      ),
+    );
   }
 
   @Get('identity-users')
@@ -63,7 +91,16 @@ export class AdminController {
   async listUsers(
     @Query() query: ListIdentityUsersQueryDto,
   ): Promise<PaginatedIdentityUsersResponseDto> {
-    return this.adminService.listUsers(query);
+    return this.listIdentityUsersUseCase.execute(
+      new ListIdentityUsersQuery(
+        query.page,
+        query.size,
+        query.role,
+        query.isActive,
+        query.includeDeleted,
+        query.search,
+      ),
+    );
   }
 
   @Get('identity-users/:id')
@@ -71,7 +108,9 @@ export class AdminController {
   @ApiBearerAuth()
   @ApiOkResponse({ type: IdentityUserResponseDto })
   async getUser(@Param('id') userId: string): Promise<IdentityUserResponseDto> {
-    return this.adminService.getUser(userId);
+    return this.getIdentityUserUseCase.execute(
+      new GetIdentityUserQuery(userId),
+    );
   }
 
   @Patch('identity-users/:id')
@@ -83,7 +122,9 @@ export class AdminController {
     @Param('id') userId: string,
     @Body() body: UpdateIdentityUserRequestDto,
   ): Promise<IdentityUserResponseDto> {
-    return this.adminService.updateUser(userId, body);
+    return this.updateIdentityUserUseCase.execute(
+      new UpdateIdentityUserCommand(userId, body.email, body.fullName),
+    );
   }
 
   @Patch('identity-users/:id/role')
@@ -97,7 +138,9 @@ export class AdminController {
     @Param('id') userId: string,
     @Body() body: ChangeRoleRequestDto,
   ): Promise<ChangeRoleResponseDto> {
-    return this.adminService.changeRole(userId, body.role);
+    return this.changeUserRoleUseCase.execute(
+      new ChangeUserRoleCommand(userId, body.role),
+    );
   }
 
   @Patch('identity-users/:id/lock')
@@ -111,7 +154,9 @@ export class AdminController {
     @Param('id') userId: string,
     @Body() body: LockUserRequestDto,
   ): Promise<LockUserResponseDto> {
-    return this.adminService.lockUser(userId, body.locked);
+    return this.lockUserUseCase.execute(
+      new LockUserCommand(userId, body.locked),
+    );
   }
 
   @Delete('identity-users/:id')
@@ -124,9 +169,11 @@ export class AdminController {
     @Body() body: DeleteIdentityUserRequestDto | undefined,
     @AuthenticatedUser() user: JwtPayload,
   ): Promise<IdentityUserResponseDto> {
-    return this.adminService.softDeleteUser(
-      userId,
-      body?.deletedById ?? user.sub ?? null,
+    return this.deleteIdentityUserUseCase.execute(
+      new DeleteIdentityUserCommand(
+        userId,
+        body?.deletedById ?? user.sub ?? null,
+      ),
     );
   }
 }

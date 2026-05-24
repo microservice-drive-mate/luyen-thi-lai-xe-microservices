@@ -1,4 +1,9 @@
 export * from './http-api';
+export * from './http/access-log.interceptor';
+export * from './http/correlation-id.middleware';
+export * from './audit/audit-context';
+export * from './audit/audit-event.factory';
+export * from './audit/audit.types';
 
 // ============== DDD BASE CLASSES =================
 export * from './ddd';

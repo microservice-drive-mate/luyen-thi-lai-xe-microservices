@@ -154,6 +154,23 @@ services:
       timeout: 5s
       retries: 20
       start_period: 45s
+
+  db-audit:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: audit_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5441:5432"
+    volumes:
+      - db_audit_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d audit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
   # ── Message Broker ─────────────────────────────────────────
   rabbitmq:
     image: rabbitmq:3-management-alpine
@@ -355,6 +372,7 @@ volumes:
   db_analytics_data:
   db_simulation_data:
   db_media_data:
+  db_audit_data:
   consul_data:
   db_keycloak_data:
   redis_data:

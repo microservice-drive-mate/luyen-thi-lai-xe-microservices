@@ -18,6 +18,7 @@ const backupTargets: BackupTarget[] = [
   { container: 'db-analytics', database: 'analytics_db', user: 'user' },
   { container: 'db-simulation', database: 'simulation_db', user: 'user' },
   { container: 'db-media', database: 'media_db', user: 'user' },
+  { container: 'db-audit', database: 'audit_db', user: 'user' },
   { container: 'db-keycloak', database: 'keycloak_db', user: 'keycloak' },
 ];
 

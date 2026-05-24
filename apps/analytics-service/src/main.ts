@@ -8,6 +8,8 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
+  AccessLogInterceptor,
+  CorrelationIdMiddleware,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
@@ -21,7 +23,11 @@ async function bootstrap() {
   const rabbitmqUrl =
     configService.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672';
 
-  app.useGlobalInterceptors(new ApiResponseInterceptor());
+  app.use(new CorrelationIdMiddleware().use);
+  app.useGlobalInterceptors(
+    new AccessLogInterceptor({ serviceName: 'analytics-service' }),
+    new ApiResponseInterceptor(),
+  );
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new ApiExceptionFilter());
 

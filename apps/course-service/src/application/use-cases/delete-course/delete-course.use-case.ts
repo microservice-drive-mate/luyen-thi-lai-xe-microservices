@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
+import { createAuditEvent, IUseCase } from '@repo/common';
 import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
 import { CourseRepository } from '../../../domain/repositories/course.repository';
 import { CourseCachePort } from '../../ports/course-cache.port';
@@ -20,7 +20,18 @@ export class DeleteCourseUseCase
     if (!course) throw new CourseNotFoundException(command.courseId);
 
     course.archive();
-    await this.courseRepository.save(course);
+    await this.courseRepository.save(
+      course,
+      createAuditEvent({
+        serviceName: 'course-service',
+        actorId: command.actorId ?? course.createdById,
+        action: 'COURSE_ARCHIVED',
+        resourceType: 'COURSE',
+        resourceId: course.id,
+        requestContext: command.auditContext,
+        metadata: { status: course.status },
+      }),
+    );
     await this.courseCache.invalidateCourse(course.id);
     await this.courseCache.invalidateLists();
 

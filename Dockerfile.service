@@ -1,0 +1,44 @@
+# syntax=docker/dockerfile:1
+
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app
+
+# Copy only dependency manifests first so npm ci is shared and cached across all services.
+COPY package.json package-lock.json turbo.json .npmrc ./
+COPY packages/common/package.json ./packages/common/package.json
+COPY apps/analytics-service/package.json ./apps/analytics-service/package.json
+COPY apps/audit-service/package.json ./apps/audit-service/package.json
+COPY apps/course-service/package.json ./apps/course-service/package.json
+COPY apps/exam-service/package.json ./apps/exam-service/package.json
+COPY apps/identity-service/package.json ./apps/identity-service/package.json
+COPY apps/media-service/package.json ./apps/media-service/package.json
+COPY apps/notification-service/package.json ./apps/notification-service/package.json
+COPY apps/question-service/package.json ./apps/question-service/package.json
+COPY apps/simulation-service/package.json ./apps/simulation-service/package.json
+COPY apps/user-service/package.json ./apps/user-service/package.json
+
+RUN --mount=type=cache,id=npm,target=/root/.npm,sharing=locked \
+    npm ci --legacy-peer-deps
+
+FROM node:20-alpine AS builder
+ARG SERVICE_NAME
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps ./apps
+COPY --from=deps /app/packages ./packages
+COPY . .
+RUN npx turbo build --filter=${SERVICE_NAME}
+
+FROM node:20-alpine AS runner
+ARG SERVICE_NAME
+ENV SERVICE_NAME=${SERVICE_NAME}
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
+COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json
+COPY --from=builder --chown=node:node /app/apps/${SERVICE_NAME} ./apps/${SERVICE_NAME}
+USER node
+CMD ["sh", "-c", "node apps/${SERVICE_NAME}/dist/src/main.js"]

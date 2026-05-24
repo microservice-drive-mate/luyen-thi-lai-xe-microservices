@@ -1,3 +1,4 @@
+import { AuditEventEnvelope } from '@repo/common';
 import { CourseEnrollment } from '../aggregates/course-enrollment/course-enrollment.aggregate';
 import { EnrollmentStatus } from '../aggregates/course-enrollment/course-enrollment.types';
 
@@ -22,5 +23,8 @@ export abstract class CourseEnrollmentRepository {
   abstract findByStudentId(
     filter: ListEnrollmentsFilter,
   ): Promise<ListEnrollmentsPage>;
-  abstract save(enrollment: CourseEnrollment): Promise<void>;
+  abstract save(
+    enrollment: CourseEnrollment,
+    auditEvent?: AuditEventEnvelope,
+  ): Promise<void>;
 }

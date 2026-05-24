@@ -18,6 +18,10 @@ import {
   RABBITMQ_CLIENT,
   RabbitMqEventPublisher,
 } from './infrastructure/messaging/rabbitmq-event-publisher.service';
+import {
+  AUDIT_SERVICE_CLIENT,
+  AuditOutboxRelayService,
+} from './infrastructure/outbox/audit-outbox-relay.service';
 import { PrismaUserProfileRepository } from './infrastructure/persistence/prisma/prisma-user-profile.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { AdminUserController } from './presentation/http/admin-user.controller';
@@ -69,6 +73,20 @@ import { MessagingController } from './presentation/messaging/messaging.controll
           },
         }),
       },
+      {
+        name: AUDIT_SERVICE_CLIENT,
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              config.get<string>('rabbitmq.url') ?? 'amqp://127.0.0.1:5672',
+            ],
+            queue: 'audit_service_events',
+            queueOptions: { durable: true },
+          },
+        }),
+      },
     ]),
   ],
   controllers: [UserController, AdminUserController, MessagingController],
@@ -78,6 +96,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
 
     { provide: UserProfileRepository, useClass: PrismaUserProfileRepository },
     { provide: EventPublisher, useClass: RabbitMqEventPublisher },
+    AuditOutboxRelayService,
 
     CreateUserProfileUseCase,
     UpdateUserProfileUseCase,
