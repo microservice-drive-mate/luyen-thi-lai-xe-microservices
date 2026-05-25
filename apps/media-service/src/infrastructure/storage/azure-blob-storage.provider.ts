@@ -14,10 +14,10 @@ export class AzureBlobStorageProvider
   extends StoragePort
   implements OnModuleInit
 {
-  private readonly client: BlobServiceClient;
+  private readonly client?: BlobServiceClient;
   private readonly containerName: string;
   private readonly accountName: string;
-  private readonly credential: StorageSharedKeyCredential;
+  private readonly credential?: StorageSharedKeyCredential;
   private readonly defaultPresignedUrlExpiry: number;
   private readonly logger = new Logger(AzureBlobStorageProvider.name);
 
@@ -29,6 +29,13 @@ export class AzureBlobStorageProvider
       configService.get<string>('storage.containerName') ?? 'media';
     this.defaultPresignedUrlExpiry =
       configService.get<number>('storage.presignedUrlExpiry') ?? 3600;
+
+    if (!this.accountName || !accountKey) {
+      this.logger.warn(
+        'Azure Blob Storage is not configured; media upload endpoints are disabled',
+      );
+      return;
+    }
 
     this.credential = new StorageSharedKeyCredential(
       this.accountName,
@@ -42,6 +49,10 @@ export class AzureBlobStorageProvider
 
   // Tự động tạo container nếu chưa tồn tại khi service khởi động
   async onModuleInit(): Promise<void> {
+    if (!this.client) {
+      return;
+    }
+
     try {
       const containerClient = this.client.getContainerClient(
         this.containerName,
@@ -60,7 +71,7 @@ export class AzureBlobStorageProvider
 
   async upload(key: string, buffer: Buffer, mimeType: string): Promise<void> {
     try {
-      const blockBlobClient = this.client
+      const blockBlobClient = this.getClient()
         .getContainerClient(this.containerName)
         .getBlockBlobClient(key);
 
@@ -75,7 +86,7 @@ export class AzureBlobStorageProvider
   }
 
   async delete(key: string): Promise<void> {
-    await this.client
+    await this.getClient()
       .getContainerClient(this.containerName)
       .getBlockBlobClient(key)
       .delete();
@@ -84,10 +95,11 @@ export class AzureBlobStorageProvider
 
   async getPresignedUrl(key: string, expiresIn?: number): Promise<string> {
     const ttl = expiresIn ?? this.defaultPresignedUrlExpiry;
-    const blockBlobClient = this.client
+    const blockBlobClient = this.getClient()
       .getContainerClient(this.containerName)
       .getBlockBlobClient(key);
 
+    const credential = this.getCredential();
     const sasToken = generateBlobSASQueryParameters(
       {
         containerName: this.containerName,
@@ -95,7 +107,7 @@ export class AzureBlobStorageProvider
         permissions: BlobSASPermissions.parse('r'),
         expiresOn: new Date(Date.now() + ttl * 1000),
       },
-      this.credential,
+      credential,
     ).toString();
 
     return `${blockBlobClient.url}?${sasToken}`;
@@ -107,10 +119,11 @@ export class AzureBlobStorageProvider
     expiresIn?: number,
   ): Promise<{ uploadUrl: string; publicUrl: string }> {
     const ttl = expiresIn ?? this.defaultPresignedUrlExpiry;
-    const blockBlobClient = this.client
+    const blockBlobClient = this.getClient()
       .getContainerClient(this.containerName)
       .getBlockBlobClient(key);
 
+    const credential = this.getCredential();
     const sasToken = generateBlobSASQueryParameters(
       {
         containerName: this.containerName,
@@ -119,12 +132,28 @@ export class AzureBlobStorageProvider
         expiresOn: new Date(Date.now() + ttl * 1000),
         contentType: mimeType,
       },
-      this.credential,
+      credential,
     ).toString();
 
     return {
       uploadUrl: `${blockBlobClient.url}?${sasToken}`,
       publicUrl: blockBlobClient.url,
     };
+  }
+
+  private getClient(): BlobServiceClient {
+    if (!this.client) {
+      throw new Error('Azure Blob Storage is not configured');
+    }
+
+    return this.client;
+  }
+
+  private getCredential(): StorageSharedKeyCredential {
+    if (!this.credential) {
+      throw new Error('Azure Blob Storage is not configured');
+    }
+
+    return this.credential;
   }
 }

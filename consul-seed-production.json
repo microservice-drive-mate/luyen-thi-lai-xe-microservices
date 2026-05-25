@@ -21,16 +21,22 @@
       "rabbitmq.username": "${SECRET_RABBITMQ_USERNAME}",
       "rabbitmq.password": "${SECRET_RABBITMQ_PASSWORD}",
       "rabbitmq.vhost": "/",
+      "redis.url": "${REDIS_URL}",
       "keycloak.authServerUrl": "${KEYCLOAK_AUTH_SERVER_URL}",
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
     },
     "user-service": {
       "port": "3000",
       "database.url": "${SECRET_USER_DB_URL}",
-      "rabbitmq.url": "${SECRET_RABBITMQ_URL}"
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}",
+      "keycloak.authServerUrl": "${KEYCLOAK_AUTH_SERVER_URL}",
+      "keycloak.realm": "${KEYCLOAK_REALM}",
+      "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
+      "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
     },
     "exam-service": {
       "port": "3000",
@@ -40,21 +46,11 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000",
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}",
       "services.question.baseUrl": "${QUESTION_SERVICE_URL}",
-      "services.question.timeoutMs": "3000",
+      "services.question.timeoutMs": "${QUESTION_SERVICE_TIMEOUT_MS:-3000}",
       "services.user.baseUrl": "${USER_SERVICE_URL}",
-      "services.user.timeoutMs": "3000"
-    },
-    "question-service": {
-      "port": "3000",
-      "database.url": "${SECRET_QUESTION_DB_URL}",
-      "rabbitmq.url": "${SECRET_RABBITMQ_URL}",
-      "keycloak.authServerUrl": "${KEYCLOAK_AUTH_SERVER_URL}",
-      "keycloak.realm": "${KEYCLOAK_REALM}",
-      "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
-      "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000"
+      "services.user.timeoutMs": "${USER_SERVICE_TIMEOUT_MS:-3000}"
     },
     "course-service": {
       "port": "3000",
@@ -65,7 +61,17 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
+    },
+    "question-service": {
+      "port": "3000",
+      "database.url": "${SECRET_QUESTION_DB_URL}",
+      "rabbitmq.url": "${SECRET_RABBITMQ_URL}",
+      "keycloak.authServerUrl": "${KEYCLOAK_AUTH_SERVER_URL}",
+      "keycloak.realm": "${KEYCLOAK_REALM}",
+      "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
+      "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
     },
     "notification-service": {
       "port": "3000",
@@ -75,7 +81,7 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
     },
     "analytics-service": {
       "port": "3000",
@@ -86,7 +92,7 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
     },
     "simulation-service": {
       "port": "3000",
@@ -97,7 +103,7 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
     },
     "media-service": {
       "port": "3000",
@@ -107,7 +113,7 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000",
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}",
       "storage.accountName": "${STORAGE_ACCOUNT_NAME}",
       "storage.accountKey": "${SECRET_STORAGE_ACCOUNT_KEY}",
       "storage.containerName": "${STORAGE_CONTAINER_NAME}",
@@ -121,11 +127,7 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000"
-    },
-    "docs-service": {
-      "port": "3000",
-      "swagger.services": "identity-service:3000,user-service:3000,exam-service:3000,course-service:3000,question-service:3000,notification-service:3000,analytics-service:3000,simulation-service:3000,media-service:3000,audit-service:3000"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
     }
   }
 }

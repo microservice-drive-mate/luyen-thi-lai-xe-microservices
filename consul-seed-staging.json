@@ -122,10 +122,6 @@
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
       "keycloak.timeoutMs": "3000"
-    },
-    "docs-service": {
-      "port": "3000",
-      "swagger.services": "identity-service:3000,user-service:3000,exam-service:3000,course-service:3000,question-service:3000,notification-service:3000,analytics-service:3000,simulation-service:3000,media-service:3000,audit-service:3000"
     }
   }
 }
