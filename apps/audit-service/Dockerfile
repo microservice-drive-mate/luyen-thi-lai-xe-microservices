@@ -21,9 +21,20 @@ COPY --from=installer /app/apps/audit-service/node_modules ./apps/audit-service/
 COPY --from=pruner /app/out/full/ .
 RUN npx prisma generate --schema=apps/audit-service/prisma/schema.prisma
 RUN npx turbo build --filter=audit-service
+RUN npm prune --omit=dev --legacy-peer-deps && npm cache clean --force && mkdir -p apps/audit-service/node_modules
 
 FROM node:20-alpine AS runner
 RUN apk add --no-cache libc6-compat openssl
+# Runtime only needs node; package managers add unrelated CVE surface.
+RUN rm -rf \
+    /usr/local/lib/node_modules/npm \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/corepack \
+    /opt/yarn* \
+    /usr/local/bin/yarn \
+    /usr/local/bin/yarnpkg
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/audit-service/dist ./apps/audit-service/dist
 COPY --from=builder --chown=node:node /app/apps/audit-service/package.json ./apps/audit-service/

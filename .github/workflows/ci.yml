@@ -81,6 +81,15 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
+            all-services:
+              - '.github/workflows/ci.yml'
+              - 'Dockerfile.service'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'turbo.json'
+              - 'docker/**'
+              - 'deploy/**'
+              - 'consul-seed-*.json'
             identity-service:
               - 'apps/identity-service/**'
               - 'packages/**'
@@ -118,6 +127,14 @@ jobs:
           CHANGED='${{ steps.filter.outputs.changes }}'
           ALL_SERVICES='["identity-service","analytics-service","course-service","exam-service","notification-service","question-service","simulation-service","user-service","media-service","audit-service"]'
           SERVICES="[]"
+
+          if echo "$CHANGED" | jq -e 'index("all-services") != null' > /dev/null; then
+            echo "DevOps/shared build inputs changed -> build all services"
+            SERVICES="$ALL_SERVICES"
+            echo "services=$SERVICES" >> $GITHUB_OUTPUT
+            echo "Final services to build: $SERVICES"
+            exit 0
+          fi
 
           for SERVICE in $(echo $ALL_SERVICES | jq -rc '.[]'); do
             CHANGED_MATCH=$(echo $CHANGED | jq -rc --arg s "$SERVICE" 'map(select(. == $s)) | length')
@@ -195,20 +212,16 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push Docker Image
+      - name: Build Docker Image
         shell: bash
         run: |
           set -euo pipefail
-
-          OUTPUT_FLAG="--load"
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
-            OUTPUT_FLAG="--push"
-          fi
 
           for attempt in 1 2 3; do
             echo "Docker build attempt $attempt/3 for ${{ matrix.service }}"
@@ -220,7 +233,7 @@ jobs:
               --cache-from "type=gha,scope=${{ matrix.service }}" \
               --cache-to "type=gha,mode=max,scope=${{ matrix.service }}" \
               --provenance=false \
-              "$OUTPUT_FLAG" \
+              --load \
               .; then
               exit 0
             fi
@@ -234,6 +247,25 @@ jobs:
             echo "Docker build failed, retrying in ${sleep_seconds}s..."
             sleep "$sleep_seconds"
           done
+
+      - name: Scan Docker Image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          scanners: vuln
+          format: table
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Push Docker Image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest
 
       - name: Get image size
         id: size

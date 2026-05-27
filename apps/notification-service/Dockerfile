@@ -25,10 +25,21 @@ COPY --from=installer /app/apps/notification-service/node_modules ./apps/notific
 COPY --from=pruner /app/out/full/ .
 RUN npx prisma generate --schema=apps/notification-service/prisma/schema.prisma
 RUN npx turbo build --filter=notification-service
+RUN npm prune --omit=dev --legacy-peer-deps && npm cache clean --force && mkdir -p apps/notification-service/node_modules
 
 # Giai đoạn 4: Runner
 FROM node:20-alpine AS runner
 RUN apk add --no-cache libc6-compat openssl
+# Runtime only needs node; package managers add unrelated CVE surface.
+RUN rm -rf \
+    /usr/local/lib/node_modules/npm \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/corepack \
+    /opt/yarn* \
+    /usr/local/bin/yarn \
+    /usr/local/bin/yarnpkg
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/notification-service/dist ./apps/notification-service/dist
 COPY --from=builder --chown=node:node /app/apps/notification-service/package.json ./apps/notification-service/

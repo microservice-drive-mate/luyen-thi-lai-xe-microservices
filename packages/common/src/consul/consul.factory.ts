@@ -156,6 +156,9 @@ export class ConsulConfigFactory {
 
   private static loadFromEnv(env: NodeJS.ProcessEnv): ConfigRecord {
     const consulUrl = env.CONSUL_URL || 'http://localhost:8500';
+    const hasStorageCredentials = Boolean(
+      env.STORAGE_ACCOUNT_NAME && env.STORAGE_ACCOUNT_KEY,
+    );
 
     // Only include a value when the env var is explicitly set.
     // Returning undefined lets mergeConfig keep the Consul value instead of
@@ -216,20 +219,16 @@ export class ConsulConfigFactory {
             url: env.REDIS_URL,
           }
         : undefined,
-      storage:
-        env.STORAGE_ACCOUNT_NAME ||
-        env.STORAGE_ACCOUNT_KEY ||
-        env.STORAGE_CONTAINER_NAME ||
-        env.STORAGE_PRESIGNED_URL_EXPIRY
-          ? {
-              accountName: env.STORAGE_ACCOUNT_NAME,
-              accountKey: env.STORAGE_ACCOUNT_KEY,
-              containerName: env.STORAGE_CONTAINER_NAME,
-              presignedUrlExpiry: env.STORAGE_PRESIGNED_URL_EXPIRY
-                ? parseInt(env.STORAGE_PRESIGNED_URL_EXPIRY, 10)
-                : undefined,
-            }
-          : undefined,
+      storage: hasStorageCredentials
+        ? {
+            accountName: env.STORAGE_ACCOUNT_NAME,
+            accountKey: env.STORAGE_ACCOUNT_KEY,
+            containerName: env.STORAGE_CONTAINER_NAME,
+            presignedUrlExpiry: env.STORAGE_PRESIGNED_URL_EXPIRY
+              ? parseInt(env.STORAGE_PRESIGNED_URL_EXPIRY, 10)
+              : undefined,
+          }
+        : undefined,
       swagger: env.SWAGGER_SERVICES
         ? {
             services: env.SWAGGER_SERVICES,

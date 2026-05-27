@@ -25,10 +25,21 @@ COPY --from=installer /app/apps/question-service/node_modules ./apps/question-se
 COPY --from=pruner /app/out/full/ .
 RUN npx prisma generate --schema=apps/question-service/prisma/schema.prisma
 RUN npx turbo build --filter=question-service
+RUN npm prune --omit=dev --legacy-peer-deps && npm cache clean --force && mkdir -p apps/question-service/node_modules
 
 # Giai đoạn 4: Runner
 FROM node:20-alpine AS runner
 RUN apk add --no-cache libc6-compat openssl
+# Runtime only needs node; package managers add unrelated CVE surface.
+RUN rm -rf \
+    /usr/local/lib/node_modules/npm \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/corepack \
+    /opt/yarn* \
+    /usr/local/bin/yarn \
+    /usr/local/bin/yarnpkg
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/question-service/dist ./apps/question-service/dist
 COPY --from=builder --chown=node:node /app/apps/question-service/package.json ./apps/question-service/
