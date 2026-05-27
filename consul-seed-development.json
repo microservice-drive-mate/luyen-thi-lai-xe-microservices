@@ -10,7 +10,11 @@
       "observability.kibana.url": "${KIBANA_URL:-http://kibana:5601}",
       "observability.prometheus.url": "${PROMETHEUS_URL:-http://prometheus:9090}",
       "observability.alertmanager.url": "${ALERTMANAGER_URL:-http://alertmanager:9093}",
-      "observability.grafana.url": "${GRAFANA_URL:-http://grafana:3000}"
+      "observability.grafana.url": "${GRAFANA_URL:-http://grafana:3000}",
+      "public.gateway.url": "${GATEWAY_PUBLIC_URL:-http://localhost:8000}",
+      "public.keycloak.url": "${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}",
+      "public.frontend.origin": "${FRONTEND_ORIGIN:-http://localhost:3000}",
+      "cors.origins": "${KONG_CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}"
     },
     "identity-service": {
       "port": "3000",
@@ -113,7 +117,11 @@
       "keycloak.realm": "${KEYCLOAK_REALM:-luyen-thi-lai-xe-realm}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID:-nestjs-backend}",
       "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
-      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}",
+      "storage.accountName": "${STORAGE_ACCOUNT_NAME:-}",
+      "storage.accountKey": "${STORAGE_ACCOUNT_KEY:-}",
+      "storage.containerName": "${STORAGE_CONTAINER_NAME:-media}",
+      "storage.presignedUrlExpiry": "${STORAGE_PRESIGNED_URL_EXPIRY:-3600}"
     },
     "audit-service": {
       "port": "3000",

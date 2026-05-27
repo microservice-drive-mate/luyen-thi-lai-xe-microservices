@@ -1,12 +1,14 @@
-name: Main Image Release
+name: Pull Request Validation
 
 on:
-  push:
+  pull_request:
     branches: ["main"]
 
 permissions:
   contents: read
-  packages: write
+  packages: read
+  pull-requests: write
+  issues: write
 
 jobs:
   quality-gate:
@@ -41,7 +43,6 @@ jobs:
     name: Detect Changed Services
     runs-on: ubuntu-latest
     needs: quality-gate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       services: ${{ steps.set-matrix.outputs.services }}
     steps:
@@ -55,7 +56,7 @@ jobs:
         with:
           filters: |
             all-services:
-              - '.github/workflows/ci.yml'
+              - '.github/workflows/**'
               - 'Dockerfile.service'
               - 'package.json'
               - 'package-lock.json'
@@ -132,8 +133,38 @@ jobs:
           printf 'services=%s\n' "$SERVICES" >> "$GITHUB_OUTPUT"
           echo "Final services to build: $SERVICES"
 
+  label-pr:
+    name: Label Pull Request
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create labels if not exist and add to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const services = ${{ needs.detect-changes.outputs.services }};
+            if (!services || services.length === 0) return;
+
+            for (const service of services) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: `service: ${service}`,
+                  color: 'ededed',
+                });
+              } catch (e) {}
+            }
+
+            await github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: services.map((service) => `service: ${service}`),
+            });
+
   build:
-    name: Build Services
+    name: Build and Scan Services
     needs: detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -141,7 +172,6 @@ jobs:
       needs.detect-changes.outputs.services != '[]' &&
       needs.detect-changes.outputs.services != '' &&
       needs.detect-changes.outputs.services != 'null'
-
     strategy:
       fail-fast: false
       matrix:
@@ -154,13 +184,6 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - uses: docker/login-action@v3
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build Docker Image
         shell: bash
         run: |
@@ -171,7 +194,6 @@ jobs:
 
             if docker buildx build \
               --file "./apps/${{ matrix.service }}/Dockerfile" \
-              --tag "ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest" \
               --tag "ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}" \
               --cache-from "type=gha,scope=${{ matrix.service }}" \
               --cache-to "type=gha,mode=max,scope=${{ matrix.service }}" \
@@ -202,110 +224,18 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
-      - name: Push Docker Image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
-          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest
-
-      - name: Get image size
-        id: size
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          docker pull ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest 2>/dev/null || true
-          SIZE=$(docker image inspect ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest \
-            --format='{{.Size}}' 2>/dev/null | awk '{printf "%.1f MB", $1/1024/1024}' || echo "N/A")
-          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
-
       - name: Build Summary
         if: always()
         run: |
           END_TIME=$(date +%s)
           DURATION="$(( (END_TIME - START_TIME) / 60 ))m $(( (END_TIME - START_TIME) % 60 ))s"
 
-          STATUS="${{ job.status }}"
-          if [[ "$STATUS" == "success" ]]; then ICON="✅"
-          elif [[ "$STATUS" == "cancelled" ]]; then ICON="⏹️"
-          else ICON="❌"
-          fi
-
-          SIZE="${{ steps.size.outputs.size }}"
-          [ -z "$SIZE" ] && SIZE="N/A"
-
           {
-            echo "## $ICON ${{ matrix.service }}"
+            echo "## ${{ matrix.service }}"
             echo "| Property | Value |"
             echo "| :--- | :--- |"
-            echo "| Status | $STATUS |"
+            echo "| Status | ${{ job.status }} |"
             echo "| Build Duration | **$DURATION** |"
-            echo "| Image Size | $SIZE |"
+            echo "| Image Push | skipped for pull requests |"
             echo "| SHA | \`${{ github.sha }}\` |"
-            echo ""
-            echo "---"
           } >> "$GITHUB_STEP_SUMMARY"
-
-  deploy-staging:
-    name: Deploy Staging
-    runs-on: ubuntu-latest
-    needs: build
-    timeout-minutes: 30
-    if: |
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      needs.build.result == 'success' &&
-      vars.STAGING_DEPLOY_ENABLED == 'true'
-    environment: staging
-    env:
-      DEPLOY_ENV: staging
-      DEPLOY_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
-      DEPLOY_USER: ${{ secrets.STAGING_DEPLOY_USER }}
-      DEPLOY_PATH: ${{ secrets.STAGING_DEPLOY_PATH }}
-      GHCR_OWNER: nhactaohocbai
-      GHCR_USERNAME: ${{ github.actor }}
-      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      IMAGE_TAG: ${{ github.sha }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate deployment inputs
-        shell: bash
-        run: |
-          set -euo pipefail
-          required_vars=(
-            DEPLOY_HOST
-            DEPLOY_USER
-            DEPLOY_PATH
-            GHCR_OWNER
-            GHCR_USERNAME
-            GHCR_TOKEN
-            IMAGE_TAG
-          )
-
-          for var_name in "${required_vars[@]}"; do
-            if [[ -z "${!var_name:-}" ]]; then
-              echo "Missing required value: ${var_name}" >&2
-              exit 1
-            fi
-          done
-
-      - name: Configure SSH key
-        shell: bash
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${SSH_PRIVATE_KEY:-}" ]]; then
-            echo "Missing required value: STAGING_SSH_PRIVATE_KEY" >&2
-            exit 1
-          fi
-
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-
-      - name: Deploy compose stack
-        shell: bash
-        run: bash scripts/deploy-staging.sh

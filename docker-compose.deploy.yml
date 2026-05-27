@@ -229,8 +229,8 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-app}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?RABBITMQ_DEFAULT_PASS is required}
     ports:
-      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
-      - "${RABBITMQ_PROMETHEUS_PORT:-15692}:15692"
+      - "${PRIVATE_BIND:-127.0.0.1}:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+      - "${PRIVATE_BIND:-127.0.0.1}:${RABBITMQ_PROMETHEUS_PORT:-15692}:15692"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -258,7 +258,7 @@ services:
     environment:
       CONSUL_BIND_INTERFACE: eth0
     ports:
-      - "${CONSUL_PORT:-8500}:8500"
+      - "${PRIVATE_BIND:-127.0.0.1}:${CONSUL_PORT:-8500}:8500"
     volumes:
       - consul_data:/consul/data
     healthcheck:
@@ -283,6 +283,10 @@ services:
       STORAGE_ACCOUNT_KEY: ${STORAGE_ACCOUNT_KEY}
       STORAGE_CONTAINER_NAME: ${STORAGE_CONTAINER_NAME:-media}
       STORAGE_PRESIGNED_URL_EXPIRY: ${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
+      GATEWAY_PUBLIC_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:8000}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      KONG_CORS_ORIGINS: ${KONG_CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}
     depends_on:
       consul:
         condition: service_healthy
@@ -291,7 +295,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
     restart: unless-stopped
-    command: start-dev --import-realm
+    command: ${KEYCLOAK_COMMAND:-start-dev --import-realm}
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://db-keycloak:5432/${KEYCLOAK_DB_NAME:-keycloak_db}
@@ -299,13 +303,15 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      KC_HOSTNAME_STRICT: "false"
-      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-localhost}
+      KC_HOSTNAME_STRICT: ${KEYCLOAK_HOSTNAME_STRICT:-false}
+      KC_HTTP_ENABLED: ${KEYCLOAK_HTTP_ENABLED:-true}
+      KC_PROXY_HEADERS: ${KEYCLOAK_PROXY_HEADERS:-xforwarded}
     depends_on:
       db-keycloak:
         condition: service_healthy
     ports:
-      - "${KEYCLOAK_PORT:-8080}:8080"
+      - "${PUBLIC_BIND:-0.0.0.0}:${KEYCLOAK_PORT:-8080}:8080"
     volumes:
       - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
 
@@ -337,7 +343,7 @@ services:
       xpack.security.enabled: "false"
       ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms512m -Xmx512m}
     ports:
-      - "${ELASTICSEARCH_PORT:-9200}:9200"
+      - "${PRIVATE_BIND:-127.0.0.1}:${ELASTICSEARCH_PORT:-9200}:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
@@ -356,7 +362,7 @@ services:
     volumes:
       - ./docker/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
     ports:
-      - "${LOGSTASH_HOST_PORT:-5044}:5044"
+      - "${PRIVATE_BIND:-127.0.0.1}:${LOGSTASH_HOST_PORT:-5044}:5044"
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -367,7 +373,7 @@ services:
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     ports:
-      - "${KIBANA_PORT:-5601}:5601"
+      - "${PRIVATE_BIND:-127.0.0.1}:${KIBANA_PORT:-5601}:5601"
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -380,7 +386,7 @@ services:
       - ./docker/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "${PRIVATE_BIND:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -398,7 +404,7 @@ services:
       - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
     ports:
-      - "${ALERTMANAGER_PORT:-9093}:9093"
+      - "${PRIVATE_BIND:-127.0.0.1}:${ALERTMANAGER_PORT:-9093}:9093"
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
@@ -414,9 +420,18 @@ services:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "${GRAFANA_PORT:-30000}:3000"
+      - "${PRIVATE_BIND:-127.0.0.1}:${GRAFANA_PORT:-30000}:3000"
     depends_on:
       - prometheus
+
+  migration-runner:
+    image: node:20-alpine
+    working_dir: /workspace
+    environment:
+      CHECKPOINT_DISABLE: "1"
+      PRISMA_HIDE_UPDATE_MESSAGE: "true"
+    volumes:
+      - .:/workspace:ro
 
   identity-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-identity-service:${IMAGE_TAG}
@@ -729,8 +744,8 @@ services:
       - media-service
       - audit-service
     ports:
-      - "${KONG_PROXY_PORT:-8000}:8000"
-      - "${KONG_ADMIN_PORT:-8001}:8001"
+      - "${PUBLIC_BIND:-0.0.0.0}:${KONG_PROXY_PORT:-8000}:8000"
+      - "${PRIVATE_BIND:-127.0.0.1}:${KONG_ADMIN_PORT:-8001}:8001"
     volumes:
       - ./kong/kong.yaml:/usr/local/kong/declarative/kong.yaml:ro
 
