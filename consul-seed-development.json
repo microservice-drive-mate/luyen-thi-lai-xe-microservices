@@ -119,7 +119,7 @@
       "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
       "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}",
       "storage.accountName": "${STORAGE_ACCOUNT_NAME:-}",
-      "storage.accountKey": "${STORAGE_ACCOUNT_KEY:-}",
+      "storage.accountKey": "${SECRET_STORAGE_ACCOUNT_KEY:-}",
       "storage.containerName": "${STORAGE_CONTAINER_NAME:-media}",
       "storage.presignedUrlExpiry": "${STORAGE_PRESIGNED_URL_EXPIRY:-3600}"
     },

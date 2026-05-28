@@ -16,17 +16,34 @@ export class AppService {
     const raw = this.configService.get<string>('swagger.services');
     if (!raw) return [];
 
+    const nodeEnv =
+      this.configService.get<string>('nodeEnv') ?? process.env.NODE_ENV;
+    const urlMode =
+      process.env.SWAGGER_SERVICE_URL_MODE ??
+      (nodeEnv === 'development-local' ? 'localhost' : 'docker');
+
     return raw
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean)
       .map((entry) => {
+        if (entry.startsWith('http://') || entry.startsWith('https://')) {
+          const baseUrl = entry.replace(/\/+$/, '');
+          return {
+            name: new URL(baseUrl).hostname
+              .replace(/-/g, ' ')
+              .replace(/\b\w/g, (c) => c.toUpperCase()),
+            url: `${baseUrl}/docs-json`,
+          };
+        }
+
         const [slug, svcPort = '3000'] = entry.split(':');
+        const host = urlMode === 'localhost' ? 'localhost' : slug;
         return {
           name: slug
             .replace(/-/g, ' ')
             .replace(/\b\w/g, (c) => c.toUpperCase()),
-          url: `http://localhost:${svcPort}/docs-json`,
+          url: `http://${host}:${svcPort}/docs-json`,
         };
       });
   }

@@ -19,6 +19,7 @@ out/
 .env.*
 *.env
 !.env.example
+!.env.vps.example
 
 # Local Kubernetes/Helm secrets
 charts/**/values-*.local.yaml
