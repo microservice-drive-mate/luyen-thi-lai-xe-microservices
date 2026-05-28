@@ -1,0 +1,162 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lttl.configName" . }}
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.nodeEnv | quote }}
+  CONSUL_URL: {{ printf "http://%s-consul:8500" (include "lttl.fullname" .) | quote }}
+  KEYCLOAK_AUTH_SERVER_URL: {{ printf "http://%s-keycloak:8080" (include "lttl.fullname" .) | quote }}
+  KEYCLOAK_REALM: {{ .Values.secrets.keycloakRealm | quote }}
+  KEYCLOAK_CLIENT_ID: {{ .Values.secrets.keycloakClientId | quote }}
+  KEYCLOAK_TIMEOUT_MS: "3000"
+  QUESTION_SERVICE_URL: {{ printf "http://%s:3000" (include "lttl.componentName" (dict "root" . "name" "question-service")) | quote }}
+  USER_SERVICE_URL: {{ printf "http://%s:3000" (include "lttl.componentName" (dict "root" . "name" "user-service")) | quote }}
+  QUESTION_SERVICE_TIMEOUT_MS: {{ .Values.config.questionServiceTimeoutMs | quote }}
+  USER_SERVICE_TIMEOUT_MS: {{ .Values.config.userServiceTimeoutMs | quote }}
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  LOG_FORMAT: {{ .Values.config.logFormat | quote }}
+  LOG_CONSOLE_FORMAT: {{ .Values.config.logConsoleFormat | quote }}
+  GATEWAY_PUBLIC_URL: {{ .Values.config.gatewayPublicUrl | quote }}
+  KEYCLOAK_PUBLIC_URL: {{ .Values.config.keycloakPublicUrl | quote }}
+  FRONTEND_ORIGIN: {{ .Values.config.frontendOrigin | quote }}
+  KONG_CORS_ORIGINS: {{ join "," .Values.config.corsOrigins | quote }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lttl.fullname" . }}-postgres-init
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+data:
+  init-databases.sh: |
+    #!/bin/sh
+    set -eu
+
+    create_database() {
+      db_name="$1"
+      if psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${db_name}'" | grep -q 1; then
+        echo "[postgres-init] database already exists: ${db_name}"
+        return 0
+      fi
+
+      echo "[postgres-init] creating database: ${db_name}"
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres -c "CREATE DATABASE \"${db_name}\""
+    }
+
+    {{- range .Values.services }}
+    create_database {{ .dbName | quote }}
+    {{- end }}
+    create_database "keycloak_db"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lttl.fullname" . }}-consul-seed
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+data:
+  seed.sh: |
+    #!/bin/sh
+    set -eu
+
+    CONSUL_URL="${CONSUL_URL:-http://{{ include "lttl.fullname" . }}-consul:8500}"
+    NODE_ENV="${NODE_ENV:-{{ .Values.global.nodeEnv }}}"
+
+    for attempt in $(seq 1 60); do
+      if curl --silent --fail "${CONSUL_URL}/v1/status/leader" > /dev/null; then
+        break
+      fi
+      echo "[consul-seed] waiting for Consul (${attempt}/60)"
+      sleep 2
+    done
+
+    set_kv() {
+      key="$1"
+      value="$2"
+      echo "[consul-seed] ${key}"
+      curl --silent --fail -X PUT --data "${value}" "${CONSUL_URL}/v1/kv/${key}" > /dev/null
+    }
+
+    set_kv "config/${NODE_ENV}/shared/node_env" "${NODE_ENV}"
+    set_kv "config/${NODE_ENV}/shared/log.level" {{ .Values.config.logLevel | quote }}
+    set_kv "config/${NODE_ENV}/shared/log.format" {{ .Values.config.logFormat | quote }}
+    set_kv "config/${NODE_ENV}/shared/public.gateway.url" {{ .Values.config.gatewayPublicUrl | quote }}
+    set_kv "config/${NODE_ENV}/shared/public.keycloak.url" {{ .Values.config.keycloakPublicUrl | quote }}
+    set_kv "config/${NODE_ENV}/shared/public.frontend.origin" {{ .Values.config.frontendOrigin | quote }}
+    set_kv "config/${NODE_ENV}/shared/cors.origins" {{ join "," .Values.config.corsOrigins | quote }}
+
+    {{- range .Values.services }}
+    set_kv "config/${NODE_ENV}/{{ .name }}/port" "3000"
+    {{- end }}
+    set_kv "config/${NODE_ENV}/exam-service/services.question.baseUrl" "http://{{ include "lttl.componentName" (dict "root" . "name" "question-service") }}:3000"
+    set_kv "config/${NODE_ENV}/exam-service/services.user.baseUrl" "http://{{ include "lttl.componentName" (dict "root" . "name" "user-service") }}:3000"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lttl.fullname" . }}-kong
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+data:
+  kong.yaml: |
+    _format_version: "3.0"
+    _transform: true
+
+    services:
+    {{- range .Values.services }}
+      - name: {{ .name }}
+        url: http://{{ include "lttl.componentName" (dict "root" $ "name" .name) }}:3000
+        routes:
+        {{- range .routes }}
+          - name: {{ .name }}
+            paths:
+            {{- range .paths }}
+              - {{ . | quote }}
+            {{- end }}
+            strip_path: {{ .stripPath }}
+        {{- end }}
+    {{- end }}
+
+    plugins:
+      - name: cors
+        config:
+          origins:
+          {{- range .Values.config.corsOrigins }}
+            - {{ . | quote }}
+          {{- end }}
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - Origin
+            - X-Requested-With
+            - x-correlation-id
+            - x-user-id
+            - x-user-role
+          exposed_headers:
+            - Authorization
+            - x-correlation-id
+          credentials: true
+          max_age: 3600
+      - name: correlation-id
+        config:
+          header_name: x-correlation-id
+          generator: uuid#counter
+          echo_downstream: true
+      - name: rate-limiting
+        config:
+          second: 100
+          hour: 1000
+          policy: local

@@ -58,9 +58,11 @@ jobs:
             all-services:
               - '.github/workflows/**'
               - 'Dockerfile.service'
+              - 'Dockerfile.migration-runner'
               - 'package.json'
               - 'package-lock.json'
               - 'turbo.json'
+              - 'charts/**'
               - 'docker/**'
               - 'deploy/**'
               - 'consul-seed-*.json'
@@ -232,6 +234,58 @@ jobs:
 
           {
             echo "## ${{ matrix.service }}"
+            echo "| Property | Value |"
+            echo "| :--- | :--- |"
+            echo "| Status | ${{ job.status }} |"
+            echo "| Build Duration | **$DURATION** |"
+            echo "| Image Push | skipped for pull requests |"
+            echo "| SHA | \`${{ github.sha }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build-migration-runner:
+    name: Build and Scan Migration Runner
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Start Timer
+        run: echo "START_TIME=$(date +%s)" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build Migration Runner Image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx build \
+            --file Dockerfile.migration-runner \
+            --tag ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }} \
+            --cache-from type=gha,scope=migration-runner \
+            --cache-to type=gha,mode=max,scope=migration-runner \
+            --provenance=false \
+            --load \
+            .
+
+      - name: Scan Migration Runner with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
+          scanners: vuln
+          format: table
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Build Summary
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION="$(( (END_TIME - START_TIME) / 60 ))m $(( (END_TIME - START_TIME) % 60 ))s"
+          {
+            echo "## migration-runner"
             echo "| Property | Value |"
             echo "| :--- | :--- |"
             echo "| Status | ${{ job.status }} |"

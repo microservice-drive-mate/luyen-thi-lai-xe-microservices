@@ -1,0 +1,29 @@
+global:
+  imageTag: replace-with-git-sha-that-passed-main-release
+
+ingress:
+  apiHost: api.example.com
+  authHost: auth.example.com
+
+config:
+  frontendOrigin: https://example.com
+  gatewayPublicUrl: https://api.example.com
+  keycloakPublicUrl: https://auth.example.com
+  corsOrigins:
+    - https://example.com
+    - https://api.example.com
+    - https://auth.example.com
+
+imagePullSecret:
+  enabled: true
+  username: replace-with-ghcr-username
+  token: change-me
+
+secrets:
+  postgresPassword: change-me
+  rabbitmqPassword: change-me
+  rabbitmqErlangCookie: change-me-rabbitmq-cookie
+  keycloakAdminPassword: change-me
+  keycloakClientSecret: change-me
+  storageAccountName: replace-with-storage-account
+  storageAccountKey: change-me

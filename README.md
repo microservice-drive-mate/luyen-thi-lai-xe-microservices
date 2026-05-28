@@ -224,6 +224,10 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - Pull Request Validation: quality gate, build image, Trivy scan, không push image.
   - Main Image Release: build image, Trivy scan, push GHCR bằng tag `${git_sha}` và `latest`.
   - Production Release: chạy thủ công bằng immutable image tag, gắn GitHub Environment `production`.
+- Deployment Phase 5:
+  - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.
+  - Target hiện tại là K3s VPS, self-contained dependencies trong cluster.
+  - Hướng dẫn setup nằm ở `guides/devops/PHASE5-KUBERNETES.md`.
 - Health endpoints chuẩn:
   - `/health`
   - `/health/live`
