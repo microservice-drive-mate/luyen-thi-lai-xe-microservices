@@ -22,8 +22,8 @@ Trang thai hien tai:
 | Phase 1 Local/Dev | Mostly done | `.env.example`, deploy env examples, Consul seed optional media storage, health endpoints va AppLogger da co tren services. Runtime smoke can chay lai khi Docker Desktop/DNS on dinh. |
 | Phase 3 DevSecOps | Done for baseline | CI run #154 pass tren commit `2265ae8`; 10 production images build + Trivy HIGH/CRITICAL scan success. |
 | Phase 4 CI/CD | In progress | Working tree da tach PR validation, main image release, production release manual; can push de GitHub Actions verify. |
-| Phase 5 Deployment Runtime | Pending | Can chon Render hay Docker Compose/Kubernetes cho staging that. Repo hien co Docker Compose deploy scripts. |
-| Phase 9 IaC/Scaling | Pending | Chua co `k8s`, `helm`, `terraform`. |
+| Phase 5 Deployment Runtime | In progress | Kubernetes Helm path da duoc scaffold cho K3s VPS: app services, in-cluster dependencies, Ingress, probes, resources, Consul seed va Prisma migration Job. |
+| Phase 9 IaC/Scaling | Pending | Chua co `terraform`, HPA hay load test; cac phan nay tach khoi Phase 5. |
 
 ## 2. Production Service Map
 
@@ -131,8 +131,32 @@ Next recommended order:
 3. Configure GitHub Environments:
    - `staging` for automatic deploy.
    - `production` with required reviewers/manual approval.
-4. Decide Phase 5 target:
-   - Render if optimizing for a quick demo in 1 week.
-   - Docker Compose VM if using the existing deploy scripts.
-   - Kubernetes/Helm if the assignment requires orchestration depth.
-5. Add SBOM/signing/CodeQL only after Phase 4 deploy path is stable.
+4. Configure Phase 5 Kubernetes runtime:
+   - K3s VPS with Traefik and `local-path` storage class.
+   - GitHub variables: `STAGING_API_HOST`, `STAGING_AUTH_HOST`, `STAGING_FRONTEND_ORIGIN`, and production equivalents.
+   - GitHub secrets: `STAGING_KUBE_CONFIG_B64`, `PRODUCTION_KUBE_CONFIG_B64`, `GHCR_PULL_USERNAME`, `GHCR_PULL_TOKEN`, DB/RabbitMQ/Keycloak/storage secrets.
+5. Verify Helm deployment:
+   - `helm lint charts/luyen-thi-lai-xe`.
+   - `helm template luyen-thi-lai-xe charts/luyen-thi-lai-xe -f charts/luyen-thi-lai-xe/values-staging.example.yaml`.
+   - Staging deploy via main workflow and smoke test through Kong.
+   - Production manual release with `workflow_dispatch` and Helm rollback test.
+6. Add SBOM/signing/CodeQL only after Phase 5 deploy path is stable.
+
+## 7. Phase 5 Kubernetes Baseline
+
+Phase 5 target da chot la Kubernetes Helm tren K3s VPS, self-contained trong cluster.
+
+Implemented baseline:
+
+- Helm chart `charts/luyen-thi-lai-xe` deploy 10 production services, Kong, Keycloak, Postgres, RabbitMQ, Redis va Consul.
+- Kubernetes `Secret` dung cho password/token/storage; Consul seed Job chi seed non-secret config.
+- App Deployments co `resources.requests`, `resources.limits`, `/health/live` va `/health/ready` probes.
+- `Dockerfile.migration-runner` build image rieng cho Prisma migration Job.
+- GitHub Actions deploy staging/production bang Helm va kubeconfig base64.
+- `scripts/k8s-smoke.sh` verify health endpoints qua Kong.
+
+Khong nam trong Phase 5:
+
+- Terraform, HPA, k6/JMeter.
+- Full ELK/Prometheus/Grafana tren Kubernetes.
+- Vault/External Secrets.

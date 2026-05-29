@@ -30,6 +30,10 @@ COPY --from=deps /app/apps ./apps
 COPY --from=deps /app/packages ./packages
 COPY . .
 RUN npx turbo build --filter=${SERVICE_NAME}
+# Generate Prisma client BEFORE npm prune (prisma is a devDep and will be removed).
+# Back up the whole @prisma dir so npm prune cannot remove the generated client.
+RUN npx prisma generate --schema=apps/${SERVICE_NAME}/prisma/schema.prisma \
+ && cp -r node_modules/@prisma /prisma-generated
 RUN npm prune --omit=dev --legacy-peer-deps && npm cache clean --force
 
 FROM node:20-alpine AS runner
@@ -48,6 +52,8 @@ RUN rm -rf \
     /usr/local/bin/yarnpkg
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+# Restore Prisma generated client (removed by npm prune) from backup
+COPY --from=builder --chown=node:node /prisma-generated ./node_modules/@prisma/
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json
 COPY --from=builder --chown=node:node /app/apps/${SERVICE_NAME} ./apps/${SERVICE_NAME}

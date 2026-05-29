@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lttl.fullname" . }}-keycloak
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+  selector:
+    {{- include "lttl.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lttl.fullname" . }}-keycloak
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+spec:
+  replicas: {{ .Values.keycloak.replicas }}
+  selector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: keycloak
+  template:
+    metadata:
+      labels:
+        {{- include "lttl.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: keycloak
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -ec
+            - until nc -z {{ include "lttl.fullname" . }}-postgres 5432; do echo waiting for postgres; sleep 2; done
+      containers:
+        - name: keycloak
+          image: {{ .Values.keycloak.image | quote }}
+          imagePullPolicy: IfNotPresent
+          args:
+            {{- range .Values.keycloak.args }}
+            - {{ . | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://{{ include "lttl.fullname" . }}-postgres:5432/keycloak_db
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" . }}
+                  key: POSTGRES_USER
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" . }}
+                  key: POSTGRES_PASSWORD
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" . }}
+                  key: KEYCLOAK_ADMIN
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" . }}
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            - name: KC_HOSTNAME
+              value: {{ .Values.ingress.authHost | quote }}
+            - name: KC_HOSTNAME_STRICT
+              value: {{ .Values.keycloak.hostnameStrict | quote }}
+            - name: KC_HTTP_ENABLED
+              value: {{ .Values.keycloak.httpEnabled | quote }}
+            - name: KC_PROXY_HEADERS
+              value: {{ .Values.keycloak.proxyHeaders | quote }}
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 80
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.keycloak.resources | nindent 12 }}
+          volumeMounts:
+            - name: realm-import
+              mountPath: /opt/keycloak/data/import/realm-export.json
+              subPath: realm-export.json
+              readOnly: true
+      volumes:
+        - name: realm-import
+          secret:
+            secretName: {{ include "lttl.secretName" . }}
+            items:
+              - key: realm-export.json
+                path: realm-export.json

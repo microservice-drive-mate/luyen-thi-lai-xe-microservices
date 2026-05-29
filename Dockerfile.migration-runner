@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:1
+
+ARG NODE_VERSION=20-alpine
+ARG PRISMA_CLI_VERSION=7.8.0
+
+FROM node:${NODE_VERSION}
+
+RUN apk add --no-cache libc6-compat openssl
+
+WORKDIR /workspace
+
+RUN npm install -g prisma@${PRISMA_CLI_VERSION} \
+  && npm cache clean --force \
+  && rm -rf \
+    /usr/local/lib/node_modules/npm \
+    /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/bin/corepack \
+    /usr/local/bin/yarn \
+    /usr/local/bin/yarnpkg \
+    /opt/yarn-*
+
+COPY apps/identity-service/prisma ./apps/identity-service/prisma
+COPY apps/identity-service/prisma.config.ts ./apps/identity-service/prisma.config.ts
+COPY apps/user-service/prisma ./apps/user-service/prisma
+COPY apps/user-service/prisma.config.ts ./apps/user-service/prisma.config.ts
+COPY apps/exam-service/prisma ./apps/exam-service/prisma
+COPY apps/exam-service/prisma.config.ts ./apps/exam-service/prisma.config.ts
+COPY apps/course-service/prisma ./apps/course-service/prisma
+COPY apps/course-service/prisma.config.ts ./apps/course-service/prisma.config.ts
+COPY apps/question-service/prisma ./apps/question-service/prisma
+COPY apps/question-service/prisma.config.ts ./apps/question-service/prisma.config.ts
+COPY apps/notification-service/prisma ./apps/notification-service/prisma
+COPY apps/notification-service/prisma.config.ts ./apps/notification-service/prisma.config.ts
+COPY apps/analytics-service/prisma ./apps/analytics-service/prisma
+COPY apps/analytics-service/prisma.config.ts ./apps/analytics-service/prisma.config.ts
+COPY apps/simulation-service/prisma ./apps/simulation-service/prisma
+COPY apps/simulation-service/prisma.config.ts ./apps/simulation-service/prisma.config.ts
+COPY apps/media-service/prisma ./apps/media-service/prisma
+COPY apps/media-service/prisma.config.ts ./apps/media-service/prisma.config.ts
+COPY apps/audit-service/prisma ./apps/audit-service/prisma
+COPY apps/audit-service/prisma.config.ts ./apps/audit-service/prisma.config.ts
+
+ENV CHECKPOINT_DISABLE=1
+ENV PRISMA_HIDE_UPDATE_MESSAGE=true
+ENV NODE_PATH=/usr/local/lib/node_modules
+
+CMD ["sh"]

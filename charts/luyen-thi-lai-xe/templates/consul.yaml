@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lttl.fullname" . }}-consul
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: consul
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8500
+      targetPort: http
+  selector:
+    {{- include "lttl.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: consul
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "lttl.fullname" . }}-consul
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: consul
+spec:
+  serviceName: {{ include "lttl.fullname" . }}-consul
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: consul
+  template:
+    metadata:
+      labels:
+        {{- include "lttl.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: consul
+    spec:
+      containers:
+        - name: consul
+          image: {{ .Values.consul.image | quote }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - agent
+            - -server
+            - -bootstrap-expect=1
+            - -client=0.0.0.0
+            - -ui
+            - -data-dir=/consul/data
+          ports:
+            - name: http
+              containerPort: 8500
+          readinessProbe:
+            httpGet:
+              path: /v1/status/leader
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /v1/status/leader
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.consul.resources | nindent 12 }}
+          volumeMounts:
+            - name: consul-data
+              mountPath: /consul/data
+  volumeClaimTemplates:
+    - metadata:
+        name: consul-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.global.storageClassName }}
+        storageClassName: {{ .Values.global.storageClassName | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.consul.storage | quote }}

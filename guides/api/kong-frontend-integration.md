@@ -157,7 +157,7 @@ Content-Type: application/json
 ```json
 {
   "username": "admin@example.com",
-  "password": "Pass@123"
+    "password": "123456"
 }
 ```
 
@@ -295,7 +295,7 @@ Nhưng nên ưu tiên Swagger qua Kong để gắn với frontend path thực t�
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin@example.com","password":"Pass@123"}' | jq -r '.data.accessToken')
+  -d '{"username":"admin@example.com","password":"123456"}' | jq -r '.data.accessToken')
 ```
 
 Tạo topic:
@@ -334,12 +334,14 @@ curl -X POST http://localhost:8000/admin/questions \
 ```text
 http://localhost:3000
 http://localhost:3001
+http://localhost:3009
 http://localhost:4173
 http://localhost:5173
 http://localhost:5174
 http://localhost:4200
 http://127.0.0.1:3000
 http://127.0.0.1:3001
+http://127.0.0.1:3009
 http://127.0.0.1:4173
 http://127.0.0.1:5173
 http://127.0.0.1:5174

@@ -19,35 +19,51 @@ permissions:
 
 jobs:
   deploy-production:
-    name: Deploy Production
+    name: Deploy Production Kubernetes
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: inputs.confirm_production == true
     environment: production
     env:
-      DEPLOY_ENV: production
-      DEPLOY_HOST: ${{ secrets.PRODUCTION_DEPLOY_HOST }}
-      DEPLOY_USER: ${{ secrets.PRODUCTION_DEPLOY_USER }}
-      DEPLOY_PATH: ${{ secrets.PRODUCTION_DEPLOY_PATH }}
-      GHCR_OWNER: nhactaohocbai
-      GHCR_USERNAME: ${{ github.actor }}
-      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       IMAGE_TAG: ${{ inputs.image_tag }}
+      KUBE_CONFIG_B64: ${{ secrets.PRODUCTION_KUBE_CONFIG_B64 }}
+      API_HOST: ${{ vars.PRODUCTION_API_HOST }}
+      AUTH_HOST: ${{ vars.PRODUCTION_AUTH_HOST }}
+      FRONTEND_ORIGIN: ${{ vars.PRODUCTION_FRONTEND_ORIGIN }}
+      API_SCHEME: ${{ vars.PRODUCTION_API_SCHEME }}
+      GHCR_PULL_USERNAME: ${{ secrets.GHCR_PULL_USERNAME }}
+      GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+      POSTGRES_PASSWORD: ${{ secrets.PRODUCTION_POSTGRES_PASSWORD }}
+      RABBITMQ_DEFAULT_PASS: ${{ secrets.PRODUCTION_RABBITMQ_PASSWORD }}
+      RABBITMQ_ERLANG_COOKIE: ${{ secrets.PRODUCTION_RABBITMQ_ERLANG_COOKIE }}
+      KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.PRODUCTION_KEYCLOAK_ADMIN_PASSWORD }}
+      KEYCLOAK_CLIENT_SECRET: ${{ secrets.PRODUCTION_KEYCLOAK_CLIENT_SECRET }}
+      STORAGE_ACCOUNT_NAME: ${{ secrets.PRODUCTION_STORAGE_ACCOUNT_NAME }}
+      STORAGE_ACCOUNT_KEY: ${{ secrets.PRODUCTION_STORAGE_ACCOUNT_KEY }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate deployment inputs
+      - uses: azure/setup-helm@v4
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Validate Kubernetes deployment inputs
         shell: bash
         run: |
           set -euo pipefail
           required_vars=(
-            DEPLOY_HOST
-            DEPLOY_USER
-            DEPLOY_PATH
-            GHCR_OWNER
-            GHCR_USERNAME
-            GHCR_TOKEN
             IMAGE_TAG
+            KUBE_CONFIG_B64
+            API_HOST
+            AUTH_HOST
+            FRONTEND_ORIGIN
+            GHCR_PULL_USERNAME
+            GHCR_PULL_TOKEN
+            POSTGRES_PASSWORD
+            RABBITMQ_DEFAULT_PASS
+            RABBITMQ_ERLANG_COOKIE
+            KEYCLOAK_ADMIN_PASSWORD
+            KEYCLOAK_CLIENT_SECRET
           )
 
           for var_name in "${required_vars[@]}"; do
@@ -57,22 +73,88 @@ jobs:
             fi
           done
 
-      - name: Configure SSH key
+      - name: Configure kubeconfig
         shell: bash
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
         run: |
           set -euo pipefail
-          if [[ -z "${SSH_PRIVATE_KEY:-}" ]]; then
-            echo "Missing required value: PRODUCTION_SSH_PRIVATE_KEY" >&2
-            exit 1
-          fi
+          mkdir -p ~/.kube
+          printf '%s' "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
 
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-
-      - name: Deploy compose stack
+      - name: Render Helm values
         shell: bash
-        run: bash scripts/deploy-prod.sh
+        run: |
+          set -euo pipefail
+          export HELM_VALUES_FILE="$RUNNER_TEMP/production-values.json"
+          API_SCHEME="${API_SCHEME:-http}"
+          GATEWAY_PUBLIC_URL="${API_SCHEME}://${API_HOST}"
+          KEYCLOAK_PUBLIC_URL="${API_SCHEME}://${AUTH_HOST}"
+          export API_SCHEME GATEWAY_PUBLIC_URL KEYCLOAK_PUBLIC_URL
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const env = process.env;
+          const origins = [
+            env.FRONTEND_ORIGIN,
+            env.GATEWAY_PUBLIC_URL,
+            env.KEYCLOAK_PUBLIC_URL,
+          ].flatMap((value) => String(value || '').split(','))
+            .map((value) => value.trim())
+            .filter(Boolean);
+
+          const values = {
+            global: { imageTag: env.IMAGE_TAG },
+            migration: { imageTag: env.IMAGE_TAG },
+            imagePullSecret: {
+              enabled: true,
+              username: env.GHCR_PULL_USERNAME,
+              token: env.GHCR_PULL_TOKEN,
+            },
+            ingress: {
+              apiHost: env.API_HOST,
+              authHost: env.AUTH_HOST,
+            },
+            config: {
+              frontendOrigin: env.FRONTEND_ORIGIN,
+              gatewayPublicUrl: env.GATEWAY_PUBLIC_URL,
+              keycloakPublicUrl: env.KEYCLOAK_PUBLIC_URL,
+              corsOrigins: [...new Set(origins)],
+            },
+            secrets: {
+              postgresPassword: env.POSTGRES_PASSWORD,
+              rabbitmqPassword: env.RABBITMQ_DEFAULT_PASS,
+              rabbitmqErlangCookie: env.RABBITMQ_ERLANG_COOKIE,
+              keycloakAdminPassword: env.KEYCLOAK_ADMIN_PASSWORD,
+              keycloakClientSecret: env.KEYCLOAK_CLIENT_SECRET,
+              storageAccountName: env.STORAGE_ACCOUNT_NAME || '',
+              storageAccountKey: env.STORAGE_ACCOUNT_KEY || '',
+            },
+          };
+
+          fs.writeFileSync(env.HELM_VALUES_FILE, JSON.stringify(values, null, 2));
+          NODE
+
+      - name: Deploy Helm release
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm lint charts/luyen-thi-lai-xe -f "$RUNNER_TEMP/production-values.json"
+          helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
+            --namespace production \
+            --create-namespace \
+            --wait \
+            --wait-for-jobs \
+            --timeout 25m \
+            -f "$RUNNER_TEMP/production-values.json"
+
+      - name: Verify rollout and smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl wait --for=condition=complete job -l app.kubernetes.io/component=consul-seed -n production --timeout=10m
+          kubectl wait --for=condition=complete job -l app.kubernetes.io/component=migration -n production --timeout=10m
+          kubectl rollout status deployment -l app.kubernetes.io/component=app -n production --timeout=10m
+          kubectl get jobs -n production
+          API_SCHEME="${API_SCHEME:-http}"
+          SMOKE_BASE_URL="${API_SCHEME}://${API_HOST}" bash scripts/k8s-smoke.sh

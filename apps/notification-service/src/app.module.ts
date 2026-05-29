@@ -75,6 +75,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
               realm: Joi.string().default('luyen-thi-lai-xe-realm'),
               clientId: Joi.string().default('nestjs-backend'),
               clientSecret: Joi.string().optional(),
+              timeoutMs: Joi.number().default(10000),
             }).default(),
           }).unknown(true),
           'notification-service',

@@ -245,6 +245,7 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me}
+      KEYCLOAK_TIMEOUT_MS: ${KEYCLOAK_TIMEOUT_MS:-10000}
       STORAGE_ACCOUNT_NAME: ${STORAGE_ACCOUNT_NAME:-}
       STORAGE_ACCOUNT_KEY: ${STORAGE_ACCOUNT_KEY:-}
       STORAGE_CONTAINER_NAME: ${STORAGE_CONTAINER_NAME:-media}
@@ -753,6 +754,7 @@ services:
       # Cấu hình để chạy sau Gateway hoặc Proxy
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
     ports:
       - "8080:8080"
     volumes:
@@ -762,6 +764,12 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/8080'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
 
   keycloak-smtp-config:
     image: quay.io/keycloak/keycloak:24.0
@@ -786,7 +794,7 @@ services:
       KEYCLOAK_SMTP_STARTTLS: ${KEYCLOAK_SMTP_STARTTLS:-false}
     depends_on:
       keycloak:
-        condition: service_started
+        condition: service_healthy
       mailpit:
         condition: service_started
     restart: "no"

@@ -62,7 +62,7 @@ export class ApiResponseInterceptor<T>
       }
     >
 {
-  constructor(private readonly reflector?: Reflector) {}
+  constructor(private readonly reflector: Reflector = new Reflector()) {}
 
   intercept(
     context: ExecutionContext,

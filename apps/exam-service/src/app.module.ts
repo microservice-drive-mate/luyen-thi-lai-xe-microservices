@@ -66,6 +66,7 @@ import { ExamModule } from './exam.module';
               realm: Joi.string().required(),
               clientId: Joi.string().required(),
               clientSecret: Joi.string().optional(),
+              timeoutMs: Joi.number().default(10000),
             }).required(),
             services: Joi.object({
               question: Joi.object({

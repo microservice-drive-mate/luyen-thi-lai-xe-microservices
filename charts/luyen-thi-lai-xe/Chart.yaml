@@ -1,0 +1,6 @@
+apiVersion: v2
+name: luyen-thi-lai-xe
+description: Kubernetes deployment chart for the Luyen Thi Lai Xe microservices stack
+type: application
+version: 0.1.0
+appVersion: "phase-5"

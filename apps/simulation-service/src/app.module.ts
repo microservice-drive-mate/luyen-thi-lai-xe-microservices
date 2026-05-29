@@ -86,6 +86,7 @@ import { SimulationController } from './presentation/http/simulation.controller'
               realm: Joi.string().default('luyen-thi-lai-xe-realm'),
               clientId: Joi.string().default('nestjs-backend'),
               clientSecret: Joi.string().optional(),
+              timeoutMs: Joi.number().default(10000),
             }).default(),
           }).unknown(true),
           'simulation-service',
