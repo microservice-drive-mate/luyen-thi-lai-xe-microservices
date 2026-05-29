@@ -226,6 +226,7 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me}
+      KEYCLOAK_TIMEOUT_MS: ${KEYCLOAK_TIMEOUT_MS:-10000}
       STORAGE_ACCOUNT_NAME: ${STORAGE_ACCOUNT_NAME:-}
       STORAGE_ACCOUNT_KEY: ${STORAGE_ACCOUNT_KEY:-}
       STORAGE_CONTAINER_NAME: ${STORAGE_CONTAINER_NAME:-media}
@@ -323,6 +324,7 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
       KC_HOSTNAME_URL: "http://localhost:8080"
+      KC_HEALTH_ENABLED: "true"
     ports:
       - "8080:8080"
     volumes:
@@ -332,6 +334,12 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/8080'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
 
   # ── API Gateway (trỏ vào localhost của máy host) ───────────
   mailpit:
@@ -362,8 +370,10 @@ services:
       KEYCLOAK_SMTP_SSL: ${KEYCLOAK_SMTP_SSL:-false}
       KEYCLOAK_SMTP_STARTTLS: ${KEYCLOAK_SMTP_STARTTLS:-false}
     depends_on:
-      - keycloak
-      - mailpit
+      keycloak:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
     restart: "no"
 
   keycloak-backup:
@@ -383,7 +393,8 @@ services:
       BACKUP_WEEKLY_RETENTION_WEEKS: ${BACKUP_WEEKLY_RETENTION_WEEKS:-4}
       BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
     depends_on:
-      - keycloak
+      keycloak:
+        condition: service_healthy
     restart: unless-stopped
 
   kong-dev:

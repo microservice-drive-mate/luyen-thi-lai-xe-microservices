@@ -10,7 +10,7 @@ data:
   KEYCLOAK_AUTH_SERVER_URL: {{ printf "http://%s-keycloak:8080" (include "lttl.fullname" .) | quote }}
   KEYCLOAK_REALM: {{ .Values.secrets.keycloakRealm | quote }}
   KEYCLOAK_CLIENT_ID: {{ .Values.secrets.keycloakClientId | quote }}
-  KEYCLOAK_TIMEOUT_MS: "3000"
+  KEYCLOAK_TIMEOUT_MS: "10000"
   QUESTION_SERVICE_URL: {{ printf "http://%s:3000" (include "lttl.componentName" (dict "root" . "name" "question-service")) | quote }}
   USER_SERVICE_URL: {{ printf "http://%s:3000" (include "lttl.componentName" (dict "root" . "name" "user-service")) | quote }}
   QUESTION_SERVICE_TIMEOUT_MS: {{ .Values.config.questionServiceTimeoutMs | quote }}
