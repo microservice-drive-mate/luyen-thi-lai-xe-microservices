@@ -136,9 +136,7 @@ export class KeycloakAdminService extends IdentityProviderPort {
       );
 
       if (status === 401) {
-        throw new UnauthorizedException(
-          'Tai khoan hoac mat khau khong chinh xac',
-        );
+        throw new UnauthorizedException('Invalid email or password. (MSG03)');
       }
       throw new InternalServerErrorException(
         `Keycloak login error [${status ?? 'NO_RESPONSE'}]: ${detail}`,
@@ -503,9 +501,7 @@ export class KeycloakAdminService extends IdentityProviderPort {
     }
 
     if (status === 409) {
-      throw new BadRequestException(
-        'User with this email already exists in Keycloak',
-      );
+      throw new BadRequestException('Email already exists. (MSG10)');
     }
     if (status === 404) {
       throw new BadRequestException('User not found in Keycloak');

@@ -15,17 +15,23 @@ export class LogoutUseCase implements IUseCase<LogoutCommand, LogoutResult> {
 
   async execute(command: LogoutCommand): Promise<LogoutResult> {
     if (!command.accessToken) {
-      throw this.invalidToken();
+      throw new UnauthorizedException(
+        'Authentication token is missing. (MSG126)',
+      );
     }
 
     const decoded = this.decodeToken(command.accessToken);
     if (!decoded || typeof decoded.exp !== 'number') {
-      throw this.invalidToken();
+      throw new UnauthorizedException(
+        'Authentication token signature is invalid. (MSG127)',
+      );
     }
 
     const now = Math.floor(Date.now() / 1000);
     if (decoded.exp <= now) {
-      throw this.invalidToken();
+      throw new UnauthorizedException(
+        'Authentication token signature is invalid. (MSG127)',
+      );
     }
 
     await this.identityProvider.revokeSession(command.refreshToken);
@@ -33,8 +39,8 @@ export class LogoutUseCase implements IUseCase<LogoutCommand, LogoutResult> {
 
     return new LogoutResult(
       true,
-      'Ban da dang xuat thanh cong. (MSG130)',
-      'Vui long xoa token khoi LocalStorage hoac Cookie',
+      'You have been logged out successfully. (MSG122)',
+      'Please delete your token from LocalStorage or Cookie',
     );
   }
 
@@ -46,11 +52,5 @@ export class LogoutUseCase implements IUseCase<LogoutCommand, LogoutResult> {
     } catch {
       return null;
     }
-  }
-
-  private invalidToken(): UnauthorizedException {
-    return new UnauthorizedException(
-      'Token xac thuc bi thieu hoac khong hop le. (MSG129)',
-    );
   }
 }

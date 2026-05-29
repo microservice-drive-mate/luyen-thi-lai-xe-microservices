@@ -13,7 +13,7 @@ export class UpdateTemplateUseCase
 
   async execute(command: UpdateTemplateCommand): Promise<ExamTemplateResult> {
     const template = await this.templateRepository.findById(command.id);
-    if (!template) throw new ExamTemplateNotFoundException(command.id);
+    if (!template) throw new ExamTemplateNotFoundException();
     template.update(command);
     await this.templateRepository.save(
       template,

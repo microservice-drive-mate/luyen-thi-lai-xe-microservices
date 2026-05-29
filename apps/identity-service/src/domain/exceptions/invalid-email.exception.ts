@@ -4,6 +4,6 @@ export class InvalidEmailException extends DomainException {
   readonly code = 'INVALID_EMAIL';
 
   constructor(email: string) {
-    super(`Invalid email: ${email}`);
+    super('Please enter a valid email address. (MSG04)');
   }
 }

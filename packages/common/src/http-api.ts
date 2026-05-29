@@ -142,6 +142,23 @@ export class ApiResponseInterceptor<T>
   }
 }
 
+export function extractErrorCode(message: unknown): string | undefined {
+  if (!message) return undefined;
+  if (typeof message === 'string') {
+    const match = message.match(/\bMSG\d+\b/);
+    return match ? match[0] : undefined;
+  }
+  if (Array.isArray(message)) {
+    for (const item of message) {
+      if (typeof item === 'string') {
+        const match = item.match(/\bMSG\d+\b/);
+        if (match) return match[0];
+      }
+    }
+  }
+  return undefined;
+}
+
 export class ApiExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const context = host.switchToHttp();
@@ -198,10 +215,13 @@ export class ApiExceptionFilter implements ExceptionFilter {
       }
     }
 
+    const errorCode = extractErrorCode(message) ?? extractErrorCode(errors);
+
     response.status(status).json({
       success: false,
       code,
       message,
+      errorCode,
       timestamp: new Date().toISOString(),
       path: request.originalUrl ?? request.url,
       errors,

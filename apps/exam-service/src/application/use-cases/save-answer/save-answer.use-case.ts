@@ -18,7 +18,7 @@ export class SaveAnswerUseCase
 
   async execute(command: SaveAnswerCommand): Promise<ExamSessionResult> {
     const session = await this.sessionRepository.findById(command.sessionId);
-    if (!session) throw new ExamSessionNotFoundException(command.sessionId);
+    if (!session) throw new ExamSessionNotFoundException();
     session.assertOwner(command.studentId);
     const finalized = await finalizeExpiredSessionIfNeeded(
       session,

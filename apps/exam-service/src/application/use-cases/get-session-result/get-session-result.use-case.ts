@@ -18,7 +18,9 @@ export class GetSessionResultUseCase
 
   async execute(query: GetSessionResultQuery): Promise<ExamSessionResult> {
     const session = await this.sessionRepository.findById(query.sessionId);
-    if (!session) throw new ExamSessionNotFoundException(query.sessionId);
+    if (!session) {
+      throw new ExamSessionNotFoundException('Exam result not found. (MSG54)');
+    }
     session.assertOwner(query.studentId);
     await finalizeExpiredSessionIfNeeded(
       session,

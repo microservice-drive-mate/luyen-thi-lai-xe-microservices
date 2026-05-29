@@ -4,6 +4,6 @@ import { LicenseTier } from '../../domain/aggregates/user-profile/user-profile.t
 
 export class AssignLicenseTierRequestDto {
   @ApiProperty({ enum: LicenseTier })
-  @IsEnum(LicenseTier)
+  @IsEnum(LicenseTier, { message: 'Invalid license category. (MSG20)' })
   licenseTier: LicenseTier;
 }

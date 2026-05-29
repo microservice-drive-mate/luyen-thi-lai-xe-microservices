@@ -16,9 +16,9 @@ export class DeleteTemplateUseCase
 
   async execute(command: DeleteTemplateCommand): Promise<ExamTemplateResult> {
     const template = await this.templateRepository.findById(command.id);
-    if (!template) throw new ExamTemplateNotFoundException(command.id);
+    if (!template) throw new ExamTemplateNotFoundException();
     if (await this.templateRepository.hasSessions(command.id)) {
-      throw new ExamTemplateInUseException(command.id);
+      throw new ExamTemplateInUseException();
     }
     template.softDelete(command.expectedVersion);
     await this.templateRepository.save(

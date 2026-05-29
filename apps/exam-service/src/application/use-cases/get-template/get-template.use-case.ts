@@ -13,7 +13,7 @@ export class GetTemplateUseCase
 
   async execute(query: GetTemplateQuery): Promise<ExamTemplateResult> {
     const template = await this.templateRepository.findById(query.id);
-    if (!template) throw new ExamTemplateNotFoundException(query.id);
+    if (!template) throw new ExamTemplateNotFoundException();
     return ExamTemplateResult.fromAggregate(template);
   }
 }

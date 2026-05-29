@@ -18,7 +18,9 @@ export class SubmitSessionUseCase
 
   async execute(command: SubmitSessionCommand): Promise<ExamSessionResult> {
     const session = await this.sessionRepository.findById(command.sessionId);
-    if (!session) throw new ExamSessionNotFoundException(command.sessionId);
+    if (!session) {
+      throw new ExamSessionNotFoundException('Exam attempt not found. (MSG46)');
+    }
     session.assertOwner(command.studentId);
     if (session.status !== ExamSessionStatus.IN_PROGRESS) {
       return ExamSessionResult.fromAggregate(session, true);
