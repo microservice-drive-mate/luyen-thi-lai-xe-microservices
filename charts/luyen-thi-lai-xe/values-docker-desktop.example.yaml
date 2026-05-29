@@ -1,0 +1,33 @@
+global:
+  imageRegistry: local
+  imageTag: test
+  imagePullPolicy: IfNotPresent
+  storageClassName: hostpath
+
+ingress:
+  apiHost: api.127.0.0.1.nip.io
+  authHost: auth.127.0.0.1.nip.io
+
+config:
+  frontendOrigin: http://localhost:3000
+  gatewayPublicUrl: http://localhost:8000
+  keycloakPublicUrl: http://localhost:8081
+  corsOrigins:
+    - http://localhost:3000
+    - http://localhost:8000
+    - http://localhost:8081
+
+imagePullSecret:
+  enabled: false
+
+secrets:
+  postgresPassword: local-postgres-password
+  rabbitmqPassword: local-rabbitmq-password
+  rabbitmqErlangCookie: local-rabbitmq-cookie
+  keycloakAdminPassword: local-keycloak-admin-password
+  keycloakClientSecret: local-keycloak-client-secret
+  storageAccountName: ""
+  storageAccountKey: ""
+
+migration:
+  imageTag: test

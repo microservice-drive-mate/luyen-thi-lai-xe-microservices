@@ -1,0 +1,29 @@
+global:
+  imageTag: replace-with-git-sha
+
+ingress:
+  apiHost: api.staging.example.com
+  authHost: auth.staging.example.com
+
+config:
+  frontendOrigin: https://staging.example.com
+  gatewayPublicUrl: https://api.staging.example.com
+  keycloakPublicUrl: https://auth.staging.example.com
+  corsOrigins:
+    - https://staging.example.com
+    - https://api.staging.example.com
+    - https://auth.staging.example.com
+
+imagePullSecret:
+  enabled: true
+  username: replace-with-ghcr-username
+  token: change-me
+
+secrets:
+  postgresPassword: change-me
+  rabbitmqPassword: change-me
+  rabbitmqErlangCookie: change-me-rabbitmq-cookie
+  keycloakAdminPassword: change-me
+  keycloakClientSecret: change-me
+  storageAccountName: replace-with-storage-account
+  storageAccountKey: change-me

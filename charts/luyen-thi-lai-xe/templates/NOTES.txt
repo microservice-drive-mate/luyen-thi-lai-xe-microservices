@@ -1,0 +1,17 @@
+Phase 5 Kubernetes release installed:
+
+  Release: {{ .Release.Name }}
+  Namespace: {{ .Release.Namespace }}
+  API host: {{ .Values.ingress.apiHost }}
+  Keycloak host: {{ .Values.ingress.authHost }}
+  Image tag: {{ .Values.global.imageTag }}
+
+Smoke test examples:
+
+  curl http://{{ .Values.ingress.apiHost }}/identity-service/health/live
+  curl http://{{ .Values.ingress.apiHost }}/identity-service/health/ready
+
+Rollback:
+
+  helm history {{ .Release.Name }} -n {{ .Release.Namespace }}
+  helm rollback {{ .Release.Name }} <revision> -n {{ .Release.Namespace }}

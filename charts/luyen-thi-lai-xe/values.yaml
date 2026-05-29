@@ -1,0 +1,279 @@
+global:
+  imageRegistry: ghcr.io/nhactaohocbai
+  imageTag: latest
+  imagePullPolicy: IfNotPresent
+  nodeEnv: production
+  storageClassName: local-path
+
+imagePullSecret:
+  enabled: false
+  registry: ghcr.io
+  username: ""
+  token: ""
+
+ingress:
+  enabled: true
+  className: traefik
+  apiHost: api.127.0.0.1.nip.io
+  authHost: auth.127.0.0.1.nip.io
+  annotations: {}
+
+config:
+  frontendOrigin: http://localhost:3000
+  gatewayPublicUrl: http://api.127.0.0.1.nip.io
+  keycloakPublicUrl: http://auth.127.0.0.1.nip.io
+  corsOrigins:
+    - http://localhost:3000
+    - http://localhost:5173
+    - http://api.127.0.0.1.nip.io
+    - http://auth.127.0.0.1.nip.io
+  logConsoleFormat: json
+  logLevel: info
+  logFormat: json
+  questionServiceTimeoutMs: "3000"
+  userServiceTimeoutMs: "3000"
+
+secrets:
+  postgresUser: user
+  postgresPassword: change-me
+  rabbitmqUser: app
+  rabbitmqPassword: change-me
+  rabbitmqErlangCookie: change-me-rabbitmq-cookie
+  keycloakAdmin: admin
+  keycloakAdminPassword: change-me
+  keycloakRealm: luyen-thi-lai-xe-realm
+  keycloakClientId: nestjs-backend
+  keycloakClientSecret: change-me
+  storageAccountName: ""
+  storageAccountKey: ""
+  storageContainerName: media
+  storagePresignedUrlExpiry: "3600"
+
+appDefaults:
+  replicaCount: 1
+  port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    liveness:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 35
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 6
+
+services:
+  - name: identity-service
+    image: luyen-thi-lai-xe-identity-service
+    dbName: identity_db
+    usesRedis: true
+    routes:
+      - name: identity-route
+        paths: ["/auth"]
+        stripPath: true
+      - name: identity-admin-route
+        paths: ["/admin"]
+        stripPath: false
+      - name: identity-swagger-route
+        paths: ["/identity-service"]
+        stripPath: true
+  - name: user-service
+    image: luyen-thi-lai-xe-user-service
+    dbName: user_db
+    routes:
+      - name: user-route
+        paths: ["/users"]
+        stripPath: false
+      - name: user-admin-route
+        paths: ["/admin/users"]
+        stripPath: false
+      - name: user-swagger-route
+        paths: ["/user-service"]
+        stripPath: true
+  - name: exam-service
+    image: luyen-thi-lai-xe-exam-service
+    dbName: exam_db
+    routes:
+      - name: exam-route
+        paths: ["/exams"]
+        stripPath: false
+      - name: exam-admin-route
+        paths: ["/admin/exams"]
+        stripPath: false
+      - name: exam-swagger-route
+        paths: ["/exam-service"]
+        stripPath: true
+  - name: course-service
+    image: luyen-thi-lai-xe-course-service
+    dbName: course_db
+    usesRedis: true
+    routes:
+      - name: course-route
+        paths: ["/courses", "/enrollments"]
+        stripPath: false
+      - name: course-admin-route
+        paths: ["/admin/courses"]
+        stripPath: false
+      - name: course-swagger-route
+        paths: ["/course-service"]
+        stripPath: true
+  - name: question-service
+    image: luyen-thi-lai-xe-question-service
+    dbName: question_db
+    routes:
+      - name: question-admin-route
+        paths: ["/admin/questions"]
+        stripPath: false
+      - name: question-swagger-route
+        paths: ["/question-service"]
+        stripPath: true
+  - name: notification-service
+    image: luyen-thi-lai-xe-notification-service
+    dbName: notification_db
+    routes:
+      - name: notification-route
+        paths: ["/notifications"]
+        stripPath: false
+      - name: notification-swagger-route
+        paths: ["/notification-service"]
+        stripPath: true
+  - name: analytics-service
+    image: luyen-thi-lai-xe-analytics-service
+    dbName: analytics_db
+    usesRedis: true
+    routes:
+      - name: analytics-route
+        paths: ["/analytics"]
+        stripPath: false
+      - name: analytics-swagger-route
+        paths: ["/analytics-service"]
+        stripPath: true
+  - name: simulation-service
+    image: luyen-thi-lai-xe-simulation-service
+    dbName: simulation_db
+    usesRedis: true
+    routes:
+      - name: simulation-route
+        paths: ["/simulation"]
+        stripPath: false
+      - name: simulation-swagger-route
+        paths: ["/simulation-service"]
+        stripPath: true
+  - name: media-service
+    image: luyen-thi-lai-xe-media-service
+    dbName: media_db
+    routes:
+      - name: media-route
+        paths: ["/media"]
+        stripPath: false
+      - name: media-admin-route
+        paths: ["/admin/media"]
+        stripPath: false
+      - name: media-swagger-route
+        paths: ["/media-service"]
+        stripPath: true
+  - name: audit-service
+    image: luyen-thi-lai-xe-audit-service
+    dbName: audit_db
+    routes:
+      - name: audit-admin-route
+        paths: ["/admin/audit-logs"]
+        stripPath: false
+      - name: audit-swagger-route
+        paths: ["/audit-service"]
+        stripPath: true
+
+postgres:
+  image: postgres:15-alpine
+  storage: 10Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+rabbitmq:
+  image: rabbitmq:3-management-alpine
+  storage: 2Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+redis:
+  image: redis:7-alpine
+  storage: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+consul:
+  image: hashicorp/consul:1.19
+  storage: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+keycloak:
+  image: quay.io/keycloak/keycloak:24.0
+  replicas: 1
+  args: ["start", "--import-realm"]
+  hostnameStrict: "false"
+  httpEnabled: "true"
+  proxyHeaders: xforwarded
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+kong:
+  image: kong:3.7
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+migration:
+  image: luyen-thi-lai-xe-migration-runner
+  imageTag: ""
+  backoffLimit: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+jobs:
+  image: curlimages/curl:8.11.1
+  kubectlImage: bitnami/kubectl:latest

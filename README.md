@@ -17,7 +17,7 @@ File roadmap việc tiếp theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
 
 ## 2. Services hiện có
 
-- Core services:
+- Production services (10):
   - `identity-service`
   - `user-service`
   - `exam-service`
@@ -27,10 +27,9 @@ File roadmap việc tiếp theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
   - `analytics-service`
   - `simulation-service`
   - `audit-service`
-  - `audit-service`
-- Supporting services:
   - `media-service`
-  - `docs-service` dùng cho tài liệu / Swagger tổng hợp khi cần
+- Dev-only supporting service:
+  - `docs-service` dùng cho tài liệu / Swagger tổng hợp khi cần, không đưa vào Production
 
 ## 3. First Run Cho Dev/Frontend Clone Repo Lần Đầu
 
@@ -220,6 +219,15 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 
 ## 10. Ghi chú DevOps
 
+- Production scope đã chốt: 10 services; `docs-service` chỉ dùng cho Dev.
+- CI/CD Phase 4:
+  - Pull Request Validation: quality gate, build image, Trivy scan, không push image.
+  - Main Image Release: build image, Trivy scan, push GHCR bằng tag `${git_sha}` và `latest`.
+  - Production Release: chạy thủ công bằng immutable image tag, gắn GitHub Environment `production`.
+- Deployment Phase 5:
+  - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.
+  - Target hiện tại là K3s VPS, self-contained dependencies trong cluster.
+  - Hướng dẫn setup nằm ở `guides/devops/PHASE5-KUBERNETES.md`.
 - Health endpoints chuẩn:
   - `/health`
   - `/health/live`

@@ -23,9 +23,11 @@ WORKDIR /app
 COPY --from=installer /app/node_modules ./node_modules
 COPY --from=installer /app/apps/question-service/node_modules ./apps/question-service/node_modules
 COPY --from=pruner /app/out/full/ .
-RUN npx prisma generate --schema=apps/question-service/prisma/schema.prisma
+RUN npx prisma generate --schema=apps/question-service/prisma/schema.prisma --config=apps/question-service/prisma.config.ts
 RUN npx turbo build --filter=question-service
+RUN mkdir -p /tmp/prisma-client && cp -R node_modules/@prisma/question-client /tmp/prisma-client/
 RUN npm prune --omit=dev --legacy-peer-deps && npm cache clean --force && mkdir -p apps/question-service/node_modules
+RUN mkdir -p node_modules/@prisma && cp -R /tmp/prisma-client/question-client node_modules/@prisma/
 
 # Giai đoạn 4: Runner
 FROM node:20-alpine AS runner
@@ -44,6 +46,7 @@ WORKDIR /app
 COPY --from=builder --chown=node:node /app/apps/question-service/dist ./apps/question-service/dist
 COPY --from=builder --chown=node:node /app/apps/question-service/package.json ./apps/question-service/
 COPY --from=builder --chown=node:node /app/apps/question-service/prisma ./apps/question-service/prisma
+COPY --from=builder --chown=node:node /app/apps/question-service/prisma.config.ts ./apps/question-service/prisma.config.ts
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/apps/question-service/node_modules ./apps/question-service/node_modules
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist

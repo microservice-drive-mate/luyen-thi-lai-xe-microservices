@@ -131,7 +131,7 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
     },
     "docs-service": {
       "port": "3000",

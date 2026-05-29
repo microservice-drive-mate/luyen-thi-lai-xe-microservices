@@ -11,19 +11,19 @@ interface ConsulKVEntry {
   value: string;
 }
 
-loadLocalEnvFile();
+loadDotEnvFile();
 
 const CONSUL_URL = process.env.CONSUL_URL || 'http://localhost:8500';
 const DEFAULT_ENV = process.env.ENV || 'development';
 const PLACEHOLDER_PATTERN = /\$\{([A-Z0-9_]+)(?::-(.*?))?\}/g;
 
-function loadLocalEnvFile(): void {
-  const envFile = path.join(__dirname, '../.env');
+function loadDotEnvFile(): void {
+  const envFile = path.join(process.cwd(), '.env');
   if (!fs.existsSync(envFile)) {
     return;
   }
 
-  const lines = fs.readFileSync(envFile, 'utf-8').split(/\r?\n/);
+  const lines = fs.readFileSync(envFile, 'utf8').split(/\r?\n/);
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) {
@@ -36,15 +36,12 @@ function loadLocalEnvFile(): void {
     }
 
     const key = trimmed.slice(0, separatorIndex).trim();
-    let value = trimmed.slice(separatorIndex + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
+    const rawValue = trimmed.slice(separatorIndex + 1).trim();
+    if (process.env[key] !== undefined) {
+      continue;
     }
 
-    process.env[key] ??= value;
+    process.env[key] = rawValue.replace(/^(['"])(.*)\1$/, '$2');
   }
 }
 

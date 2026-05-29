@@ -1,13 +1,15 @@
 # 📋 DevOps Infrastructure Summary — Luyện Thi Lái Xe Microservices
 
 **Last Updated**: May 2026  
-**Status**: Hybrid mode operational + CI/CD automated + Monitoring setup
+**Status**: Historical summary. Current working baseline is tracked in `DEVOPS-ASSESSMENT.md`.
+
+> Current update on 2026-05-27: Production scope is 10 services, `docs-service` is Dev-only, Phase 3 DevSecOps baseline is closed after CI run #154 passed Trivy image scans for commit `2265ae8`, and Phase 4 CI/CD is being split into PR validation, main image release, automatic staging deploy, and manual production release.
 
 ---
 
 ## 🎯 Executive Summary
 
-Dự án đã hoàn thành ~**80-85%** infrastructure DevOps cho production-ready microservices architecture. Dưới đây là breakdown chi tiết những gì **đã triển khai** vs **còn thiếu**.
+Tài liệu này là snapshot lịch sử. Đánh giá hiện tại thận trọng hơn: dự án có foundation DevOps tốt cho local/dev và demo microservices, Phase 3 security baseline đã sạch CI, nhưng production readiness vẫn cần hoàn thiện Phase 4/5: promotion, deploy runtime, rollback, secret store, backup/restore và environment operations.
 
 ---
 

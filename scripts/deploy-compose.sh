@@ -30,6 +30,8 @@ remote_env_file="${remote_root}/${DEPLOY_ENV}.env"
 remote_compose_file="${remote_root}/docker-compose.deploy.yml"
 remote_kong_dir="${remote_root}/kong"
 remote_kong_file="${remote_kong_dir}/kong.yaml"
+remote_kong_runtime_dir="${remote_root}/docker/kong"
+remote_kong_render_file="${remote_kong_runtime_dir}/render-kong-config.sh"
 remote_consul_dir="${remote_root}/docker/consul"
 remote_consul_init_file="${remote_consul_dir}/init.sh"
 remote_keycloak_dir="${remote_root}/docker/keycloak"
@@ -38,6 +40,7 @@ remote_logstash_dir="${remote_root}/docker/logstash"
 remote_logstash_pipeline_file="${remote_logstash_dir}/logstash.conf"
 remote_alertmanager_dir="${remote_root}/docker/alertmanager"
 remote_alertmanager_file="${remote_alertmanager_dir}/alertmanager.yml"
+remote_alertmanager_render_file="${remote_alertmanager_dir}/render-alertmanager-config.sh"
 remote_prometheus_dir="${remote_root}/docker/prometheus"
 remote_prometheus_file="${remote_prometheus_dir}/prometheus.yml"
 remote_prometheus_alerts_file="${remote_prometheus_dir}/alerts.yml"
@@ -48,6 +51,21 @@ remote_grafana_dashboards_dir="${remote_grafana_dir}/dashboards"
 remote_grafana_datasource_file="${remote_grafana_datasource_dir}/prometheus.yml"
 remote_grafana_dashboard_provider_file="${remote_grafana_dashboard_provider_dir}/dashboards.yml"
 remote_grafana_dashboard_file="${remote_grafana_dashboards_dir}/microservices-observability.json"
+remote_apps_dir="${remote_root}/apps"
+prisma_cli_version="${PRISMA_CLI_VERSION:-7.8.0}"
+
+migration_services=(
+  identity-service
+  user-service
+  exam-service
+  course-service
+  question-service
+  notification-service
+  analytics-service
+  simulation-service
+  media-service
+  audit-service
+)
 
 ssh_opts=(
   -o StrictHostKeyChecking=no
@@ -60,19 +78,28 @@ ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
 echo "Uploading deployment assets"
 scp "${ssh_opts[@]}" docker-compose.deploy.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_compose_file}"
 scp "${ssh_opts[@]}" kong/kong.yaml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_kong_file}"
+scp "${ssh_opts[@]}" docker/kong/render-kong-config.sh "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_kong_render_file}"
 scp "${ssh_opts[@]}" docker/consul/init.sh "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_consul_init_file}"
 scp "${ssh_opts[@]}" docker/keycloak/realm-export.json "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_keycloak_realm_file}"
 scp "${ssh_opts[@]}" docker/logstash/logstash.conf "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_logstash_pipeline_file}"
 scp "${ssh_opts[@]}" docker/alertmanager/alertmanager.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_alertmanager_file}"
+scp "${ssh_opts[@]}" docker/alertmanager/render-alertmanager-config.sh "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_alertmanager_render_file}"
 scp "${ssh_opts[@]}" docker/prometheus/prometheus.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_prometheus_file}"
 scp "${ssh_opts[@]}" docker/prometheus/alerts.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_prometheus_alerts_file}"
 scp "${ssh_opts[@]}" docker/grafana/provisioning/datasources/prometheus.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_grafana_datasource_file}"
 scp "${ssh_opts[@]}" docker/grafana/provisioning/dashboards/dashboards.yml "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_grafana_dashboard_provider_file}"
 scp "${ssh_opts[@]}" docker/grafana/dashboards/microservices-observability.json "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_grafana_dashboard_file}"
 
+for service in "${migration_services[@]}"; do
+  remote_service_dir="${remote_apps_dir}/${service}"
+  ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    "rm -rf '${remote_service_dir}/prisma' && mkdir -p '${remote_service_dir}'"
+  scp "${ssh_opts[@]}" -r "apps/${service}/prisma" "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_service_dir}/"
+done
+
 echo "Deploying ${IMAGE_TAG} to ${DEPLOY_ENV}"
 ssh "${ssh_opts[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-  "export DEPLOY_ENV='${DEPLOY_ENV}' GHCR_OWNER='${GHCR_OWNER}' IMAGE_TAG='${IMAGE_TAG}' GHCR_USERNAME='${GHCR_USERNAME}' GHCR_TOKEN='${GHCR_TOKEN}' REMOTE_ROOT='${remote_root}' REMOTE_ENV_FILE='${remote_env_file}' REMOTE_COMPOSE_FILE='${remote_compose_file}'; bash -s" <<'EOF'
+  "export DEPLOY_ENV='${DEPLOY_ENV}' GHCR_OWNER='${GHCR_OWNER}' IMAGE_TAG='${IMAGE_TAG}' GHCR_USERNAME='${GHCR_USERNAME}' GHCR_TOKEN='${GHCR_TOKEN}' PRISMA_CLI_VERSION='${prisma_cli_version}' REMOTE_ROOT='${remote_root}' REMOTE_ENV_FILE='${remote_env_file}' REMOTE_COMPOSE_FILE='${remote_compose_file}'; bash -s" <<'EOF'
 set -euo pipefail
 
 if [[ ! -f "${REMOTE_ENV_FILE}" ]]; then
@@ -81,6 +108,16 @@ if [[ ! -f "${REMOTE_ENV_FILE}" ]]; then
 fi
 
 cd "${REMOTE_ROOT}"
+
+deploy_image_tag="${IMAGE_TAG}"
+deploy_ghcr_owner="${GHCR_OWNER}"
+
+set -a
+. "${REMOTE_ENV_FILE}"
+set +a
+
+export IMAGE_TAG="${deploy_image_tag}"
+export GHCR_OWNER="${deploy_ghcr_owner}"
 
 echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
 
@@ -147,17 +184,29 @@ export GHCR_OWNER IMAGE_TAG
 "${compose_cmd[@]}" pull
 "${compose_cmd[@]}" up -d "${infra_services[@]}"
 
+declare -A migration_database_urls=(
+  [identity-service]="${SECRET_IDENTITY_DB_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-identity:5432/${IDENTITY_DB_NAME:-identity_db}}"
+  [user-service]="${SECRET_USER_DB_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-user:5432/${USER_DB_NAME:-user_db}}"
+  [exam-service]="${SECRET_EXAM_DB_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-exam:5432/${EXAM_DB_NAME:-exam_db}}"
+  [course-service]="${SECRET_COURSE_DB_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-course:5432/${COURSE_DB_NAME:-course_db}}"
+  [question-service]="${SECRET_QUESTION_DB_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-question:5432/${QUESTION_DB_NAME:-question_db}}"
+  [notification-service]="${SECRET_NOTIFICATION_DB_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-notification:5432/${NOTIFICATION_DB_NAME:-notification_db}}"
+  [analytics-service]="${SECRET_ANALYTICS_DB_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-analytics:5432/${ANALYTICS_DB_NAME:-analytics_db}}"
+  [simulation-service]="${SECRET_SIMULATION_DB_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-simulation:5432/${SIMULATION_DB_NAME:-simulation_db}}"
+  [media-service]="${SECRET_MEDIA_DB_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-media:5432/${MEDIA_DB_NAME:-media_db}}"
+  [audit-service]="${SECRET_AUDIT_DB_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-audit:5432/${AUDIT_DB_NAME:-audit_db}}"
+)
+
 for service in "${migration_services[@]}"; do
-  "${compose_cmd[@]}" run --rm --no-deps "${service}" \
-    npx prisma migrate deploy --schema "./apps/${service}/prisma/schema.prisma"
+  echo "[migrate] ${service}"
+  "${compose_cmd[@]}" run --rm --no-deps \
+    -e DATABASE_URL="${migration_database_urls[${service}]}" \
+    migration-runner \
+    sh -lc "apk add --no-cache libc6-compat openssl >/dev/null && npm exec --yes --package prisma@${PRISMA_CLI_VERSION} -- prisma migrate deploy --schema './apps/${service}/prisma/schema.prisma'"
 done
 
 "${compose_cmd[@]}" up -d --remove-orphans "${app_services[@]}"
 "${compose_cmd[@]}" ps
-
-set -a
-. "${REMOTE_ENV_FILE}"
-set +a
 
 gateway_port="${KONG_PROXY_PORT:-8000}"
 health_routes=(
