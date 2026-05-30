@@ -3,6 +3,7 @@
 Tài liệu này gom phần quan trọng nhất để team dev chạy local, verify code và nắm nhanh các luồng DevOps hiện có trong repo.
 
 File roadmap việc tiếp theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
+Tổng kết DevOps hiện tại: [DEVOPS-SUMMARY.md](./DEVOPS-SUMMARY.md)
 
 ## 1. Tổng quan
 
@@ -17,7 +18,7 @@ File roadmap việc tiếp theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
 
 ## 2. Services hiện có
 
-- Core services:
+- Production/VPS app services:
   - `identity-service`
   - `user-service`
   - `exam-service`
@@ -26,11 +27,10 @@ File roadmap việc tiếp theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
   - `notification-service`
   - `analytics-service`
   - `simulation-service`
-  - `audit-service`
+  - `media-service`
   - `audit-service`
 - Supporting services:
-  - `media-service`
-  - `docs-service` dùng cho tài liệu / Swagger tổng hợp khi cần
+  - `docs-service` dùng cho tài liệu / Swagger tổng hợp trong dev/noi bo, hiện không nằm trong luồng production/VPS deploy
 
 ## 3. First Run Cho Dev/Frontend Clone Repo Lần Đầu
 
@@ -220,6 +220,9 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 
 ## 10. Ghi chú DevOps
 
+- Trạng thái tổng quan:
+  - MVP/local/VPS Docker Compose đã khá đầy đủ: Docker, Kong, Consul, RabbitMQ, Keycloak, ELK, Prometheus/Grafana, backup, runbook.
+  - Production hardening còn thiếu: Trivy/secret scan/SBOM, secret manager, rollback workflow, load test và IaC.
 - Health endpoints chuẩn:
   - `/health`
   - `/health/live`
@@ -235,6 +238,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - [guides/devops/JENKINS-DOCKER-COMPOSE.md](./guides/devops/JENKINS-DOCKER-COMPOSE.md)
 - Phase 6.1-6.5 Logging + ELK + Correlation ID + Metrics + Alerting ở [guides/devops/OBSERVABILITY-ELK.md](./guides/devops/OBSERVABILITY-ELK.md)
 - Runbook Observability ở [guides/devops/OBSERVABILITY-RUNBOOK.md](./guides/devops/OBSERVABILITY-RUNBOOK.md)
+- Tổng hợp trạng thái và gap DevOps ở [DEVOPS-SUMMARY.md](./DEVOPS-SUMMARY.md)
 
 ## 11. Quy trình làm việc
 
@@ -255,7 +259,7 @@ Tactic đang áp dụng:
 Kiểm tra health qua Kong:
 
 ```powershell
-docker compose up -d --build kong identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service
+docker compose up -d --build kong identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service audit-service
 npm.cmd run smoke
 ```
 
