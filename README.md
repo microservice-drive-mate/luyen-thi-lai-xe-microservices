@@ -3,6 +3,7 @@
 Tài liệu này gom phần quan trọng nhất để team dev chạy local, verify code và nắm nhanh các luồng DevOps hiện có trong repo.
 
 File roadmap việc tiếp theo: [README.NEXT-STEPS.md](./README.NEXT-STEPS.md)
+Tổng kết DevOps hiện tại: [DEVOPS-SUMMARY.md](./DEVOPS-SUMMARY.md)
 
 ## 1. Tổng quan
 
@@ -219,15 +220,24 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 
 ## 10. Ghi chú DevOps
 
+- Trạng thái tổng quan:
+  - MVP/local/GCP đã khá đầy đủ: Docker, Kong, Consul, RabbitMQ, Keycloak, ELK, Prometheus/Grafana, backup, runbook.
+  - CI/CD đã có PR validation, main image release, Trivy scan và production release thủ công bằng immutable image tag.
+  - Production hardening còn thiếu: secret manager chính thức, SBOM/signing, rollback workflow riêng, load test, HPA và Terraform.
 - Production scope đã chốt: 10 services; `docs-service` chỉ dùng cho Dev.
 - CI/CD Phase 4:
   - Pull Request Validation: quality gate, build image, Trivy scan, không push image.
-  - Main Image Release: build image, Trivy scan, push GHCR bằng tag `${git_sha}` và `latest`.
+  - Main Image Release: build đủ 10 production images, Trivy scan, push GHCR bằng tag `${git_sha}` và `latest`, rồi auto deploy GCP staging bằng Helm.
   - Production Release: chạy thủ công bằng immutable image tag, gắn GitHub Environment `production`.
+  - Jenkins: pipeline tự host/legacy cho GHCR + Docker Compose deploy qua SSH/VM hoặc Compute Engine; GitHub Actions vẫn là đường chính cho GCP/GKE.
 - Deployment Phase 5:
   - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.
-  - Target hiện tại là K3s VPS, self-contained dependencies trong cluster.
+  - Target hiện tại là GCP/GKE, self-contained dependencies trong cluster cho giai đoạn MVP.
+  - GCP/GKE chỉ pull image từ GHCR theo tag được truyền vào Helm; không build source code trên GCP.
+  - K3s/VPS chỉ còn là hướng lab hoặc fallback legacy, không phải target production chính.
   - Hướng dẫn setup nằm ở `guides/devops/PHASE5-KUBERNETES.md`.
+  - Checklist GCP chi tiết nằm ở `guides/devops/GCP-SETUP.md`.
+  - Kịch bản demo DevOps nằm ở `guides/devops/DEVOPS-DEMO-SCRIPT.md`.
 - Health endpoints chuẩn:
   - `/health`
   - `/health/live`
@@ -243,6 +253,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - [guides/devops/JENKINS-DOCKER-COMPOSE.md](./guides/devops/JENKINS-DOCKER-COMPOSE.md)
 - Phase 6.1-6.5 Logging + ELK + Correlation ID + Metrics + Alerting ở [guides/devops/OBSERVABILITY-ELK.md](./guides/devops/OBSERVABILITY-ELK.md)
 - Runbook Observability ở [guides/devops/OBSERVABILITY-RUNBOOK.md](./guides/devops/OBSERVABILITY-RUNBOOK.md)
+- Tổng hợp trạng thái và gap DevOps ở [DEVOPS-SUMMARY.md](./DEVOPS-SUMMARY.md)
 
 ## 11. Quy trình làm việc
 
@@ -263,7 +274,7 @@ Tactic đang áp dụng:
 Kiểm tra health qua Kong:
 
 ```powershell
-docker compose up -d --build kong identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service
+docker compose up -d --build kong identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service audit-service
 npm.cmd run smoke
 ```
 

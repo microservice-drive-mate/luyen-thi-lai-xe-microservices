@@ -5,6 +5,7 @@ global:
   storageClassName: hostpath
 
 ingress:
+  className: traefik
   apiHost: api.127.0.0.1.nip.io
   authHost: auth.127.0.0.1.nip.io
 

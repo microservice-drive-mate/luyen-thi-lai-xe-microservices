@@ -1,29 +1,29 @@
-# DevOps Assessment - Luyen Thi Lai Xe Microservices
+# Đánh giá DevOps - Luyện Thi Lái Xe Microservices
 
-**Ngay cap nhat**: 2026-05-27
-**Branch**: `devops/baseline-local-stability`
-**Latest CI verified commit**: `2265ae813da9294db4bd7276c693b7d0db7748de`
-**Ghi chu**: `DEVOPS-SUMMARY.md` la tai lieu lich su/lac quan hon thuc te. File nay la baseline hien hanh de tiep tuc cac phase DevOps.
+**Ngày cập nhật**: 2026-05-27
+**Branch gốc**: `devops/baseline-local-stability`
+**Commit CI đã xác minh trước đó**: `2265ae813da9294db4bd7276c693b7d0db7748de`
+**Ghi chú**: `DEVOPS-SUMMARY.md` là bản tổng kết ngắn gọn/lạc quan hơn. File này ghi lại baseline chi tiết hơn để tiếp tục các phase DevOps.
 
-## 1. Ket Luan Nhanh
+## 1. Kết luận nhanh
 
-Du an da chot baseline:
+Dự án đã chốt baseline:
 
 - Production scope: **10 services**.
-- `docs-service`: **Dev-only**, khong dua vao staging/production.
-- Development co the chay 11 services neu can `docs-service`.
-- Staging/Production Consul seed va deploy chi gom 10 production services.
+- `docs-service`: **chỉ dùng cho dev**, không đưa vào staging/production.
+- Development có thể chạy 11 services nếu cần `docs-service`.
+- Staging/production Consul seed và deploy chỉ gồm 10 production services.
 
-Trang thai hien tai:
+Trạng thái hiện tại:
 
-| Hang muc | Trang thai | Ghi chu |
+| Hạng mục | Trạng thái | Ghi chú |
 | --- | --- | --- |
-| Phase 0 Baseline | Done | README da mo ta local/full-stack, production 10 services, docs-service Dev-only. |
-| Phase 1 Local/Dev | Mostly done | `.env.example`, deploy env examples, Consul seed optional media storage, health endpoints va AppLogger da co tren services. Runtime smoke can chay lai khi Docker Desktop/DNS on dinh. |
-| Phase 3 DevSecOps | Done for baseline | CI run #154 pass tren commit `2265ae8`; 10 production images build + Trivy HIGH/CRITICAL scan success. |
-| Phase 4 CI/CD | In progress | Working tree da tach PR validation, main image release, production release manual; can push de GitHub Actions verify. |
-| Phase 5 Deployment Runtime | In progress | Kubernetes Helm path da duoc scaffold cho K3s VPS: app services, in-cluster dependencies, Ingress, probes, resources, Consul seed va Prisma migration Job. |
-| Phase 9 IaC/Scaling | Pending | Chua co `terraform`, HPA hay load test; cac phan nay tach khoi Phase 5. |
+| Phase 0 Baseline | Đã xong | README đã mô tả local/full-stack, production 10 services, `docs-service` dev-only. |
+| Phase 1 Local/Dev | Gần xong | `.env.example`, deploy env examples, Consul seed optional media storage, health endpoints và AppLogger đã có trên services. Runtime smoke cần chạy lại khi Docker Desktop/DNS ổn định. |
+| Phase 3 DevSecOps | Đã đủ baseline | CI run #154 pass trên commit `2265ae8`; 10 production images build + Trivy HIGH/CRITICAL scan success. |
+| Phase 4 CI/CD | Đang hoàn thiện | Đã tách PR validation, main image release, auto deploy GCP staging và production release manual; cần GitHub Actions verify sau khi merge. |
+| Phase 5 Deployment Runtime | Đang hoàn thiện | Kubernetes Helm path đã scaffold và target chính đã đổi sang GCP/GKE: app services, in-cluster dependencies, Ingress, probes, resources, Consul seed và Prisma migration Job. K3s/VPS chỉ còn là lab/fallback legacy. |
+| Phase 9 IaC/Scaling | Chưa làm | Chưa có `terraform`, HPA hoặc load test; các phần này tách khỏi Phase 5. |
 
 ## 2. Production Service Map
 
@@ -44,61 +44,84 @@ Dev-only:
 
 - `docs-service`
 
-## 3. Phase 3 Closure
+## 3. Chốt Phase 3 DevSecOps
 
-Phase 3 DevSecOps co the chot baseline vi cac muc can thiet da qua:
+Phase 3 DevSecOps có thể chốt baseline vì các mục cần thiết đã qua:
 
-- Hardcoded secrets trong Compose/Consul seed da chuyen sang env variable hoac placeholder.
-- `.env.example`, `deploy/staging.env.example`, `deploy/production.env.example` da chuan hoa.
-- `scripts/consul-seed.ts` ho tro env interpolation.
-- `docker/consul/init.sh` khong crash khi thieu media storage optional.
-- Docker runtime image da prune dev dependencies.
-- Runtime image da xoa `npm`, `npx`, `corepack`, `yarn` de giam CVE surface.
-- GitHub Actions da co Trivy image scan voi `severity: CRITICAL,HIGH`, `exit-code: 1`.
-- PR thay doi DevOps/shared files se build/scan du 10 production services.
-- `media-service` da nang `multer` len `^2.1.1`.
-- CI run #154 tren commit `2265ae813da9294db4bd7276c693b7d0db7748de` pass:
+- Hardcoded secrets trong Compose/Consul seed đã chuyển sang env variable hoặc placeholder.
+- `.env.example`, `deploy/staging.env.example`, `deploy/production.env.example` đã chuẩn hóa.
+- `scripts/consul-seed.ts` hỗ trợ env interpolation.
+- `docker/consul/init.sh` không crash khi thiếu media storage optional.
+- Docker runtime image đã prune dev dependencies.
+- Runtime image đã xóa `npm`, `npx`, `corepack`, `yarn` để giảm CVE surface.
+- GitHub Actions đã có Trivy image scan với `severity: CRITICAL,HIGH`, `exit-code: 1`.
+- PR thay đổi DevOps/shared files sẽ build/scan đủ 10 production services.
+- `media-service` đã nâng `multer` lên `^2.1.1`.
+- CI run #154 trên commit `2265ae813da9294db4bd7276c693b7d0db7748de` pass:
   - Code Quality & Testing: success.
   - Detect Changed Services: success.
   - Build Services cho 10 production services: success.
-  - Trivy scan cho tung image: success.
-  - Push image: skipped dung ky vong vi run tren PR.
+  - Trivy scan cho từng image: success.
+  - Push image: skipped đúng kỳ vọng vì run trên PR.
 
-Rui ro con lai:
+Rủi ro còn lại:
 
-- Neu secret that tung bi paste/push, can rotate ngoai repo.
-- Chua co SBOM/signing/CodeQL nhu lop hardening bo sung.
-- Production secret store chua duoc chon chinh thuc.
+- Nếu secret thật từng bị paste/push, cần rotate ngoài repo.
+- Chưa có SBOM/signing/CodeQL như lớp hardening bổ sung.
+- Production secret store chưa được chọn chính thức; với GCP nên ưu tiên Google Secret Manager hoặc Vault.
 
-## 4. Phase 4 CI/CD Baseline
+## 4. Baseline Phase 4 CI/CD
 
-Working tree hien da dinh huong Phase 4 nhu sau:
+Working tree hiện đang định hướng Phase 4 như sau:
 
 - `.github/workflows/pr-validation.yml`
-  - Trigger: pull request vao `main`.
-  - Chay quality gate: `npm ci`, Prisma generate, Biome, typecheck, test.
+  - Trigger: pull request vào `main`.
+  - Chạy quality gate: `npm ci`, Prisma generate, Biome, typecheck, test.
   - Detect changed services.
-  - Build Docker image va scan Trivy.
-  - Khong login GHCR, khong push image.
-  - Tu dong label PR theo service bi anh huong.
+  - Build Docker image và scan Trivy.
+  - Không login GHCR, không push image.
+  - Tự động label PR theo service bị ảnh hưởng.
 
 - `.github/workflows/ci.yml`
-  - Trigger: push vao `main`.
-  - Chay quality gate.
-  - Build va Trivy scan changed/all-required services.
-  - Push GHCR voi 2 tag: `${github.sha}` va `latest`.
-  - Deploy staging tu dong neu repository variable `STAGING_DEPLOY_ENABLED=true`.
-  - Staging job gan GitHub Environment `staging`.
+  - Trigger: push vào `main`.
+  - Chạy quality gate.
+  - Trên push vào `main`, build đủ 10 production services để đảm bảo cùng một immutable tag `${github.sha}` tồn tại cho toàn bộ Helm release.
+  - Build và Trivy scan toàn bộ required services.
+  - Push GHCR với 2 tag: `${github.sha}` và `latest`.
+  - Auto deploy GCP staging bằng Helm sau khi build image và migration-runner thành công.
+  - Có thể tạm tắt auto deploy bằng repository variable `GCP_AUTO_DEPLOY_ENABLED=false`.
+  - Staging job gắn GitHub Environment `staging`.
 
 - `.github/workflows/production-release.yml`
   - Trigger: `workflow_dispatch`.
-  - Input: immutable `image_tag`, thuong la Git SHA da pass Main Image Release.
-  - Job gan GitHub Environment `production`.
-  - Can cau hinh manual approval/reviewer trong GitHub Environments.
+  - Input: immutable `image_tag`, thường là Git SHA đã pass Main Image Release.
+  - Job gắn GitHub Environment `production`.
+  - Cần cấu hình manual approval/reviewer trong GitHub Environments.
 
-Deployment secrets/vars can cau hinh:
+Deployment secrets/vars cần cấu hình:
 
-- Repository variable: `STAGING_DEPLOY_ENABLED=true`
+Kubernetes/GCP/GKE path:
+
+- Repository variable optional: `GCP_AUTO_DEPLOY_ENABLED=false` nếu cần tạm tắt auto deploy GCP staging. Mặc định workflow sẽ deploy sau mỗi push vào `main`.
+- Staging environment/repo variables:
+  - `STAGING_API_SCHEME`
+  - `STAGING_API_HOST`
+  - `STAGING_AUTH_HOST`
+  - `STAGING_FRONTEND_ORIGIN`
+- Production environment/repo variables:
+  - `PRODUCTION_API_SCHEME`
+  - `PRODUCTION_API_HOST`
+  - `PRODUCTION_AUTH_HOST`
+  - `PRODUCTION_FRONTEND_ORIGIN`
+- Shared secrets:
+  - `GHCR_PULL_USERNAME`
+  - `GHCR_PULL_TOKEN`
+- Staging/production kubeconfig secrets:
+  - `STAGING_KUBE_CONFIG_B64`
+  - `PRODUCTION_KUBE_CONFIG_B64`
+
+Legacy SSH/Compose path, chỉ dùng nếu deploy lên VM/Compute Engine bằng Docker Compose:
+
 - Staging environment/repo secrets:
   - `STAGING_DEPLOY_HOST`
   - `STAGING_DEPLOY_USER`
@@ -110,53 +133,54 @@ Deployment secrets/vars can cau hinh:
   - `PRODUCTION_DEPLOY_PATH`
   - `PRODUCTION_SSH_PRIVATE_KEY`
 
-## 5. Deploy/Migration Note
+## 5. Ghi chú Deploy/Migration
 
-Runtime images intentionally remove `npm/npx`, so deploy must not run migrations inside application runtime containers.
+Runtime images cố ý xóa `npm/npx`, nên deploy không được chạy migrations trực tiếp trong application runtime containers.
 
-Current working tree fixes this by:
+Working tree hiện xử lý việc này bằng cách:
 
-- Adding a `migration-runner` service in `docker-compose.deploy.yml` based on `node:20-alpine`.
-- Uploading each production service `prisma/` directory to the remote deploy path.
-- Running `prisma migrate deploy` from `migration-runner` with `DATABASE_URL` injected per service.
+- Thêm `migration-runner` service trong `docker-compose.deploy.yml` dựa trên `node:20-alpine`.
+- Upload từng thư mục `prisma/` của production service lên remote deploy path.
+- Chạy `prisma migrate deploy` từ `migration-runner` với `DATABASE_URL` inject theo từng service.
 
-This keeps application runtime images small/hardened while preserving a deploy-time migration path.
+Cách này giữ application runtime images nhỏ/hardened, đồng thời vẫn có deploy-time migration path.
 
-## 6. Remaining Priority
+## 6. Thứ tự ưu tiên còn lại
 
-Next recommended order:
+Thứ tự khuyến nghị tiếp theo:
 
-1. Validate workflow YAML and Compose deploy config locally.
-2. Push Phase 4 changes and verify PR Validation/Main Image Release behavior.
-3. Configure GitHub Environments:
-   - `staging` for automatic deploy.
-   - `production` with required reviewers/manual approval.
-4. Configure Phase 5 Kubernetes runtime:
-   - K3s VPS with Traefik and `local-path` storage class.
-   - GitHub variables: `STAGING_API_HOST`, `STAGING_AUTH_HOST`, `STAGING_FRONTEND_ORIGIN`, and production equivalents.
+1. Validate workflow YAML và Compose deploy config locally.
+2. Merge/push Phase 4 changes và verify PR Validation/Main Image Release behavior.
+3. Cấu hình GitHub Environments:
+   - `staging` cho automatic deploy.
+   - `production` với required reviewers/manual approval.
+4. Cấu hình Phase 5 Kubernetes runtime:
+   - GCP/GKE cluster là target chính.
+   - Ingress controller/load balancer, DNS records và optional static IP trên GCP.
+   - GitHub variables: `STAGING_API_HOST`, `STAGING_AUTH_HOST`, `STAGING_FRONTEND_ORIGIN`, và production equivalents.
    - GitHub secrets: `STAGING_KUBE_CONFIG_B64`, `PRODUCTION_KUBE_CONFIG_B64`, `GHCR_PULL_USERNAME`, `GHCR_PULL_TOKEN`, DB/RabbitMQ/Keycloak/storage secrets.
 5. Verify Helm deployment:
    - `helm lint charts/luyen-thi-lai-xe`.
    - `helm template luyen-thi-lai-xe charts/luyen-thi-lai-xe -f charts/luyen-thi-lai-xe/values-staging.example.yaml`.
-   - Staging deploy via main workflow and smoke test through Kong.
-   - Production manual release with `workflow_dispatch` and Helm rollback test.
-6. Add SBOM/signing/CodeQL only after Phase 5 deploy path is stable.
+   - Staging deploy qua main workflow và smoke test qua Kong.
+   - Production manual release với `workflow_dispatch` và Helm rollback test.
+6. Thêm SBOM/signing/CodeQL sau khi Phase 5 deploy path ổn định.
 
-## 7. Phase 5 Kubernetes Baseline
+## 7. Baseline Phase 5 Kubernetes
 
-Phase 5 target da chot la Kubernetes Helm tren K3s VPS, self-contained trong cluster.
+Phase 5 target đã đổi sang Kubernetes Helm trên GCP/GKE, self-contained trong cluster cho giai đoạn MVP. K3s/VPS chỉ còn là lab/fallback legacy.
 
-Implemented baseline:
+Baseline đã implement:
 
-- Helm chart `charts/luyen-thi-lai-xe` deploy 10 production services, Kong, Keycloak, Postgres, RabbitMQ, Redis va Consul.
-- Kubernetes `Secret` dung cho password/token/storage; Consul seed Job chi seed non-secret config.
-- App Deployments co `resources.requests`, `resources.limits`, `/health/live` va `/health/ready` probes.
-- `Dockerfile.migration-runner` build image rieng cho Prisma migration Job.
-- GitHub Actions deploy staging/production bang Helm va kubeconfig base64.
+- Helm chart `charts/luyen-thi-lai-xe` deploy 10 production services, Kong, Keycloak, Postgres, RabbitMQ, Redis và Consul.
+- Kubernetes `Secret` dùng cho password/token/storage; Consul seed Job chỉ seed non-secret config.
+- App Deployments có `resources.requests`, `resources.limits`, `/health/live` và `/health/ready` probes.
+- `Dockerfile.migration-runner` build image riêng cho Prisma migration Job.
+- GitHub Actions deploy staging/production bằng Helm và kubeconfig base64.
 - `scripts/k8s-smoke.sh` verify health endpoints qua Kong.
 
-Khong nam trong Phase 5:
+Không nằm trong Phase 5:
 
 - Terraform, HPA, k6/JMeter.
-- Full ELK/Prometheus/Grafana tren Kubernetes.
+- Full ELK/Prometheus/Grafana trên Kubernetes.
 - Vault/External Secrets.

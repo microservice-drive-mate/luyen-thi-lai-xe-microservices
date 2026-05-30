@@ -1,7 +1,9 @@
 global:
   imageTag: replace-with-git-sha
+  storageClassName: standard-rwo
 
 ingress:
+  className: gce
   apiHost: api.staging.example.com
   authHost: auth.staging.example.com
 
