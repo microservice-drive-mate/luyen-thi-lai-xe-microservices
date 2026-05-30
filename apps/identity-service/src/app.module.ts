@@ -36,9 +36,14 @@ import {
   USER_SERVICE_CLIENT,
   NOTI_SERVICE_CLIENT,
 } from './infrastructure/messaging/identity-event-publisher.service';
+import {
+  RabbitMqAuditPublisher,
+  AUDIT_SERVICE_CLIENT,
+} from './infrastructure/messaging/rabbitmq-audit-publisher.service';
 import { IdentityProviderPort } from './application/ports/identity-provider.port';
 import { TokenBlacklistPort } from './application/ports/token-blacklist.port';
 import { IdentityEventPublisherPort } from './application/ports/identity-event-publisher.port';
+import { AuditPublisherPort } from './application/ports/audit-publisher.port';
 import { IdentityUserRepository } from './domain/repositories/identity-user.repository';
 import { PrismaIdentityUserRepository } from './infrastructure/persistence/prisma/prisma-identity-user.repository';
 import { LoginUseCase } from './application/use-cases/login/login.use-case';
@@ -130,6 +135,12 @@ import { DeleteIdentityUserUseCase } from './application/use-cases/delete-identi
             'notification_service_events',
           ),
       },
+      {
+        name: AUDIT_SERVICE_CLIENT,
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) =>
+          createRabbitMqClientOptions(configService, 'audit_service_events'),
+      },
     ]),
     KeycloakConnectModule.registerAsync({
       inject: [ConfigService],
@@ -150,6 +161,7 @@ import { DeleteIdentityUserUseCase } from './application/use-cases/delete-identi
     PrismaService,
     KeycloakAdminService,
     IdentityEventPublisher,
+    RabbitMqAuditPublisher,
     TokenBlacklistService,
     { provide: IdentityProviderPort, useExisting: KeycloakAdminService },
     { provide: TokenBlacklistPort, useExisting: TokenBlacklistService },
@@ -157,6 +169,7 @@ import { DeleteIdentityUserUseCase } from './application/use-cases/delete-identi
       provide: IdentityEventPublisherPort,
       useExisting: IdentityEventPublisher,
     },
+    { provide: AuditPublisherPort, useExisting: RabbitMqAuditPublisher },
     { provide: IdentityUserRepository, useClass: PrismaIdentityUserRepository },
     LoginUseCase,
     LogoutUseCase,

@@ -5,7 +5,7 @@ import * as path from 'node:path';
 const turboCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 const localEnv = loadLocalEnvFile();
 const devConcurrency =
-  process.env.DEV_CONCURRENCY ?? localEnv.DEV_CONCURRENCY ?? '4';
+  process.env.DEV_CONCURRENCY ?? localEnv.DEV_CONCURRENCY ?? '12';
 const env: NodeJS.ProcessEnv = {
   ...process.env,
   CONSUL_URL:
