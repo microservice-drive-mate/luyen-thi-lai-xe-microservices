@@ -1,4 +1,4 @@
-import { Controller, Get, Logger, SetMetadata } from '@nestjs/common';
+import { Controller, Get, Logger, Query, SetMetadata } from '@nestjs/common';
 import { AppService, ServiceCandidate } from './app.service';
 
 interface SwaggerUiConfig {
@@ -20,20 +20,23 @@ export class AppController {
   @Get('docs-config')
   @SetMetadata('skip-api-response', true)
   async getDocsConfig(): Promise<SwaggerUiConfig> {
-    let candidates = this.appService.buildCandidatesFromConfig();
+    const configuredCandidates = this.appService.buildCandidatesFromConfig();
+    let catalogCandidates: ServiceCandidate[] = [];
 
-    if (candidates.length === 0) {
+    if (configuredCandidates.length === 0) {
       try {
-        candidates = await this.appService.buildCandidatesFromCatalog();
+        catalogCandidates = await this.appService.buildCandidatesFromCatalog();
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         this.logger.warn(`Consul catalog unavailable: ${msg}`);
       }
     }
 
-    if (candidates.length === 0) {
-      candidates = this.appService.buildLocalFallbackCandidates();
-    }
+    const candidates = this.appService.mergeCandidates([
+      ...configuredCandidates,
+      ...catalogCandidates,
+      ...this.appService.buildLocalFallbackCandidates(),
+    ]);
 
     const urls = await this.appService.probeAlive(candidates);
 
@@ -53,9 +56,18 @@ export class AppController {
     return {
       urls:
         urls.length > 0
-          ? urls
+          ? urls.map((u) => ({
+              name: u.name,
+              url: this.appService.buildProxyUrl(u.url),
+            }))
           : [{ name: 'No services running', url: '/docs-json' }],
       deepLinking: true,
     };
+  }
+
+  @Get('docs-proxy')
+  @SetMetadata('skip-api-response', true)
+  async getDocsProxy(@Query('url') url: string): Promise<unknown> {
+    return this.appService.fetchOpenApiDocument(url);
   }
 }

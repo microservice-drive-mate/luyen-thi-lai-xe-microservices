@@ -90,23 +90,66 @@ const processedMessageKeys = new Map<string, number>();
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 
 export function getRabbitMqUrl(config: ConfigService): string {
-  return (
+  const configuredUrl =
     config.get<string>('rabbitmq.url') ??
     config.get<string>('RABBITMQ_URL') ??
-    DEFAULT_RABBITMQ_URL
-  );
+    DEFAULT_RABBITMQ_URL;
+  const username =
+    config.get<string>('rabbitmq.username') ??
+    config.get<string>('RABBITMQ_USERNAME') ??
+    process.env.RABBITMQ_USERNAME ??
+    process.env.RABBITMQ_DEFAULT_USER;
+  const password =
+    config.get<string>('rabbitmq.password') ??
+    config.get<string>('RABBITMQ_PASSWORD') ??
+    process.env.RABBITMQ_PASSWORD ??
+    process.env.RABBITMQ_DEFAULT_PASS;
+
+  if (!username || !password || hasCredentials(configuredUrl)) {
+    return configuredUrl;
+  }
+
+  return withCredentials(configuredUrl, username, password);
 }
 
-export function createRabbitMqQueueOptions(queue: string): {
+function hasCredentials(url: string): boolean {
+  try {
+    return new URL(url).username.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function withCredentials(
+  url: string,
+  username: string,
+  password: string,
+): string {
+  try {
+    const parsedUrl = new URL(url);
+    parsedUrl.username = username;
+    parsedUrl.password = password;
+    return parsedUrl.toString();
+  } catch {
+    const separator = '://';
+    const separatorIndex = url.indexOf(separator);
+    if (separatorIndex === -1) {
+      return url;
+    }
+
+    const scheme = url.slice(0, separatorIndex);
+    const rest = url.slice(separatorIndex + separator.length);
+    return `${scheme}://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${rest}`;
+  }
+}
+
+export function createRabbitMqQueueOptions(_queue: string): {
   durable: boolean;
   arguments: Record<string, string>;
 } {
   return {
     durable: true,
-    arguments: {
-      'x-dead-letter-exchange': '',
-      'x-dead-letter-routing-key': getRabbitMqDlqName(queue),
-    },
+    arguments: {},
   };
 }
 

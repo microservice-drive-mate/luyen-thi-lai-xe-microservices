@@ -25,6 +25,12 @@ enum SimulationSessionStatus {
   ABANDONED
 }
 
+enum Practice2dSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
 model Maneuver {
   id              String          @id @default(uuid())
   title           String          @db.Text
@@ -47,6 +53,9 @@ model ManeuverCheckpoint {
   title         String   @db.Text
   instruction   String   @db.Text
   penalty       String?  @db.Text
+  x             Float?
+  y             Float?
+  visualColor   String?
   displayOrder  Int
 
   maneuver Maneuver @relation(fields: [maneuverId], references: [id], onDelete: Cascade)
@@ -61,9 +70,15 @@ model ManeuverError {
   code            String
   description     String          @db.Text
   severity        String
+  pointsDeducted  Int             @default(0)
+  isFatal         Boolean         @default(false)
+  isGeneral       Boolean         @default(true)
+  isActive        Boolean         @default(true)
+  visualColor     String?
+  icon            String?
   createdAt       DateTime        @default(now())
 
-  @@index([licenseCategory])
+  @@index([licenseCategory, isGeneral, isActive])
   @@map("maneuver_errors")
 }
 
@@ -97,4 +112,46 @@ model SimulationAnswer {
 
   @@unique([sessionId, scenarioId])
   @@map("simulation_answers")
+}
+
+model Practice2dSession {
+  id                String                  @id @default(uuid())
+  studentId         String
+  licenseCategory   LicenseCategory
+  status            Practice2dSessionStatus @default(IN_PROGRESS)
+  clientCapabilities Json                    @default("{}")
+  persistTelemetry  Boolean                 @default(false)
+  telemetrySnapshot Json?
+  totalEvents       Int                     @default(0)
+  errorCount        Int                     @default(0)
+  totalPenalty      Int                     @default(0)
+  score             Int?
+  summary           Json                    @default("{}")
+  startedAt         DateTime                @default(now())
+  endedAt           DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  feedbackEvents Practice2dFeedbackEvent[]
+
+  @@index([studentId, status, startedAt])
+  @@map("practice2d_sessions")
+}
+
+model Practice2dFeedbackEvent {
+  id             String   @id @default(uuid())
+  sessionId      String
+  telemetryType  String
+  errorCode      String?
+  severity       String
+  penalty        Int      @default(0)
+  message        String   @db.Text
+  hint           String?  @db.Text
+  telemetry      Json     @default("{}")
+  occurredAt     DateTime @default(now())
+
+  session Practice2dSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, occurredAt])
+  @@map("practice2d_feedback_events")
 }

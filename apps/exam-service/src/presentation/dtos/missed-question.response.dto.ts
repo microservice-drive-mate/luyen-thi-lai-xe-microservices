@@ -15,6 +15,7 @@ export class MissedQuestionResponseDto {
   @ApiProperty({ type: [MissedQuestionOptionResponseDto] })
   options!: MissedQuestionOptionResponseDto[];
   @ApiPropertyOptional({ nullable: true }) lastAnsweredAt!: Date | null;
+  @ApiProperty() missedCount!: number;
 
   static fromItem(item: MissedQuestionItem): MissedQuestionResponseDto {
     return Object.assign(new MissedQuestionResponseDto(), item);

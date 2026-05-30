@@ -16,6 +16,7 @@ export enum CourseStatus {
 }
 
 export interface CreateCourseProps {
+  courseCode?: string | null;
   title: string;
   description?: string | null;
   licenseCategory: LicenseCategory;
@@ -29,6 +30,7 @@ export interface CreateCourseProps {
 
 export interface ReconstituteCourseProps {
   id: string;
+  courseCode: string | null;
   title: string;
   description: string | null;
   licenseCategory: LicenseCategory;
@@ -37,6 +39,10 @@ export interface ReconstituteCourseProps {
   tuitionFee: number;
   capacity: number | null;
   status: CourseStatus;
+  version: number;
+  isDeleted: boolean;
+  deletedAt: Date | null;
+  deletedBy: string | null;
   createdById: string;
   createdAt: Date;
   updatedAt: Date;
@@ -47,6 +53,7 @@ export interface ReconstituteCourseProps {
 }
 
 export interface UpdateCourseProps {
+  expectedVersion?: number;
   title?: string;
   description?: string | null;
   duration?: string | null;

@@ -413,3 +413,30 @@ npm.cmd run db:seed
 ```
 
 The simulation seed inserts deterministic maneuver/checkpoint/error content for demo license categories. Without seed data, `GET /simulation/maneuvers` and `GET /simulation/maneuver-errors` correctly return empty arrays, so the frontend should treat an empty list as “no content seeded yet”, not as an API failure.
+## SRS Alignment Additions: UC35/UC36
+
+### POST `/simulation/practice2d/sessions`
+
+Starts a 2D practice session for the current student. `studentId` is derived from JWT.
+
+Request fields: `licenseCategory`, `clientCapabilities`, `persistTelemetry`.
+
+### POST `/simulation/practice2d/sessions/:id/telemetry`
+
+Ingests telemetry for an active owner session and returns immediate feedback.
+
+Request fields: `type`, optional `speedKmh`, `laneOffset`, `collision`, `signal`, `payload`.
+
+Response includes `severity`, `penalty`, `message`, `hint`, and optional `errorCode`.
+
+### POST `/simulation/practice2d/sessions/:id/end`
+
+Ends or abandons a practice session and returns summary fields: `totalEvents`, `errorCount`, `totalPenalty`, `score`.
+
+### GET `/simulation/practice2d/sessions/:id`
+
+Returns the current student's session summary and persisted feedback events.
+
+### Maneuver Metadata
+
+`ManeuverCheckpoint` now supports optional `x`, `y`, and `visualColor`. `ManeuverError` supports `pointsDeducted`, `isFatal`, `isGeneral`, `isActive`, `visualColor`, and `icon`; `GET /simulation/maneuver-errors` returns active general errors only.

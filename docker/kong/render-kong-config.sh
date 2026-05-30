@@ -3,7 +3,7 @@ set -eu
 
 template_path="${KONG_TEMPLATE_PATH:-/usr/local/kong/declarative/kong.template.yaml}"
 output_path="${KONG_DECLARATIVE_CONFIG:-/usr/local/kong/declarative/kong.yaml}"
-cors_origins="${KONG_CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}"
+cors_origins="${KONG_CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3009,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:3009,http://127.0.0.1:5173}"
 origins_file="$(mktemp)"
 
 printf '%s' "$cors_origins" \

@@ -5,6 +5,7 @@ import {
   ExamSessionRepository,
   ListExamSessionsFilter,
   ListExamSessionsPage,
+  MissedQuestionReviewFilter,
   MissedQuestionItem,
 } from '../../../domain/repositories/exam-session.repository';
 import { ExamSessionMapper } from '../mappers/exam-session.mapper';
@@ -57,34 +58,60 @@ export class PrismaExamSessionRepository extends ExamSessionRepository {
   }
 
   async findMissedQuestions(
-    studentId: string,
-    limit: number,
+    filter: MissedQuestionReviewFilter,
   ): Promise<MissedQuestionItem[]> {
+    const since = filter.periodDays
+      ? new Date(Date.now() - filter.periodDays * 24 * 60 * 60 * 1000)
+      : undefined;
     const rows = await this.prisma.examSessionQuestion.findMany({
       where: {
         isCorrect: false,
         session: {
-          studentId,
+          studentId: filter.studentId,
           status: { in: ['COMPLETED', 'TIMED_OUT'] },
+          ...(since && { finishedAt: { gte: since } }),
         },
       },
       orderBy: [{ answeredAt: 'desc' }],
-      distinct: ['questionId'],
-      take: limit,
+      take: 500,
     });
 
-    return rows.map((row) => ({
-      questionId: row.questionId,
-      content: row.questionContent,
-      imageUrl: row.imageUrl,
-      mediaFileId: row.mediaFileId,
-      options: row.optionsSnapshot as Array<{
-        id: string;
-        content: string;
-        displayOrder: number;
-      }>,
-      lastAnsweredAt: row.answeredAt,
-    }));
+    const grouped = new Map<
+      string,
+      { row: (typeof rows)[number]; count: number }
+    >();
+    for (const row of rows) {
+      const existing = grouped.get(row.questionId);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        grouped.set(row.questionId, { row, count: 1 });
+      }
+    }
+
+    return [...grouped.values()]
+      .sort((a, b) =>
+        filter.mode === 'recent'
+          ? (b.row.answeredAt?.getTime() ?? 0) -
+            (a.row.answeredAt?.getTime() ?? 0)
+          : b.count - a.count ||
+            (b.row.answeredAt?.getTime() ?? 0) -
+              (a.row.answeredAt?.getTime() ?? 0),
+      )
+      .slice(0, filter.limit)
+      .map(({ row, count }) => ({
+        questionId: row.questionId,
+        content: row.questionContent,
+        imageUrl: row.imageUrl,
+        mediaFileId: row.mediaFileId,
+        options: row.optionsSnapshot as Array<{
+          id: string;
+          content: string;
+          displayOrder: number;
+        }>,
+        lastAnsweredAt: row.answeredAt,
+        missedCount: count,
+      }));
   }
 
   async save(session: ExamSession): Promise<void> {

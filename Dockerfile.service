@@ -29,14 +29,32 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps ./apps
 COPY --from=deps /app/packages ./packages
 COPY . .
+RUN npm --workspace=apps/${SERVICE_NAME} run prisma:generate
 RUN npx turbo build --filter=${SERVICE_NAME}
+# Generate Prisma client BEFORE npm prune (prisma is a devDep and will be removed).
+# Back up the whole @prisma dir so npm prune cannot remove the generated client.
+RUN npx prisma generate --schema=apps/${SERVICE_NAME}/prisma/schema.prisma \
+ && cp -r node_modules/@prisma /prisma-generated
+RUN npm prune --omit=dev --legacy-peer-deps && npm cache clean --force
 
 FROM node:20-alpine AS runner
 ARG SERVICE_NAME
 ENV SERVICE_NAME=${SERVICE_NAME}
 RUN apk add --no-cache libc6-compat openssl
+# Runtime only needs node; package managers add unrelated CVE surface.
+RUN rm -rf \
+    /usr/local/lib/node_modules/npm \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/corepack \
+    /opt/yarn* \
+    /usr/local/bin/yarn \
+    /usr/local/bin/yarnpkg
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+# Restore Prisma generated client (removed by npm prune) from backup
+COPY --from=builder --chown=node:node /prisma-generated ./node_modules/@prisma/
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json
 COPY --from=builder --chown=node:node /app/apps/${SERVICE_NAME} ./apps/${SERVICE_NAME}

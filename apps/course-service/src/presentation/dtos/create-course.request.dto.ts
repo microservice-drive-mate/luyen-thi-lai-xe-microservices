@@ -45,6 +45,11 @@ export class CourseRequirementDto {
 }
 
 export class CreateCourseRequestDto {
+  @ApiPropertyOptional({ example: 'B1-FOUNDATION' })
+  @IsOptional()
+  @IsString()
+  courseCode?: string | null;
+
   @ApiProperty({ example: 'Khóa học B1 – Cơ bản' })
   @IsString()
   @IsNotEmpty()

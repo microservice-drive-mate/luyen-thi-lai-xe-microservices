@@ -36,6 +36,7 @@ import { MediaModule } from './media.module';
     }),
     MetricsModule.register({ serviceName: 'media-service' }),
     ConfigModule.forRoot({
+      envFilePath: ConsulConfigFactory.envFilePaths(),
       load: [
         ConsulConfigFactory.create(
           Joi.object({
@@ -59,6 +60,7 @@ import { MediaModule } from './media.module';
               realm: Joi.string().required(),
               clientId: Joi.string().required(),
               clientSecret: Joi.string().optional(),
+              timeoutMs: Joi.number().default(10000),
             }).required(),
             storage: Joi.object({
               accountName: Joi.string().required(),

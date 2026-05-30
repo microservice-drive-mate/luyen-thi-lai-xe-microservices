@@ -12,5 +12,6 @@ export class UpdateCourseCommand {
     readonly requirement?: CreateCourseRequirementFields | null,
     readonly actorId?: string,
     readonly auditContext?: AuditRequestContext,
+    readonly expectedVersion?: number,
   ) {}
 }

@@ -3,7 +3,7 @@ import { DomainException } from '@repo/common';
 export class CourseNotFoundException extends DomainException {
   readonly code = 'COURSE_NOT_FOUND';
 
-  constructor(courseId: string) {
-    super(`Cannot find course with id ${courseId}`);
+  constructor(_courseId: string) {
+    super('Course not found. (MSG23)');
   }
 }

@@ -1148,3 +1148,16 @@ Returns recently missed question snapshots for review. Response does not include
 ```
 
 Exam sessions store immutable template snapshot fields at start time: template name/version, license category, total questions, passing score, duration, critical config, and topic distribution.
+## SRS Alignment Additions: UC32 Missed Review Filters
+
+`GET /exams/review/missed-questions` supports:
+
+| Query | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `limit` | number | `20` | 1-50 |
+| `size` | number | `20` | SRS UC32 alias for `limit`; 1-50 |
+| `periodDays` | number | all history | 1-365 |
+| `period` | number | all history | SRS UC32 alias for `periodDays`; 1-365 |
+| `mode` | `frequent` or `recent` | `frequent` | Frequency prioritizes repeated misses; recent prioritizes latest mistakes. |
+
+Each item includes `missedCount`. The response remains student-safe and does not expose `correctOptionId`.

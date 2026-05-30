@@ -30,7 +30,22 @@ export class PrismaCourseRepository extends CourseRepository {
   }
 
   async existsById(id: string): Promise<boolean> {
-    const count = await this.prisma.course.count({ where: { id } });
+    const count = await this.prisma.course.count({
+      where: { id, isDeleted: false },
+    });
+    return count > 0;
+  }
+
+  async existsByCourseCode(
+    courseCode: string,
+    excludeCourseId?: string,
+  ): Promise<boolean> {
+    const count = await this.prisma.course.count({
+      where: {
+        courseCode,
+        ...(excludeCourseId && { id: { not: excludeCourseId } }),
+      },
+    });
     return count > 0;
   }
 
@@ -41,6 +56,7 @@ export class PrismaCourseRepository extends CourseRepository {
       }),
       ...(filter.status && { status: filter.status }),
       ...(!filter.status && { status: { not: 'ARCHIVED' as const } }),
+      isDeleted: false,
       ...(filter.createdById && { createdById: filter.createdById }),
     };
 
@@ -80,6 +96,7 @@ export class PrismaCourseRepository extends CourseRepository {
         where: { id: course.id },
         create: {
           id: course.id,
+          courseCode: course.courseCode,
           title: course.title,
           description: course.description,
           licenseCategory: course.licenseCategory,
@@ -88,12 +105,17 @@ export class PrismaCourseRepository extends CourseRepository {
           tuitionFee: course.tuitionFee,
           capacity: course.capacity,
           status: course.status,
+          version: course.version,
+          isDeleted: course.isDeleted,
+          deletedAt: course.deletedAt,
+          deletedBy: course.deletedBy,
           createdById: course.createdById,
           createdAt: course.createdAt,
           updatedAt: course.updatedAt,
         },
         update: {
           title: course.title,
+          courseCode: course.courseCode,
           description: course.description,
           licenseCategory: course.licenseCategory,
           totalLessons: course.totalLessons,
@@ -101,6 +123,10 @@ export class PrismaCourseRepository extends CourseRepository {
           tuitionFee: course.tuitionFee,
           capacity: course.capacity,
           status: course.status,
+          version: course.version,
+          isDeleted: course.isDeleted,
+          deletedAt: course.deletedAt,
+          deletedBy: course.deletedBy,
           updatedAt: course.updatedAt,
         },
       });

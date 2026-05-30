@@ -15,6 +15,14 @@ enum NotificationType {
   SMS
 }
 
+enum AcademicWarningDeliveryStatus {
+  PENDING
+  QUEUED
+  PENDING_RETRY
+  FAILED
+  SENT
+}
+
 model Notification {
   id        String           @id @default(uuid())
   userId    String
@@ -38,8 +46,16 @@ model AcademicWarning {
   severity    String
   message     String   @db.Text
   createdById String
+  deliveryStatus AcademicWarningDeliveryStatus @default(PENDING)
+  retryAttempts  Int      @default(0)
+  nextRetryAt    DateTime?
+  notificationId String?
+  lastError      String?  @db.Text
+  queuedAt       DateTime?
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([studentId, createdAt])
+  @@index([deliveryStatus, nextRetryAt])
   @@map("academic_warnings")
 }

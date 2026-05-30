@@ -1,6 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import {
   AccessLogInterceptor,
   ApiExceptionFilter,
@@ -10,12 +10,16 @@ import {
   CorrelationIdInterceptor,
   CorrelationIdMiddleware,
   getRabbitMqUrl,
+  installLocalDevTransientErrorGuard,
   MetricsService,
   RabbitMqRetryInterceptor,
+  runBootstrapWithRetries,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
+
+installLocalDevTransientErrorGuard('audit-service');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -46,7 +50,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),
     new AccessLogInterceptor({ serviceName: 'audit-service' }),
-    new ApiResponseInterceptor(),
+    new ApiResponseInterceptor(app.get(Reflector)),
   );
   app.useGlobalFilters(new ApiExceptionFilter());
 
@@ -58,4 +62,4 @@ async function bootstrap() {
   await app.startAllMicroservices();
   await app.listen(port);
 }
-void bootstrap();
+void runBootstrapWithRetries('audit-service', bootstrap);

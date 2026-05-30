@@ -26,7 +26,12 @@ export class ExamReviewController {
     @Query() query: ListMissedQuestionsQueryDto,
   ): Promise<ListMissedQuestionsResponseDto> {
     const result = await this.listMissedQuestionsUseCase.execute(
-      new ListMissedQuestionsQuery(user.sub ?? '', query.limit ?? 20),
+      new ListMissedQuestionsQuery(
+        user.sub ?? '',
+        query.limit ?? query.size ?? 20,
+        query.periodDays ?? query.period,
+        query.mode ?? 'frequent',
+      ),
     );
     return ListMissedQuestionsResponseDto.fromItems(result);
   }

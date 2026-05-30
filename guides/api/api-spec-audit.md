@@ -35,9 +35,11 @@ Phase hiện tại audit các mutation quan trọng:
 
 | Producer service | Audited actions |
 | --- | --- |
+| `identity-service` | `USER_LOGIN_FAILED`, `IDENTITY_USER_CREATED`, `IDENTITY_USER_UPDATED`, `IDENTITY_USER_ROLE_CHANGED`, `IDENTITY_USER_LOCKED`, `IDENTITY_USER_UNLOCKED`, `IDENTITY_USER_DELETED` |
 | `user-service` | `USER_LICENSE_ASSIGNED` |
 | `course-service` | `COURSE_CREATED`, `COURSE_UPDATED`, `COURSE_ARCHIVED`, `COURSE_ACTIVATED`, `COURSE_LESSON_ADDED`, `COURSE_LESSON_REMOVED`, `COURSE_MATERIAL_ADDED`, `ENROLLMENT_PROGRESS_RESET` |
 | `exam-service` | `EXAM_TEMPLATE_CREATED`, `EXAM_TEMPLATE_UPDATED`, `EXAM_TEMPLATE_DELETED` |
+
 
 ---
 
@@ -335,6 +337,17 @@ Idempotency rule:
 
 ## Producer Audit Matrix
 
+### `identity-service`
+
+| Endpoint | Action | Resource | Metadata |
+| --- | --- | --- | --- |
+| `POST /login` (Failed only) | `USER_LOGIN_FAILED` | `IdentityUser` | `{ "reason": "..." }` |
+| `POST /admin/identity-users` | `IDENTITY_USER_CREATED` | `IdentityUser` | `{ "email": "...", "fullName": "...", "role": "..." }` |
+| `PATCH /admin/identity-users/:id` | `IDENTITY_USER_UPDATED` | `IdentityUser` | `{ "updatedEmail": "...", "updatedFullName": "..." }` |
+| `PATCH /admin/identity-users/:id/role` | `IDENTITY_USER_ROLE_CHANGED` | `IdentityUser` | `{ "previousRole": "...", "newRole": "..." }` |
+| `PATCH /admin/identity-users/:id/lock` | `IDENTITY_USER_LOCKED` / `IDENTITY_USER_UNLOCKED` | `IdentityUser` | `{ "locked": boolean }` |
+| `DELETE /admin/identity-users/:id` | `IDENTITY_USER_DELETED` | `IdentityUser` | `{ "deletedById": "..." }` |
+
 ### `user-service`
 
 | Endpoint | Action | Resource | Metadata |
@@ -390,6 +403,9 @@ user_db.outbox_messages
 course_db.outbox_messages
 exam_db.outbox_messages
 ```
+
+*Lưu ý: `identity-service` sử dụng phương thức publish RabbitMQ trực tiếp (Fire-and-forget), không qua Outbox Table nhằm tối ưu hóa hiệu năng và tránh block các tác vụ nghiệp vụ Keycloak.*
+
 
 Outbox relay behavior:
 

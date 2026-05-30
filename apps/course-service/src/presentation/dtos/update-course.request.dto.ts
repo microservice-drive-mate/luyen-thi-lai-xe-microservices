@@ -12,6 +12,12 @@ import { CourseRequirementDto } from './create-course.request.dto';
 export class UpdateCourseRequestDto {
   @ApiPropertyOptional()
   @IsOptional()
+  @IsNumber()
+  @Min(1)
+  version?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   title?: string;
 

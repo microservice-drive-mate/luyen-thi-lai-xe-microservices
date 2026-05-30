@@ -58,6 +58,7 @@ export class CourseMaterialResponseDto {
 
 export class CourseResponseDto {
   @ApiProperty() id: string;
+  @ApiPropertyOptional() courseCode: string | null;
   @ApiProperty() title: string;
   @ApiPropertyOptional() description: string | null;
   @ApiProperty({ enum: LicenseCategory }) licenseCategory: LicenseCategory;
@@ -66,6 +67,10 @@ export class CourseResponseDto {
   @ApiProperty() tuitionFee: number;
   @ApiPropertyOptional() capacity: number | null;
   @ApiProperty({ enum: CourseStatus }) status: CourseStatus;
+  @ApiProperty() version: number;
+  @ApiProperty() isDeleted: boolean;
+  @ApiPropertyOptional() deletedAt: Date | null;
+  @ApiPropertyOptional() deletedBy: string | null;
   @ApiProperty() createdById: string;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
@@ -79,6 +84,7 @@ export class CourseResponseDto {
   static fromResult(result: CourseResult): CourseResponseDto {
     const dto = new CourseResponseDto();
     dto.id = result.id;
+    dto.courseCode = result.courseCode;
     dto.title = result.title;
     dto.description = result.description;
     dto.licenseCategory = result.licenseCategory;
@@ -87,6 +93,10 @@ export class CourseResponseDto {
     dto.tuitionFee = result.tuitionFee;
     dto.capacity = result.capacity;
     dto.status = result.status;
+    dto.version = result.version;
+    dto.isDeleted = result.isDeleted;
+    dto.deletedAt = result.deletedAt;
+    dto.deletedBy = result.deletedBy;
     dto.createdById = result.createdById;
     dto.createdAt = result.createdAt;
     dto.updatedAt = result.updatedAt;

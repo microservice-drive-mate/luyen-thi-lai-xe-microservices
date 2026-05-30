@@ -20,6 +20,7 @@ export class UpdateCourseUseCase
     if (!course) throw new CourseNotFoundException(command.courseId);
 
     course.update({
+      expectedVersion: command.expectedVersion,
       title: command.title,
       description: command.description,
       duration: command.duration,
@@ -40,7 +41,7 @@ export class UpdateCourseUseCase
         resourceType: 'COURSE',
         resourceId: course.id,
         requestContext: command.auditContext,
-        metadata: { title: course.title },
+        metadata: { title: course.title, version: course.version },
       }),
     );
     await this.courseCache.invalidateCourse(course.id);

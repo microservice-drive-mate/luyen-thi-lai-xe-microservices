@@ -1,12 +1,46 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { NotificationType } from '@prisma/notification-client';
 import { NotificationRecord } from '../../domain/repositories/notification.repository';
+import { AcademicWarningDispatchResult } from '../../application/use-cases/notification.use-cases';
 
 export class SendAcademicWarningRequestDto {
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description: 'Single recipient id. Kept for backward compatibility.',
+  })
+  @IsOptional()
   @IsUUID()
-  studentId!: string;
+  studentId?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Batch recipient ids for SRS UC29 selected-student flow.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('4', { each: true })
+  studentIds?: string[];
+
+  @ApiPropertyOptional({
+    enum: NotificationType,
+    isArray: true,
+    default: [NotificationType.IN_APP],
+    description: 'Delivery channels. Current implementation supports IN_APP.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsEnum(NotificationType, { each: true })
+  deliveryChannels?: NotificationType[];
 
   @ApiProperty()
   @IsString()
@@ -48,6 +82,38 @@ export class NotificationResponseDto {
 
   static fromRecord(record: NotificationRecord): NotificationResponseDto {
     return Object.assign(new NotificationResponseDto(), record);
+  }
+}
+
+export class AcademicWarningDispatchResponseDto {
+  @ApiProperty() warningId!: string;
+  @ApiProperty({ type: [String] }) warningIds!: string[];
+  @ApiProperty({ nullable: true, type: NotificationResponseDto })
+  notification!: NotificationResponseDto | null;
+  @ApiProperty({ type: [NotificationResponseDto] })
+  notifications!: NotificationResponseDto[];
+  @ApiProperty() deliveryStatus!: string;
+  @ApiProperty() persisted!: number;
+  @ApiProperty() queued!: number;
+  @ApiProperty() pendingRetry!: number;
+
+  static fromResult(
+    result: AcademicWarningDispatchResult,
+  ): AcademicWarningDispatchResponseDto {
+    const dto = new AcademicWarningDispatchResponseDto();
+    dto.warningId = result.warningId;
+    dto.warningIds = result.warningIds;
+    dto.notification = result.notification
+      ? NotificationResponseDto.fromRecord(result.notification)
+      : null;
+    dto.notifications = result.notifications.map(
+      NotificationResponseDto.fromRecord,
+    );
+    dto.deliveryStatus = result.deliveryStatus;
+    dto.persisted = result.persisted;
+    dto.queued = result.queued;
+    dto.pendingRetry = result.pendingRetry;
+    return dto;
   }
 }
 

@@ -1110,3 +1110,17 @@ Authorization: Bearer <admin_token>
 ```
 
 Expected: course status becomes `ARCHIVED`; normal list endpoints no longer return it unless explicitly filtered.
+## SRS UC08-UC10 Alignment Tests
+
+1. Create with unique `courseCode`:
+   `POST /admin/courses` with `courseCode=B1-FOUNDATION`; expect response includes `courseCode` and `version=1`.
+2. Duplicate `courseCode`:
+   repeat the same `courseCode`; expect HTTP 409 `COURSE_CODE_ALREADY_EXISTS`.
+3. Optimistic update:
+   `PATCH /admin/courses/{id}` with current `version`; expect success and incremented `version`.
+4. Version conflict:
+   repeat update with stale `version`; expect HTTP 409 `COURSE_VERSION_CONFLICT`.
+5. Delete/archive dependency:
+   create an active enrollment, then `DELETE /admin/courses/{id}`; expect HTTP 409 `COURSE_HAS_ACTIVE_ENROLLMENTS`.
+6. Archive success:
+   delete a course without active enrollments; expect `status=ARCHIVED`, `isDeleted=true`, `deletedAt`, and `deletedBy`.

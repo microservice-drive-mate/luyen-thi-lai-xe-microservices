@@ -41,3 +41,13 @@ Then mark read:
 PATCH http://localhost:3006/notifications/{notificationId}/read
 Authorization: Bearer <student_token>
 ```
+## SRS UC29 Retry Test Scenarios
+
+1. Happy path:
+   call `POST /admin/academic-warnings`; expect `persisted=1`, `queued=1`, `pendingRetry=0`, and an in-app notification for the student.
+2. Retry path:
+   simulate repository/notification creation failure during dispatch; warning remains persisted with `deliveryStatus=PENDING_RETRY`.
+3. Retry worker:
+   set `nextRetryAt` in the past, wait for `notification.warningRetryIntervalMs`, and verify the worker creates the notification and marks warning `QUEUED`.
+4. Failure cap:
+   after 3 failed retry attempts, expect `deliveryStatus=FAILED`.

@@ -12,6 +12,7 @@ export interface CreateCourseRequirementFields {
 export class CreateCourseCommand {
   constructor(
     readonly createdById: string,
+    readonly courseCode: string | null | undefined,
     readonly title: string,
     readonly licenseCategory: LicenseCategory,
     readonly description?: string | null,

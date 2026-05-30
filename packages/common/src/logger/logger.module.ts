@@ -31,6 +31,25 @@ function parseStructuredMessage(message: unknown): Record<string, unknown> {
   }
 }
 
+function shouldEnableLogstash(): boolean {
+  if (!process.env.LOGSTASH_HOST) {
+    return false;
+  }
+
+  if (process.env.LOGSTASH_ENABLED === 'false') {
+    return false;
+  }
+
+  if (
+    (process.env.NODE_ENV || 'development-local') === 'development-local' &&
+    process.env.LOGSTASH_ENABLED !== 'true'
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 @Global()
 @Module({
   imports: [
@@ -94,17 +113,25 @@ function parseStructuredMessage(message: unknown): Record<string, unknown> {
           }),
         ];
 
-        if (process.env.LOGSTASH_HOST) {
-          transports.push(
-            new winston.transports.Http({
-              host: process.env.LOGSTASH_HOST,
-              port: process.env.LOGSTASH_PORT
-                ? parseInt(process.env.LOGSTASH_PORT, 10)
-                : 5044,
-              path: '/',
-              format: jsonFormat,
-            }),
-          );
+        if (shouldEnableLogstash()) {
+          const logstashTransport = new winston.transports.Http({
+            host: process.env.LOGSTASH_HOST,
+            port: process.env.LOGSTASH_PORT
+              ? parseInt(process.env.LOGSTASH_PORT, 10)
+              : 5044,
+            path: '/',
+            format: jsonFormat,
+          });
+
+          logstashTransport.on('error', (error: Error) => {
+            if (process.env.LOGSTASH_DEBUG === 'true') {
+              console.warn(
+                `[logger] Logstash transport unavailable: ${error.message}`,
+              );
+            }
+          });
+
+          transports.push(logstashTransport);
         }
 
         return {

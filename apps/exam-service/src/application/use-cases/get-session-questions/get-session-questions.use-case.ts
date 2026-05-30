@@ -18,7 +18,7 @@ export class GetSessionQuestionsUseCase
 
   async execute(query: GetSessionQuestionsQuery): Promise<ExamSessionResult> {
     const session = await this.sessionRepository.findById(query.sessionId);
-    if (!session) throw new ExamSessionNotFoundException(query.sessionId);
+    if (!session) throw new ExamSessionNotFoundException();
     session.assertOwner(query.studentId);
     await finalizeExpiredSessionIfNeeded(
       session,

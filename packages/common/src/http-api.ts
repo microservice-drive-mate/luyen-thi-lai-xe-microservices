@@ -62,7 +62,7 @@ export class ApiResponseInterceptor<T>
       }
     >
 {
-  constructor(private readonly reflector?: Reflector) {}
+  constructor(private readonly reflector: Reflector = new Reflector()) {}
 
   intercept(
     context: ExecutionContext,
@@ -89,9 +89,11 @@ export class ApiResponseInterceptor<T>
     const httpContext = context.switchToHttp();
     const request = httpContext.getRequest<Request>();
     const response = httpContext.getResponse<Response>();
+    const path = request.originalUrl ?? request.url;
     const skipApiResponse =
-      request.originalUrl?.startsWith('/metrics') ||
-      request.url.startsWith('/metrics') ||
+      path.startsWith('/metrics') ||
+      path.startsWith('/docs-config') ||
+      path.startsWith('/docs-json') ||
       this.reflector?.getAllAndOverride<boolean>('skip-api-response', [
         context.getHandler(),
         context.getClass(),
@@ -138,6 +140,23 @@ export class ApiResponseInterceptor<T>
       }),
     );
   }
+}
+
+export function extractErrorCode(message: unknown): string | undefined {
+  if (!message) return undefined;
+  if (typeof message === 'string') {
+    const match = message.match(/\bMSG\d+\b/);
+    return match ? match[0] : undefined;
+  }
+  if (Array.isArray(message)) {
+    for (const item of message) {
+      if (typeof item === 'string') {
+        const match = item.match(/\bMSG\d+\b/);
+        if (match) return match[0];
+      }
+    }
+  }
+  return undefined;
 }
 
 export class ApiExceptionFilter implements ExceptionFilter {
@@ -196,10 +215,13 @@ export class ApiExceptionFilter implements ExceptionFilter {
       }
     }
 
+    const errorCode = extractErrorCode(message) ?? extractErrorCode(errors);
+
     response.status(status).json({
       success: false,
       code,
       message,
+      errorCode,
       timestamp: new Date().toISOString(),
       path: request.originalUrl ?? request.url,
       errors,

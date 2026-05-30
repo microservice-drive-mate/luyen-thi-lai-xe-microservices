@@ -10,7 +10,8 @@
       "!**/.claude",
       "!**/.turbo",
       "!**/dist",
-      "!**/node_modules"
+      "!**/node_modules",
+      "!**/backups"
     ]
   },
   "formatter": {

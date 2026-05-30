@@ -80,6 +80,7 @@
       "port": "3000",
       "database.url": "${SECRET_NOTIFICATION_DB_URL}",
       "rabbitmq.url": "${SECRET_RABBITMQ_URL}",
+      "notification.warningRetryIntervalMs": "${NOTIFICATION_WARNING_RETRY_INTERVAL_MS:-300000}",
       "keycloak.authServerUrl": "${KEYCLOAK_AUTH_SERVER_URL}",
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
@@ -130,7 +131,7 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "3000"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-3000}"
     },
     "docs-service": {
       "port": "3000",

@@ -18,6 +18,7 @@ import Joi from 'joi';
     }),
     MetricsModule.register({ serviceName: 'docs-service' }),
     ConfigModule.forRoot({
+      envFilePath: ConsulConfigFactory.envFilePaths(),
       load: [
         ConsulConfigFactory.create(
           Joi.object({

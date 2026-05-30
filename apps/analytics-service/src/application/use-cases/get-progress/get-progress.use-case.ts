@@ -17,10 +17,10 @@ export class GetProgressUseCase
   ) {}
 
   async execute(query: GetProgressQuery): Promise<ProgressDashboard> {
-    const cached = await this.cache.get(query.studentId);
+    const cached = await this.cache.get(query.studentId, query.licenseTier);
     if (cached) return cached;
     const dashboard = await this.repository.getDashboard(query.studentId);
-    await this.cache.set(query.studentId, dashboard);
+    await this.cache.set(query.studentId, dashboard, query.licenseTier);
     return dashboard;
   }
 }

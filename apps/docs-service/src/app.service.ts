@@ -72,7 +72,20 @@ export class AppService {
       { name: 'Notification Service', url: 'http://localhost:3006/docs-json' },
       { name: 'Analytics Service', url: 'http://localhost:3007/docs-json' },
       { name: 'Simulation Service', url: 'http://localhost:3008/docs-json' },
+      { name: 'Media Service', url: 'http://localhost:3010/docs-json' },
+      { name: 'Audit Service', url: 'http://localhost:3011/docs-json' },
     ];
+  }
+
+  mergeCandidates(candidates: ServiceCandidate[]): ServiceCandidate[] {
+    const seen = new Set<string>();
+    return candidates.filter((candidate) => {
+      if (seen.has(candidate.url)) {
+        return false;
+      }
+      seen.add(candidate.url);
+      return true;
+    });
   }
 
   async probeAlive(
@@ -84,6 +97,67 @@ export class AppService {
     return results
       .filter((r) => r.alive)
       .map(({ alive: _alive, ...rest }) => rest);
+  }
+
+  buildProxyUrl(upstreamUrl: string): string {
+    return `/docs-proxy?url=${encodeURIComponent(upstreamUrl)}`;
+  }
+
+  async fetchOpenApiDocument(upstreamUrl: string): Promise<unknown> {
+    this.assertAllowedDocsUrl(upstreamUrl);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    try {
+      const res = await fetch(upstreamUrl, { signal: controller.signal });
+      if (!res.ok) {
+        throw new Error(
+          `Upstream Swagger spec returned ${res.status} ${res.statusText}`,
+        );
+      }
+      const document = await res.json();
+      return this.withUpstreamServer(document, upstreamUrl);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  private withUpstreamServer(document: unknown, upstreamUrl: string): unknown {
+    if (!document || typeof document !== 'object' || Array.isArray(document)) {
+      return document;
+    }
+
+    const url = new URL(upstreamUrl);
+    return {
+      ...document,
+      servers: [{ url: url.origin }],
+    };
+  }
+
+  private assertAllowedDocsUrl(upstreamUrl: string): void {
+    const url = new URL(upstreamUrl);
+    const allowedHosts = new Set(['localhost', '127.0.0.1']);
+    const allowedPorts = new Set([
+      '3001',
+      '3002',
+      '3003',
+      '3004',
+      '3005',
+      '3006',
+      '3007',
+      '3008',
+      '3010',
+      '3011',
+    ]);
+
+    if (
+      url.protocol !== 'http:' ||
+      !allowedHosts.has(url.hostname) ||
+      !allowedPorts.has(url.port) ||
+      url.pathname !== '/docs-json'
+    ) {
+      throw new Error(`Swagger upstream is not allowed: ${upstreamUrl}`);
+    }
   }
 
   private async isAlive(url: string): Promise<boolean> {

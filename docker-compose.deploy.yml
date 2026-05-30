@@ -271,7 +271,7 @@ services:
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-app}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-change-me}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?RABBITMQ_DEFAULT_PASS is required}
     ports:
       - "${PRIVATE_BIND:-127.0.0.1}:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
       - "${PRIVATE_BIND:-127.0.0.1}:${RABBITMQ_PROMETHEUS_PORT:-15692}:15692"
@@ -318,11 +318,19 @@ services:
       - ./docker/consul/init.sh:/consul/init.sh:ro
     environment:
       CONSUL_URL: http://consul:8500
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
       STORAGE_ACCOUNT_NAME: ${STORAGE_ACCOUNT_NAME}
       STORAGE_ACCOUNT_KEY: ${STORAGE_ACCOUNT_KEY}
       STORAGE_CONTAINER_NAME: ${STORAGE_CONTAINER_NAME:-media}
       STORAGE_PRESIGNED_URL_EXPIRY: ${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
+      GATEWAY_PUBLIC_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:8000}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      KONG_CORS_ORIGINS: ${KONG_CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}
     depends_on:
       consul:
         condition: service_healthy
@@ -447,14 +455,17 @@ services:
       - ./docker/alertmanager/render-alertmanager-config.sh:/usr/local/bin/render-alertmanager-config.sh:ro
       - alertmanager_data:/alertmanager
     ports:
-      - "${PRIVATE_BIND:-127.0.0.1}:${ALERTMANAGER_PORT:-9093}:9093"
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
 
   grafana:
     image: grafana/grafana:11.3.1
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -463,6 +474,15 @@ services:
       - "${PRIVATE_BIND:-127.0.0.1}:${GRAFANA_PORT:-30000}:3000"
     depends_on:
       - prometheus
+
+  migration-runner:
+    image: node:20-alpine
+    working_dir: /workspace
+    environment:
+      CHECKPOINT_DISABLE: "1"
+      PRISMA_HIDE_UPDATE_MESSAGE: "true"
+    volumes:
+      - .:/workspace:ro
 
   identity-service:
     image: ghcr.io/${GHCR_OWNER}/luyen-thi-lai-xe-identity-service:${IMAGE_TAG}

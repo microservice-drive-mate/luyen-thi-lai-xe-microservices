@@ -21,6 +21,12 @@ out/
 !.env.example
 !.env.vps.example
 
+# Local Kubernetes/Helm secrets
+charts/**/values-*.local.yaml
+charts/**/values-*.secret.yaml
+rendered-*.yaml
+kubeconfig*.yaml
+
 # Consul seed production (chứa secrets thật - không commit)
 consul-seed-production.json
 consul-seed-development.json
@@ -49,3 +55,4 @@ backups/
 # Misc
 .DS_Store
 *.pem
+context

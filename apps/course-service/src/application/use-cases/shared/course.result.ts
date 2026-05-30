@@ -34,6 +34,7 @@ export interface CourseMaterialResult {
 export class CourseResult {
   constructor(
     readonly id: string,
+    readonly courseCode: string | null,
     readonly title: string,
     readonly description: string | null,
     readonly licenseCategory: LicenseCategory,
@@ -42,6 +43,10 @@ export class CourseResult {
     readonly tuitionFee: number,
     readonly capacity: number | null,
     readonly status: CourseStatus,
+    readonly version: number,
+    readonly isDeleted: boolean,
+    readonly deletedAt: Date | null,
+    readonly deletedBy: string | null,
     readonly createdById: string,
     readonly createdAt: Date,
     readonly updatedAt: Date,
@@ -54,6 +59,7 @@ export class CourseResult {
   static fromAggregate(course: Course): CourseResult {
     return new CourseResult(
       course.id,
+      course.courseCode,
       course.title,
       course.description,
       course.licenseCategory,
@@ -62,6 +68,10 @@ export class CourseResult {
       course.tuitionFee,
       course.capacity,
       course.status,
+      course.version,
+      course.isDeleted,
+      course.deletedAt,
+      course.deletedBy,
       course.createdById,
       course.createdAt,
       course.updatedAt,

@@ -21,6 +21,10 @@ export interface ListCoursesPage {
 export abstract class CourseRepository {
   abstract findById(id: string): Promise<Course | null>;
   abstract existsById(id: string): Promise<boolean>;
+  abstract existsByCourseCode(
+    courseCode: string,
+    excludeCourseId?: string,
+  ): Promise<boolean>;
   abstract save(course: Course, auditEvent?: AuditEventEnvelope): Promise<void>;
   abstract findAll(filter: ListCoursesFilter): Promise<ListCoursesPage>;
   abstract countEnrollments(courseId: string): Promise<number>;

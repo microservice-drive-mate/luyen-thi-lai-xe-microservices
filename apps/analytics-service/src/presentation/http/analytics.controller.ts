@@ -7,6 +7,8 @@ import { ProgressResponseDto } from '../dtos/progress.response.dto';
 
 interface JwtPayload {
   sub?: string;
+  licenseTier?: string;
+  license_category?: string;
 }
 
 @ApiTags('Analytics')
@@ -22,7 +24,10 @@ export class AnalyticsController {
     @AuthenticatedUser() user: JwtPayload,
   ): Promise<ProgressResponseDto> {
     const result = await this.getProgressUseCase.execute(
-      new GetProgressQuery(user.sub ?? ''),
+      new GetProgressQuery(
+        user.sub ?? '',
+        user.licenseTier ?? user.license_category,
+      ),
     );
     return ProgressResponseDto.fromDashboard(result);
   }

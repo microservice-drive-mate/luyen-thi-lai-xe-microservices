@@ -15,7 +15,7 @@ loadDotEnvFile();
 
 const CONSUL_URL = process.env.CONSUL_URL || 'http://localhost:8500';
 const DEFAULT_ENV = process.env.ENV || 'development';
-const ENV_PLACEHOLDER_PATTERN = /\$\{([A-Z0-9_]+)(?::-(.*?))?\}/g;
+const PLACEHOLDER_PATTERN = /\$\{([A-Z0-9_]+)(?::-(.*?))?\}/g;
 
 function loadDotEnvFile(): void {
   const envFile = path.join(process.cwd(), '.env');
@@ -45,41 +45,12 @@ function loadDotEnvFile(): void {
   }
 }
 
-async function flatten(
-  obj: ConsulSeedConfig,
-  prefix: string = '',
-): Promise<ConsulKVEntry[]> {
-  const entries: ConsulKVEntry[] = [];
-
-  for (const [key, value] of Object.entries(obj)) {
-    const fullKey = prefix ? `${prefix}/${key}` : key;
-
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      entries.push(...(await flatten(value as ConsulSeedConfig, fullKey)));
-    } else {
-      entries.push({
-        key: fullKey,
-        value: JSON.stringify(resolveEnvPlaceholders(value, fullKey)),
-      });
-    }
-  }
-
-  return entries;
-}
-
-function resolveEnvPlaceholders(
-  value: string | number | boolean | ConsulSeedConfig,
-  key: string,
-): string | number | boolean | ConsulSeedConfig {
-  if (typeof value !== 'string') {
-    return value;
-  }
-
+function resolvePlaceholders(value: string, env: string): string {
   return value.replace(
-    ENV_PLACEHOLDER_PATTERN,
-    (_match, variableName: string, defaultValue: string | undefined) => {
-      const envValue = process.env[variableName];
-      if (envValue !== undefined) {
+    PLACEHOLDER_PATTERN,
+    (match, name: string, defaultValue: string | undefined) => {
+      const envValue = process.env[name];
+      if (envValue !== undefined && envValue !== '') {
         return envValue;
       }
 
@@ -87,11 +58,37 @@ function resolveEnvPlaceholders(
         return defaultValue;
       }
 
-      throw new Error(
-        `Missing environment variable ${variableName} for Consul key ${key}`,
-      );
+      if (env === 'staging' || env === 'production') {
+        throw new Error(
+          `Missing required environment variable "${name}" while resolving ${match}`,
+        );
+      }
+
+      return '';
     },
   );
+}
+
+async function flatten(
+  obj: ConsulSeedConfig,
+  prefix: string = '',
+  env: string = DEFAULT_ENV,
+): Promise<ConsulKVEntry[]> {
+  const entries: ConsulKVEntry[] = [];
+
+  for (const [key, value] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}/${key}` : key;
+
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      entries.push(...(await flatten(value as ConsulSeedConfig, fullKey, env)));
+    } else {
+      const resolvedValue =
+        typeof value === 'string' ? resolvePlaceholders(value, env) : value;
+      entries.push({ key: fullKey, value: JSON.stringify(resolvedValue) });
+    }
+  }
+
+  return entries;
 }
 
 async function cleanConsulPrefix(prefix: string): Promise<void> {
@@ -134,7 +131,7 @@ async function seedConsul(env: string): Promise<void> {
   await cleanConsulPrefix(`config/${env}/`);
 
   // Flatten the hierarchical config (không có leading slash để khớp với ConsulConfigService)
-  const entries = await flatten(envConfig, `config/${env}`);
+  const entries = await flatten(envConfig, `config/${env}`, env);
 
   console.log(`\n✓ Found ${entries.length} configuration keys to seed`);
 

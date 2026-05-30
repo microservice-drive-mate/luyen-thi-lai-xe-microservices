@@ -19,11 +19,27 @@ import {
   SubmitSimulationSessionUseCase,
 } from '../../application/use-cases/simulation.use-cases';
 import {
+  EndPractice2dSessionUseCase,
+  GetPractice2dSessionUseCase,
+  IngestPractice2dTelemetryUseCase,
+  StartPractice2dSessionUseCase,
+} from '../../application/use-cases/practice2d/practice2d.use-cases';
+import {
+  EndPractice2dSessionCommand,
+  IngestPractice2dTelemetryCommand,
+  StartPractice2dSessionCommand,
+} from '../../application/use-cases/practice2d/practice2d.commands';
+import {
+  EndPractice2dSessionRequestDto,
   LicenseCategoryQueryDto,
   ManeuverErrorResponseDto,
   ManeuverResponseDto,
+  Practice2dFeedbackResponseDto,
+  Practice2dSessionResponseDto,
+  Practice2dTelemetryRequestDto,
   SaveSimulationAnswerRequestDto,
   SimulationSessionResponseDto,
+  StartPractice2dSessionRequestDto,
   StartSimulationSessionRequestDto,
 } from '../dtos/simulation.dtos';
 
@@ -42,6 +58,10 @@ export class SimulationController {
     private readonly startSimulationSessionUseCase: StartSimulationSessionUseCase,
     private readonly saveSimulationAnswerUseCase: SaveSimulationAnswerUseCase,
     private readonly submitSimulationSessionUseCase: SubmitSimulationSessionUseCase,
+    private readonly startPractice2dSessionUseCase: StartPractice2dSessionUseCase,
+    private readonly ingestPractice2dTelemetryUseCase: IngestPractice2dTelemetryUseCase,
+    private readonly endPractice2dSessionUseCase: EndPractice2dSessionUseCase,
+    private readonly getPractice2dSessionUseCase: GetPractice2dSessionUseCase,
   ) {}
 
   @Get('maneuvers')
@@ -144,5 +164,78 @@ export class SimulationController {
       user.sub ?? '',
     );
     return SimulationSessionResponseDto.fromRecord(result);
+  }
+
+  @Post('practice2d/sessions')
+  @Roles({ roles: ['realm:STUDENT'] })
+  @ApiOperation({ summary: 'Start a 2D driving practice session' })
+  async startPractice2d(
+    @AuthenticatedUser() user: JwtPayload,
+    @Body() dto: StartPractice2dSessionRequestDto,
+  ): Promise<Practice2dSessionResponseDto> {
+    const result = await this.startPractice2dSessionUseCase.execute(
+      new StartPractice2dSessionCommand(
+        user.sub ?? '',
+        dto.licenseCategory,
+        dto.clientCapabilities,
+        dto.persistTelemetry ?? false,
+      ),
+    );
+    return Practice2dSessionResponseDto.fromResult(result);
+  }
+
+  @Post('practice2d/sessions/:id/telemetry')
+  @Roles({ roles: ['realm:STUDENT'] })
+  @ApiOperation({ summary: 'Ingest 2D practice telemetry and return feedback' })
+  async ingestPracticeTelemetry(
+    @AuthenticatedUser() user: JwtPayload,
+    @Param('id') sessionId: string,
+    @Body() dto: Practice2dTelemetryRequestDto,
+  ): Promise<Practice2dFeedbackResponseDto> {
+    const result = await this.ingestPractice2dTelemetryUseCase.execute(
+      new IngestPractice2dTelemetryCommand(
+        sessionId,
+        user.sub ?? '',
+        dto.type,
+        dto.speedKmh,
+        dto.laneOffset,
+        dto.collision,
+        dto.signal,
+        dto.payload,
+      ),
+    );
+    return Practice2dFeedbackResponseDto.fromResult(result);
+  }
+
+  @Post('practice2d/sessions/:id/end')
+  @Roles({ roles: ['realm:STUDENT'] })
+  @ApiOperation({ summary: 'End a 2D practice session and return summary' })
+  async endPractice2d(
+    @AuthenticatedUser() user: JwtPayload,
+    @Param('id') sessionId: string,
+    @Body() dto: EndPractice2dSessionRequestDto,
+  ): Promise<Practice2dSessionResponseDto> {
+    const result = await this.endPractice2dSessionUseCase.execute(
+      new EndPractice2dSessionCommand(
+        sessionId,
+        user.sub ?? '',
+        dto.abandoned ?? false,
+      ),
+    );
+    return Practice2dSessionResponseDto.fromResult(result);
+  }
+
+  @Get('practice2d/sessions/:id')
+  @Roles({ roles: ['realm:STUDENT'] })
+  @ApiOperation({ summary: 'Get a 2D practice session summary' })
+  async getPractice2d(
+    @AuthenticatedUser() user: JwtPayload,
+    @Param('id') sessionId: string,
+  ): Promise<Practice2dSessionResponseDto> {
+    const result = await this.getPractice2dSessionUseCase.execute({
+      sessionId,
+      studentId: user.sub ?? '',
+    });
+    return Practice2dSessionResponseDto.fromResult(result);
   }
 }

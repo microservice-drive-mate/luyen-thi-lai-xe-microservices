@@ -927,3 +927,12 @@ Resets only the current student's enrollment progress to baseline:
 **Response `200`**
 
 Same `Enrollment` shape as `GET /enrollments/:id`, with `progress = 0`, `status = "ACTIVE"`, and `completedAt = null`.
+## SRS Alignment Additions: Course Code, Version, Soft Delete
+
+`POST /admin/courses` accepts optional `courseCode`. If provided, it must be unique; duplicates return `COURSE_CODE_ALREADY_EXISTS` with HTTP 409.
+
+`PATCH /admin/courses/:id` accepts optional `version`. When supplied, the service compares it with the current aggregate version and returns `COURSE_VERSION_CONFLICT` with HTTP 409 on mismatch.
+
+`DELETE /admin/courses/:id` keeps the existing archive behavior for API compatibility and also records soft-delete metadata: `isDeleted`, `deletedAt`, `deletedBy`. Courses with active/non-dropped enrollments return `COURSE_HAS_ACTIVE_ENROLLMENTS` with HTTP 409.
+
+Course responses include `courseCode`, `version`, `isDeleted`, `deletedAt`, and `deletedBy`.

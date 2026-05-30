@@ -88,6 +88,7 @@ export class AdminCourseController {
     const result = await this.createCourseUseCase.execute(
       new CreateCourseCommand(
         actorId,
+        dto.courseCode,
         dto.title,
         dto.licenseCategory,
         dto.description,
@@ -149,6 +150,7 @@ export class AdminCourseController {
         dto.requirement,
         actorId,
         buildAuditRequestContext(request, user),
+        dto.version,
       ),
     );
     return CourseResponseDto.fromResult(result);

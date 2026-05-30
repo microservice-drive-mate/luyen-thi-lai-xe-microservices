@@ -20,11 +20,13 @@ import Joi from 'joi';
 import {
   ListNotificationsUseCase,
   MarkNotificationReadUseCase,
+  RetryAcademicWarningsUseCase,
   SendAcademicWarningUseCase,
 } from './application/use-cases/notification.use-cases';
 import { NotificationRepository } from './domain/repositories/notification.repository';
 import { PrismaNotificationRepository } from './infrastructure/persistence/prisma/prisma-notification.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { AcademicWarningRetryService } from './infrastructure/retry/academic-warning-retry.service';
 import { NotificationController } from './presentation/http/notification.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';
 
@@ -45,6 +47,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     }),
     MetricsModule.register({ serviceName: 'notification-service' }),
     ConfigModule.forRoot({
+      envFilePath: ConsulConfigFactory.envFilePaths(),
       load: [
         ConsulConfigFactory.create(
           Joi.object({
@@ -75,6 +78,10 @@ import { MessagingController } from './presentation/messaging/messaging.controll
               realm: Joi.string().default('luyen-thi-lai-xe-realm'),
               clientId: Joi.string().default('nestjs-backend'),
               clientSecret: Joi.string().optional(),
+              timeoutMs: Joi.number().default(10000),
+            }).default(),
+            notification: Joi.object({
+              warningRetryIntervalMs: Joi.number().default(300000),
             }).default(),
           }).unknown(true),
           'notification-service',
@@ -101,6 +108,8 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     PrismaService,
     { provide: NotificationRepository, useClass: PrismaNotificationRepository },
     SendAcademicWarningUseCase,
+    RetryAcademicWarningsUseCase,
+    AcademicWarningRetryService,
     ListNotificationsUseCase,
     MarkNotificationReadUseCase,
     { provide: APP_GUARD, useClass: AuthGuard },

@@ -15,6 +15,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { buildAuditRequestContext } from '@repo/common';
 import { Public, Roles } from 'nest-keycloak-connect';
 import { ForgotPasswordCommand } from '../../application/use-cases/forgot-password/forgot-password.command';
 import { ForgotPasswordUseCase } from '../../application/use-cases/forgot-password/forgot-password.use-case';
@@ -46,9 +47,18 @@ export class AuthController {
   @Public()
   @ApiBody({ type: LoginRequestDto })
   @ApiOkResponse({ type: LoginResponseDto })
-  async login(@Body() body: LoginRequestDto): Promise<LoginResponseDto> {
+  async login(
+    @Body() body: LoginRequestDto,
+    @Req() request: Request,
+  ): Promise<LoginResponseDto> {
     return this.loginUseCase.execute(
-      new LoginCommand(body.username, body.password),
+      new LoginCommand(
+        body.username,
+        body.password,
+        // auditContext is populated without a user (public endpoint).
+        // actorId defaults to the username for failed-login traceability.
+        buildAuditRequestContext(request, undefined),
+      ),
     );
   }
 

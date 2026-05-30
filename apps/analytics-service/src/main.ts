@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -13,12 +13,16 @@ import {
   CorrelationIdInterceptor,
   CorrelationIdMiddleware,
   getRabbitMqUrl,
+  installLocalDevTransientErrorGuard,
   MetricsService,
   RabbitMqRetryInterceptor,
+  runBootstrapWithRetries,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
+
+installLocalDevTransientErrorGuard('analytics-service');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -35,7 +39,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),
     new AccessLogInterceptor({ serviceName: 'analytics-service' }),
-    new ApiResponseInterceptor(),
+    new ApiResponseInterceptor(app.get(Reflector)),
   );
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new ApiExceptionFilter());
@@ -65,4 +69,4 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Analytics Service listening on port ${port}`);
 }
-void bootstrap();
+void runBootstrapWithRetries('analytics-service', bootstrap);

@@ -43,6 +43,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     }),
     MetricsModule.register({ serviceName: 'audit-service' }),
     ConfigModule.forRoot({
+      envFilePath: ConsulConfigFactory.envFilePaths(),
       load: [
         ConsulConfigFactory.create(
           Joi.object({
@@ -62,6 +63,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
               realm: Joi.string().required(),
               clientId: Joi.string().required(),
               clientSecret: Joi.string().optional(),
+              timeoutMs: Joi.number().default(10000),
             }).required(),
           }).unknown(true),
           'audit-service',

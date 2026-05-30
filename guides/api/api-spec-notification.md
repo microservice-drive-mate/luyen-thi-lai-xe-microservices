@@ -125,7 +125,7 @@ The current implementation creates `IN_APP` notifications. Other enum values are
 
 ### POST `/admin/academic-warnings`
 
-Creates an academic warning record and an in-app notification for a student. `createdById` is taken from the caller JWT `sub`.
+Creates academic warning records and in-app notifications for one or more students. `createdById` is taken from the caller JWT `sub`.
 
 **Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
 
@@ -139,7 +139,8 @@ Authorization: Bearer <admin_or_instructor_access_token>
 
 ```json
 {
-  "studentId": "89ea9a17-1cce-4fff-855c-d32a081648cd",
+  "studentIds": ["89ea9a17-1cce-4fff-855c-d32a081648cd"],
+  "deliveryChannels": ["IN_APP"],
   "reason": "LOW_EXAM_SCORE",
   "severity": "HIGH",
   "message": "Bạn cần ôn lại nhóm câu hỏi thường sai trước khi thi tiếp."
@@ -150,7 +151,9 @@ Authorization: Bearer <admin_or_instructor_access_token>
 
 | Field | Required | Rule |
 | --- | --- | --- |
-| `studentId` | yes | UUID |
+| `studentId` | conditional | UUID. Backward-compatible single recipient field |
+| `studentIds` | conditional | Non-empty UUID array. Required when `studentId` is omitted |
+| `deliveryChannels` | no | Non-empty enum array. Current implementation accepts `IN_APP` only |
 | `reason` | yes | non-empty string |
 | `severity` | yes | non-empty string, recommended values: `LOW`, `MEDIUM`, `HIGH` |
 | `message` | yes | non-empty string |
@@ -291,3 +294,23 @@ Notification-service consumes these event types:
 | `exam.session.failed` | Creates a non-blocking in-app notification for the student |
 
 Event consumers log and skip invalid payloads so notification delivery does not block exam completion.
+## SRS Alignment Additions: UC29 Warning Retry
+
+`POST /admin/academic-warnings` now persists the warning before notification dispatch. The response contains a delivery summary:
+
+```json
+{
+  "warningId": "uuid",
+  "warningIds": ["uuid"],
+  "notification": {},
+  "notifications": [{}],
+  "deliveryStatus": "QUEUED",
+  "persisted": 1,
+  "queued": 1,
+  "pendingRetry": 0
+}
+```
+
+Delivery status values: `PENDING`, `QUEUED`, `PENDING_RETRY`, `FAILED`, `SENT`.
+
+If notification enqueue/create fails, the API still returns success with `pendingRetry = 1`; a background retry worker retries due warnings up to 3 attempts. Retry interval is configured by `notification.warningRetryIntervalMs` with default `300000`.

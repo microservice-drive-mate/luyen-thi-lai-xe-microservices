@@ -33,3 +33,13 @@ docker exec -it luyen-thi-lai-xe-microservices-redis-1 redis-cli keys "analytics
 ```
 
 After `POST /enrollments/{id}/reset-progress`, the student's analytics key should be invalidated and rebuilt on next read.
+## SRS UC34 Cache Scope Tests
+
+1. Owner-only:
+   call `GET /analytics/me/progress` as student and verify response `studentId` equals JWT `sub`.
+2. Cache miss/hit:
+   first call builds from PostgreSQL projection; second call should use Redis key `analytics:progress:{studentId}:{licenseTier|default}`.
+3. Reset invalidation:
+   after `course.enrollment.progress-reset`, verify all `analytics:progress:{studentId}:*` keys are invalidated and rebuilt on next read.
+4. Weak topics:
+   after wrong exam answers are projected, verify top weak topics are ranked by incorrect count.

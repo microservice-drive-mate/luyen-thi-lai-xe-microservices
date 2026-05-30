@@ -14,6 +14,9 @@ export interface ManeuverRecord {
     title: string;
     instruction: string;
     penalty: string | null;
+    x?: number | null;
+    y?: number | null;
+    visualColor?: string | null;
     displayOrder: number;
   }>;
 }
@@ -24,6 +27,12 @@ export interface ManeuverErrorRecord {
   code: string;
   description: string;
   severity: string;
+  pointsDeducted: number;
+  isFatal: boolean;
+  isGeneral: boolean;
+  isActive: boolean;
+  visualColor: string | null;
+  icon: string | null;
 }
 
 export interface SimulationSessionRecord {

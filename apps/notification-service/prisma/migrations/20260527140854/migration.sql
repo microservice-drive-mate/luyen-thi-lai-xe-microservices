@@ -1,0 +1,2 @@
+-- No-op migration kept to preserve migration history.
+-- `updatedAt` is introduced by 20260527162000_academic_warning_delivery.

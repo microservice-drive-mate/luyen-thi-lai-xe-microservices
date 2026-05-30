@@ -35,9 +35,15 @@ export class StartSessionUseCase
 
   async execute(command: StartSessionCommand): Promise<ExamSessionResult> {
     const template = await this.templateRepository.findById(command.templateId);
-    if (!template) throw new ExamTemplateNotFoundException(command.templateId);
+    if (!template) {
+      throw new ExamTemplateNotFoundException(
+        'Exam resource not found. (MSG38)',
+      );
+    }
     if (!template.isActive || template.isDeleted) {
-      throw new ExamTemplateInactiveException(command.templateId);
+      throw new ExamTemplateInactiveException(
+        'Exam resource not found. (MSG38)',
+      );
     }
 
     const profile = await this.userProfileClient.getCurrentStudentProfile(
@@ -50,12 +56,12 @@ export class StartSessionUseCase
       !profile.studentDetail
     ) {
       throw new StudentProfileInvalidException(
-        'Current user is not an active student',
+        'Exam resource not found. (MSG38)',
       );
     }
     if (profile.studentDetail.licenseTier !== template.licenseCategory) {
       throw new StudentLicenseMismatchException(
-        'Student license tier does not match exam template',
+        'Invalid exam start request. (MSG36)',
       );
     }
 

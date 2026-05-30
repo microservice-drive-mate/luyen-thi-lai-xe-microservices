@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { setupCors } from './cors.setup';
 
 export interface SwaggerSetupOptions {
   title: string;
@@ -12,7 +13,7 @@ export function setupMicroserviceSwagger(
   options: SwaggerSetupOptions,
 ) {
   // Allow cross-origin requests so Swagger UI on docs-service can fetch /docs-json
-  app.enableCors();
+  setupCors(app);
 
   const config = new DocumentBuilder()
     .setTitle(options.title)

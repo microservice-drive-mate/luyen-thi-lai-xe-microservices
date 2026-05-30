@@ -223,3 +223,8 @@ Analytics-service consumes these event types from RabbitMQ:
 | `course.enrollment.progress-reset` | Clears daily activity/weak-topic tracker and resets course completion/study minutes baseline |
 
 Event handlers are idempotent where the repository can upsert by natural key. After every successful projection update, the cache key for that student is invalidated.
+## SRS Alignment Additions: Scoped Progress Cache
+
+`GET /analytics/me/progress` remains owner-only: `studentId` is read only from JWT `sub`. The cache key is scoped as `analytics:progress:{studentId}:{licenseTier|default}` so progress can be separated by license tier when the claim is available.
+
+Projection still comes from analytics read-model tables. Weak topics are computed from `QuestionAccuracyTracker`; no realtime raw-log aggregation is performed on request path.

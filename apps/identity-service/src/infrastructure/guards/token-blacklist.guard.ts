@@ -21,7 +21,7 @@ export class TokenBlacklistGuard implements CanActivate {
     const token = authHeader.replace(/^Bearer\s+/i, '');
     if (token && (await this.tokenBlacklistService.isBlacklisted(token))) {
       throw new UnauthorizedException(
-        'Token has been revoked. Please log in again. (MSG131)',
+        'Authentication token is missing or invalid. (MSG121)',
       );
     }
 

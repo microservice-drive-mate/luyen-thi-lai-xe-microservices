@@ -1,0 +1,196 @@
+{{- range .Values.services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lttl.componentName" (dict "root" $ "name" .name) }}
+  labels:
+    {{- include "lttl.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: app
+    app.kubernetes.io/service-name: {{ .name }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+  selector:
+    {{- include "lttl.selectorLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: app
+    app.kubernetes.io/service-name: {{ .name }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lttl.componentName" (dict "root" $ "name" .name) }}
+  labels:
+    {{- include "lttl.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: app
+    app.kubernetes.io/service-name: {{ .name }}
+spec:
+  replicas: {{ default $.Values.appDefaults.replicaCount .replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: app
+      app.kubernetes.io/service-name: {{ .name }}
+  template:
+    metadata:
+      labels:
+        {{- include "lttl.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: app
+        app.kubernetes.io/service-name: {{ .name }}
+    spec:
+      serviceAccountName: {{ include "lttl.serviceAccountName" $ }}
+      {{- if $.Values.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ include "lttl.imagePullSecretName" $ }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-consul-seed
+          image: {{ $.Values.jobs.kubectlImage | quote }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -ec
+            - |
+              job="{{ include "lttl.consulSeedJobName" $ }}"
+              while true; do
+                if ! kubectl get "job/${job}" > /dev/null 2>&1; then
+                  echo "Waiting for Consul seed job to be created: ${job}"
+                  sleep 5
+                  continue
+                fi
+                conditions="$(kubectl get "job/${job}" -o jsonpath='{range .status.conditions[*]}{.type}={.status}{"\n"}{end}')"
+                if printf '%s\n' "${conditions}" | grep -q '^Complete=True$'; then
+                  exit 0
+                fi
+                if printf '%s\n' "${conditions}" | grep -q '^Failed=True$'; then
+                  echo "Consul seed job failed: ${job}" >&2
+                  exit 1
+                fi
+                sleep 5
+              done
+        - name: wait-for-migrations
+          image: {{ $.Values.jobs.kubectlImage | quote }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -ec
+            - |
+              job="{{ include "lttl.migrationJobName" $ }}"
+              while true; do
+                if ! kubectl get "job/${job}" > /dev/null 2>&1; then
+                  echo "Waiting for migration job to be created: ${job}"
+                  sleep 5
+                  continue
+                fi
+                conditions="$(kubectl get "job/${job}" -o jsonpath='{range .status.conditions[*]}{.type}={.status}{"\n"}{end}')"
+                if printf '%s\n' "${conditions}" | grep -q '^Complete=True$'; then
+                  exit 0
+                fi
+                if printf '%s\n' "${conditions}" | grep -q '^Failed=True$'; then
+                  echo "Migration job failed: ${job}" >&2
+                  exit 1
+                fi
+                sleep 5
+              done
+        - name: wait-for-core
+          image: busybox:1.36
+          command:
+            - sh
+            - -ec
+            - |
+              until nc -z {{ include "lttl.fullname" $ }}-postgres 5432; do echo waiting for postgres; sleep 2; done
+              until nc -z {{ include "lttl.fullname" $ }}-rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done
+              until nc -z {{ include "lttl.fullname" $ }}-consul 8500; do echo waiting for consul; sleep 2; done
+              until nc -z {{ include "lttl.fullname" $ }}-keycloak 8080; do echo waiting for keycloak; sleep 2; done
+              {{- if .usesRedis }}
+              until nc -z {{ include "lttl.fullname" $ }}-redis 6379; do echo waiting for redis; sleep 2; done
+              {{- end }}
+      containers:
+        - name: app
+          image: {{ include "lttl.serviceImage" (dict "root" $ "service" .) | quote }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: {{ include "lttl.configName" $ }}
+          env:
+            - name: SERVICE_NAME
+              value: {{ .name | quote }}
+            - name: PORT
+              value: "3000"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" $ }}
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" $ }}
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@{{ include "lttl.fullname" $ }}-postgres:5432/{{ .dbName }}
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" $ }}
+                  key: RABBITMQ_DEFAULT_USER
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" $ }}
+                  key: RABBITMQ_DEFAULT_PASS
+            - name: RABBITMQ_USERNAME
+              value: $(RABBITMQ_DEFAULT_USER)
+            - name: RABBITMQ_PASSWORD
+              value: $(RABBITMQ_DEFAULT_PASS)
+            - name: RABBITMQ_URL
+              value: amqp://$(RABBITMQ_DEFAULT_USER):$(RABBITMQ_DEFAULT_PASS)@{{ include "lttl.fullname" $ }}-rabbitmq:5672
+            {{- if .usesRedis }}
+            - name: REDIS_URL
+              value: redis://{{ include "lttl.fullname" $ }}-redis:6379
+            {{- end }}
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" $ }}
+                  key: KEYCLOAK_CLIENT_SECRET
+            - name: STORAGE_ACCOUNT_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" $ }}
+                  key: STORAGE_ACCOUNT_NAME
+            - name: STORAGE_ACCOUNT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" $ }}
+                  key: STORAGE_ACCOUNT_KEY
+            - name: STORAGE_CONTAINER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" $ }}
+                  key: STORAGE_CONTAINER_NAME
+            - name: STORAGE_PRESIGNED_URL_EXPIRY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" $ }}
+                  key: STORAGE_PRESIGNED_URL_EXPIRY
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            {{- toYaml $.Values.appDefaults.probes.liveness | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            {{- toYaml $.Values.appDefaults.probes.readiness | nindent 12 }}
+          resources:
+            {{- toYaml (default $.Values.appDefaults.resources .resources) | nindent 12 }}
+{{- end }}

@@ -1,27 +1,27 @@
 # Tổng kết hạ tầng DevOps - Luyện Thi Lái Xe Microservices
 
 **Cập nhật lần cuối**: Tháng 05/2026
-**Phạm vi đã kiểm tra**: Docker local/hybrid, Docker Compose full stack, VPS Compose deploy, CI/CD, observability, resilience, backup và runbook.
+**Phạm vi đã kiểm tra**: Docker local/hybrid, Docker Compose full stack, VPS Compose deploy, CI/CD, Kubernetes baseline, observability, resilience, backup và runbook.
 
 ## Tóm tắt điều hành
 
-Repo hiện tại đã đủ tốt cho **MVP/demo trên local hoặc VPS bằng Docker Compose**. Nếu đối chiếu theo checklist DevOps trong `DEVOPS (2).docx`, trạng thái tổng quan là:
+Repo hiện tại đã đủ tốt cho **MVP/demo trên local hoặc VPS**, đồng thời đã có baseline cho **CI/CD tách luồng, DevSecOps cơ bản và Kubernetes/K3s deployment**. Nếu đối chiếu theo checklist DevOps trong `DEVOPS (2).docx`, trạng thái tổng quan là:
 
-- **Mức sẵn sàng DevOps cho MVP**: khoảng **85-90%**.
-- **Mức sẵn sàng production day-2 operations**: khoảng **70-75%**.
-- **Chưa đạt mức production enterprise/Kubernetes**: còn thiếu DevSecOps scan, secret manager, IaC, load test và autoscaling.
+- **Mức sẵn sàng DevOps cho MVP**: khoảng **90%**.
+- **Mức sẵn sàng production day-2 operations**: khoảng **75-80%**.
+- **Chưa đạt mức production enterprise hoàn chỉnh**: còn thiếu secret manager chính thức, SBOM/signing, offsite/PITR backup, load test, HPA và Terraform.
 
-Kết quả kiểm tra tĩnh:
+Kết quả kiểm tra tĩnh trước đó:
 
 - `docker compose -f docker-compose.infra.yml config --quiet`: pass.
 - `docker compose -f docker-compose.yaml config --quiet`: pass.
 - `docker compose -f docker-compose.deploy.yml --env-file deploy/production.env.example config --quiet`: pass.
 
-Docker có cảnh báo quyền đọc `~/.docker/config.json` trên máy local, nhưng cấu hình Compose vẫn hợp lệ.
+Ghi chú: `DEVOPS-ASSESSMENT.md` là bản đánh giá baseline chi tiết từ nhánh DevOps mới trên `main`. File này là bản tổng kết ngắn gọn bằng tiếng Việt có dấu để phục vụ README/báo cáo.
 
 ## Mốc cơ sở service
 
-Luồng production/VPS deploy hiện chốt **10 application services**:
+Luồng production/staging hiện chốt **10 application services**:
 
 - `identity-service`
 - `user-service`
@@ -34,7 +34,7 @@ Luồng production/VPS deploy hiện chốt **10 application services**:
 - `media-service`
 - `audit-service`
 
-`docs-service` dùng cho Swagger/docs aggregation ở môi trường dev hoặc nội bộ. Service này **không nằm trong luồng VPS production deploy** hiện tại.
+`docs-service` dùng cho Swagger/docs aggregation ở môi trường dev hoặc nội bộ. Service này **không nằm trong luồng staging/production deploy** hiện tại.
 
 ## Phần đã hoàn thành
 
@@ -44,7 +44,10 @@ Luồng production/VPS deploy hiện chốt **10 application services**:
 - Full stack có `docker-compose.yaml`.
 - Hybrid local có `docker-compose.infra.yml`.
 - VPS/staging/production có `docker-compose.deploy.yml`.
-- Compose files có healthcheck cho PostgreSQL, Redis, Consul, Keycloak/Kong/app services theo mức độ cần thiết.
+- Runtime images đã được harden thêm:
+  - prune dev dependencies.
+  - loại `npm`, `npx`, `corepack`, `yarn` khỏi runtime image để giảm CVE surface.
+- Có `Dockerfile.migration-runner` để chạy Prisma migration ngoài application runtime container.
 
 ### Infrastructure Foundation
 
@@ -67,6 +70,8 @@ Luồng production/VPS deploy hiện chốt **10 application services**:
   - `consul-seed-development.json`
   - `consul-seed-staging.json`
   - `consul-seed-production.json`
+- `scripts/consul-seed.ts` hỗ trợ env interpolation.
+- `docker/consul/init.sh` không crash khi thiếu media storage optional.
 - Thứ tự ưu tiên config trong code: env > Consul > default.
 - `.gitignore` đã chặn `.env`, `*.env`, `backups/`.
 
@@ -79,18 +84,41 @@ Luồng production/VPS deploy hiện chốt **10 application services**:
   - `npm run db:backup:local`
   - `npm run db:restore:test`
 - CI có staging migration job trên branch `staging`.
-- Deploy script chạy `prisma migrate deploy` cho 10 service production.
+- Docker Compose deploy dùng `migration-runner` để chạy `prisma migrate deploy`.
+- Kubernetes baseline có Prisma migration Job riêng trong Helm chart.
 
-### CI/CD
+### CI/CD & DevSecOps
 
-- GitHub Actions:
-  - `.github/workflows/ci.yml`: quality gate, service change detection, matrix Docker build, GHCR push trên `main`.
-  - `.github/workflows/deploy-vps.yml`: deploy VPS bằng Docker Compose sau CI success hoặc manual dispatch.
+- GitHub Actions đã tách luồng:
+  - `.github/workflows/pr-validation.yml`: validate PR vào `main`, chạy quality gate, detect changed services, build image và Trivy scan, không push image.
+  - `.github/workflows/ci.yml`: main image release, quality gate, build + Trivy scan, push GHCR với `${github.sha}` và `latest`, staging deploy nếu bật biến `STAGING_DEPLOY_ENABLED=true`.
+  - `.github/workflows/production-release.yml`: production release thủ công bằng immutable `image_tag`, gắn GitHub Environment `production`.
   - `.github/workflows/devops-smoke.yml`: smoke suites cho observability, RabbitMQ resilience và restore test.
 - Jenkins:
   - `Jenkinsfile` có lint, typecheck, test, build, image push, staging deploy và production manual approval.
+- DevSecOps baseline:
+  - Trivy image scan với `severity: CRITICAL,HIGH`, `exit-code: 1`.
+  - PR thay đổi DevOps/shared files sẽ build/scan đủ 10 production services.
+  - Hardcoded secrets trong Compose/Consul seed đã được chuyển dần sang env variable hoặc placeholder.
 - Registry:
   - GHCR image naming: `ghcr.io/<owner>/luyen-thi-lai-xe-<service>:<tag>`.
+
+### Deployment Runtime
+
+- Docker Compose runtime:
+  - local/hybrid.
+  - full Docker stack.
+  - VPS Compose deploy.
+- Kubernetes Phase 5 baseline:
+  - Helm chart tại `charts/luyen-thi-lai-xe`.
+  - Target hiện tại: K3s VPS.
+  - Deploy 10 production services, Kong, Keycloak, PostgreSQL, RabbitMQ, Redis và Consul.
+  - Kubernetes `Secret` dùng cho password/token/storage.
+  - Consul seed Job chỉ seed non-secret config.
+  - App Deployments có `resources.requests`, `resources.limits`, `/health/live` và `/health/ready` probes.
+  - GitHub Actions deploy staging/production bằng Helm và kubeconfig base64.
+  - `scripts/k8s-smoke.sh` verify health endpoints qua Kong.
+- Hướng dẫn chi tiết: `guides/devops/PHASE5-KUBERNETES.md`.
 
 ### Observability
 
@@ -156,50 +184,34 @@ Luồng production/VPS deploy hiện chốt **10 application services**:
   - `guides/devops/RABBITMQ-RESILIENCE.md`
   - `guides/devops/HTTP-RESILIENCE.md`
   - `guides/devops/JENKINS-DOCKER-COMPOSE.md`
+  - `guides/devops/PHASE5-KUBERNETES.md`
 
 ## Phần còn thiếu
 
-### P0 - Security/DevSecOps
+### P0/P1 - Security hardening còn lại
 
-Còn thiếu để đạt yêu cầu Phase 3 trong tài liệu DevOps:
+- Chưa có secret manager chính thức như Vault/AWS Secrets Manager/Azure Key Vault.
+- Chưa có SBOM bằng Syft/CycloneDX.
+- Chưa sign image/release bằng Cosign hoặc có provenance policy đầy đủ.
+- Nếu secret thật từng bị paste/push, cần rotate ngoài repo.
 
-- Chưa có Trivy image scan trong GitHub Actions/Jenkins.
-- Chưa có secret scanning như Gitleaks/TruffleHog.
-- Chưa có dependency audit gate bắt buộc.
-- Chưa generate SBOM bằng Syft/CycloneDX.
-- Chưa sign image/release bằng Cosign hoặc có provenance policy.
-- Chưa có Vault/AWS Secrets Manager/Azure Key Vault integration.
+### P1 - Release hardening còn lại
 
-Ghi chú: local Compose vẫn còn default credentials (`password`, `guest`, `admin`) để dễ chạy dev. `docker-compose.deploy.yml` đã dùng env interpolation cho production, nhưng secret manager thực thụ vẫn chưa có.
+- Main workflow vẫn push cả `${github.sha}` và `latest`; production release đã dùng immutable `image_tag`, nhưng cần policy vận hành rõ ràng: production chỉ chọn SHA/release tag đã pass.
+- Production approval trên GitHub phụ thuộc Environment protection rule ngoài repo; cần cấu hình reviewer trong GitHub Environments.
+- Rollback đã có hướng dẫn và Helm rollback path, nhưng nên bổ sung workflow/job riêng cho rollback có tham số.
 
-### P1 - Release Hardening
-
-- GitHub Actions build có tag SHA và `latest`, nhưng production flow cần chốt policy: deploy production bằng immutable SHA/tag release, hạn chế dùng `latest`.
-- Production approval trên GitHub phụ thuộc environment protection rule ngoài repo; Jenkins đã có `input` manual approval.
-- Rollback đã có hướng dẫn trong Jenkins guide, nhưng chưa có workflow riêng cho rollback.
-
-### P1 - Runtime Verification
+### P1 - Runtime verification
 
 - Đã có smoke tests, nhưng nên chạy thực tế sau deploy và lưu bằng chứng pass/fail theo mỗi lần release.
-- `media-service` chưa có script `test` trong `package.json`, trong khi CI chạy `npx turbo run test`; nên bổ sung script test placeholder hoặc test thật để tránh build matrix/quality gate lệch service.
+- Cần chạy lại smoke trên môi trường Docker/K3s thật sau khi merge để xác nhận DNS, ingress và health endpoint ổn định.
 
-### P2 - Cloud Runtime / Kubernetes
-
-Chưa có:
-
-- Kubernetes manifests hoặc Helm/Kustomize.
-- resource requests/limits cho K8s.
-- HPA.
-- Ingress/TLS cho K8s.
-
-Với MVP, VPS Docker Compose là đủ. K8s nên để sau khi có nhu cầu scale thật.
-
-### P2 - IaC & Load Test
+### P2 - Scaling & IaC
 
 Chưa có:
 
 - Terraform modules.
-- Ansible playbooks.
+- HPA.
 - k6/JMeter/Locust load test.
 - nightly performance regression gate.
 
@@ -216,44 +228,50 @@ Chưa có:
 
 | Hạng mục | Trạng thái | Mức hoàn thành | Ghi chú |
 | --- | --- | ---: | --- |
-| Docker & Compose | Đã làm | 95% | `docs-service` không deploy production; 10 app services deploy đủ. |
+| Docker & Compose | Đã làm | 95% | 10 app services deploy đủ; `docs-service` dev-only. |
 | Local/dev bootstrap | Đã làm | 90% | README có first-run flow. |
-| Database migration/seed | Đã làm | 90% | CI có staging migration; deploy script chạy migration. |
-| CI/CD | Một phần | 80% | Build/push/deploy có; scan/SBOM/rollback workflow còn thiếu. |
-| VPS deployment | Đã làm | 85% | Compose deploy + migrations + health smoke. |
+| Database migration/seed | Đã làm | 90% | CI/deploy có migration path; Kubernetes có migration Job. |
+| CI/CD | Đã làm nền | 85% | PR validation, main image release, production manual release đã có; rollback job riêng còn thiếu. |
+| DevSecOps baseline | Đã làm nền | 75% | Trivy HIGH/CRITICAL gate có; SBOM/signing/secret manager còn thiếu. |
+| VPS Compose deployment | Đã làm | 85% | Compose deploy + migrations + health smoke. |
+| Kubernetes baseline | Đã làm nền | 70% | Helm/K3s scaffold có; HPA/load test/Terraform còn thiếu. |
 | Observability | Đã làm | 85% | Prometheus/Grafana/ELK/alerts có; cần verify runtime và bổ sung business metrics. |
 | Health/metrics/logging | Đã làm | 90% | Đã đồng bộ common modules. |
 | HTTP/RabbitMQ resilience | Đã làm | 85% | Retry/DLQ/circuit breaker có; idempotency durable còn là follow-up. |
 | Backup/restore/runbook | Đã làm | 80% | Daily backup + restore test có; offsite/PITR còn thiếu. |
-| Secrets management | Một phần | 45% | Env templates có; secret manager chưa có. |
-| DevSecOps supply chain | Còn thiếu | 25% | Chưa có Trivy/secret scan/SBOM gate. |
-| IaC | Còn thiếu | 15% | Docker Compose là IaC mức app-runtime; Terraform chưa có. |
-| Load test/autoscaling | Còn thiếu | 0% | Chưa có k6/JMeter/HPA. |
+| Secrets management | Một phần | 50% | Env templates/K8s secrets có; external secret manager chưa có. |
+| IaC | Còn thiếu | 20% | Docker Compose/Helm là IaC mức app-runtime; Terraform chưa có. |
+| Load test/autoscaling | Còn thiếu | 10% | Probes/resources có; chưa có k6/JMeter/HPA. |
 | Multi-region | Còn thiếu | 0% | Post-MVP. |
 
 ## Việc nên làm tiếp
 
 ### Làm ngay
 
-1. Thêm Trivy scan vào `.github/workflows/ci.yml` sau Docker build.
-2. Thêm Gitleaks/TruffleHog secret scan vào PR quality gate.
-3. Thêm `npm audit --audit-level=high` hoặc `audit-ci`.
-4. Generate SBOM cho image bằng Syft/CycloneDX và upload artifact.
-5. Bổ sung `test` script cho `media-service`.
-6. Chốt production deploy chỉ dùng immutable image tag (`github.sha` hoặc release tag), không dùng `latest`.
+1. Cấu hình GitHub Environments:
+   - `staging` cho deploy tự động nếu bật.
+   - `production` với required reviewers/manual approval.
+2. Verify workflow YAML sau merge:
+   - PR Validation.
+   - Main Image Release.
+   - Production Release.
+3. Chạy `helm lint` và `helm template` cho chart `charts/luyen-thi-lai-xe`.
+4. Chạy smoke test trên môi trường staging/K3s thật qua Kong.
 
 ### Gần hạn
 
-1. Đẩy backup offsite lên S3/Azure Blob và document restore từ offsite.
-2. Thêm rollback GitHub Action/Jenkins parameterized job.
-3. Thêm k6 smoke/load script cho các luồng chính: login, làm bài thi, nộp bài, upload media.
-4. Thêm business metrics: exam completion rate, pass/fail count, notification delivery outcome.
+1. Thêm rollback GitHub Action/Jenkins parameterized job.
+2. Generate SBOM cho image bằng Syft/CycloneDX và upload artifact.
+3. Thêm Cosign signing/provenance nếu cần hardening sâu hơn.
+4. Đẩy backup offsite lên S3/Azure Blob và document restore từ offsite.
+5. Thêm k6 smoke/load script cho các luồng chính: login, làm bài thi, nộp bài, upload media.
+6. Thêm business metrics: exam completion rate, pass/fail count, notification delivery outcome.
 
 ### Sau MVP
 
 1. Terraform cho VPS/cloud resources.
-2. Helm/Kustomize nếu chuyển sang Kubernetes.
-3. HPA và resource limits.
+2. HPA và autoscaling policy.
+3. Managed database/PITR nếu deploy production thật.
 4. Multi-region/failover nếu có nhu cầu production lớn.
 
 ## Lệnh nhanh
@@ -285,4 +303,8 @@ npm run db:restore:test
 # Backup one-shot
 npm run db:backup:once
 npm run keycloak:backup:once
+
+# Kubernetes baseline
+helm lint charts/luyen-thi-lai-xe
+helm template luyen-thi-lai-xe charts/luyen-thi-lai-xe -f charts/luyen-thi-lai-xe/values-staging.example.yaml
 ```

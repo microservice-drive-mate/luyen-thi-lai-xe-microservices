@@ -33,6 +33,7 @@ enum EnrollmentStatus {
 
 model Course {
   id              String          @id @default(uuid())
+  courseCode      String?         @unique
   title           String          @db.Text
   description     String?         @db.Text
   licenseCategory LicenseCategory
@@ -41,6 +42,10 @@ model Course {
   tuitionFee      Decimal         @default(0) @db.Decimal(12, 2)
   capacity        Int?
   status          CourseStatus    @default(DRAFT)
+  version         Int             @default(1)
+  isDeleted       Boolean         @default(false)
+  deletedAt       DateTime?
+  deletedBy       String?
   createdById     String
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -52,6 +57,7 @@ model Course {
   enrollments CourseEnrollment[]
 
   @@index([licenseCategory, status, createdAt])
+  @@index([isDeleted, status, createdAt])
   @@index([createdById, createdAt])
   @@map("courses")
 }

@@ -42,7 +42,7 @@ export class PrismaSimulationRepository extends SimulationRepository {
     licenseCategory: LicenseCategory,
   ): Promise<ManeuverErrorRecord[]> {
     return this.prisma.maneuverError.findMany({
-      where: { licenseCategory },
+      where: { licenseCategory, isGeneral: true, isActive: true },
       orderBy: { code: 'asc' },
     });
   }
@@ -66,9 +66,13 @@ export class PrismaSimulationRepository extends SimulationRepository {
     const session = await this.prisma.simulationSession.findFirst({
       where: { id: input.sessionId, studentId: input.studentId },
     });
-    if (!session) throw new NotFoundException('Simulation session not found');
+    if (!session) {
+      throw new NotFoundException('Session not found or not active. (MSG136)');
+    }
     if (session.status !== SimulationSessionStatus.IN_PROGRESS) {
-      throw new BadRequestException('Simulation session is already finished');
+      throw new BadRequestException(
+        'Session not found or not active. (MSG136)',
+      );
     }
 
     await this.prisma.simulationAnswer.upsert({
@@ -102,7 +106,9 @@ export class PrismaSimulationRepository extends SimulationRepository {
       where: { id: sessionId, studentId },
       include: { answers: true },
     });
-    if (!session) throw new NotFoundException('Simulation session not found');
+    if (!session) {
+      throw new NotFoundException('Session not found or not active. (MSG136)');
+    }
     if (session.status !== SimulationSessionStatus.IN_PROGRESS) return session;
 
     const totalScenarios = session.answers.length;

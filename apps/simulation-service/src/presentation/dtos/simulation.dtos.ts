@@ -6,6 +6,8 @@ import {
 import {
   IsBoolean,
   IsEnum,
+  IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -15,6 +17,10 @@ import {
   ManeuverRecord,
   SimulationSessionRecord,
 } from '../../domain/repositories/simulation.repository';
+import {
+  Practice2dFeedbackResult,
+  Practice2dSessionResult,
+} from '../../application/use-cases/practice2d/practice2d.result';
 
 export class LicenseCategoryQueryDto {
   @ApiProperty({ enum: LicenseCategory })
@@ -42,6 +48,63 @@ export class SaveSimulationAnswerRequestDto {
   @IsOptional()
   @IsBoolean()
   isCorrect?: boolean | null;
+}
+
+export class StartPractice2dSessionRequestDto {
+  @ApiProperty({ enum: LicenseCategory })
+  @IsEnum(LicenseCategory)
+  licenseCategory!: LicenseCategory;
+
+  @ApiProperty()
+  @IsObject()
+  clientCapabilities!: {
+    canvas?: boolean;
+    webgl?: boolean;
+    keyboard?: boolean;
+    touch?: boolean;
+  };
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  persistTelemetry?: boolean;
+}
+
+export class Practice2dTelemetryRequestDto {
+  @ApiProperty()
+  @IsString()
+  type!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  speedKmh?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  laneOffset?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  collision?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  signal?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  payload?: unknown;
+}
+
+export class EndPractice2dSessionRequestDto {
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  abandoned?: boolean;
 }
 
 export class ManeuverResponseDto {
@@ -73,5 +136,21 @@ export class SimulationSessionResponseDto {
     record: SimulationSessionRecord,
   ): SimulationSessionResponseDto {
     return Object.assign(new SimulationSessionResponseDto(), record);
+  }
+}
+
+export class Practice2dFeedbackResponseDto {
+  static fromResult(
+    result: Practice2dFeedbackResult,
+  ): Practice2dFeedbackResponseDto {
+    return Object.assign(new Practice2dFeedbackResponseDto(), result);
+  }
+}
+
+export class Practice2dSessionResponseDto {
+  static fromResult(
+    result: Practice2dSessionResult,
+  ): Practice2dSessionResponseDto {
+    return Object.assign(new Practice2dSessionResponseDto(), result);
   }
 }

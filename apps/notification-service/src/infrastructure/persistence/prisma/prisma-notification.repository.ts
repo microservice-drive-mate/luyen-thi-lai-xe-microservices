@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationType, Prisma } from '@prisma/notification-client';
 import {
   AcademicWarningRecord,
+  AcademicWarningDeliveryStatus,
   NotificationRecord,
   NotificationRepository,
 } from '../../../domain/repositories/notification.repository';
@@ -40,7 +41,62 @@ export class PrismaNotificationRepository extends NotificationRepository {
     message: string;
     createdById: string;
   }): Promise<AcademicWarningRecord> {
-    return this.prisma.academicWarning.create({ data: input });
+    const record = await this.prisma.academicWarning.create({ data: input });
+    return {
+      ...record,
+      deliveryStatus:
+        record.deliveryStatus as unknown as AcademicWarningDeliveryStatus,
+    };
+  }
+
+  async updateAcademicWarningDelivery(
+    id: string,
+    input: {
+      deliveryStatus: AcademicWarningDeliveryStatus;
+      notificationId?: string | null;
+      lastError?: string | null;
+      queuedAt?: Date | null;
+      nextRetryAt?: Date | null;
+      retryAttempts?: number;
+    },
+  ): Promise<AcademicWarningRecord> {
+    const record = await this.prisma.academicWarning.update({
+      where: { id },
+      data: {
+        deliveryStatus: input.deliveryStatus as never,
+        notificationId: input.notificationId,
+        lastError: input.lastError,
+        queuedAt: input.queuedAt,
+        nextRetryAt: input.nextRetryAt,
+        ...(input.retryAttempts !== undefined && {
+          retryAttempts: input.retryAttempts,
+        }),
+      },
+    });
+    return {
+      ...record,
+      deliveryStatus:
+        record.deliveryStatus as unknown as AcademicWarningDeliveryStatus,
+    };
+  }
+
+  async findWarningsDueForRetry(
+    now: Date,
+    take: number,
+  ): Promise<AcademicWarningRecord[]> {
+    const records = await this.prisma.academicWarning.findMany({
+      where: {
+        deliveryStatus: AcademicWarningDeliveryStatus.PENDING_RETRY as never,
+        OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
+      },
+      orderBy: { createdAt: 'asc' },
+      take,
+    });
+    return records.map((record) => ({
+      ...record,
+      deliveryStatus:
+        record.deliveryStatus as unknown as AcademicWarningDeliveryStatus,
+    }));
   }
 
   async findByUser(

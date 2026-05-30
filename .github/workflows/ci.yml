@@ -1,16 +1,12 @@
-name: CI/CD Pipeline for Microservices
+name: Main Image Release
 
 on:
   push:
-    branches: ["main", "staging"]
-  pull_request:
     branches: ["main"]
 
 permissions:
   contents: read
   packages: write
-  pull-requests: write
-  issues: write
 
 jobs:
   quality-gate:
@@ -41,34 +37,11 @@ jobs:
       - name: Run Tests
         run: npx turbo run test
 
-  staging-migrations:
-    name: Deploy Prisma Migrations to Staging
-    runs-on: ubuntu-latest
-    needs: quality-gate
-    timeout-minutes: 15
-    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
-    environment: staging
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-
-      - run: npm ci
-
-      - name: Run Prisma migrate deploy
-        env:
-          CONSUL_URL: ${{ secrets.STAGING_CONSUL_URL }}
-          NODE_ENV: staging
-        run: npm run db:deploy -- staging
-
   detect-changes:
     name: Detect Changed Services
     runs-on: ubuntu-latest
     needs: quality-gate
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       services: ${{ steps.set-matrix.outputs.services }}
     steps:
@@ -81,6 +54,17 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
+            all-services:
+              - '.github/workflows/**'
+              - 'Dockerfile.service'
+              - 'Dockerfile.migration-runner'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'turbo.json'
+              - 'charts/**'
+              - 'docker/**'
+              - 'deploy/**'
+              - 'consul-seed-*.json'
             identity-service:
               - 'apps/identity-service/**'
               - 'packages/**'
@@ -114,17 +98,26 @@ jobs:
 
       - name: Build matrix
         id: set-matrix
+        shell: bash
         run: |
           CHANGED='${{ steps.filter.outputs.changes }}'
-          ALL_SERVICES='["identity-service","analytics-service","course-service","exam-service","notification-service","question-service","simulation-service","user-service","media-service","audit-service"]'
+          ALL_SERVICES_JSON='["identity-service","analytics-service","course-service","exam-service","notification-service","question-service","simulation-service","user-service","media-service","audit-service"]'
           SERVICES="[]"
 
-          for SERVICE in $(echo $ALL_SERVICES | jq -rc '.[]'); do
-            CHANGED_MATCH=$(echo $CHANGED | jq -rc --arg s "$SERVICE" 'map(select(. == $s)) | length')
-            
+          if printf '%s\n' "$CHANGED" | jq -e 'index("all-services") != null' > /dev/null; then
+            echo "DevOps/shared build inputs changed -> build all services"
+            SERVICES="$ALL_SERVICES_JSON"
+            printf 'services=%s\n' "$SERVICES" >> "$GITHUB_OUTPUT"
+            echo "Final services to build: $SERVICES"
+            exit 0
+          fi
+
+          while IFS= read -r SERVICE; do
+            CHANGED_MATCH=$(printf '%s\n' "$CHANGED" | jq -rc --arg s "$SERVICE" 'map(select(. == $s)) | length')
+
             if [ "$CHANGED_MATCH" -gt "0" ]; then
               echo "$SERVICE: files changed -> build"
-              SERVICES=$(echo $SERVICES | jq -rc --arg s "$SERVICE" '. + [$s]')
+              SERVICES=$(printf '%s\n' "$SERVICES" | jq -rc --arg s "$SERVICE" '. + [$s]')
               continue
             fi
 
@@ -134,43 +127,12 @@ jobs:
 
             if [ "$HTTP_STATUS" != "200" ]; then
               echo "$SERVICE: image missing on GHCR -> build"
-              SERVICES=$(echo $SERVICES | jq -rc --arg s "$SERVICE" '. + [$s]')
+              SERVICES=$(printf '%s\n' "$SERVICES" | jq -rc --arg s "$SERVICE" '. + [$s]')
             fi
-          done
+          done < <(printf '%s\n' "$ALL_SERVICES_JSON" | jq -rc '.[]')
 
-          echo "services=$SERVICES" >> $GITHUB_OUTPUT
+          printf 'services=%s\n' "$SERVICES" >> "$GITHUB_OUTPUT"
           echo "Final services to build: $SERVICES"
-
-  label-pr:
-    name: Label Pull Request
-    needs: detect-changes
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Create labels if not exist & add to PR
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const services = ${{ needs.detect-changes.outputs.services }};
-            if (!services || services.length === 0) return;
-
-            for (const service of services) {
-              try {
-                await github.rest.issues.createLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  name: `service: ${service}`,
-                  color: 'ededed',
-                });
-              } catch (e) {}
-            }
-
-            await github.rest.issues.addLabels({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: services.map(s => `service: ${s}`),
-            });
 
   build:
     name: Build Services
@@ -188,27 +150,23 @@ jobs:
         service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
     steps:
       - name: Start Timer
-        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+        run: echo "START_TIME=$(date +%s)" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push Docker Image
+      - name: Build Docker Image
         shell: bash
         run: |
           set -euo pipefail
-
-          OUTPUT_FLAG="--load"
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
-            OUTPUT_FLAG="--push"
-          fi
 
           for attempt in 1 2 3; do
             echo "Docker build attempt $attempt/3 for ${{ matrix.service }}"
@@ -220,7 +178,7 @@ jobs:
               --cache-from "type=gha,scope=${{ matrix.service }}" \
               --cache-to "type=gha,mode=max,scope=${{ matrix.service }}" \
               --provenance=false \
-              "$OUTPUT_FLAG" \
+              --load \
               .; then
               exit 0
             fi
@@ -235,6 +193,25 @@ jobs:
             sleep "$sleep_seconds"
           done
 
+      - name: Scan Docker Image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          scanners: vuln
+          format: table
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Push Docker Image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest
+
       - name: Get image size
         id: size
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -242,7 +219,7 @@ jobs:
           docker pull ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest 2>/dev/null || true
           SIZE=$(docker image inspect ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest \
             --format='{{.Size}}' 2>/dev/null | awk '{printf "%.1f MB", $1/1024/1024}' || echo "N/A")
-          echo "size=$SIZE" >> $GITHUB_OUTPUT
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
 
       - name: Build Summary
         if: always()
@@ -257,14 +234,228 @@ jobs:
           fi
 
           SIZE="${{ steps.size.outputs.size }}"
-          [ -z "$SIZE" ] && SIZE="N/A (PR — not pushed)"
+          [ -z "$SIZE" ] && SIZE="N/A"
 
-          echo "## $ICON ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          echo "| Status | $STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build Duration | **$DURATION** |" >> $GITHUB_STEP_SUMMARY
-          echo "| Image Size | $SIZE |" >> $GITHUB_STEP_SUMMARY
-          echo "| SHA | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "---" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## $ICON ${{ matrix.service }}"
+            echo "| Property | Value |"
+            echo "| :--- | :--- |"
+            echo "| Status | $STATUS |"
+            echo "| Build Duration | **$DURATION** |"
+            echo "| Image Size | $SIZE |"
+            echo "| SHA | \`${{ github.sha }}\` |"
+            echo ""
+            echo "---"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build-migration-runner:
+    name: Build Migration Runner
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Start Timer
+        run: echo "START_TIME=$(date +%s)" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Migration Runner Image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx build \
+            --file Dockerfile.migration-runner \
+            --tag ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }} \
+            --tag ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:latest \
+            --cache-from type=gha,scope=migration-runner \
+            --cache-to type=gha,mode=max,scope=migration-runner \
+            --provenance=false \
+            --load \
+            .
+
+      - name: Scan Migration Runner with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
+          scanners: vuln
+          format: table
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Push Migration Runner Image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
+          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:latest
+
+      - name: Build Summary
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION="$(( (END_TIME - START_TIME) / 60 ))m $(( (END_TIME - START_TIME) % 60 ))s"
+          {
+            echo "## migration-runner"
+            echo "| Property | Value |"
+            echo "| :--- | :--- |"
+            echo "| Status | ${{ job.status }} |"
+            echo "| Build Duration | **$DURATION** |"
+            echo "| SHA | \`${{ github.sha }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-staging:
+    name: Deploy Staging Kubernetes
+    runs-on: ubuntu-latest
+    needs: [build, build-migration-runner]
+    timeout-minutes: 30
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.build.result == 'success' &&
+      needs.build-migration-runner.result == 'success' &&
+      vars.STAGING_DEPLOY_ENABLED == 'true'
+    environment: staging
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+      KUBE_CONFIG_B64: ${{ secrets.STAGING_KUBE_CONFIG_B64 }}
+      API_HOST: ${{ vars.STAGING_API_HOST }}
+      AUTH_HOST: ${{ vars.STAGING_AUTH_HOST }}
+      FRONTEND_ORIGIN: ${{ vars.STAGING_FRONTEND_ORIGIN }}
+      API_SCHEME: ${{ vars.STAGING_API_SCHEME }}
+      GHCR_PULL_USERNAME: ${{ secrets.GHCR_PULL_USERNAME }}
+      GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+      POSTGRES_PASSWORD: ${{ secrets.STAGING_POSTGRES_PASSWORD }}
+      RABBITMQ_DEFAULT_PASS: ${{ secrets.STAGING_RABBITMQ_PASSWORD }}
+      RABBITMQ_ERLANG_COOKIE: ${{ secrets.STAGING_RABBITMQ_ERLANG_COOKIE }}
+      KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.STAGING_KEYCLOAK_ADMIN_PASSWORD }}
+      KEYCLOAK_CLIENT_SECRET: ${{ secrets.STAGING_KEYCLOAK_CLIENT_SECRET }}
+      STORAGE_ACCOUNT_NAME: ${{ secrets.STAGING_STORAGE_ACCOUNT_NAME }}
+      STORAGE_ACCOUNT_KEY: ${{ secrets.STAGING_STORAGE_ACCOUNT_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Validate Kubernetes deployment inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_vars=(
+            IMAGE_TAG
+            KUBE_CONFIG_B64
+            API_HOST
+            AUTH_HOST
+            FRONTEND_ORIGIN
+            GHCR_PULL_USERNAME
+            GHCR_PULL_TOKEN
+            POSTGRES_PASSWORD
+            RABBITMQ_DEFAULT_PASS
+            RABBITMQ_ERLANG_COOKIE
+            KEYCLOAK_ADMIN_PASSWORD
+            KEYCLOAK_CLIENT_SECRET
+          )
+
+          for var_name in "${required_vars[@]}"; do
+            if [[ -z "${!var_name:-}" ]]; then
+              echo "Missing required value: ${var_name}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Configure kubeconfig
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.kube
+          printf '%s' "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
+
+      - name: Render Helm values
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HELM_VALUES_FILE="$RUNNER_TEMP/staging-values.json"
+          API_SCHEME="${API_SCHEME:-http}"
+          GATEWAY_PUBLIC_URL="${API_SCHEME}://${API_HOST}"
+          KEYCLOAK_PUBLIC_URL="${API_SCHEME}://${AUTH_HOST}"
+          export API_SCHEME GATEWAY_PUBLIC_URL KEYCLOAK_PUBLIC_URL
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const env = process.env;
+          const origins = [
+            env.FRONTEND_ORIGIN,
+            env.GATEWAY_PUBLIC_URL,
+            env.KEYCLOAK_PUBLIC_URL,
+          ].flatMap((value) => String(value || '').split(','))
+            .map((value) => value.trim())
+            .filter(Boolean);
+
+          const values = {
+            global: { imageTag: env.IMAGE_TAG },
+            migration: { imageTag: env.IMAGE_TAG },
+            imagePullSecret: {
+              enabled: true,
+              username: env.GHCR_PULL_USERNAME,
+              token: env.GHCR_PULL_TOKEN,
+            },
+            ingress: {
+              apiHost: env.API_HOST,
+              authHost: env.AUTH_HOST,
+            },
+            config: {
+              frontendOrigin: env.FRONTEND_ORIGIN,
+              gatewayPublicUrl: env.GATEWAY_PUBLIC_URL,
+              keycloakPublicUrl: env.KEYCLOAK_PUBLIC_URL,
+              corsOrigins: [...new Set(origins)],
+            },
+            secrets: {
+              postgresPassword: env.POSTGRES_PASSWORD,
+              rabbitmqPassword: env.RABBITMQ_DEFAULT_PASS,
+              rabbitmqErlangCookie: env.RABBITMQ_ERLANG_COOKIE,
+              keycloakAdminPassword: env.KEYCLOAK_ADMIN_PASSWORD,
+              keycloakClientSecret: env.KEYCLOAK_CLIENT_SECRET,
+              storageAccountName: env.STORAGE_ACCOUNT_NAME || '',
+              storageAccountKey: env.STORAGE_ACCOUNT_KEY || '',
+            },
+          };
+
+          fs.writeFileSync(env.HELM_VALUES_FILE, JSON.stringify(values, null, 2));
+          NODE
+
+      - name: Deploy Helm release
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm lint charts/luyen-thi-lai-xe -f "$RUNNER_TEMP/staging-values.json"
+          helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
+            --namespace staging \
+            --create-namespace \
+            --wait \
+            --wait-for-jobs \
+            --timeout 25m \
+            -f "$RUNNER_TEMP/staging-values.json"
+
+      - name: Verify rollout and smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl wait --for=condition=complete job -l app.kubernetes.io/component=consul-seed -n staging --timeout=10m
+          kubectl wait --for=condition=complete job -l app.kubernetes.io/component=migration -n staging --timeout=10m
+          kubectl rollout status deployment -l app.kubernetes.io/component=app -n staging --timeout=10m
+          kubectl get jobs -n staging
+          API_SCHEME="${API_SCHEME:-http}"
+          SMOKE_BASE_URL="${API_SCHEME}://${API_HOST}" bash scripts/k8s-smoke.sh

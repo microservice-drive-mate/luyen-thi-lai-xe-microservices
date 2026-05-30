@@ -37,3 +37,15 @@ Content-Type: application/json
 ```
 
 Save answer while `IN_PROGRESS`, then submit. A later answer save should fail because the backend owns the state transition.
+## SRS UC35/UC36 Test Scenarios
+
+1. Start 2D practice:
+   `POST /simulation/practice2d/sessions` as `STUDENT` with `licenseCategory` and `clientCapabilities` containing either `canvas` or `webgl`, plus `keyboard` or `touch`.
+2. Unsupported client:
+   send capabilities without rendering/input support and expect `PRACTICE2D_UNSUPPORTED_CLIENT`.
+3. Telemetry feedback:
+   send `POST /simulation/practice2d/sessions/{id}/telemetry` with `collision=true`, `speedKmh > 60`, or `laneOffset > 1`; expect feedback severity/penalty and persisted event.
+4. Owner mismatch:
+   call telemetry/get/end with a different student token; expect forbidden.
+5. End session:
+   `POST /simulation/practice2d/sessions/{id}/end`; expect summary with `score`, `errorCount`, and `totalPenalty`.

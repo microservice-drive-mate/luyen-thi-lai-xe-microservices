@@ -1504,3 +1504,15 @@ Expected: response contains question snapshots and options only. It must not con
 ### Template Snapshot
 
 After starting a session, verify `exam_sessions` stores template snapshot columns. Updating the template later must not change existing session grading/history context.
+## SRS UC32 Missed Review Tests
+
+1. Empty history:
+   `GET /exams/review/missed-questions?limit=20`; expect `items=[]`.
+2. Frequent mode:
+   after multiple wrong answers for the same question, call `mode=frequent`; expect that question first and `missedCount > 1`.
+3. Recent mode:
+   call `mode=recent`; expect latest wrong question first.
+4. Period filter:
+   call `periodDays=1`; expect only recent completed/timed-out sessions to contribute.
+5. Safety:
+   verify response does not include `correctOptionId`.

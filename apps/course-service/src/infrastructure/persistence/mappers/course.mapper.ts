@@ -40,6 +40,7 @@ export interface RawCourseMaterialRow {
 
 export interface RawCourseRow {
   id: string;
+  courseCode: string | null;
   title: string;
   description: string | null;
   licenseCategory: string;
@@ -48,6 +49,10 @@ export interface RawCourseRow {
   tuitionFee: Prisma.Decimal;
   capacity: number | null;
   status: string;
+  version: number;
+  isDeleted: boolean;
+  deletedAt: Date | null;
+  deletedBy: string | null;
   createdById: string;
   createdAt: Date;
   updatedAt: Date;
@@ -61,6 +66,7 @@ export const CourseMapper = {
   toDomain(raw: RawCourseRow): Course {
     return Course.reconstitute({
       id: raw.id,
+      courseCode: raw.courseCode,
       title: raw.title,
       description: raw.description,
       licenseCategory: raw.licenseCategory as LicenseCategory,
@@ -69,6 +75,10 @@ export const CourseMapper = {
       tuitionFee: Number(raw.tuitionFee),
       capacity: raw.capacity,
       status: raw.status as CourseStatus,
+      version: raw.version,
+      isDeleted: raw.isDeleted,
+      deletedAt: raw.deletedAt,
+      deletedBy: raw.deletedBy,
       createdById: raw.createdById,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,

@@ -8,14 +8,14 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: identity_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5432:5432"
     volumes:
       - db_identity_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d identity_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d identity_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -26,14 +26,14 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: user_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5433:5432"
     volumes:
       - db_user_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d user_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d user_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -44,14 +44,14 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: exam_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5434:5432"
     volumes:
       - db_exam_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d exam_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d exam_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -62,14 +62,14 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: course_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5435:5432"
     volumes:
       - db_course_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d course_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d course_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -80,14 +80,14 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: question_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5436:5432"
     volumes:
       - db_question_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d question_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d question_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -98,14 +98,14 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: notification_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5437:5432"
     volumes:
       - db_notification_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d notification_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d notification_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -116,14 +116,14 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: analytics_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5438:5432"
     volumes:
       - db_analytics_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d analytics_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d analytics_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -134,14 +134,14 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: simulation_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5439:5432"
     volumes:
       - db_simulation_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d simulation_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d simulation_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -152,14 +152,14 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: media_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5440:5432"
     volumes:
       - db_media_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d media_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d media_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -169,14 +169,14 @@ services:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: audit_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5441:5432"
     volumes:
       - db_audit_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d audit_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d audit_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -199,9 +199,9 @@ services:
       exec docker-entrypoint.sh /opt/rabbitmq/sbin/rabbitmq-server"
     environment:
       RABBITMQ_NODENAME: rabbit@rabbitmq
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-      RABBITMQ_ERLANG_COOKIE: luyen-thi-lai-xe-rabbitmq-cookie
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-luyen-thi-lai-xe-rabbitmq-cookie}
     ports:
       - "5672:5672"   # Port cho ứng dụng kết nối
       - "15672:15672" # Port cho giao diện quản lý (Web UI)
@@ -240,11 +240,20 @@ services:
       - ./docker/consul/init.sh:/consul/init.sh:ro
     environment:
       CONSUL_URL: http://consul:8500
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me}
+      KEYCLOAK_TIMEOUT_MS: ${KEYCLOAK_TIMEOUT_MS:-10000}
       STORAGE_ACCOUNT_NAME: ${STORAGE_ACCOUNT_NAME:-}
       STORAGE_ACCOUNT_KEY: ${STORAGE_ACCOUNT_KEY:-}
       STORAGE_CONTAINER_NAME: ${STORAGE_CONTAINER_NAME:-media}
       STORAGE_PRESIGNED_URL_EXPIRY: ${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
+      GATEWAY_PUBLIC_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:8000}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      KONG_CORS_ORIGINS: ${KONG_CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}
     depends_on:
       consul:
         condition: service_healthy
@@ -262,15 +271,16 @@ services:
       args:
         SERVICE_NAME: identity-service
     environment:
-      - DATABASE_URL=postgresql://user:password@db-identity:5432/identity_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db-identity:5432/identity_db
       - CONSUL_URL=http://consul:8500
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - REDIS_URL=redis://redis:6379
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
       - LOGSTASH_HOST=logstash
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     ports:
       - "3001:3000"
     restart: unless-stopped
@@ -299,14 +309,15 @@ services:
       args:
         SERVICE_NAME: user-service
     environment:
-      - DATABASE_URL=postgresql://user:password@db-user:5432/user_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db-user:5432/user_db
       - CONSUL_URL=http://consul:8500
       - LOGSTASH_HOST=logstash
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     ports:
       - "3002:3000"
     restart: unless-stopped
@@ -333,9 +344,9 @@ services:
       args:
         SERVICE_NAME: exam-service
     environment:
-      - DATABASE_URL=postgresql://user:password@db-exam:5432/exam_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db-exam:5432/exam_db
       - CONSUL_URL=http://consul:8500
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
@@ -343,6 +354,7 @@ services:
       - QUESTION_SERVICE_URL=http://question-service:3000
       - USER_SERVICE_URL=http://user-service:3000
       - LOGSTASH_HOST=logstash
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     ports:
       - "3003:3000"
     restart: unless-stopped
@@ -369,14 +381,15 @@ services:
       args:
         SERVICE_NAME: course-service
     environment:
-      - DATABASE_URL=postgresql://user:password@db-course:5432/course_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db-course:5432/course_db
       - CONSUL_URL=http://consul:8500
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
       - LOGSTASH_HOST=logstash
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     ports:
       - "3004:3000"
     restart: unless-stopped
@@ -403,14 +416,15 @@ services:
       args:
         SERVICE_NAME: question-service
     environment:
-      - DATABASE_URL=postgresql://user:password@db-question:5432/question_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db-question:5432/question_db
       - CONSUL_URL=http://consul:8500
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
       - LOGSTASH_HOST=logstash
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     ports:
       - "3005:3000"
     restart: unless-stopped
@@ -437,14 +451,15 @@ services:
       args:
         SERVICE_NAME: notification-service
     environment:
-      - DATABASE_URL=postgresql://user:password@db-notification:5432/notification_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db-notification:5432/notification_db
       - CONSUL_URL=http://consul:8500
       - LOGSTASH_HOST=logstash
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     ports:
       - "3006:3000"
     restart: unless-stopped
@@ -471,15 +486,16 @@ services:
       args:
         SERVICE_NAME: analytics-service
     environment:
-      - DATABASE_URL=postgresql://user:password@db-analytics:5432/analytics_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db-analytics:5432/analytics_db
       - CONSUL_URL=http://consul:8500
       - LOGSTASH_HOST=logstash
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - REDIS_URL=redis://redis:6379
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     ports:
       - "3007:3000"
     restart: unless-stopped
@@ -507,15 +523,16 @@ services:
       args:
         SERVICE_NAME: simulation-service
     environment:
-      - DATABASE_URL=postgresql://user:password@db-simulation:5432/simulation_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db-simulation:5432/simulation_db
       - CONSUL_URL=http://consul:8500
       - LOGSTASH_HOST=logstash
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - REDIS_URL=redis://redis:6379
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     ports:
       - "3008:3000"
     restart: unless-stopped
@@ -544,9 +561,9 @@ services:
       args:
         SERVICE_NAME: media-service
     environment:
-      - DATABASE_URL=postgresql://user:password@db-media:5432/media_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db-media:5432/media_db
       - CONSUL_URL=http://consul:8500
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
@@ -556,6 +573,7 @@ services:
       - STORAGE_CONTAINER_NAME=${STORAGE_CONTAINER_NAME:-media}
       - STORAGE_PRESIGNED_URL_EXPIRY=${STORAGE_PRESIGNED_URL_EXPIRY:-3600}
       - LOGSTASH_HOST=logstash
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     ports:
       - "3010:3000"
     restart: unless-stopped
@@ -582,14 +600,15 @@ services:
       args:
         SERVICE_NAME: audit-service
     environment:
-      - DATABASE_URL=postgresql://user:password@db-audit:5432/audit_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db-audit:5432/audit_db
       - CONSUL_URL=http://consul:8500
       - LOGSTASH_HOST=logstash
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-change-me}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
     ports:
       - "3011:3000"
     restart: unless-stopped
@@ -719,13 +738,13 @@ services:
   db-keycloak:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: keycloak_db
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak_db}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-password}
     volumes:
       - db_keycloak_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER:-keycloak} -d ${KEYCLOAK_DB_NAME:-keycloak_db}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -737,14 +756,15 @@ services:
     command: start-dev --import-realm
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://db-keycloak:5432/keycloak_db
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: password
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB_URL: jdbc:postgresql://db-keycloak:5432/${KEYCLOAK_DB_NAME:-keycloak_db}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-password}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       # Cấu hình để chạy sau Gateway hoặc Proxy
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
     ports:
       - "8080:8080"
     volumes:
@@ -754,6 +774,12 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/8080'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
 
   keycloak-smtp-config:
     image: quay.io/keycloak/keycloak:24.0
@@ -763,8 +789,8 @@ services:
     environment:
       KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_REALM: luyen-thi-lai-xe-realm
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KEYCLOAK_SMTP_HOST: ${KEYCLOAK_SMTP_HOST:-mailpit}
       KEYCLOAK_SMTP_PORT: ${KEYCLOAK_SMTP_PORT:-1025}
       KEYCLOAK_SMTP_FROM: ${KEYCLOAK_SMTP_FROM:-no-reply@luyen-thi-lai-xe.local}
@@ -778,7 +804,7 @@ services:
       KEYCLOAK_SMTP_STARTTLS: ${KEYCLOAK_SMTP_STARTTLS:-false}
     depends_on:
       keycloak:
-        condition: service_started
+        condition: service_healthy
       mailpit:
         condition: service_started
     restart: "no"

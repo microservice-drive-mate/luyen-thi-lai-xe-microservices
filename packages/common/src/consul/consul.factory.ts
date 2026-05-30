@@ -9,6 +9,10 @@ type ConfigRecord = Record<string, unknown>;
 export class ConsulConfigFactory {
   private static readonly logger = new Logger(ConsulConfigFactory.name);
 
+  static envFilePaths(): string[] {
+    return ['.env', '../../.env'];
+  }
+
   /**
    * Create async config factory
    * Priority: Environment Variables > Consul KV > .env File > Defaults
@@ -36,7 +40,7 @@ export class ConsulConfigFactory {
           nodeEnv,
           serviceName,
         );
-        const envConfig = ConsulConfigFactory.loadFromEnv(env);
+        const envConfig = ConsulConfigFactory.loadFromEnv(env, serviceName);
         config = ConsulConfigFactory.mergeConfig(consulConfig, envConfig);
         ConsulConfigFactory.logger.log('Configuration loaded from Consul');
       } catch (error: unknown) {
@@ -44,7 +48,7 @@ export class ConsulConfigFactory {
         ConsulConfigFactory.logger.warn(
           `Failed to load from Consul: ${message}, falling back to .env`,
         );
-        config = ConsulConfigFactory.loadFromEnv(env);
+        config = ConsulConfigFactory.loadFromEnv(env, serviceName);
         ConsulConfigFactory.logger.log('Configuration loaded from .env file');
       }
 
@@ -154,15 +158,33 @@ export class ConsulConfigFactory {
     return config;
   }
 
-  private static loadFromEnv(env: NodeJS.ProcessEnv): ConfigRecord {
+  private static loadFromEnv(
+    env: NodeJS.ProcessEnv,
+    serviceName?: string,
+  ): ConfigRecord {
     const consulUrl = env.CONSUL_URL || 'http://localhost:8500';
+    const nodeEnv =
+      env.NODE_ENV || ConsulConfigFactory.resolveDefaultNodeEnv(consulUrl);
+    const hasStorageCredentials = Boolean(
+      env.STORAGE_ACCOUNT_NAME &&
+        (env.SECRET_STORAGE_ACCOUNT_KEY || env.STORAGE_ACCOUNT_KEY),
+    );
+    const rabbitmqConfig = ConsulConfigFactory.buildRabbitMqConfig(
+      env,
+      nodeEnv,
+    );
+    const databaseUrl = ConsulConfigFactory.normalizeDevelopmentLocalUrl(
+      ConsulConfigFactory.resolveServiceSecret(env, serviceName, 'DB_URL') ??
+        env.DATABASE_URL,
+      nodeEnv,
+      serviceName,
+    );
 
     // Only include a value when the env var is explicitly set.
     // Returning undefined lets mergeConfig keep the Consul value instead of
     // overwriting it with a hard-coded default.
     return {
-      nodeEnv:
-        env.NODE_ENV || ConsulConfigFactory.resolveDefaultNodeEnv(consulUrl),
+      nodeEnv: nodeEnv,
       port: env.PORT !== undefined ? parseInt(env.PORT, 10) : undefined,
       logging:
         env.LOG_LEVEL !== undefined || env.LOG_FORMAT !== undefined
@@ -171,9 +193,9 @@ export class ConsulConfigFactory {
               format: env.LOG_FORMAT,
             }
           : undefined,
-      database: env.DATABASE_URL
+      database: databaseUrl
         ? {
-            url: env.DATABASE_URL,
+            url: databaseUrl,
             poolSize: env.DATABASE_POOL_SIZE
               ? parseInt(env.DATABASE_POOL_SIZE, 10)
               : undefined,
@@ -182,20 +204,7 @@ export class ConsulConfigFactory {
               : undefined,
           }
         : undefined,
-      rabbitmq: env.RABBITMQ_URL
-        ? {
-            url: env.RABBITMQ_URL,
-            username: env.RABBITMQ_USERNAME,
-            password: env.RABBITMQ_PASSWORD,
-            vhost: env.RABBITMQ_VHOST,
-            connectionTimeout: env.RABBITMQ_CONNECTION_TIMEOUT
-              ? parseInt(env.RABBITMQ_CONNECTION_TIMEOUT, 10)
-              : undefined,
-            heartbeat: env.RABBITMQ_HEARTBEAT
-              ? parseInt(env.RABBITMQ_HEARTBEAT, 10)
-              : undefined,
-          }
-        : undefined,
+      rabbitmq: rabbitmqConfig,
       keycloak:
         env.KEYCLOAK_AUTH_SERVER_URL ||
         env.KEYCLOAK_REALM ||
@@ -205,7 +214,8 @@ export class ConsulConfigFactory {
               authServerUrl: env.KEYCLOAK_AUTH_SERVER_URL,
               realm: env.KEYCLOAK_REALM,
               clientId: env.KEYCLOAK_CLIENT_ID,
-              clientSecret: env.KEYCLOAK_CLIENT_SECRET,
+              clientSecret:
+                env.SECRET_KEYCLOAK_CLIENT_SECRET ?? env.KEYCLOAK_CLIENT_SECRET,
               timeoutMs: env.KEYCLOAK_TIMEOUT_MS
                 ? parseInt(env.KEYCLOAK_TIMEOUT_MS, 10)
                 : undefined,
@@ -213,23 +223,31 @@ export class ConsulConfigFactory {
           : undefined,
       redis: env.REDIS_URL
         ? {
-            url: env.REDIS_URL,
+            url: ConsulConfigFactory.normalizeDevelopmentLocalUrl(
+              env.REDIS_URL,
+              nodeEnv,
+            ),
           }
         : undefined,
-      storage:
-        env.STORAGE_ACCOUNT_NAME ||
-        env.STORAGE_ACCOUNT_KEY ||
-        env.STORAGE_CONTAINER_NAME ||
-        env.STORAGE_PRESIGNED_URL_EXPIRY
-          ? {
-              accountName: env.STORAGE_ACCOUNT_NAME,
-              accountKey: env.STORAGE_ACCOUNT_KEY,
-              containerName: env.STORAGE_CONTAINER_NAME,
-              presignedUrlExpiry: env.STORAGE_PRESIGNED_URL_EXPIRY
-                ? parseInt(env.STORAGE_PRESIGNED_URL_EXPIRY, 10)
-                : undefined,
-            }
-          : undefined,
+      notification: env.NOTIFICATION_WARNING_RETRY_INTERVAL_MS
+        ? {
+            warningRetryIntervalMs: parseInt(
+              env.NOTIFICATION_WARNING_RETRY_INTERVAL_MS,
+              10,
+            ),
+          }
+        : undefined,
+      storage: hasStorageCredentials
+        ? {
+            accountName: env.STORAGE_ACCOUNT_NAME,
+            accountKey:
+              env.SECRET_STORAGE_ACCOUNT_KEY ?? env.STORAGE_ACCOUNT_KEY,
+            containerName: env.STORAGE_CONTAINER_NAME,
+            presignedUrlExpiry: env.STORAGE_PRESIGNED_URL_EXPIRY
+              ? parseInt(env.STORAGE_PRESIGNED_URL_EXPIRY, 10)
+              : undefined,
+          }
+        : undefined,
       swagger: env.SWAGGER_SERVICES
         ? {
             services: env.SWAGGER_SERVICES,
@@ -262,6 +280,142 @@ export class ConsulConfigFactory {
             }
           : undefined,
     };
+  }
+
+  private static buildRabbitMqConfig(
+    env: NodeJS.ProcessEnv,
+    nodeEnv: string,
+  ): ConfigRecord | undefined {
+    const username =
+      env.SECRET_RABBITMQ_USERNAME ??
+      env.RABBITMQ_USERNAME ??
+      env.RABBITMQ_DEFAULT_USER;
+    const password =
+      env.SECRET_RABBITMQ_PASSWORD ??
+      env.RABBITMQ_PASSWORD ??
+      env.RABBITMQ_DEFAULT_PASS;
+    const rabbitMqUrl = env.SECRET_RABBITMQ_URL ?? env.RABBITMQ_URL;
+    const hasRabbitMqConfig = Boolean(
+      rabbitMqUrl ||
+        username ||
+        password ||
+        env.RABBITMQ_HOST ||
+        env.RABBITMQ_PORT ||
+        env.RABBITMQ_CONNECTION_TIMEOUT ||
+        env.RABBITMQ_HEARTBEAT,
+    );
+
+    if (!hasRabbitMqConfig) {
+      return undefined;
+    }
+
+    const host =
+      env.RABBITMQ_HOST ??
+      (nodeEnv === 'development-local' ? 'localhost' : 'rabbitmq');
+    const port = env.RABBITMQ_PORT ?? '5672';
+    const scheme = env.RABBITMQ_SCHEME ?? 'amqp';
+    const credentials =
+      username && password
+        ? `${encodeURIComponent(username)}:${encodeURIComponent(password)}@`
+        : '';
+
+    return {
+      url:
+        ConsulConfigFactory.normalizeDevelopmentLocalUrl(
+          rabbitMqUrl,
+          nodeEnv,
+        ) ?? `${scheme}://${credentials}${host}:${port}`,
+      username,
+      password,
+      vhost: env.RABBITMQ_VHOST,
+      connectionTimeout: env.RABBITMQ_CONNECTION_TIMEOUT
+        ? parseInt(env.RABBITMQ_CONNECTION_TIMEOUT, 10)
+        : undefined,
+      heartbeat: env.RABBITMQ_HEARTBEAT
+        ? parseInt(env.RABBITMQ_HEARTBEAT, 10)
+        : undefined,
+    };
+  }
+
+  private static normalizeDevelopmentLocalUrl(
+    value: string | undefined,
+    nodeEnv: string,
+    serviceName?: string,
+  ): string | undefined {
+    if (!value || nodeEnv !== 'development-local') {
+      return value;
+    }
+
+    try {
+      const url = new URL(value);
+      const hostname = url.hostname.toLowerCase();
+
+      if (hostname === 'rabbitmq') {
+        url.hostname = 'localhost';
+        return url.toString();
+      }
+
+      if (hostname === 'redis') {
+        url.hostname = 'localhost';
+        return url.toString();
+      }
+
+      const port = ConsulConfigFactory.resolveDevelopmentLocalDatabasePort(
+        hostname,
+        serviceName,
+      );
+      if (port) {
+        url.hostname = 'localhost';
+        url.port = port;
+        return url.toString();
+      }
+    } catch {
+      return value;
+    }
+
+    return value;
+  }
+
+  private static resolveDevelopmentLocalDatabasePort(
+    hostname: string,
+    serviceName?: string,
+  ): string | undefined {
+    const serviceKey =
+      serviceName?.replace(/-service$/, '') ?? hostname.replace(/^db-/, '');
+    const ports: Record<string, string> = {
+      identity: '5432',
+      user: '5433',
+      exam: '5434',
+      course: '5435',
+      question: '5436',
+      notification: '5437',
+      analytics: '5438',
+      simulation: '5439',
+      media: '5440',
+      audit: '5441',
+    };
+
+    if (hostname === `db-${serviceKey}` || hostname.startsWith('db-')) {
+      return ports[serviceKey];
+    }
+
+    return undefined;
+  }
+
+  private static resolveServiceSecret(
+    env: NodeJS.ProcessEnv,
+    serviceName: string | undefined,
+    suffix: string,
+  ): string | undefined {
+    if (!serviceName) {
+      return undefined;
+    }
+
+    const serviceKey = serviceName
+      .replace(/-service$/, '')
+      .replace(/[^a-zA-Z0-9]+/g, '_')
+      .toUpperCase();
+    return env[`SECRET_${serviceKey}_${suffix}`];
   }
 
   private static setNestedValue(

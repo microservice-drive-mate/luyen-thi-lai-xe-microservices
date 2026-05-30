@@ -18,9 +18,11 @@ import { CourseHasNoLessonException } from '../../exceptions/course-has-no-lesso
 import { InstructorAlreadyAssignedException } from '../../exceptions/instructor-already-assigned.exception';
 import { LessonNotFoundException } from '../../exceptions/lesson-not-found.exception';
 import { CourseMaterialLinkedEvent } from '../../events/course-material-linked.event';
+import { CourseVersionConflictException } from '../../exceptions/course-version-conflict.exception';
 
 export class Course extends AggregateRoot<string> {
   private _title: string;
+  private _courseCode: string | null;
   private _description: string | null;
   private _licenseCategory: LicenseCategory;
   private _totalLessons: number;
@@ -28,6 +30,10 @@ export class Course extends AggregateRoot<string> {
   private _tuitionFee: number;
   private _capacity: number | null;
   private _status: CourseStatus;
+  private _version: number;
+  private _isDeleted: boolean;
+  private _deletedAt: Date | null;
+  private _deletedBy: string | null;
   private _createdById: string;
   private _createdAt: Date;
   private _updatedAt: Date;
@@ -38,6 +44,7 @@ export class Course extends AggregateRoot<string> {
 
   private constructor(
     id: string,
+    courseCode: string | null,
     title: string,
     description: string | null,
     licenseCategory: LicenseCategory,
@@ -46,6 +53,10 @@ export class Course extends AggregateRoot<string> {
     tuitionFee: number,
     capacity: number | null,
     status: CourseStatus,
+    version: number,
+    isDeleted: boolean,
+    deletedAt: Date | null,
+    deletedBy: string | null,
     createdById: string,
     createdAt: Date,
     updatedAt: Date,
@@ -55,6 +66,7 @@ export class Course extends AggregateRoot<string> {
     materials: CourseMaterial[],
   ) {
     super(id);
+    this._courseCode = courseCode;
     this._title = title;
     this._description = description;
     this._licenseCategory = licenseCategory;
@@ -63,6 +75,10 @@ export class Course extends AggregateRoot<string> {
     this._tuitionFee = tuitionFee;
     this._capacity = capacity;
     this._status = status;
+    this._version = version;
+    this._isDeleted = isDeleted;
+    this._deletedAt = deletedAt;
+    this._deletedBy = deletedBy;
     this._createdById = createdById;
     this._createdAt = createdAt;
     this._updatedAt = updatedAt;
@@ -86,6 +102,7 @@ export class Course extends AggregateRoot<string> {
 
     return new Course(
       id,
+      props.courseCode ?? null,
       props.title,
       props.description ?? null,
       props.licenseCategory,
@@ -94,6 +111,10 @@ export class Course extends AggregateRoot<string> {
       props.tuitionFee ?? 0,
       props.capacity ?? null,
       CourseStatus.DRAFT,
+      1,
+      false,
+      null,
+      null,
       props.createdById,
       now,
       now,
@@ -118,6 +139,7 @@ export class Course extends AggregateRoot<string> {
 
     return new Course(
       props.id,
+      props.courseCode,
       props.title,
       props.description,
       props.licenseCategory,
@@ -126,6 +148,10 @@ export class Course extends AggregateRoot<string> {
       props.tuitionFee,
       props.capacity,
       props.status,
+      props.version,
+      props.isDeleted,
+      props.deletedAt,
+      props.deletedBy,
       props.createdById,
       props.createdAt,
       props.updatedAt,
@@ -137,11 +163,18 @@ export class Course extends AggregateRoot<string> {
   }
 
   update(props: UpdateCourseProps): void {
+    if (
+      props.expectedVersion !== undefined &&
+      props.expectedVersion !== this._version
+    ) {
+      throw new CourseVersionConflictException(this.id);
+    }
     if (props.title !== undefined) this._title = props.title;
     if (props.description !== undefined) this._description = props.description;
     if (props.duration !== undefined) this._duration = props.duration;
     if (props.tuitionFee !== undefined) this._tuitionFee = props.tuitionFee;
     if (props.capacity !== undefined) this._capacity = props.capacity;
+    this._version += 1;
     this._updatedAt = new Date();
   }
 
@@ -150,16 +183,22 @@ export class Course extends AggregateRoot<string> {
       throw new CourseHasNoLessonException(this._id);
     }
     this._status = CourseStatus.ACTIVE;
+    this._version += 1;
     this._updatedAt = new Date();
   }
 
   deactivate(): void {
     this._status = CourseStatus.DRAFT;
+    this._version += 1;
     this._updatedAt = new Date();
   }
 
-  archive(): void {
+  archive(deletedBy?: string): void {
     this._status = CourseStatus.ARCHIVED;
+    this._isDeleted = true;
+    this._deletedAt = new Date();
+    this._deletedBy = deletedBy ?? null;
+    this._version += 1;
     this._updatedAt = new Date();
   }
 
@@ -174,6 +213,7 @@ export class Course extends AggregateRoot<string> {
     );
     this._lessons.push(lesson);
     this._totalLessons = this._lessons.length;
+    this._version += 1;
     this._updatedAt = new Date();
     return lesson;
   }
@@ -182,6 +222,7 @@ export class Course extends AggregateRoot<string> {
     const lesson = this._lessons.find((l) => l.id === lessonId);
     if (!lesson) throw new LessonNotFoundException(lessonId);
     lesson.update(props);
+    this._version += 1;
     this._updatedAt = new Date();
   }
 
@@ -190,6 +231,7 @@ export class Course extends AggregateRoot<string> {
     if (index === -1) throw new LessonNotFoundException(lessonId);
     this._lessons.splice(index, 1);
     this._totalLessons = this._lessons.length;
+    this._version += 1;
     this._updatedAt = new Date();
   }
 
@@ -202,6 +244,7 @@ export class Course extends AggregateRoot<string> {
     this._instructors.push(
       new CourseInstructor(crypto.randomUUID(), this._id, instructorId),
     );
+    this._version += 1;
     this._updatedAt = new Date();
   }
 
@@ -209,6 +252,7 @@ export class Course extends AggregateRoot<string> {
     this._instructors = this._instructors.filter(
       (i) => i.instructorId !== instructorId,
     );
+    this._version += 1;
     this._updatedAt = new Date();
   }
 
@@ -218,6 +262,7 @@ export class Course extends AggregateRoot<string> {
     } else {
       this._requirement = CourseRequirement.create(this._id, props);
     }
+    this._version += 1;
     this._updatedAt = new Date();
   }
 
@@ -232,6 +277,7 @@ export class Course extends AggregateRoot<string> {
       new Date(),
     );
     this._materials.push(material);
+    this._version += 1;
     this._updatedAt = new Date();
 
     if (props.mediaFileId) {
@@ -245,9 +291,13 @@ export class Course extends AggregateRoot<string> {
 
   removeMaterial(materialId: string): void {
     this._materials = this._materials.filter((m) => m.id !== materialId);
+    this._version += 1;
     this._updatedAt = new Date();
   }
 
+  get courseCode(): string | null {
+    return this._courseCode;
+  }
   get title(): string {
     return this._title;
   }
@@ -271,6 +321,18 @@ export class Course extends AggregateRoot<string> {
   }
   get status(): CourseStatus {
     return this._status;
+  }
+  get version(): number {
+    return this._version;
+  }
+  get isDeleted(): boolean {
+    return this._isDeleted;
+  }
+  get deletedAt(): Date | null {
+    return this._deletedAt;
+  }
+  get deletedBy(): string | null {
+    return this._deletedBy;
   }
   get createdById(): string {
     return this._createdById;

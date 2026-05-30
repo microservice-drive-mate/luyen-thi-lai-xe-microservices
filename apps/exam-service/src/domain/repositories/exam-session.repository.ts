@@ -18,6 +18,14 @@ export interface MissedQuestionItem {
   mediaFileId: string | null;
   options: Array<{ id: string; content: string; displayOrder: number }>;
   lastAnsweredAt: Date | null;
+  missedCount: number;
+}
+
+export interface MissedQuestionReviewFilter {
+  studentId: string;
+  limit: number;
+  periodDays?: number;
+  mode?: 'frequent' | 'recent';
 }
 
 export interface ListExamSessionsPage {
@@ -31,8 +39,7 @@ export abstract class ExamSessionRepository {
     filter: ListExamSessionsFilter,
   ): Promise<ListExamSessionsPage>;
   abstract findMissedQuestions(
-    studentId: string,
-    limit: number,
+    filter: MissedQuestionReviewFilter,
   ): Promise<MissedQuestionItem[]>;
   abstract save(session: ExamSession): Promise<void>;
 }

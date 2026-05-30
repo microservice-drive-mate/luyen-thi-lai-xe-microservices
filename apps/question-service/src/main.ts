@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
@@ -13,13 +13,17 @@ import {
   CorrelationIdInterceptor,
   CorrelationIdMiddleware,
   getRabbitMqUrl,
+  installLocalDevTransientErrorGuard,
   MetricsService,
   RabbitMqRetryInterceptor,
+  runBootstrapWithRetries,
   setupMicroserviceSwagger,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
+
+installLocalDevTransientErrorGuard('question-service');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -51,7 +55,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),
     new AccessLogInterceptor({ serviceName: 'question-service' }),
-    new ApiResponseInterceptor(),
+    new ApiResponseInterceptor(app.get(Reflector)),
   );
   app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
 
@@ -66,4 +70,4 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Question Service listening on port ${port}`);
 }
-void bootstrap();
+void runBootstrapWithRetries('question-service', bootstrap);

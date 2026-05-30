@@ -13,9 +13,11 @@ export class ListMissedQuestionsUseCase
   constructor(private readonly sessionRepository: ExamSessionRepository) {}
 
   execute(query: ListMissedQuestionsQuery): Promise<MissedQuestionItem[]> {
-    return this.sessionRepository.findMissedQuestions(
-      query.studentId,
-      Math.min(Math.max(query.limit, 1), 50),
-    );
+    return this.sessionRepository.findMissedQuestions({
+      studentId: query.studentId,
+      limit: Math.min(Math.max(query.limit, 1), 50),
+      periodDays: query.periodDays,
+      mode: query.mode,
+    });
   }
 }

@@ -36,6 +36,7 @@ import { UserModule } from './user.module';
     }),
     MetricsModule.register({ serviceName: 'user-service' }),
     ConfigModule.forRoot({
+      envFilePath: ConsulConfigFactory.envFilePaths(),
       load: [
         ConsulConfigFactory.create(
           Joi.object({
@@ -65,6 +66,7 @@ import { UserModule } from './user.module';
               realm: Joi.string().required(),
               clientId: Joi.string().required(),
               clientSecret: Joi.string().optional(),
+              timeoutMs: Joi.number().default(10000),
             }).required(),
           }).unknown(true),
           'user-service',

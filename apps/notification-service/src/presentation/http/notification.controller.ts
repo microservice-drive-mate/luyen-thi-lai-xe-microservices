@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -15,11 +16,13 @@ import {
   SendAcademicWarningUseCase,
 } from '../../application/use-cases/notification.use-cases';
 import {
+  AcademicWarningDispatchResponseDto,
   ListNotificationsQueryDto,
   ListNotificationsResponseDto,
   NotificationResponseDto,
   SendAcademicWarningRequestDto,
 } from '../dtos/notification.dtos';
+import { NotificationType } from '@prisma/notification-client';
 
 interface JwtPayload {
   sub?: string;
@@ -41,15 +44,31 @@ export class NotificationController {
   async sendAcademicWarning(
     @AuthenticatedUser() user: JwtPayload,
     @Body() dto: SendAcademicWarningRequestDto,
-  ): Promise<NotificationResponseDto> {
-    const result = await this.sendAcademicWarningUseCase.execute({
-      studentId: dto.studentId,
+  ): Promise<AcademicWarningDispatchResponseDto> {
+    const studentIds = [
+      ...(dto.studentId ? [dto.studentId] : []),
+      ...(dto.studentIds ?? []),
+    ].filter((value, index, items) => items.indexOf(value) === index);
+    if (studentIds.length === 0) {
+      throw new BadRequestException(
+        'At least one student recipient is required',
+      );
+    }
+    const unsupportedChannels = (
+      dto.deliveryChannels ?? [NotificationType.IN_APP]
+    ).filter((channel) => channel !== NotificationType.IN_APP);
+    if (unsupportedChannels.length > 0) {
+      throw new BadRequestException('Only IN_APP delivery is supported');
+    }
+
+    const result = await this.sendAcademicWarningUseCase.executeMany({
+      studentIds,
       reason: dto.reason,
       severity: dto.severity,
       message: dto.message,
       createdById: user.sub ?? '',
     });
-    return NotificationResponseDto.fromRecord(result);
+    return AcademicWarningDispatchResponseDto.fromResult(result);
   }
 
   @Get('notifications/me')

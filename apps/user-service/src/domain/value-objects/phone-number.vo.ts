@@ -15,7 +15,7 @@ export class PhoneNumber extends ValueObject<{ value: string }> {
     const normalized = value.trim().replace(/\s/g, '');
     if (!PhoneNumber.VN_PHONE_REGEX.test(normalized)) {
       throw new InvalidPhoneNumberException(
-        `"${value}" không phải là số điện thoại Việt Nam hợp lệ`,
+        `"${value}" is not a valid Vietnamese phone number`,
       );
     }
     return new PhoneNumber({ value: normalized });
