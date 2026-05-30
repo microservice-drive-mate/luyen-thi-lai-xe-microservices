@@ -234,11 +234,13 @@ kubectl apply -f managed-certificate-staging.yaml
 
 ## 7. Cau hinh GitHub Secrets va Variables
 
-Repository variable:
+Repository variable optional:
 
 ```text
-STAGING_DEPLOY_ENABLED=true
+GCP_AUTO_DEPLOY_ENABLED=false
 ```
+
+Mac dinh `.github/workflows/ci.yml` se auto deploy GCP staging sau moi lan push/merge vao `main` thanh cong. Chi set `GCP_AUTO_DEPLOY_ENABLED=false` khi muon tam dung auto deploy.
 
 Staging variables:
 
@@ -359,8 +361,8 @@ SMOKE_BASE_URL=https://api.staging.example.com bash scripts/k8s-smoke.sh
 Luong hien co:
 
 1. Merge vao `main`.
-2. `Main Image Release` build, scan Trivy va push image GHCR voi tag `${github.sha}`.
-3. Neu `STAGING_DEPLOY_ENABLED=true`, workflow deploy staging bang Helm.
+2. `Main Image Release` build du 10 production images, scan Trivy va push image GHCR voi tag `${github.sha}`.
+3. Workflow auto deploy GCP staging bang Helm voi dung tag `${github.sha}` vua build.
 4. Production release dung `.github/workflows/production-release.yml`, chay manual voi `image_tag` la Git SHA da pass.
 
 Can cau hinh GitHub Environment:

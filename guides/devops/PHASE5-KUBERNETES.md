@@ -75,11 +75,13 @@ If you install Traefik or NGINX Ingress on GKE instead of using GKE Ingress, ove
 
 ## GitHub Variables And Secrets
 
-Repository variable:
+Repository variable optional:
 
 ```text
-STAGING_DEPLOY_ENABLED=true
+GCP_AUTO_DEPLOY_ENABLED=false
 ```
+
+By default, `.github/workflows/ci.yml` deploys GCP staging after every successful push to `main`. Set `GCP_AUTO_DEPLOY_ENABLED=false` only when you need to pause auto deploy.
 
 Staging variables:
 

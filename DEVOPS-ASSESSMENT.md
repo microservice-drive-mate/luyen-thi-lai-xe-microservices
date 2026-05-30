@@ -86,8 +86,10 @@ Working tree hien da dinh huong Phase 4 nhu sau:
   - Trigger: push vao `main`.
   - Chay quality gate.
   - Build va Trivy scan changed/all-required services.
+  - Tren push vao `main`, build du 10 production services de dam bao cung mot immutable tag `${github.sha}` ton tai cho toan bo Helm release.
   - Push GHCR voi 2 tag: `${github.sha}` va `latest`.
-  - Deploy staging tu dong neu repository variable `STAGING_DEPLOY_ENABLED=true`.
+  - Auto deploy GCP staging bang Helm sau khi build image va migration-runner thanh cong.
+  - Co the tam tat auto deploy bang repository variable `GCP_AUTO_DEPLOY_ENABLED=false`.
   - Staging job gan GitHub Environment `staging`.
 
 - `.github/workflows/production-release.yml`
@@ -100,7 +102,7 @@ Deployment secrets/vars can cau hinh:
 
 Kubernetes/GCP/GKE path:
 
-- Repository variable: `STAGING_DEPLOY_ENABLED=true`
+- Repository variable optional: `GCP_AUTO_DEPLOY_ENABLED=false` neu can tam tat auto deploy GCP staging. Mac dinh workflow se deploy sau moi push vao `main`.
 - Staging environment/repo variables:
   - `STAGING_API_SCHEME`
   - `STAGING_API_HOST`
@@ -120,7 +122,7 @@ Kubernetes/GCP/GKE path:
 
 Legacy SSH/Compose path, chi dung neu deploy len VM/Compute Engine bang Docker Compose:
 
-- Repository variable: `STAGING_DEPLOY_ENABLED=true`
+- Repository variable optional: `GCP_AUTO_DEPLOY_ENABLED=false` neu can tam tat auto deploy GCP staging. Mac dinh workflow se deploy sau moi push vao `main`.
 - Staging environment/repo secrets:
   - `STAGING_DEPLOY_HOST`
   - `STAGING_DEPLOY_USER`

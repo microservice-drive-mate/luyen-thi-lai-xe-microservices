@@ -104,6 +104,14 @@ jobs:
           ALL_SERVICES_JSON='["identity-service","analytics-service","course-service","exam-service","notification-service","question-service","simulation-service","user-service","media-service","audit-service"]'
           SERVICES="[]"
 
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            echo "Main push uses one immutable release tag for the whole Helm release -> build all production services"
+            SERVICES="$ALL_SERVICES_JSON"
+            printf 'services=%s\n' "$SERVICES" >> "$GITHUB_OUTPUT"
+            echo "Final services to build: $SERVICES"
+            exit 0
+          fi
+
           if printf '%s\n' "$CHANGED" | jq -e 'index("all-services") != null' > /dev/null; then
             echo "DevOps/shared build inputs changed -> build all services"
             SERVICES="$ALL_SERVICES_JSON"
@@ -314,16 +322,19 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-staging:
-    name: Deploy Staging Kubernetes
+    name: Deploy GCP Staging
     runs-on: ubuntu-latest
     needs: [build, build-migration-runner]
     timeout-minutes: 30
+    concurrency:
+      group: deploy-gcp-staging
+      cancel-in-progress: false
     if: |
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       needs.build.result == 'success' &&
       needs.build-migration-runner.result == 'success' &&
-      vars.STAGING_DEPLOY_ENABLED == 'true'
+      (vars.GCP_AUTO_DEPLOY_ENABLED == '' || vars.GCP_AUTO_DEPLOY_ENABLED == 'true')
     environment: staging
     env:
       IMAGE_TAG: ${{ github.sha }}

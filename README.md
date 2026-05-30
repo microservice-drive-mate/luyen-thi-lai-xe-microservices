@@ -227,7 +227,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 - Production scope đã chốt: 10 services; `docs-service` chỉ dùng cho Dev.
 - CI/CD Phase 4:
   - Pull Request Validation: quality gate, build image, Trivy scan, không push image.
-  - Main Image Release: build image, Trivy scan, push GHCR bằng tag `${git_sha}` và `latest`.
+  - Main Image Release: build đủ 10 production images, Trivy scan, push GHCR bằng tag `${git_sha}` và `latest`, rồi auto deploy GCP staging bằng Helm.
   - Production Release: chạy thủ công bằng immutable image tag, gắn GitHub Environment `production`.
 - Deployment Phase 5:
   - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.

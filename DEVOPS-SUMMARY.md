@@ -91,7 +91,7 @@ Luồng production/staging hiện chốt **10 application services**:
 
 - GitHub Actions đã tách luồng:
   - `.github/workflows/pr-validation.yml`: validate PR vào `main`, chạy quality gate, detect changed services, build image và Trivy scan, không push image.
-  - `.github/workflows/ci.yml`: main image release, quality gate, build + Trivy scan, push GHCR với `${github.sha}` và `latest`, staging deploy nếu bật biến `STAGING_DEPLOY_ENABLED=true`.
+  - `.github/workflows/ci.yml`: main image release, quality gate, build + Trivy scan đủ 10 production services, push GHCR với `${github.sha}` và `latest`, rồi auto deploy GCP staging bằng Helm. Có thể tắt auto deploy bằng repository variable `GCP_AUTO_DEPLOY_ENABLED=false`.
   - `.github/workflows/production-release.yml`: production release thủ công bằng immutable `image_tag`, gắn GitHub Environment `production`.
   - `.github/workflows/devops-smoke.yml`: smoke suites cho observability, RabbitMQ resilience và restore test.
 - Jenkins:
