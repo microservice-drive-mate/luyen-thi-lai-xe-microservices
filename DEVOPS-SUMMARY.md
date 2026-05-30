@@ -1,11 +1,11 @@
 # Tổng kết hạ tầng DevOps - Luyện Thi Lái Xe Microservices
 
 **Cập nhật lần cuối**: Tháng 05/2026
-**Phạm vi đã kiểm tra**: Docker local/hybrid, Docker Compose full stack, VPS Compose deploy, CI/CD, Kubernetes baseline, observability, resilience, backup và runbook.
+**Phạm vi đã kiểm tra**: Docker local/hybrid, Docker Compose full stack, Docker Compose deploy legacy, CI/CD, Kubernetes baseline cho GCP/GKE, observability, resilience, backup và runbook.
 
 ## Tóm tắt điều hành
 
-Repo hiện tại đã đủ tốt cho **MVP/demo trên local hoặc VPS**, đồng thời đã có baseline cho **CI/CD tách luồng, DevSecOps cơ bản và Kubernetes/K3s deployment**. Nếu đối chiếu theo checklist DevOps trong `DEVOPS (2).docx`, trạng thái tổng quan là:
+Repo hiện tại đã đủ tốt cho **MVP/demo trên local hoặc GCP**, đồng thời đã có baseline cho **CI/CD tách luồng, DevSecOps cơ bản và Kubernetes/GKE deployment**. Nếu đối chiếu theo checklist DevOps trong `DEVOPS (2).docx`, trạng thái tổng quan là:
 
 - **Mức sẵn sàng DevOps cho MVP**: khoảng **90%**.
 - **Mức sẵn sàng production day-2 operations**: khoảng **75-80%**.
@@ -43,7 +43,7 @@ Luồng production/staging hiện chốt **10 application services**:
 - Mỗi app service production có Dockerfile riêng trong `apps/*/Dockerfile`.
 - Full stack có `docker-compose.yaml`.
 - Hybrid local có `docker-compose.infra.yml`.
-- VPS/staging/production có `docker-compose.deploy.yml`.
+- Docker Compose deploy legacy có `docker-compose.deploy.yml` cho trường hợp cần chạy trên VM/Compute Engine.
 - Runtime images đã được harden thêm:
   - prune dev dependencies.
   - loại `npm`, `npx`, `corepack`, `yarn` khỏi runtime image để giảm CVE surface.
@@ -62,7 +62,7 @@ Luồng production/staging hiện chốt **10 application services**:
 
 - Root env templates:
   - `.env.example`
-  - `.env.vps.example`
+  - `.env.vps.example` (legacy cho luồng VM/SSH cũ)
   - `deploy/staging.env.example`
   - `deploy/production.env.example`
 - Consul seed files theo môi trường:
@@ -108,10 +108,11 @@ Luồng production/staging hiện chốt **10 application services**:
 - Docker Compose runtime:
   - local/hybrid.
   - full Docker stack.
-  - VPS Compose deploy.
+  - Docker Compose deploy legacy qua SSH/VM.
 - Kubernetes Phase 5 baseline:
   - Helm chart tại `charts/luyen-thi-lai-xe`.
-  - Target hiện tại: K3s VPS.
+  - Target hiện tại: GCP/GKE.
+  - K3s chỉ còn là lựa chọn lab/fallback nếu cần thử nhanh ngoài GCP.
   - Deploy 10 production services, Kong, Keycloak, PostgreSQL, RabbitMQ, Redis và Consul.
   - Kubernetes `Secret` dùng cho password/token/storage.
   - Consul seed Job chỉ seed non-secret config.
@@ -190,7 +191,7 @@ Luồng production/staging hiện chốt **10 application services**:
 
 ### P0/P1 - Security hardening còn lại
 
-- Chưa có secret manager chính thức như Vault/AWS Secrets Manager/Azure Key Vault.
+- Chưa có secret manager chính thức như Google Secret Manager hoặc Vault.
 - Chưa có SBOM bằng Syft/CycloneDX.
 - Chưa sign image/release bằng Cosign hoặc có provenance policy đầy đủ.
 - Nếu secret thật từng bị paste/push, cần rotate ngoài repo.
@@ -204,7 +205,7 @@ Luồng production/staging hiện chốt **10 application services**:
 ### P1 - Runtime verification
 
 - Đã có smoke tests, nhưng nên chạy thực tế sau deploy và lưu bằng chứng pass/fail theo mỗi lần release.
-- Cần chạy lại smoke trên môi trường Docker/K3s thật sau khi merge để xác nhận DNS, ingress và health endpoint ổn định.
+- Cần chạy lại smoke trên môi trường GKE/staging thật sau khi merge để xác nhận DNS, ingress và health endpoint ổn định.
 
 ### P2 - Scaling & IaC
 
@@ -219,7 +220,7 @@ Chưa có:
 
 Chưa có:
 
-- backup offsite lên S3/Azure Blob.
+- backup offsite lên Google Cloud Storage.
 - PITR managed database.
 - multi-region deploy/failover.
 - cross-region RabbitMQ/Consul strategy.
@@ -233,8 +234,8 @@ Chưa có:
 | Database migration/seed | Đã làm | 90% | CI/deploy có migration path; Kubernetes có migration Job. |
 | CI/CD | Đã làm nền | 85% | PR validation, main image release, production manual release đã có; rollback job riêng còn thiếu. |
 | DevSecOps baseline | Đã làm nền | 75% | Trivy HIGH/CRITICAL gate có; SBOM/signing/secret manager còn thiếu. |
-| VPS Compose deployment | Đã làm | 85% | Compose deploy + migrations + health smoke. |
-| Kubernetes baseline | Đã làm nền | 70% | Helm/K3s scaffold có; HPA/load test/Terraform còn thiếu. |
+| Compose deployment legacy | Đã làm | 85% | Compose deploy + migrations + health smoke; dùng cho VM/Compute Engine nếu cần fallback. |
+| Kubernetes baseline | Đã làm nền | 70% | Helm/GKE scaffold có; HPA/load test/Terraform còn thiếu. |
 | Observability | Đã làm | 85% | Prometheus/Grafana/ELK/alerts có; cần verify runtime và bổ sung business metrics. |
 | Health/metrics/logging | Đã làm | 90% | Đã đồng bộ common modules. |
 | HTTP/RabbitMQ resilience | Đã làm | 85% | Retry/DLQ/circuit breaker có; idempotency durable còn là follow-up. |
@@ -256,7 +257,7 @@ Chưa có:
    - Main Image Release.
    - Production Release.
 3. Chạy `helm lint` và `helm template` cho chart `charts/luyen-thi-lai-xe`.
-4. Chạy smoke test trên môi trường staging/K3s thật qua Kong.
+4. Chạy smoke test trên môi trường staging/GKE thật qua Kong.
 
 ### Gần hạn
 
@@ -269,9 +270,9 @@ Chưa có:
 
 ### Sau MVP
 
-1. Terraform cho VPS/cloud resources.
+1. Terraform cho GCP resources: GKE, Artifact/GHCR access, DNS, static IP, service accounts và secret wiring.
 2. HPA và autoscaling policy.
-3. Managed database/PITR nếu deploy production thật.
+3. Managed database/PITR, ưu tiên Cloud SQL nếu deploy production thật.
 4. Multi-region/failover nếu có nhu cầu production lớn.
 
 ## Lệnh nhanh

@@ -176,4 +176,4 @@ File `.last-deployed-tag` trên server giúp biết image tag gần nhất đã 
 - Chốt production deploy bằng immutable image tag (`IMAGE_TAG` là Git SHA hoặc release tag), hạn chế dùng `latest`.
 - Tạo Jenkins parameterized rollback job để redeploy `.last-deployed-tag` hoặc tag cũ được chỉ định.
 - Đẩy backup PostgreSQL/Keycloak ra offsite storage và ghi lại restore rehearsal theo từng release lớn.
-- Bổ sung host/container/DB-level monitoring nếu môi trường VPS cần quan sát sâu hơn app metrics hiện có.
+- Bổ sung host/container/DB-level monitoring nếu môi trường VM/Compute Engine legacy cần quan sát sâu hơn app metrics hiện có.

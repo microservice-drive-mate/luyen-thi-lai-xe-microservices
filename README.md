@@ -221,7 +221,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 ## 10. Ghi chú DevOps
 
 - Trạng thái tổng quan:
-  - MVP/local/VPS Docker Compose đã khá đầy đủ: Docker, Kong, Consul, RabbitMQ, Keycloak, ELK, Prometheus/Grafana, backup, runbook.
+  - MVP/local/GCP đã khá đầy đủ: Docker, Kong, Consul, RabbitMQ, Keycloak, ELK, Prometheus/Grafana, backup, runbook.
   - CI/CD đã có PR validation, main image release, Trivy scan và production release thủ công bằng immutable image tag.
   - Production hardening còn thiếu: secret manager chính thức, SBOM/signing, rollback workflow riêng, load test, HPA và Terraform.
 - Production scope đã chốt: 10 services; `docs-service` chỉ dùng cho Dev.
@@ -231,7 +231,8 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - Production Release: chạy thủ công bằng immutable image tag, gắn GitHub Environment `production`.
 - Deployment Phase 5:
   - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.
-  - Target hiện tại là K3s VPS, self-contained dependencies trong cluster.
+  - Target hiện tại là GCP/GKE, self-contained dependencies trong cluster cho giai đoạn MVP.
+  - K3s/VPS chỉ còn là hướng lab hoặc fallback legacy, không phải target production chính.
   - Hướng dẫn setup nằm ở `guides/devops/PHASE5-KUBERNETES.md`.
 - Health endpoints chuẩn:
   - `/health`

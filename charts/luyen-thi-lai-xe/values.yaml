@@ -3,7 +3,7 @@ global:
   imageTag: latest
   imagePullPolicy: IfNotPresent
   nodeEnv: production
-  storageClassName: local-path
+  storageClassName: standard-rwo
 
 imagePullSecret:
   enabled: false
@@ -13,7 +13,7 @@ imagePullSecret:
 
 ingress:
   enabled: true
-  className: traefik
+  className: gce
   apiHost: api.127.0.0.1.nip.io
   authHost: auth.127.0.0.1.nip.io
   annotations: {}

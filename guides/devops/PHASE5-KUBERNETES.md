@@ -1,6 +1,6 @@
 # Phase 5 Kubernetes Deployment
 
-Phase 5 deploys the production scope to a real Kubernetes runtime. The current baseline targets K3s on a VPS with Traefik ingress and the default `local-path` storage class.
+Phase 5 deploys the production scope to a real Kubernetes runtime. The current primary target is GCP/GKE. K3s/VPS is now only a local lab or legacy fallback path.
 
 ## Scope
 
@@ -22,30 +22,54 @@ Out of scope for Phase 5:
 - Full ELK/Prometheus/Grafana migration to Kubernetes.
 - Vault or External Secrets integration.
 
-## K3s Host Setup
+## GCP/GKE Cluster Setup
 
-Install K3s on the VPS:
+Create or select a GCP project, then enable the required APIs:
 
 ```bash
-curl -sfL https://get.k3s.io | sh -
-sudo kubectl get nodes
-sudo kubectl get storageclass
+gcloud config set project <gcp-project-id>
+gcloud services enable container.googleapis.com compute.googleapis.com
+```
+
+Create a small staging cluster. Adjust region, node count and machine type for budget/capacity:
+
+```bash
+gcloud container clusters create luyen-thi-lai-xe-staging \
+  --region asia-southeast1 \
+  --num-nodes 1 \
+  --machine-type e2-standard-4 \
+  --enable-ip-alias \
+  --release-channel regular
+
+gcloud container clusters get-credentials luyen-thi-lai-xe-staging \
+  --region asia-southeast1
+
+kubectl get nodes
+kubectl get storageclass
 ```
 
 Export kubeconfig for GitHub Actions:
 
 ```bash
-sudo cat /etc/rancher/k3s/k3s.yaml > kubeconfig.yaml
-# Replace 127.0.0.1 with the VPS public host or IP in kubeconfig.yaml.
-base64 -w0 kubeconfig.yaml
+kubectl config view --raw --minify > kubeconfig-gke-staging.yaml
+base64 -w0 kubeconfig-gke-staging.yaml
 ```
 
-Use DNS records or nip.io-style hosts:
+Use real DNS records for staging/production:
 
 ```text
-api.<vps-ip>.nip.io
-auth.<vps-ip>.nip.io
+api.staging.example.com
+auth.staging.example.com
+api.example.com
+auth.example.com
 ```
+
+The chart defaults to GKE-friendly values:
+
+- `global.storageClassName: standard-rwo`
+- `ingress.className: gce`
+
+If you install Traefik or NGINX Ingress on GKE instead of using GKE Ingress, override `ingress.className` in the environment values file.
 
 ## GitHub Variables And Secrets
 
@@ -58,10 +82,10 @@ STAGING_DEPLOY_ENABLED=true
 Staging variables:
 
 ```text
-STAGING_API_SCHEME=http
-STAGING_API_HOST=api.<vps-ip>.nip.io
-STAGING_AUTH_HOST=auth.<vps-ip>.nip.io
-STAGING_FRONTEND_ORIGIN=http://localhost:3000
+STAGING_API_SCHEME=https
+STAGING_API_HOST=api.staging.example.com
+STAGING_AUTH_HOST=auth.staging.example.com
+STAGING_FRONTEND_ORIGIN=https://staging.example.com
 ```
 
 Production variables:
@@ -132,7 +156,7 @@ helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
 ## Smoke Test
 
 ```bash
-SMOKE_BASE_URL=http://api.<vps-ip>.nip.io bash scripts/k8s-smoke.sh
+SMOKE_BASE_URL=https://api.staging.example.com bash scripts/k8s-smoke.sh
 ```
 
 The smoke script checks `/health/live` and `/health/ready` for all 10 production services through Kong.
@@ -146,3 +170,23 @@ SMOKE_BASE_URL=https://api.example.com bash scripts/k8s-smoke.sh
 ```
 
 Rollback reverts the Kubernetes release, including app image tags and rendered config. Database migrations are not automatically reversed; if a migration is not backward compatible, create a follow-up migration instead of relying on rollback.
+
+## K3s Legacy Lab
+
+Use this only when you need a cheap local/VM rehearsal outside GCP:
+
+```bash
+curl -sfL https://get.k3s.io | sh -
+sudo kubectl get nodes
+sudo kubectl get storageclass
+```
+
+For K3s, override the chart values:
+
+```yaml
+global:
+  storageClassName: local-path
+
+ingress:
+  className: traefik
+```

@@ -22,7 +22,7 @@ Trang thai hien tai:
 | Phase 1 Local/Dev | Mostly done | `.env.example`, deploy env examples, Consul seed optional media storage, health endpoints va AppLogger da co tren services. Runtime smoke can chay lai khi Docker Desktop/DNS on dinh. |
 | Phase 3 DevSecOps | Done for baseline | CI run #154 pass tren commit `2265ae8`; 10 production images build + Trivy HIGH/CRITICAL scan success. |
 | Phase 4 CI/CD | In progress | Working tree da tach PR validation, main image release, production release manual; can push de GitHub Actions verify. |
-| Phase 5 Deployment Runtime | In progress | Kubernetes Helm path da duoc scaffold cho K3s VPS: app services, in-cluster dependencies, Ingress, probes, resources, Consul seed va Prisma migration Job. |
+| Phase 5 Deployment Runtime | In progress | Kubernetes Helm path da duoc scaffold va target chinh da doi sang GCP/GKE: app services, in-cluster dependencies, Ingress, probes, resources, Consul seed va Prisma migration Job. K3s/VPS chi con la lab/fallback legacy. |
 | Phase 9 IaC/Scaling | Pending | Chua co `terraform`, HPA hay load test; cac phan nay tach khoi Phase 5. |
 
 ## 2. Production Service Map
@@ -68,7 +68,7 @@ Rui ro con lai:
 
 - Neu secret that tung bi paste/push, can rotate ngoai repo.
 - Chua co SBOM/signing/CodeQL nhu lop hardening bo sung.
-- Production secret store chua duoc chon chinh thuc.
+- Production secret store chua duoc chon chinh thuc; voi GCP nen uu tien Google Secret Manager hoac Vault.
 
 ## 4. Phase 4 CI/CD Baseline
 
@@ -97,6 +97,28 @@ Working tree hien da dinh huong Phase 4 nhu sau:
   - Can cau hinh manual approval/reviewer trong GitHub Environments.
 
 Deployment secrets/vars can cau hinh:
+
+Kubernetes/GCP/GKE path:
+
+- Repository variable: `STAGING_DEPLOY_ENABLED=true`
+- Staging environment/repo variables:
+  - `STAGING_API_SCHEME`
+  - `STAGING_API_HOST`
+  - `STAGING_AUTH_HOST`
+  - `STAGING_FRONTEND_ORIGIN`
+- Production environment/repo variables:
+  - `PRODUCTION_API_SCHEME`
+  - `PRODUCTION_API_HOST`
+  - `PRODUCTION_AUTH_HOST`
+  - `PRODUCTION_FRONTEND_ORIGIN`
+- Shared secrets:
+  - `GHCR_PULL_USERNAME`
+  - `GHCR_PULL_TOKEN`
+- Staging/production kubeconfig secrets:
+  - `STAGING_KUBE_CONFIG_B64`
+  - `PRODUCTION_KUBE_CONFIG_B64`
+
+Legacy SSH/Compose path, chi dung neu deploy len VM/Compute Engine bang Docker Compose:
 
 - Repository variable: `STAGING_DEPLOY_ENABLED=true`
 - Staging environment/repo secrets:
@@ -132,7 +154,8 @@ Next recommended order:
    - `staging` for automatic deploy.
    - `production` with required reviewers/manual approval.
 4. Configure Phase 5 Kubernetes runtime:
-   - K3s VPS with Traefik and `local-path` storage class.
+   - GCP/GKE cluster as the primary target.
+   - Ingress controller/load balancer, DNS records and optional static IP on GCP.
    - GitHub variables: `STAGING_API_HOST`, `STAGING_AUTH_HOST`, `STAGING_FRONTEND_ORIGIN`, and production equivalents.
    - GitHub secrets: `STAGING_KUBE_CONFIG_B64`, `PRODUCTION_KUBE_CONFIG_B64`, `GHCR_PULL_USERNAME`, `GHCR_PULL_TOKEN`, DB/RabbitMQ/Keycloak/storage secrets.
 5. Verify Helm deployment:
@@ -144,7 +167,7 @@ Next recommended order:
 
 ## 7. Phase 5 Kubernetes Baseline
 
-Phase 5 target da chot la Kubernetes Helm tren K3s VPS, self-contained trong cluster.
+Phase 5 target da doi sang Kubernetes Helm tren GCP/GKE, self-contained trong cluster cho giai doan MVP. K3s/VPS chi con la lab/fallback legacy.
 
 Implemented baseline:
 
