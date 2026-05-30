@@ -236,6 +236,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - K3s/VPS chỉ còn là hướng lab hoặc fallback legacy, không phải target production chính.
   - Hướng dẫn setup nằm ở `guides/devops/PHASE5-KUBERNETES.md`.
   - Checklist GCP chi tiết nằm ở `guides/devops/GCP-SETUP.md`.
+  - Kịch bản demo DevOps nằm ở `guides/devops/DEVOPS-DEMO-SCRIPT.md`.
 - Health endpoints chuẩn:
   - `/health`
   - `/health/live`

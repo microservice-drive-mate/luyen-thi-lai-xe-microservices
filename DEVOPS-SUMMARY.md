@@ -188,6 +188,7 @@ Luồng production/staging hiện chốt **10 application services**:
   - `guides/devops/JENKINS-DOCKER-COMPOSE.md`
   - `guides/devops/PHASE5-KUBERNETES.md`
   - `guides/devops/GCP-SETUP.md`
+  - `guides/devops/DEVOPS-DEMO-SCRIPT.md`
 
 ## Phần còn thiếu
 
