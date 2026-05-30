@@ -2,6 +2,8 @@
 
 Phase 5 deploys the production scope to a real Kubernetes runtime. The current primary target is GCP/GKE. K3s/VPS is now only a local lab or legacy fallback path.
 
+For the full GCP checklist, including cluster sizing, DNS, static IP, TLS and GitHub secrets, see `guides/devops/GCP-SETUP.md`.
+
 ## Scope
 
 Included:

@@ -186,6 +186,7 @@ Luồng production/staging hiện chốt **10 application services**:
   - `guides/devops/HTTP-RESILIENCE.md`
   - `guides/devops/JENKINS-DOCKER-COMPOSE.md`
   - `guides/devops/PHASE5-KUBERNETES.md`
+  - `guides/devops/GCP-SETUP.md`
 
 ## Phần còn thiếu
 
@@ -258,6 +259,7 @@ Chưa có:
    - Production Release.
 3. Chạy `helm lint` và `helm template` cho chart `charts/luyen-thi-lai-xe`.
 4. Chạy smoke test trên môi trường staging/GKE thật qua Kong.
+5. Làm theo checklist GCP trong `guides/devops/GCP-SETUP.md` trước khi mở public DNS/TLS.
 
 ### Gần hạn
 

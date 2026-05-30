@@ -234,6 +234,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - Target hiện tại là GCP/GKE, self-contained dependencies trong cluster cho giai đoạn MVP.
   - K3s/VPS chỉ còn là hướng lab hoặc fallback legacy, không phải target production chính.
   - Hướng dẫn setup nằm ở `guides/devops/PHASE5-KUBERNETES.md`.
+  - Checklist GCP chi tiết nằm ở `guides/devops/GCP-SETUP.md`.
 - Health endpoints chuẩn:
   - `/health`
   - `/health/live`
