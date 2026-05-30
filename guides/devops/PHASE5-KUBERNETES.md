@@ -1,39 +1,39 @@
-# Phase 5 Kubernetes Deployment
+# Phase 5 - Triển Khai Kubernetes
 
-Phase 5 deploys the production scope to a real Kubernetes runtime. The current primary target is GCP/GKE. K3s/VPS is now only a local lab or legacy fallback path.
+Phase 5 triển khai phạm vi production lên một Kubernetes runtime thật. Target chính hiện tại là **GCP/GKE**. K3s/VPS chỉ còn là hướng lab nội bộ hoặc fallback legacy.
 
-For the full GCP checklist, including cluster sizing, DNS, static IP, TLS and GitHub secrets, see `guides/devops/GCP-SETUP.md`.
+Checklist GCP đầy đủ, bao gồm sizing cluster, DNS, static IP, TLS và GitHub secrets, nằm ở `guides/devops/GCP-SETUP.md`.
 
-## Scope
+## Phạm vi
 
-Included:
+Bao gồm:
 
 - 10 production services: identity, user, exam, course, question, notification, analytics, simulation, media, audit.
-- Kong DB-less gateway exposed through Ingress.
-- Keycloak exposed through a separate Ingress host.
-- In-cluster Postgres, RabbitMQ, Redis, Consul and Keycloak.
-- Consul seed Job for non-secret runtime config.
-- Prisma migration Job using `luyen-thi-lai-xe-migration-runner`.
-- App Pods wait for Consul seed and Prisma migration Jobs before the main containers start.
-- Liveness/readiness probes and resource requests/limits.
+- Kong DB-less gateway expose qua Ingress.
+- Keycloak expose qua Ingress host riêng.
+- Postgres, RabbitMQ, Redis, Consul và Keycloak chạy trong cluster cho giai đoạn MVP.
+- Consul seed Job cho runtime config không phải secret.
+- Prisma migration Job dùng image `luyen-thi-lai-xe-migration-runner`.
+- App Pods đợi Consul seed và Prisma migration Jobs hoàn tất trước khi chạy main containers.
+- Liveness/readiness probes và `resources.requests`/`resources.limits`.
 - Helm rollback.
 
-Out of scope for Phase 5:
+Không nằm trong Phase 5:
 
-- Terraform, HPA and load testing. These belong to Phase 9.
-- Full ELK/Prometheus/Grafana migration to Kubernetes.
-- Vault or External Secrets integration.
+- Terraform, HPA và load testing. Các phần này thuộc Phase 9.
+- Chuyển toàn bộ ELK/Prometheus/Grafana sang Kubernetes.
+- Vault hoặc External Secrets integration.
 
-## GCP/GKE Cluster Setup
+## Thiết lập GCP/GKE Cluster
 
-Create or select a GCP project, then enable the required APIs:
+Tạo hoặc chọn GCP project, rồi bật các API cần thiết:
 
 ```bash
 gcloud config set project <gcp-project-id>
 gcloud services enable container.googleapis.com compute.googleapis.com
 ```
 
-Create a small staging cluster. Adjust region, node count and machine type for budget/capacity:
+Tạo staging cluster nhỏ. Có thể điều chỉnh region, node count và machine type theo ngân sách/tải thực tế:
 
 ```bash
 gcloud container clusters create luyen-thi-lai-xe-staging \
@@ -50,14 +50,14 @@ kubectl get nodes
 kubectl get storageclass
 ```
 
-Export kubeconfig for GitHub Actions:
+Export kubeconfig cho GitHub Actions:
 
 ```bash
 kubectl config view --raw --minify > kubeconfig-gke-staging.yaml
 base64 -w0 kubeconfig-gke-staging.yaml
 ```
 
-Use real DNS records for staging/production:
+Dùng DNS records thật cho staging/production:
 
 ```text
 api.staging.example.com
@@ -66,14 +66,14 @@ api.example.com
 auth.example.com
 ```
 
-The chart defaults to GKE-friendly values:
+Chart đang mặc định theo hướng phù hợp với GKE:
 
 - `global.storageClassName: standard-rwo`
 - `ingress.className: gce`
 
-If you install Traefik or NGINX Ingress on GKE instead of using GKE Ingress, override `ingress.className` in the environment values file.
+Nếu cài Traefik hoặc NGINX Ingress trên GKE thay vì dùng GKE Ingress, override `ingress.className` trong values file của môi trường đó.
 
-## GitHub Variables And Secrets
+## GitHub Variables Và Secrets
 
 Repository variable optional:
 
@@ -81,7 +81,7 @@ Repository variable optional:
 GCP_AUTO_DEPLOY_ENABLED=false
 ```
 
-By default, `.github/workflows/ci.yml` deploys GCP staging after every successful push to `main`. Set `GCP_AUTO_DEPLOY_ENABLED=false` only when you need to pause auto deploy.
+Mặc định `.github/workflows/ci.yml` sẽ deploy GCP staging sau mỗi lần push vào `main` thành công. Chỉ set `GCP_AUTO_DEPLOY_ENABLED=false` khi cần tạm dừng auto deploy.
 
 Staging variables:
 
@@ -95,7 +95,7 @@ STAGING_FRONTEND_ORIGIN=https://staging.example.com
 Production variables:
 
 ```text
-PRODUCTION_API_SCHEME=http
+PRODUCTION_API_SCHEME=https
 PRODUCTION_API_HOST=api.example.com
 PRODUCTION_AUTH_HOST=auth.example.com
 PRODUCTION_FRONTEND_ORIGIN=https://example.com
@@ -134,9 +134,9 @@ PRODUCTION_STORAGE_ACCOUNT_NAME
 PRODUCTION_STORAGE_ACCOUNT_KEY
 ```
 
-`GHCR_PULL_TOKEN` should be a GitHub token that can pull packages from GHCR after the workflow has finished.
+`GHCR_PULL_TOKEN` nên là GitHub token có quyền pull packages từ GHCR sau khi workflow build image xong.
 
-## Local Helm Validation
+## Kiểm tra Helm trên local
 
 ```bash
 helm lint charts/luyen-thi-lai-xe
@@ -144,7 +144,7 @@ helm template luyen-thi-lai-xe charts/luyen-thi-lai-xe \
   -f charts/luyen-thi-lai-xe/values-staging.example.yaml
 ```
 
-## Manual Deploy
+## Deploy thủ công
 
 ```bash
 helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
@@ -157,13 +157,13 @@ helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
   --set migration.imageTag=<git-sha>
 ```
 
-## Smoke Test
+## Smoke test
 
 ```bash
 SMOKE_BASE_URL=https://api.staging.example.com bash scripts/k8s-smoke.sh
 ```
 
-The smoke script checks `/health/live` and `/health/ready` for all 10 production services through Kong.
+Smoke script kiểm tra `/health/live` và `/health/ready` của toàn bộ 10 production services thông qua Kong.
 
 ## Rollback
 
@@ -173,11 +173,11 @@ helm rollback luyen-thi-lai-xe <revision> -n production
 SMOKE_BASE_URL=https://api.example.com bash scripts/k8s-smoke.sh
 ```
 
-Rollback reverts the Kubernetes release, including app image tags and rendered config. Database migrations are not automatically reversed; if a migration is not backward compatible, create a follow-up migration instead of relying on rollback.
+Rollback sẽ đưa Kubernetes release về revision cũ, bao gồm app image tags và rendered config. Database migrations không tự reverse; nếu migration không backward compatible thì cần tạo migration tiếp theo thay vì kỳ vọng rollback DB tự xử lý.
 
 ## K3s Legacy Lab
 
-Use this only when you need a cheap local/VM rehearsal outside GCP:
+Chỉ dùng phần này khi cần rehearsal giá rẻ trên local/VM ngoài GCP:
 
 ```bash
 curl -sfL https://get.k3s.io | sh -
@@ -185,7 +185,7 @@ sudo kubectl get nodes
 sudo kubectl get storageclass
 ```
 
-For K3s, override the chart values:
+Với K3s, override chart values như sau:
 
 ```yaml
 global:

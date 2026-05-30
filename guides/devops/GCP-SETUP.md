@@ -1,64 +1,64 @@
-# GCP Setup Guide - Luyen Thi Lai Xe Microservices
+# Hướng dẫn thiết lập GCP - Luyện Thi Lái Xe Microservices
 
-Tai lieu nay mo ta cac viec can lam de dua toan bo he thong len Google Cloud Platform theo huong **GKE + Helm**. Trang thai hien tai cua repo phu hop nhat voi **MVP/staging tren GKE Standard**, self-contained dependencies trong cluster. Khi len production that, nen tach dan database/cache/secret/storage sang managed services cua GCP.
+Tài liệu này mô tả các việc cần làm để đưa toàn bộ hệ thống lên Google Cloud Platform theo hướng **GKE + Helm**. Trạng thái hiện tại của repo phù hợp nhất với **MVP/staging trên GKE Standard**, các dependency vẫn tự chạy trong cluster. Khi lên production thật, nên tách dần database, cache, secret và storage sang managed services của GCP.
 
-## 1. Kien truc de xuat
+## 1. Kiến trúc đề xuất
 
 ### MVP/Staging
 
 - Compute runtime: **GKE Standard**.
-- Region: `asia-southeast1` neu nguoi dung chinh o Viet Nam/Dong Nam A.
+- Region: `asia-southeast1` nếu người dùng chính ở Việt Nam/Đông Nam Á.
 - Namespace:
-  - `staging` cho moi truong test.
-  - `production` cho release that neu dung chung cluster luc dau.
-- Container registry: tiep tuc dung **GHCR** theo workflow hien co.
+  - `staging` cho môi trường kiểm thử.
+  - `production` cho release thật nếu giai đoạn đầu dùng chung cluster.
+- Container registry: tiếp tục dùng **GHCR** theo workflow hiện có.
 - Ingress: GKE Ingress class `gce`.
 - StorageClass: `standard-rwo`.
 - Media storage:
-  - Trang thai code hien tai: `media-service` dang dung Azure Blob SDK.
-  - Neu muon full GCP: can implement Google Cloud Storage provider cho `media-service` truoc khi chuyen media sang Cloud Storage.
-  - Neu chua sua code: tam thoi giu Azure Blob cho media, con runtime van chay tren GKE.
-- Secrets: tam thoi dung GitHub Secrets -> render thanh Kubernetes Secret qua Helm.
+  - Trạng thái code hiện tại: `media-service` đang dùng Azure Blob SDK.
+  - Nếu muốn full GCP: cần thêm `GoogleCloudStorageProvider` cho `media-service` trước khi chuyển media sang Cloud Storage.
+  - Nếu chưa sửa code: tạm thời giữ Azure Blob cho media, còn runtime vẫn chạy trên GKE.
+- Secrets: tạm thời dùng GitHub Secrets rồi render thành Kubernetes Secret qua Helm.
 
-### Production hardening sau MVP
+### Production Hardening Sau MVP
 
-- Postgres: chuyen sang **Cloud SQL for PostgreSQL** thay vi Postgres trong cluster.
-- Redis: chuyen sang **Memorystore for Redis**.
-- Media: Cloud Storage + Workload Identity Federation for GKE, sau khi `media-service` co GCS provider.
-- Secrets: Google Secret Manager + Secret Manager CSI add-on hoac External Secrets.
+- Postgres: chuyển sang **Cloud SQL for PostgreSQL** thay vì Postgres trong cluster.
+- Redis: chuyển sang **Memorystore for Redis**.
+- Media: Cloud Storage + Workload Identity Federation for GKE, sau khi `media-service` có GCS provider.
+- Secrets: Google Secret Manager + Secret Manager CSI add-on hoặc External Secrets.
 - DNS/TLS: Cloud DNS + Google-managed certificate.
-- IaC: Terraform cho project, GKE, DNS, static IP, service accounts, IAM va secrets.
+- IaC: Terraform cho project, GKE, DNS, static IP, service accounts, IAM và secrets.
 
-## 2. Thong so nen chon
+## 2. Thông số nên chọn
 
-| Hang muc | MVP/Staging khuyen nghi | Production nho khuyen nghi | Ghi chu |
+| Hạng mục | MVP/Staging khuyến nghị | Production nhỏ khuyến nghị | Ghi chú |
 | --- | --- | --- | --- |
-| GKE mode | Standard | Standard regional | Autopilot rat gon van hanh, nhung chart hien tai co nhieu stateful dependency nen Standard de kiem soat node/storage hon. |
-| Region | `asia-southeast1` | `asia-southeast1` | Gan Viet Nam/Singapore de latency thap. |
-| Cluster type | Zonal hoac regional 1 region | Regional | Zonal re hon; regional tot hon cho HA. |
-| Node machine | `e2-standard-4` | `e2-standard-4` hoac `e2-standard-8` | MVP nen bat dau `e2-standard-4`, scale sau khi co metrics. |
-| Node count | 2 nodes | 3 nodes toi thieu | 2 nodes du cho demo co du dia cho rolling update; production can HA hon. |
-| Autoscaling | min 2, max 3 | min 3, max 6 | Nen bat autoscaling de tranh het tai nguyen luc deploy. |
-| Boot disk | `pd-balanced`, 50-100Gi | `pd-balanced`, 100Gi | Image/cache/log tren node can du dung luong. |
-| Pod storage | `standard-rwo` | `standard-rwo` hoac managed DB | Chart da dung PVC cho Postgres/RabbitMQ/Redis/Consul. |
-| Public traffic | GKE Ingress `gce` | GKE Ingress `gce` + static IP + managed cert | Neu dung NGINX/Traefik thi override `ingress.className`. |
-| Media storage | Tam giu Azure Blob hoac implement GCS provider | Cloud Storage sau khi code support GCS | Hien `media-service` chua phai GCS-native. |
-| App replicas | 1 moi service | 2+ cho service stateless | Hien chart app default 1 replica; tang sau khi DB/session/config san sang. |
+| GKE mode | Standard | Standard regional | Autopilot vận hành rất gọn, nhưng chart hiện có nhiều dependency stateful nên Standard dễ kiểm soát node/storage hơn. |
+| Region | `asia-southeast1` | `asia-southeast1` | Gần Việt Nam/Singapore để giảm latency. |
+| Cluster type | Zonal hoặc regional 1 region | Regional | Zonal rẻ hơn; regional tốt hơn cho HA. |
+| Node machine | `e2-standard-4` | `e2-standard-4` hoặc `e2-standard-8` | MVP nên bắt đầu với `e2-standard-4`, rồi scale sau khi có metrics. |
+| Node count | 2 nodes | Tối thiểu 3 nodes | 2 nodes đủ cho demo và có chỗ cho rolling update; production cần HA hơn. |
+| Autoscaling | min 2, max 3 | min 3, max 6 | Nên bật autoscaling để tránh hết tài nguyên lúc deploy. |
+| Boot disk | `pd-balanced`, 50-100Gi | `pd-balanced`, 100Gi | Image/cache/log trên node cần đủ dung lượng. |
+| Pod storage | `standard-rwo` | `standard-rwo` hoặc managed DB | Chart đang dùng PVC cho Postgres/RabbitMQ/Redis/Consul. |
+| Public traffic | GKE Ingress `gce` | GKE Ingress `gce` + static IP + managed cert | Nếu dùng NGINX/Traefik thì override `ingress.className`. |
+| Media storage | Tạm giữ Azure Blob hoặc implement GCS provider | Cloud Storage sau khi code support GCS | Hiện `media-service` chưa phải GCS-native. |
+| App replicas | 1 mỗi service | 2+ cho service stateless | Chart hiện default 1 replica; tăng sau khi DB/session/config sẵn sàng. |
 
-Resource request hien tai tu chart:
+Resource request hiện tại từ chart:
 
-- 10 app services: moi service request `100m CPU`, `128Mi`.
+- 10 app services: mỗi service request `100m CPU`, `128Mi`.
 - Postgres: `250m CPU`, `512Mi`, PVC `10Gi`.
 - RabbitMQ: `100m CPU`, `256Mi`, PVC `2Gi`.
 - Redis: `50m CPU`, `128Mi`, PVC `1Gi`.
 - Consul: `100m CPU`, `128Mi`, PVC `1Gi`.
 - Keycloak: `250m CPU`, `512Mi`.
 - Kong: `100m CPU`, `512Mi`.
-- Migration job: `100m CPU`, `256Mi` luc deploy.
+- Migration job: `100m CPU`, `256Mi` lúc deploy.
 
-Tong request MVP xap xi `2 CPU` va `3.5Gi RAM`, chua tinh kube-system, surge rollout va buffer. Vi vay 2 node `e2-standard-4` la diem bat dau hop ly cho staging/demo; production nen co it nhat 3 node hoac chuyen stateful dependency sang managed services.
+Tổng request MVP xấp xỉ `2 CPU` và `3.5Gi RAM`, chưa tính kube-system, surge rollout và buffer. Vì vậy 2 node `e2-standard-4` là điểm bắt đầu hợp lý cho staging/demo; production nên có ít nhất 3 node hoặc chuyển stateful dependency sang managed services.
 
-## 3. Chuan bi GCP project
+## 3. Chuẩn bị GCP Project
 
 ```bash
 gcloud auth login
@@ -74,7 +74,7 @@ gcloud services enable \
   cloudresourcemanager.googleapis.com
 ```
 
-Tao bien shell dung lai:
+Tạo biến shell dùng lại:
 
 ```bash
 export PROJECT_ID=<gcp-project-id>
@@ -83,11 +83,11 @@ export ZONE=asia-southeast1-a
 export CLUSTER_NAME=lttl-staging
 ```
 
-## 4. Tao GKE cluster
+## 4. Tạo GKE Cluster
 
-### Option A - MVP staging tiet kiem hon
+### Option A - MVP/Staging tiết kiệm hơn
 
-Dung zonal cluster 2 node:
+Dùng zonal cluster 2 node:
 
 ```bash
 gcloud container clusters create "$CLUSTER_NAME" \
@@ -106,7 +106,7 @@ gcloud container clusters create "$CLUSTER_NAME" \
   --release-channel regular
 ```
 
-Bat autoscaling cho node pool mac dinh:
+Bật autoscaling cho node pool mặc định:
 
 ```bash
 gcloud container clusters update "$CLUSTER_NAME" \
@@ -117,9 +117,9 @@ gcloud container clusters update "$CLUSTER_NAME" \
   --max-nodes 3
 ```
 
-### Option B - Production nho/HA hon
+### Option B - Production nhỏ/HA hơn
 
-Dung regional cluster:
+Dùng regional cluster:
 
 ```bash
 gcloud container clusters create lttl-production \
@@ -138,9 +138,9 @@ gcloud container clusters create lttl-production \
   --release-channel regular
 ```
 
-Voi regional cluster, `--num-nodes 1` nghia la moi zone trong region co 1 node. Tong so node thuc te co the lon hon zonal cluster, nen can kiem tra chi phi truoc khi tao.
+Với regional cluster, `--num-nodes 1` nghĩa là mỗi zone trong region có 1 node. Tổng số node thực tế có thể lớn hơn zonal cluster, nên cần kiểm tra chi phí trước khi tạo.
 
-Lay credentials:
+Lấy credentials:
 
 ```bash
 gcloud container clusters get-credentials "$CLUSTER_NAME" --zone "$ZONE" --project "$PROJECT_ID"
@@ -148,14 +148,14 @@ kubectl get nodes
 kubectl get storageclass
 ```
 
-## 5. Media storage tren GCP
+## 5. Media Storage Trên GCP
 
-Quan trong: repo hien tai co provider `AzureBlobStorageProvider` va dependency `@azure/storage-blob`. Cac bien `STORAGE_ACCOUNT_NAME`, `STORAGE_ACCOUNT_KEY`, `STORAGE_CONTAINER_NAME` dang map theo Azure Blob. Vi vay co 2 huong:
+Quan trọng: repo hiện tại có provider `AzureBlobStorageProvider` và dependency `@azure/storage-blob`. Các biến `STORAGE_ACCOUNT_NAME`, `STORAGE_ACCOUNT_KEY`, `STORAGE_CONTAINER_NAME` đang map theo Azure Blob. Vì vậy có 2 hướng:
 
-1. **Nhanh nhat de deploy he thong len GKE**: van dung Azure Blob cho media, chi chuyen compute/runtime sang GCP.
-2. **Full GCP**: them `GoogleCloudStorageProvider` vao `media-service`, cap nhat config/env, test upload/download/delete, roi moi dung Cloud Storage bucket ben duoi.
+1. **Nhanh nhất để deploy hệ thống lên GKE**: vẫn dùng Azure Blob cho media, chỉ chuyển compute/runtime sang GCP.
+2. **Full GCP**: thêm `GoogleCloudStorageProvider` vào `media-service`, cập nhật config/env, test upload/download/delete, rồi mới dùng Cloud Storage bucket bên dưới.
 
-Phan duoi la checklist cho huong full GCP sau khi code da support GCS.
+Phần dưới là checklist cho hướng full GCP sau khi code đã support GCS.
 
 ```bash
 export MEDIA_BUCKET=lttl-media-staging-$PROJECT_ID
@@ -166,7 +166,7 @@ gcloud storage buckets create "gs://$MEDIA_BUCKET" \
   --uniform-bucket-level-access
 ```
 
-Sau khi code da support GCS, luon dau co the dung service account key de inject qua Kubernetes Secret/Helm. Day la buoc tam thoi; khong nen giu lau trong production:
+Sau khi code đã support GCS, lúc đầu có thể dùng service account key để inject qua Kubernetes Secret/Helm. Đây là bước tạm thời; không nên giữ lâu trong production:
 
 ```bash
 gcloud iam service-accounts create lttl-media-sa \
@@ -180,11 +180,11 @@ gcloud iam service-accounts keys create media-sa-key.json \
   --iam-account "lttl-media-sa@$PROJECT_ID.iam.gserviceaccount.com"
 ```
 
-Sau MVP nen bo key file va chuyen sang Workload Identity Federation for GKE.
+Sau MVP nên bỏ key file và chuyển sang Workload Identity Federation for GKE.
 
-## 6. DNS, static IP va TLS
+## 6. DNS, Static IP Và TLS
 
-Dat 2 host:
+Đặt 2 host:
 
 - `api.staging.example.com`
 - `auth.staging.example.com`
@@ -196,9 +196,9 @@ gcloud compute addresses create lttl-staging-ip --global
 gcloud compute addresses describe lttl-staging-ip --global --format="value(address)"
 ```
 
-Tao A records trong Cloud DNS hoac DNS provider dang dung, tro 2 host tren ve static IP nay.
+Tạo A records trong Cloud DNS hoặc DNS provider đang dùng, trỏ 2 host trên về static IP này.
 
-Neu dung Google-managed certificate, can them annotation vao Ingress:
+Nếu dùng Google-managed certificate, cần thêm annotation vào Ingress:
 
 ```yaml
 ingress:
@@ -208,12 +208,12 @@ ingress:
     networking.gke.io/managed-certificates: lttl-staging-cert
 ```
 
-Chart hien tai chua co template `ManagedCertificate`, nen co 2 cach:
+Chart hiện tại chưa có template `ManagedCertificate`, nên có 2 cách:
 
-1. Tao file manifest rieng `ManagedCertificate` va apply truoc Helm.
-2. Bo sung template cert vao chart trong phase hardening tiep theo.
+1. Tạo file manifest riêng `ManagedCertificate` và apply trước Helm.
+2. Bổ sung template cert vào chart trong phase hardening tiếp theo.
 
-Manifest mau:
+Manifest mẫu:
 
 ```yaml
 apiVersion: networking.gke.io/v1
@@ -232,7 +232,7 @@ kubectl create namespace staging
 kubectl apply -f managed-certificate-staging.yaml
 ```
 
-## 7. Cau hinh GitHub Secrets va Variables
+## 7. Cấu Hình GitHub Secrets Và Variables
 
 Repository variable optional:
 
@@ -240,7 +240,7 @@ Repository variable optional:
 GCP_AUTO_DEPLOY_ENABLED=false
 ```
 
-Mac dinh `.github/workflows/ci.yml` se auto deploy GCP staging sau moi lan push/merge vao `main` thanh cong. Chi set `GCP_AUTO_DEPLOY_ENABLED=false` khi muon tam dung auto deploy.
+Mặc định `.github/workflows/ci.yml` sẽ auto deploy GCP staging sau mỗi lần push/merge vào `main` thành công. Chỉ set `GCP_AUTO_DEPLOY_ENABLED=false` khi muốn tạm dừng auto deploy.
 
 Staging variables:
 
@@ -278,20 +278,20 @@ kubectl config view --raw --minify > kubeconfig-gke-staging.yaml
 base64 -w0 kubeconfig-gke-staging.yaml
 ```
 
-Tren Windows PowerShell:
+Trên Windows PowerShell:
 
 ```powershell
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("kubeconfig-gke-staging.yaml"))
 ```
 
-## 8. Dieu chinh Helm values
+## 8. Điều Chỉnh Helm Values
 
-File da co:
+File đã có:
 
 - `charts/luyen-thi-lai-xe/values-staging.example.yaml`
 - `charts/luyen-thi-lai-xe/values-production.example.yaml`
 
-Gia tri GKE quan trong:
+Giá trị GKE quan trọng:
 
 ```yaml
 global:
@@ -312,9 +312,9 @@ config:
   keycloakPublicUrl: https://auth.staging.example.com
 ```
 
-Neu chua dung HTTPS ngay, co the tam de `STAGING_API_SCHEME=http`, nhung production nen dung HTTPS.
+Nếu chưa dùng HTTPS ngay, có thể tạm để `STAGING_API_SCHEME=http`, nhưng production nên dùng HTTPS.
 
-Voi media storage, neu chua implement GCS provider thi tiep tuc dien Azure Blob credentials vao:
+Với media storage, nếu chưa implement GCS provider thì tiếp tục điền Azure Blob credentials vào:
 
 ```yaml
 secrets:
@@ -323,9 +323,9 @@ secrets:
   storageContainerName: media
 ```
 
-## 9. Deploy thu cong lan dau
+## 9. Deploy Thủ Công Lần Đầu
 
-Can co `helm`, `kubectl`, `gcloud` tren may operator.
+Cần có `helm`, `kubectl`, `gcloud` trên máy operator.
 
 ```bash
 helm lint charts/luyen-thi-lai-xe -f charts/luyen-thi-lai-xe/values-staging.example.yaml
@@ -341,7 +341,7 @@ helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
   --set migration.imageTag=<git-sha-da-pass-ci>
 ```
 
-Kiem tra:
+Kiểm tra:
 
 ```bash
 kubectl get pods -n staging
@@ -356,56 +356,56 @@ Smoke test:
 SMOKE_BASE_URL=https://api.staging.example.com bash scripts/k8s-smoke.sh
 ```
 
-## 10. Deploy bang GitHub Actions
+## 10. Deploy Bằng GitHub Actions
 
-Luong hien co:
+Luồng hiện có:
 
-1. Merge vao `main`.
-2. `Main Image Release` build du 10 production images, scan Trivy va push image GHCR voi tag `${github.sha}`.
-3. Workflow auto deploy GCP staging bang Helm voi dung tag `${github.sha}` vua build.
-4. Production release dung `.github/workflows/production-release.yml`, chay manual voi `image_tag` la Git SHA da pass.
+1. Merge vào `main`.
+2. `Main Image Release` build đủ 10 production images, scan Trivy và push image GHCR với tag `${github.sha}`.
+3. Workflow auto deploy GCP staging bằng Helm với đúng tag `${github.sha}` vừa build.
+4. Production release dùng `.github/workflows/production-release.yml`, chạy manual với `image_tag` là Git SHA đã pass.
 
-Can cau hinh GitHub Environment:
+Cần cấu hình GitHub Environment:
 
-- `staging`: cho phep auto deploy neu team dong y.
-- `production`: bat required reviewers/manual approval.
+- `staging`: cho phép auto deploy nếu team đồng ý.
+- `production`: bật required reviewers/manual approval.
 
-## 11. Checklist truoc khi mo public
+## 11. Checklist Trước Khi Mở Public
 
-- DNS A records da tro dung static IP.
-- ManagedCertificate trang thai `Active`.
-- Kong Ingress tra ve duoc `/identity-service/health/live`.
-- Keycloak public URL dung `https://auth...`.
-- `KONG_CORS_ORIGINS` gom frontend, API va auth origins.
-- Tat hoac gioi han Kong admin public exposure.
-- Secret khong nam trong repo.
-- GitHub Environment `production` co required reviewers.
-- Backup Postgres/Keycloak da co lich va restore test.
-- Alerting co kenh nhan canh bao that.
+- DNS A records đã trỏ đúng static IP.
+- ManagedCertificate trạng thái `Active`.
+- Kong Ingress trả về được `/identity-service/health/live`.
+- Keycloak public URL đúng `https://auth...`.
+- `KONG_CORS_ORIGINS` gồm frontend, API và auth origins.
+- Tắt hoặc giới hạn Kong admin public exposure.
+- Secret không nằm trong repo.
+- GitHub Environment `production` có required reviewers.
+- Backup Postgres/Keycloak đã có lịch và restore test.
+- Alerting có kênh nhận cảnh báo thật.
 
-## 12. Loi hay gap
+## 12. Lỗi Hay Gặp
 
-| Trieu chung | Nguyen nhan hay gap | Cach xu ly |
+| Triệu chứng | Nguyên nhân hay gặp | Cách xử lý |
 | --- | --- | --- |
-| Pod pending | Node thieu CPU/RAM hoac PVC chua bind | `kubectl describe pod`, tang node/max-nodes, kiem tra StorageClass. |
-| Ingress khong co IP | GKE Ingress dang reconcile hoac annotation sai | `kubectl describe ingress -n staging`, kiem tra static IP global. |
-| HTTPS chua active | DNS chua tro dung IP hoac cert dang provisioning | Cho propagate DNS, `kubectl describe managedcertificate`. |
-| ImagePullBackOff | GHCR pull secret sai | Kiem tra `GHCR_PULL_USERNAME`, `GHCR_PULL_TOKEN`, package visibility. |
-| Migration job fail | DB chua san sang hoac Prisma env sai | `kubectl logs job/<migration-job> -n staging`. |
-| Keycloak redirect sai | `KEYCLOAK_PUBLIC_URL`, `KC_HOSTNAME`, scheme/host sai | Kiem tra `STAGING_AUTH_HOST`, `STAGING_API_SCHEME`. |
+| Pod pending | Node thiếu CPU/RAM hoặc PVC chưa bind | `kubectl describe pod`, tăng node/max-nodes, kiểm tra StorageClass. |
+| Ingress không có IP | GKE Ingress đang reconcile hoặc annotation sai | `kubectl describe ingress -n staging`, kiểm tra static IP global. |
+| HTTPS chưa active | DNS chưa trỏ đúng IP hoặc cert đang provisioning | Chờ propagate DNS, `kubectl describe managedcertificate`. |
+| ImagePullBackOff | GHCR pull secret sai | Kiểm tra `GHCR_PULL_USERNAME`, `GHCR_PULL_TOKEN`, package visibility. |
+| Migration job fail | DB chưa sẵn sàng hoặc Prisma env sai | `kubectl logs job/<migration-job> -n staging`. |
+| Keycloak redirect sai | `KEYCLOAK_PUBLIC_URL`, `KC_HOSTNAME`, scheme/host sai | Kiểm tra `STAGING_AUTH_HOST`, `STAGING_API_SCHEME`. |
 
-## 13. Ghi chu chi phi
+## 13. Ghi Chú Chi Phí
 
-Khong hardcode gia trong tai lieu vi bang gia GCP thay doi theo thoi gian. Truoc khi tao production cluster, hay uoc tinh bang Google Cloud Pricing Calculator voi:
+Không hardcode giá trong tài liệu vì bảng giá GCP thay đổi theo thời gian. Trước khi tạo production cluster, hãy ước tính bằng Google Cloud Pricing Calculator với:
 
-- So node va machine type.
-- Persistent Disk dung cho PVC.
+- Số node và machine type.
+- Persistent Disk dùng cho PVC.
 - Load balancer/Ingress.
 - Cloud Storage.
-- Cloud SQL/Memorystore neu tach managed services.
+- Cloud SQL/Memorystore nếu tách managed services.
 - Network egress.
 
-## 14. Tai lieu tham khao
+## 14. Tài Liệu Tham Khảo
 
 - GKE cluster configuration choices: https://docs.cloud.google.com/kubernetes-engine/docs/concepts/configuration-overview
 - GKE Autopilot overview: https://docs.cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview
