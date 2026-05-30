@@ -4,27 +4,29 @@ Tài liệu này là kịch bản demo phần DevOps để thuyết trình với
 
 ## 1. Mục tiêu demo
 
-Sau buổi demo, giảng viên cần thấy rõ 5 điểm:
+Sau buổi demo, giảng viên cần thấy rõ 6 điểm:
 
 1. Hệ thống microservices đã được container hóa và có thể chạy nhất quán bằng Docker.
 2. Mỗi lần có code mới, GitHub Actions kiểm tra chất lượng code, build image, scan bảo mật và push image lên GHCR.
 3. GCP/GKE không build source code; GKE chỉ pull image đã có từ GHCR theo tag được Helm truyền vào.
-4. Hệ thống có nền tảng vận hành: health check, metrics, logs, alert rules, smoke test, backup/restore.
-5. Nhóm hiểu rõ phần đã làm, phần còn thiếu và hướng production hardening tiếp theo.
+4. Jenkins vẫn được giữ như pipeline CI/CD tự host cho luồng nội bộ hoặc legacy Docker Compose trên VM/Compute Engine.
+5. Hệ thống có nền tảng vận hành: health check, metrics, logs, alert rules, smoke test, backup/restore.
+6. Nhóm hiểu rõ phần đã làm, phần còn thiếu và hướng production hardening tiếp theo.
 
 ## 2. Thời lượng gợi ý
 
 | Phần | Thời lượng | Nội dung chính |
 | --- | ---: | --- |
 | Mở bài | 1 phút | Giới thiệu vấn đề DevOps cần giải quyết. |
-| Kiến trúc triển khai | 2 phút | Docker, GHCR, GitHub Actions, Helm, GKE. |
+| Kiến trúc triển khai | 2 phút | Docker, GHCR, GitHub Actions, Jenkins, Helm, GKE. |
 | Local/hybrid runtime | 3 phút | Infra Docker + services local/full Docker. |
 | CI/CD + DevSecOps | 4 phút | PR validation, build image, Trivy, GHCR. |
+| Jenkins CI/CD legacy | 2 phút | Self-hosted pipeline, GHCR, Docker Compose deploy qua SSH. |
 | GCP/GKE deployment | 4 phút | GKE pull image từ GHCR, Helm deploy, smoke test. |
 | Observability/Resilience/Backup | 4 phút | Health, metrics, logs, RabbitMQ DLQ, restore test. |
 | Kết luận + Q&A | 2 phút | Đánh giá mức hoàn thành và roadmap. |
 
-Tổng thời lượng: khoảng 20 phút. Nếu chỉ có 10-12 phút, ưu tiên các phần 1, 2, 4, 5 và 7.
+Tổng thời lượng: khoảng 22 phút. Nếu chỉ có 10-12 phút, ưu tiên mở bài, kiến trúc, CI/CD chính, GCP/GKE và kết luận; Jenkins có thể nói ngắn trong 30-45 giây như pipeline thay thế.
 
 ## 3. Chuẩn bị trước buổi demo
 
@@ -38,6 +40,9 @@ Mở sẵn các tab:
   - `Pull Request Validation`.
   - `Main Image Release`.
   - `Production Release`.
+- Jenkins nếu muốn demo pipeline tự host:
+  - Job hoặc Multibranch Pipeline của repo.
+  - Console output của lần build gần nhất.
 - GHCR packages của các service.
 - GCP Console:
   - GKE cluster.
@@ -85,6 +90,8 @@ Nếu internet, GitHub Actions hoặc GCP gặp vấn đề:
 - Mở các file cấu hình để giải thích:
   - `.github/workflows/ci.yml`
   - `.github/workflows/pr-validation.yml`
+  - `Jenkinsfile`
+  - `guides/devops/JENKINS-DOCKER-COMPOSE.md`
   - `charts/luyen-thi-lai-xe/values.yaml`
   - `guides/devops/GCP-SETUP.md`
   - `DEVOPS-SUMMARY.md`
@@ -100,6 +107,7 @@ Lời thoại gợi ý:
 - Đây là hệ thống microservices nên DevOps không chỉ là “chạy được Docker”.
 - DevOps phải bao gồm vòng đời: build, test, release, deploy, monitor, recover.
 - Dự án đang chọn GCP/GKE làm target triển khai chính.
+- Jenkins là luồng CI/CD tự host/legacy để chứng minh dự án có thể chạy được cả trong môi trường doanh nghiệp không dùng GitHub Actions.
 
 ## 5. Sơ đồ luồng DevOps
 
@@ -118,11 +126,25 @@ Developer
   -> Helm upgrade
   -> Smoke test qua Kong
   -> Observability + backup + runbook
+
+Luồng thay thế/legacy:
+
+Developer
+  -> Jenkins Multibranch Pipeline
+  -> Lint / typecheck / test / build
+  -> Build & push image lên GHCR
+  -> SSH vào server VM/Compute Engine
+  -> Docker Compose pull image mới
+  -> Smoke test qua Kong
 ```
 
 Lời thoại gợi ý:
 
 > Điểm quan trọng là GCP/GKE không build source code. Source code được build trong GitHub Actions, image được đẩy lên GHCR. Khi deploy, GKE chỉ pull image theo tag immutable, ví dụ Git SHA, sau đó Helm render Kubernetes resources và rollout bản mới.
+
+Nếu nói thêm về Jenkins:
+
+> Jenkins không phải đường deploy chính cho GKE trong phiên bản hiện tại. Jenkins là pipeline CI/CD tự host cho môi trường nội bộ hoặc legacy Docker Compose. Hai luồng cùng dùng chung nguyên tắc quan trọng: build image, push lên GHCR, rồi môi trường runtime chỉ pull image đã đóng gói.
 
 ## 6. Demo 1 - Local/Hybrid Runtime
 
@@ -224,7 +246,60 @@ Nếu giảng viên hỏi vì sao không dùng Google Artifact Registry:
 
 > Hiện tại nhóm dùng GHCR vì tích hợp trực tiếp với GitHub Actions và repo. Khi production hóa sâu hơn trên GCP, có thể chuyển hoặc mirror image sang Google Artifact Registry. Tuy nhiên về mặt DevOps, nguyên tắc không đổi: build một lần, scan một lần, deploy bằng immutable image tag.
 
-## 9. Demo 4 - Deploy Lên GCP/GKE
+## 9. Demo 4 - Jenkins CI/CD Legacy
+
+Mục tiêu: chứng minh dự án có thêm pipeline CI/CD tự host, phù hợp khi doanh nghiệp muốn kiểm soát runner nội bộ hoặc vẫn deploy bằng Docker Compose trên VM/Compute Engine.
+
+Mở file:
+
+- `Jenkinsfile`
+- `guides/devops/JENKINS-DOCKER-COMPOSE.md`
+- `scripts/deploy-staging.sh`
+- `scripts/deploy-prod.sh`
+- `scripts/deploy-compose.sh`
+
+Lời thoại gợi ý:
+
+> Ngoài GitHub Actions, dự án còn có `Jenkinsfile` để chạy CI/CD trên Jenkins tự host. Jenkins dùng agent label `docker-node20`, chạy `npm ci`, lint, typecheck, unit test, build workspace. Khi branch là `main` hoặc tag release, Jenkins login GHCR, build và push image của 10 service. Sau đó Jenkins deploy qua SSH bằng Docker Compose cho môi trường staging hoặc production legacy.
+
+Các stage chính trong `Jenkinsfile`:
+
+- `Checkout`
+- `Prepare`
+- `Install`
+- `Lint`
+- `Typecheck`
+- `Unit Tests`
+- `Build Workspace`
+- `Docker Login`
+- `Build & Push Images`
+- `Deploy Staging`
+- `Deploy Production`
+
+Credentials Jenkins cần có:
+
+- `ghcr-credentials`: GitHub username/token có quyền push/pull package.
+- `deploy-ssh-key`: SSH key của user deploy trên server.
+
+Điểm nên nhấn:
+
+- GitHub Actions là đường chính cho GCP/GKE bằng Helm.
+- Jenkins là đường thay thế cho self-hosted CI/CD hoặc legacy Docker Compose trên VM/Compute Engine.
+- Cả hai đều không build source code trên server runtime; server chỉ pull image đã build từ GHCR.
+- Production Jenkins có bước `input` để phê duyệt thủ công trước khi deploy tag.
+
+Nếu muốn demo nhanh bằng terminal:
+
+```bash
+rg -n "stage\\('Checkout'\\)|stage\\('Build & Push Images'\\)|stage\\('Deploy Staging'\\)|stage\\('Deploy Production'\\)" Jenkinsfile
+rg -n "ghcr-credentials|deploy-ssh-key|docker compose|IMAGE_TAG" guides/devops/JENKINS-DOCKER-COMPOSE.md
+```
+
+Nếu giảng viên hỏi Jenkins có còn phù hợp khi đã qua GCP/GKE:
+
+> Có, nhưng vai trò khác nhau. Với target hiện tại, GitHub Actions triển khai lên GKE bằng Helm. Jenkins được giữ như pipeline tự host/legacy để deploy Docker Compose qua SSH, hoặc có thể phát triển tiếp để gọi `gcloud`, `kubectl` và `helm` nếu muốn chuyển Jenkins thành runner chính cho GKE.
+
+## 10. Demo 5 - Deploy Lên GCP/GKE
 
 Mục tiêu: chứng minh có Kubernetes deployment path bằng Helm.
 
@@ -270,7 +345,7 @@ Lời thoại gợi ý:
 - GKE pull image từ GHCR bằng `imagePullSecret`.
 - Ingress target hiện tại là GKE Ingress class `gce`.
 
-## 10. Demo 5 - Smoke Test Qua Kong
+## 11. Demo 6 - Smoke Test Qua Kong
 
 Mục tiêu: chứng minh sau deploy có bước xác minh runtime.
 
@@ -290,7 +365,7 @@ Lời thoại gợi ý:
 
 > Smoke test không kiểm tra quá sâu nghiệp vụ, nhưng xác nhận toàn bộ 10 production services có thể truy cập qua Kong và health endpoints phản hồi đúng. Đây là bước bắt buộc sau deploy để phát hiện lỗi rollout sớm.
 
-## 11. Demo 6 - Observability
+## 12. Demo 7 - Observability
 
 Mục tiêu: chứng minh hệ thống có khả năng quan sát.
 
@@ -327,7 +402,7 @@ Lời thoại gợi ý:
 - Logs có correlation id để trace request qua nhiều service.
 - Có runbook để xử lý incident.
 
-## 12. Demo 7 - Resilience
+## 13. Demo 8 - Resilience
 
 Mục tiêu: chứng minh hệ thống có xử lý lỗi tạm thời và message failure.
 
@@ -352,7 +427,7 @@ Nếu giảng viên hỏi idempotency:
 
 > Hiện tại idempotency mới là memory TTL cho baseline. Production hardening tiếp theo là chuyển idempotency store sang Redis hoặc database để durable hơn khi pod restart.
 
-## 13. Demo 8 - Backup Và Restore
+## 14. Demo 9 - Backup Và Restore
 
 Mục tiêu: chứng minh có phương án phục hồi dữ liệu.
 
@@ -379,7 +454,7 @@ Lời thoại gợi ý:
 - Hiện backup offsite/PITR chưa hoàn chỉnh.
 - Roadmap GCP là đẩy backup lên Cloud Storage và cân nhắc Cloud SQL PITR.
 
-## 14. Demo 9 - Rollback Và Release Safety
+## 15. Demo 10 - Rollback Và Release Safety
 
 Mục tiêu: chứng minh team có suy nghĩ về rollback.
 
@@ -395,7 +470,7 @@ Lời thoại gợi ý:
 
 > Rollback bằng Helm có thể đưa Kubernetes release về revision trước, bao gồm image tag và rendered config. Tuy nhiên database migration không tự reverse, nên production cần nguyên tắc backward-compatible migration hoặc tạo migration mới để sửa dữ liệu.
 
-## 15. Phần kết luận
+## 16. Phần kết luận
 
 Lời thoại gợi ý:
 
@@ -408,7 +483,7 @@ Nên nhấn mạnh:
 - Chưa claim enterprise production hoàn chỉnh.
 - Team hiểu rõ trade-off giữa MVP và production hardening.
 
-## 16. Câu hỏi giảng viên có thể hỏi
+## 17. Câu hỏi giảng viên có thể hỏi
 
 ### Vì sao chọn GKE thay vì VPS?
 
@@ -421,6 +496,12 @@ Trả lời:
 Trả lời:
 
 > Theo nguyên tắc build once, deploy many. GitHub Actions build và scan image, sau đó push lên GHCR. GKE chỉ pull image theo tag immutable. Cách này giúp artifact ổn định, dễ rollback và dễ audit.
+
+### Vì sao vừa có GitHub Actions vừa có Jenkins?
+
+Trả lời:
+
+> GitHub Actions là pipeline chính cho hướng GCP/GKE hiện tại: PR validation, build/scan image, push GHCR và Helm deploy lên GKE. Jenkins được giữ như pipeline tự host/legacy cho môi trường doanh nghiệp hoặc VM/Compute Engine chạy Docker Compose. Hai pipeline không mâu thuẫn nhau; chúng chứng minh cùng một quy trình DevOps có thể chạy trên managed CI hoặc self-hosted CI.
 
 ### Nếu chỉ đổi một service, vì sao main workflow build đủ 10 images?
 
@@ -464,7 +545,7 @@ Trả lời:
 
 > Dự án không chỉ có backup script mà còn có `db:restore:test` để rehearsal restore. Đây là điểm quan trọng vì backup không được kiểm chứng thì chưa đủ tin cậy.
 
-## 17. Checklist thao tác nhanh khi demo
+## 18. Checklist thao tác nhanh khi demo
 
 ### Nếu demo bằng local
 
@@ -504,7 +585,15 @@ SMOKE_BASE_URL=https://api.staging.example.com bash scripts/k8s-smoke.sh
 4. Mở GHCR packages để chỉ image tags.
 5. Mở GKE workloads để chỉ pods đang chạy image tag đó.
 
-## 18. Slide tóm tắt nên có
+### Nếu demo bằng Jenkins
+
+1. Mở `Jenkinsfile`.
+2. Chỉ vào agent `docker-node20` và các stage lint/typecheck/test/build.
+3. Chỉ vào stage `Build & Push Images` để giải thích image được push lên GHCR.
+4. Chỉ vào stage `Deploy Staging` và `Deploy Production` để giải thích Docker Compose deploy qua SSH.
+5. Mở `guides/devops/JENKINS-DOCKER-COMPOSE.md` để chỉ credentials `ghcr-credentials`, `deploy-ssh-key` và các script deploy.
+
+## 19. Slide tóm tắt nên có
 
 Slide 1 - Vấn đề:
 
@@ -515,6 +604,7 @@ Slide 2 - Pipeline:
 
 - PR validation.
 - Main image release.
+- Jenkins self-hosted CI/CD cho Docker Compose legacy.
 - GHCR.
 - GKE pull image.
 - Helm deploy.
@@ -541,6 +631,6 @@ Slide 5 - Roadmap:
 - Cloud SQL/PITR.
 - SBOM/Cosign.
 
-## 19. Kết bài ngắn gọn
+## 20. Kết bài ngắn gọn
 
 > Phần DevOps của dự án đã đi từ local bootstrap đến CI/CD, image registry, GKE deployment và day-2 operations baseline. Dự án chưa claim là production enterprise hoàn chỉnh, nhưng đã có nền tảng đủ tốt cho MVP và có roadmap rõ ràng để harden lên production thật.

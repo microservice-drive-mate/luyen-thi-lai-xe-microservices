@@ -229,6 +229,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - Pull Request Validation: quality gate, build image, Trivy scan, không push image.
   - Main Image Release: build đủ 10 production images, Trivy scan, push GHCR bằng tag `${git_sha}` và `latest`, rồi auto deploy GCP staging bằng Helm.
   - Production Release: chạy thủ công bằng immutable image tag, gắn GitHub Environment `production`.
+  - Jenkins: pipeline tự host/legacy cho GHCR + Docker Compose deploy qua SSH/VM hoặc Compute Engine; GitHub Actions vẫn là đường chính cho GCP/GKE.
 - Deployment Phase 5:
   - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.
   - Target hiện tại là GCP/GKE, self-contained dependencies trong cluster cho giai đoạn MVP.

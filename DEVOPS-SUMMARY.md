@@ -96,6 +96,7 @@ Luồng production/staging hiện chốt **10 application services**:
   - `.github/workflows/devops-smoke.yml`: smoke suites cho observability, RabbitMQ resilience và restore test.
 - Jenkins:
   - `Jenkinsfile` có lint, typecheck, test, build, image push, staging deploy và production manual approval.
+  - Vai trò hiện tại là pipeline tự host/legacy cho Docker Compose deploy qua SSH/VM hoặc Compute Engine; GitHub Actions vẫn là đường chính cho GCP/GKE bằng Helm.
 - DevSecOps baseline:
   - Trivy image scan với `severity: CRITICAL,HIGH`, `exit-code: 1`.
   - PR thay đổi DevOps/shared files sẽ build/scan đủ 10 production services.
