@@ -236,6 +236,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - Jenkins DORA Integration Phase 4: Jenkinsfile ghi deployment event sau staging/production deploy và archive artifact theo `guides/devops/JENKINS-DORA-INTEGRATION.md`.
   - DORA Grafana Dashboard Phase 5: export DORA JSON sang Prometheus metrics và hiển thị dashboard theo `guides/devops/DORA-GRAFANA-DASHBOARD.md`.
   - OpenTelemetry/Jaeger Phase 6: trace end-to-end từ Kong đến NestJS services theo `guides/devops/OPENTELEMETRY-JAEGER-TRACING.md`.
+  - Business Metrics Phase 7: đo user mới, lượt làm bài thi, pass/fail, hoàn tất bài học/khóa học, notification delivery và upload media theo `guides/devops/BUSINESS-METRICS.md`.
 - Deployment Phase 5:
   - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.
   - Target hiện tại là GCP/GKE, self-contained dependencies trong cluster cho giai đoạn MVP.
@@ -266,6 +267,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 - Jenkins DORA integration Phase 4 ở [guides/devops/JENKINS-DORA-INTEGRATION.md](./guides/devops/JENKINS-DORA-INTEGRATION.md)
 - DORA Grafana dashboard Phase 5 ở [guides/devops/DORA-GRAFANA-DASHBOARD.md](./guides/devops/DORA-GRAFANA-DASHBOARD.md)
 - OpenTelemetry/Jaeger tracing Phase 6 ở [guides/devops/OPENTELEMETRY-JAEGER-TRACING.md](./guides/devops/OPENTELEMETRY-JAEGER-TRACING.md)
+- Business metrics Phase 7 ở [guides/devops/BUSINESS-METRICS.md](./guides/devops/BUSINESS-METRICS.md)
 
 ## 11. Quy trình làm việc
 

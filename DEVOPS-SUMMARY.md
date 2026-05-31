@@ -1,11 +1,11 @@
 # Tổng kết hạ tầng DevOps - Luyện Thi Lái Xe Microservices
 
 **Cập nhật lần cuối**: Tháng 05/2026
-**Phạm vi đã kiểm tra**: Docker local/hybrid, Docker Compose full stack, Docker Compose deploy legacy, CI/CD, Kubernetes baseline cho GCP/GKE, observability, resilience, backup và runbook.
+**Phạm vi đã kiểm tra**: Docker local/hybrid, Docker Compose full stack, Docker Compose deploy legacy, CI/CD, Kubernetes baseline cho GCP/GKE, observability, business metrics, resilience, backup và runbook.
 
 ## Tóm tắt điều hành
 
-Repo hiện tại đã đủ tốt cho **MVP/demo trên local hoặc GCP**, đồng thời đã có baseline cho **CI/CD tách luồng, DevSecOps cơ bản, Kubernetes/GKE deployment và observability đủ 3 trụ cột metrics/logs/traces**. Nếu đối chiếu theo checklist DevOps trong `DEVOPS (2).docx`, trạng thái tổng quan là:
+Repo hiện tại đã đủ tốt cho **MVP/demo trên local hoặc GCP**, đồng thời đã có baseline cho **CI/CD tách luồng, DevSecOps cơ bản, Kubernetes/GKE deployment, observability đủ 3 trụ cột metrics/logs/traces và business metrics**. Nếu đối chiếu theo checklist DevOps trong `DEVOPS (2).docx`, trạng thái tổng quan là:
 
 - **Mức sẵn sàng DevOps cho MVP**: khoảng **90%**.
 - **Mức sẵn sàng production day-2 operations**: khoảng **75-80%**.
@@ -157,6 +157,15 @@ Luồng production/staging hiện chốt **10 application services**:
 - DORA dashboard:
   - `docker/grafana/dashboards/dora-metrics.json`
   - `dora-metrics-exporter` đọc `reports/dora/dora.prom` qua textfile collector.
+- Business metrics Phase 7:
+  - `users_created_total`: số user profile mới theo role và nguồn tạo.
+  - `exam_sessions_started_total`: số lượt học viên bắt đầu bài thi theo hạng bằng.
+  - `exam_sessions_completed_total`: số lượt nộp bài theo pass/fail, trạng thái và lỗi câu điểm liệt.
+  - `course_lessons_completed_total` và `course_enrollments_completed_total`: tiến độ hoàn tất bài học/khóa học.
+  - `notifications_delivery_total`: kết quả gửi notification theo kênh, event và trạng thái.
+  - `media_upload_total`: kết quả upload media theo mode, MIME type và trạng thái.
+  - Dashboard Grafana: `docker/grafana/dashboards/business-metrics.json`.
+  - Hướng dẫn: `guides/devops/BUSINESS-METRICS.md`.
 - Hướng dẫn tracing nằm ở `guides/devops/OPENTELEMETRY-JAEGER-TRACING.md`.
 - Alert rules:
   - service metrics endpoint down.
@@ -167,6 +176,8 @@ Luồng production/staging hiện chốt **10 application services**:
 - Grafana provisioning:
   - datasource Prometheus.
   - dashboard `microservices-observability.json`.
+  - dashboard `dora-metrics.json`.
+  - dashboard `business-metrics.json`.
 - ELK:
   - Elasticsearch, Logstash, Kibana trong Compose.
   - `AppLoggerModule` dùng Winston + optional HTTP transport tới Logstash.
@@ -210,6 +221,7 @@ Luồng production/staging hiện chốt **10 application services**:
   - `guides/devops/JENKINS-DOCKER-COMPOSE.md`
   - `guides/devops/PHASE5-KUBERNETES.md`
   - `guides/devops/GCP-SETUP.md`
+  - `guides/devops/BUSINESS-METRICS.md`
   - `guides/devops/DEVOPS-DEMO-SCRIPT.md`
 
 ## Phần còn thiếu
@@ -261,7 +273,7 @@ Chưa có:
 | DevSecOps baseline | Đã làm nền | 75% | Trivy HIGH/CRITICAL gate có; SBOM/signing/secret manager còn thiếu. |
 | Compose deployment legacy | Đã làm | 85% | Compose deploy + migrations + health smoke; dùng cho VM/Compute Engine nếu cần fallback. |
 | Kubernetes baseline | Đã làm nền | 70% | Helm/GKE scaffold có; HPA/load test/Terraform còn thiếu. |
-| Observability | Đã làm | 85% | Prometheus/Grafana/ELK/alerts có; cần verify runtime và bổ sung business metrics. |
+| Observability | Đã làm | 90% | Prometheus/Grafana/ELK/alerts/tracing/DORA/business metrics có; cần verify runtime trên GKE thật. |
 | Health/metrics/logging | Đã làm | 90% | Đã đồng bộ common modules. |
 | HTTP/RabbitMQ resilience | Đã làm | 85% | Retry/DLQ/circuit breaker có; idempotency durable còn là follow-up. |
 | Backup/restore/runbook | Đã làm | 80% | Daily backup + restore test có; offsite/PITR còn thiếu. |
@@ -292,7 +304,7 @@ Chưa có:
 3. Thêm Cosign signing/provenance nếu cần hardening sâu hơn.
 4. Đẩy backup offsite lên S3/Azure Blob và document restore từ offsite.
 5. Thêm k6 smoke/load script cho các luồng chính: login, làm bài thi, nộp bài, upload media.
-6. Thêm business metrics: exam completion rate, pass/fail count, notification delivery outcome.
+6. Thêm alert hoặc dashboard panel nâng cao cho business metrics, ví dụ pass rate giảm mạnh, notification failure tăng hoặc upload media lỗi bất thường.
 
 ### Sau MVP
 

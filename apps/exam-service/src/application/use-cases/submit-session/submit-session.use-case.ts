@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
+import { IUseCase, MetricsService } from '@repo/common';
+import { ExamSessionStatus } from '../../../domain/aggregates/exam-session/exam-session.types';
 import { ExamSessionNotFoundException } from '../../../domain/exceptions/exam.exceptions';
 import { ExamSessionRepository } from '../../../domain/repositories/exam-session.repository';
 import { EventPublisher } from '../../ports/event-publisher.port';
 import { ExamSessionResult } from '../shared/exam-session.result';
 import { SubmitSessionCommand } from './submit-session.command';
-import { ExamSessionStatus } from '../../../domain/aggregates/exam-session/exam-session.types';
 
 @Injectable()
 export class SubmitSessionUseCase
@@ -14,6 +14,7 @@ export class SubmitSessionUseCase
   constructor(
     private readonly sessionRepository: ExamSessionRepository,
     private readonly eventPublisher: EventPublisher,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async execute(command: SubmitSessionCommand): Promise<ExamSessionResult> {
@@ -31,6 +32,17 @@ export class SubmitSessionUseCase
     const events = session.getDomainEvents();
     session.clearDomainEvents();
     await this.eventPublisher.publishAll(events);
+    this.metricsService.recordExamSessionCompleted({
+      licenseCategory: session.licenseCategory,
+      status: session.status,
+      result:
+        session.isPassed === null
+          ? 'unknown'
+          : session.isPassed
+            ? 'pass'
+            : 'fail',
+      failedByCritical: session.failedByCritical,
+    });
     return ExamSessionResult.fromAggregate(session, true);
   }
 }

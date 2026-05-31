@@ -276,6 +276,10 @@ describe('Exam use cases', () => {
   let questionPoolClient: jest.Mocked<QuestionPoolClient>;
   let userProfileClient: jest.Mocked<UserProfileClient>;
   let eventPublisher: jest.Mocked<EventPublisher>;
+  let metricsService: {
+    recordExamSessionStarted: jest.Mock;
+    recordExamSessionCompleted: jest.Mock;
+  };
 
   beforeEach(() => {
     templateRepository = {
@@ -295,6 +299,10 @@ describe('Exam use cases', () => {
     eventPublisher = {
       publish: jest.fn(),
       publishAll: jest.fn(),
+    };
+    metricsService = {
+      recordExamSessionStarted: jest.fn(),
+      recordExamSessionCompleted: jest.fn(),
     };
   });
 
@@ -338,6 +346,7 @@ describe('Exam use cases', () => {
       sessionRepository,
       questionPoolClient,
       userProfileClient,
+      metricsService as never,
     );
     const result = await useCase.execute(
       new StartSessionCommand('template-id', 'student-id', 'token'),
@@ -350,6 +359,9 @@ describe('Exam use cases', () => {
       topicId: 'topic-1',
     });
     expect(sessionRepository.save).toHaveBeenCalledTimes(1);
+    expect(metricsService.recordExamSessionStarted).toHaveBeenCalledWith({
+      licenseCategory: LicenseCategory.B2,
+    });
   });
 
   it('lists available exams for the current student license tier', async () => {
@@ -450,6 +462,7 @@ describe('Exam use cases', () => {
       sessionRepository,
       questionPoolClient,
       userProfileClient,
+      metricsService as never,
     );
 
     await expect(
@@ -474,6 +487,7 @@ describe('Exam use cases', () => {
       sessionRepository,
       questionPoolClient,
       userProfileClient,
+      metricsService as never,
     );
 
     await expect(
@@ -538,6 +552,7 @@ describe('Exam use cases', () => {
       sessionRepository,
       questionPoolClient,
       userProfileClient,
+      metricsService as never,
     );
     const result = await useCase.execute(
       new StartSessionCommand('template-id', 'student-id', 'token'),
@@ -562,7 +577,11 @@ describe('Exam use cases', () => {
     session.saveAnswer('q2', 'q2-o1');
     sessionRepository.findById.mockResolvedValue(session);
 
-    const useCase = new SubmitSessionUseCase(sessionRepository, eventPublisher);
+    const useCase = new SubmitSessionUseCase(
+      sessionRepository,
+      eventPublisher,
+      metricsService as never,
+    );
     const result = await useCase.execute(
       new SubmitSessionCommand(session.id, 'student-id'),
     );
@@ -575,6 +594,12 @@ describe('Exam use cases', () => {
         expect.objectContaining({ eventName: 'exam.session.passed' }),
       ]),
     );
+    expect(metricsService.recordExamSessionCompleted).toHaveBeenCalledWith({
+      licenseCategory: LicenseCategory.B2,
+      status: ExamSessionStatus.COMPLETED,
+      result: 'pass',
+      failedByCritical: false,
+    });
   });
 
   it('lazily finalizes an expired session before returning its result', async () => {
