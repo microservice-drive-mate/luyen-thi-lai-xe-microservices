@@ -38,16 +38,6 @@ spec:
         {{- include "lttl.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: kong
     spec:
-      initContainers:
-        - name: wait-for-apps
-          image: busybox:1.36
-          command:
-            - sh
-            - -ec
-            - |
-              {{- range .Values.services }}
-              until nc -z {{ include "lttl.componentName" (dict "root" $ "name" .name) }} 3000; do echo waiting for {{ .name }}; sleep 2; done
-              {{- end }}
       containers:
         - name: kong
           image: {{ .Values.kong.image | quote }}
