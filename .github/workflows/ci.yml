@@ -332,6 +332,7 @@ jobs:
       AUTH_HOST: ${{ vars.STAGING_AUTH_HOST }}
       FRONTEND_ORIGIN: ${{ vars.STAGING_FRONTEND_ORIGIN }}
       API_SCHEME: ${{ vars.STAGING_API_SCHEME }}
+      STAGING_SEED_ENABLED: ${{ vars.STAGING_SEED_ENABLED }}
       GHCR_PULL_USERNAME: ${{ secrets.GHCR_PULL_USERNAME }}
       GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
       POSTGRES_PASSWORD: ${{ secrets.STAGING_POSTGRES_PASSWORD }}
@@ -422,6 +423,9 @@ jobs:
               keycloakPublicUrl: env.KEYCLOAK_PUBLIC_URL,
               corsOrigins: [...new Set(origins)],
             },
+            seed: {
+              enabled: String(env.STAGING_SEED_ENABLED || '').toLowerCase() === 'true',
+            },
             secrets: {
               postgresPassword: env.POSTGRES_PASSWORD,
               rabbitmqPassword: env.RABBITMQ_DEFAULT_PASS,
@@ -455,6 +459,9 @@ jobs:
           set -euo pipefail
           kubectl wait --for=condition=complete job -l app.kubernetes.io/component=consul-seed -n staging --timeout=10m
           kubectl wait --for=condition=complete job -l app.kubernetes.io/component=migration -n staging --timeout=10m
+          if kubectl get job -l app.kubernetes.io/component=seed -n staging --no-headers 2>/dev/null | grep -q .; then
+            kubectl wait --for=condition=complete job -l app.kubernetes.io/component=seed -n staging --timeout=15m
+          fi
           kubectl rollout status deployment -l app.kubernetes.io/component=app -n staging --timeout=10m
           kubectl get jobs -n staging
           API_SCHEME="${API_SCHEME:-http}"

@@ -121,6 +121,9 @@ jobs:
               keycloakPublicUrl: env.KEYCLOAK_PUBLIC_URL,
               corsOrigins: [...new Set(origins)],
             },
+            seed: {
+              enabled: false,
+            },
             secrets: {
               postgresPassword: env.POSTGRES_PASSWORD,
               rabbitmqPassword: env.RABBITMQ_DEFAULT_PASS,

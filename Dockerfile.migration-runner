@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG NODE_VERSION=20-alpine
+ARG NODE_VERSION=24-alpine
 ARG PRISMA_CLI_VERSION=7.8.0
 
 FROM node:${NODE_VERSION}
@@ -9,17 +9,16 @@ RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /workspace
 
-RUN npm install -g prisma@${PRISMA_CLI_VERSION} \
-  && npm cache clean --force \
-  && rm -rf \
-    /usr/local/lib/node_modules/npm \
-    /usr/local/lib/node_modules/corepack \
-    /usr/local/bin/npm \
-    /usr/local/bin/npx \
-    /usr/local/bin/corepack \
-    /usr/local/bin/yarn \
-    /usr/local/bin/yarnpkg \
-    /opt/yarn-*
+RUN npm install --no-audit --no-fund --ignore-scripts \
+    prisma@${PRISMA_CLI_VERSION} \
+    @prisma/client@${PRISMA_CLI_VERSION} \
+    @prisma/adapter-pg@${PRISMA_CLI_VERSION} \
+    tsx@4.22.3 \
+    axios@1.16.0 \
+    pg@8.16.3 \
+  && npm cache clean --force
+
+ENV PATH=/workspace/node_modules/.bin:$PATH
 
 COPY apps/identity-service/prisma ./apps/identity-service/prisma
 COPY apps/identity-service/prisma.config.ts ./apps/identity-service/prisma.config.ts
@@ -41,9 +40,28 @@ COPY apps/media-service/prisma ./apps/media-service/prisma
 COPY apps/media-service/prisma.config.ts ./apps/media-service/prisma.config.ts
 COPY apps/audit-service/prisma ./apps/audit-service/prisma
 COPY apps/audit-service/prisma.config.ts ./apps/audit-service/prisma.config.ts
+COPY scripts ./scripts
+COPY seed ./seed
+
+RUN set -eux; \
+  for service in \
+    identity-service \
+    user-service \
+    exam-service \
+    course-service \
+    question-service \
+    notification-service \
+    analytics-service \
+    simulation-service \
+    media-service \
+    audit-service; do \
+      cd "/workspace/apps/${service}"; \
+      DATABASE_URL="postgresql://user:password@localhost:5432/${service}" \
+        prisma generate --schema ./prisma/schema.prisma; \
+      cd /workspace; \
+    done
 
 ENV CHECKPOINT_DISABLE=1
 ENV PRISMA_HIDE_UPDATE_MESSAGE=true
-ENV NODE_PATH=/usr/local/lib/node_modules
 
 CMD ["sh"]
