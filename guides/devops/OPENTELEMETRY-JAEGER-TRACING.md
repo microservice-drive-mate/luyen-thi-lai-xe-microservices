@@ -4,7 +4,7 @@ Distributed tracing bổ sung OpenTelemetry/Jaeger để nhìn được một re
 
 Mục tiêu demo:
 
-- Kong tạo span gateway đầu tiên.
+- Kong tạo span gateway đầu tiên và gửi vào Jaeger qua Zipkin endpoint.
 - App services tạo span xử lý HTTP/RabbitMQ.
 - Outbound HTTP tự inject `traceparent` để nối trace giữa các service.
 - Jaeger hiển thị toàn bộ trace theo cùng trace id.
@@ -16,7 +16,7 @@ Client
   -> Kong Gateway
   -> identity/user/exam/course/... service
   -> service gọi HTTP hoặc publish/consume RabbitMQ
-  -> OpenTelemetry OTLP HTTP
+  -> OpenTelemetry OTLP HTTP hoặc Zipkin v2
   -> Jaeger
 ```
 
@@ -26,7 +26,7 @@ Client
 - `packages/common/src/tracing/tracing.middleware.ts`: tạo HTTP server span và extract `traceparent`.
 - `packages/common/src/tracing/tracing.interceptor.ts`: tạo span cho Nest handler và RabbitMQ consumer.
 - `packages/common/src/http/resilient-http-client.ts`: inject trace context vào outbound `fetch`/Axios.
-- `kong/kong.yaml` và `kong/kong.dev.yaml`: bật plugin `opentelemetry`.
+- `kong/kong.yaml` và `kong/kong.dev.yaml`: bật plugin `zipkin` cho Kong để gửi span gateway vào Jaeger.
 - `docker-compose.yaml`, `docker-compose.infra.yml`, `docker-compose.deploy.yml`: thêm Jaeger và cấu hình `OTEL_*`.
 - `charts/luyen-thi-lai-xe`: thêm Jaeger, cấu hình app pods và Kong trên GKE.
 
@@ -50,7 +50,7 @@ curl http://localhost:8000/user-service/health
 
 Trong Jaeger:
 
-1. Chọn service `kong-gateway`.
+1. Chọn service `kong`.
 2. Bấm `Find Traces`.
 3. Mở trace mới nhất.
 4. Kiểm tra span của Kong và app service nằm trong cùng trace.
@@ -79,10 +79,10 @@ OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces \
 npm run dev
 ```
 
-Kong trong `docker-compose.infra.yml` gửi trace đến Jaeger bằng endpoint nội bộ:
+Kong trong `docker-compose.infra.yml` gửi trace đến Jaeger bằng Zipkin endpoint nội bộ:
 
 ```text
-http://jaeger:4318/v1/traces
+http://jaeger:9411/api/v2/spans
 ```
 
 Services chạy local gửi trace đến:
@@ -125,15 +125,21 @@ Giá trị mặc định:
 tracing:
   enabled: true
   otlpTracesEndpoint: ""
+  kongZipkinEndpoint: ""
   propagators: tracecontext,baggage
-  kongServiceName: kong-gateway
   kongSamplingRate: "1.0"
 ```
 
-Khi `otlpTracesEndpoint` để rỗng, chart tự dùng:
+Khi `otlpTracesEndpoint` để rỗng, app services tự dùng:
 
 ```text
 http://<release-name>-jaeger:4318/v1/traces
+```
+
+Khi `kongZipkinEndpoint` để rỗng, Kong tự dùng:
+
+```text
+http://<release-name>-jaeger:9411/api/v2/spans
 ```
 
 Port-forward Jaeger UI:
@@ -161,18 +167,16 @@ OTEL_PROPAGATORS=tracecontext,baggage
 Kong:
 
 ```text
-KONG_TRACING_INSTRUMENTATIONS=all
-KONG_TRACING_SAMPLING_RATE=1.0
+Kong dùng plugin zipkin trong declarative config.
 ```
 
 Kong plugin:
 
 ```yaml
-- name: opentelemetry
+- name: zipkin
   config:
-    traces_endpoint: http://jaeger:4318/v1/traces
-    resource_attributes:
-      service.name: kong-gateway
+    http_endpoint: http://jaeger:9411/api/v2/spans
+    sample_ratio: 1
 ```
 
 ## 8. Cách kiểm tra nhanh
@@ -205,21 +209,21 @@ curl -H "x-correlation-id: demo-trace-002" http://localhost:8000/course-service/
 
 Trong Jaeger, tìm service:
 
-- `kong-gateway` hoặc `kong-dev`
+- `kong`
 - `user-service`
 - `course-service`
 
 ## 9. Lời thoại demo với giảng viên
 
-> Ở các phase trước, dự án đã có metrics bằng Prometheus/Grafana và logs bằng ELK. Distributed tracing bổ sung trụ cột thứ ba của observability là traces. Khi client gọi API qua Kong, Kong tạo span gateway và truyền trace context xuống service bằng chuẩn W3C `traceparent`. Service NestJS tiếp tục tạo span xử lý request, span handler và span message consumer. Tất cả được export qua OTLP HTTP về Jaeger, nên nhóm có thể nhìn một request đang chậm ở gateway, service hay dependency nào.
+> Ở các phase trước, dự án đã có metrics bằng Prometheus/Grafana và logs bằng ELK. Distributed tracing bổ sung trụ cột thứ ba của observability là traces. Khi client gọi API qua Kong, Kong tạo span gateway và gửi span vào Jaeger qua Zipkin v2 endpoint. Service NestJS tiếp tục tạo span xử lý request, span handler và span message consumer rồi export qua OTLP HTTP về Jaeger, nên nhóm có thể nhìn một request đang chậm ở gateway, service hay dependency nào.
 
 Điểm nên chỉ trên màn hình:
 
-1. `kong/kong.yaml` có plugin `opentelemetry`.
+1. `kong/kong.yaml` có plugin `zipkin`.
 2. Compose/Helm có Jaeger.
 3. Service có biến `OTEL_TRACING_ENABLED=true`.
 4. Gửi request qua `localhost:8000`.
-5. Mở Jaeger, chọn `kong-gateway`, xem trace có span của Kong và service.
+5. Mở Jaeger, chọn `kong`, xem trace có span của Kong và service.
 
 ## 10. Lưu ý vận hành
 

@@ -157,11 +157,10 @@ data:
           generator: uuid#counter
           echo_downstream: true
       {{ if .Values.tracing.enabled }}
-      - name: opentelemetry
+      - name: zipkin
         config:
-          traces_endpoint: {{ default (printf "http://%s-jaeger:4318/v1/traces" (include "lttl.fullname" .)) .Values.tracing.otlpTracesEndpoint | quote }}
-          resource_attributes:
-            service.name: {{ .Values.tracing.kongServiceName | quote }}
+          http_endpoint: {{ default (printf "http://%s-jaeger:9411/api/v2/spans" (include "lttl.fullname" .)) .Values.tracing.kongZipkinEndpoint | quote }}
+          sample_ratio: {{ .Values.tracing.kongSamplingRate }}
       {{ end }}
       - name: rate-limiting
         config:

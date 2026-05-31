@@ -18,6 +18,9 @@ spec:
     - name: otlp-http
       port: 4318
       targetPort: otlp-http
+    - name: zipkin
+      port: 9411
+      targetPort: zipkin
   selector:
     {{- include "lttl.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: tracing
@@ -56,6 +59,8 @@ spec:
               containerPort: 4317
             - name: otlp-http
               containerPort: 4318
+            - name: zipkin
+              containerPort: 9411
           readinessProbe:
             httpGet:
               path: /

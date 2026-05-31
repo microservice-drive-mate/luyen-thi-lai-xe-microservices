@@ -633,7 +633,7 @@ jobs:
         run: |
           set -uo pipefail
           echo "========== HELM RELEASE STATUS =========="
-          helm list -n staging --all || true
+          helm list -n staging || true
           echo ""
           echo "========== HELM HISTORY =========="
           helm history luyen-thi-lai-xe -n staging || true
@@ -651,6 +651,36 @@ jobs:
           for pod in $(kubectl get pods -n staging --no-headers -o custom-columns=":metadata.name" 2>/dev/null | head -20); do
             echo "--- Describing pod: $pod ---"
             kubectl describe pod "$pod" -n staging 2>/dev/null | tail -40
+            echo ""
+          done
+          echo ""
+          echo "========== KONG ROLLOUT DEBUG =========="
+          kubectl describe deployment luyen-thi-lai-xe-kong -n staging 2>/dev/null || true
+          echo ""
+          kubectl get rs,pods -n staging -l app.kubernetes.io/component=kong -o wide 2>/dev/null || true
+          echo ""
+          for pod in $(kubectl get pods -n staging -l app.kubernetes.io/component=kong --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do
+            echo "--- Describing Kong pod: $pod ---"
+            kubectl describe pod "$pod" -n staging 2>/dev/null || true
+            echo ""
+            echo "--- Current Kong logs: $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --tail=120 2>/dev/null || true
+            echo ""
+            echo "--- Previous Kong logs: $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --previous --tail=120 2>/dev/null || true
+            echo ""
+          done
+          echo ""
+          echo "========== NON-RUNNING POD DEBUG =========="
+          for pod in $(kubectl get pods -n staging --field-selector=status.phase!=Running,status.phase!=Succeeded --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do
+            echo "--- Describing non-running pod: $pod ---"
+            kubectl describe pod "$pod" -n staging 2>/dev/null || true
+            echo ""
+            echo "--- Current logs: $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --tail=120 2>/dev/null || true
+            echo ""
+            echo "--- Previous logs: $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --previous --tail=120 2>/dev/null || true
             echo ""
           done
           echo ""

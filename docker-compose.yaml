@@ -673,8 +673,6 @@ services:
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_LISTEN: 0.0.0.0:8001
       KONG_PROXY_LISTEN: 0.0.0.0:8000
-      KONG_TRACING_INSTRUMENTATIONS: all
-      KONG_TRACING_SAMPLING_RATE: "1.0"
     ports:
       - "8000:8000" # Cổng gọi API chính
       - "8001:8001" # Cổng Admin API để kiểm tra cấu hình
@@ -721,6 +719,7 @@ services:
       - "16686:16686"
       - "4317:4317"
       - "4318:4318"
+      - "9411:9411"
     restart: unless-stopped
 
   dora-metrics-exporter:

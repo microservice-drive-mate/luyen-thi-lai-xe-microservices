@@ -66,3 +66,8 @@ reports/deployments/
 .DS_Store
 *.pem
 context
+
+# DevOps presentation and lessons learned documents
+devops_presentation_walkthrough.md
+devops_lessons_learned.md
+devops_detailed_ops_walkthrough.md

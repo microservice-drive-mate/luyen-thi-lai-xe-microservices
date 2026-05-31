@@ -151,7 +151,7 @@ Luồng production/staging hiện chốt **10 application services**:
   - RabbitMQ retry/DLQ metrics.
 - Distributed tracing:
   - `packages/common/src/tracing/`: khởi động OpenTelemetry SDK, HTTP tracing middleware và Nest/RabbitMQ tracing interceptor.
-  - Kong bật plugin `opentelemetry` trong `kong/kong.yaml`, `kong/kong.dev.yaml` và Helm ConfigMap.
+  - Kong bật plugin `zipkin` trong `kong/kong.yaml`, `kong/kong.dev.yaml` và Helm ConfigMap để gửi span gateway vào Jaeger.
   - Jaeger được thêm vào Docker Compose và Helm chart để xem trace end-to-end.
   - `resilientFetch`/Axios resilience tự inject `traceparent` cho outbound HTTP.
 - Prometheus scrape config:

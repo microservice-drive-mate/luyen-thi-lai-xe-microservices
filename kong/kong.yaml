@@ -199,11 +199,10 @@ plugins:
       header_name: x-correlation-id
       generator: uuid#counter
       echo_downstream: true
-  - name: opentelemetry
+  - name: zipkin
     config:
-      traces_endpoint: http://jaeger:4318/v1/traces
-      resource_attributes:
-        service.name: kong-gateway
+      http_endpoint: http://jaeger:9411/api/v2/spans
+      sample_ratio: 1
   - name: rate-limiting
     config:
       second: 100

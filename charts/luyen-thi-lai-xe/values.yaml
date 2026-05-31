@@ -39,8 +39,8 @@ config:
 tracing:
   enabled: true
   otlpTracesEndpoint: ""
+  kongZipkinEndpoint: ""
   propagators: tracecontext,baggage
-  kongServiceName: kong-gateway
   kongSamplingRate: "1.0"
   jaeger:
     image: jaegertracing/jaeger:2.5.0

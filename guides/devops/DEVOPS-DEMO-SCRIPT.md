@@ -429,9 +429,9 @@ Với phần business metrics, mở Grafana dashboard `Business Metrics` và nó
 
 > Business metrics bổ sung chỉ số nghiệp vụ. Các use case tạo user, bắt đầu/nộp bài thi, hoàn tất bài học, gửi notification và upload media đều ghi counter vào Prometheus. Nhờ vậy nhóm biết hệ thống đang tạo ra giá trị nghiệp vụ nào, ví dụ bao nhiêu lượt thi được hoàn tất, tỷ lệ pass/fail ra sao, notification lỗi bao nhiêu và upload media có ổn định không.
 
-Với phần tracing, mở Jaeger tại `http://localhost:16686`, chọn service `kong-gateway` hoặc `kong-dev` và nói:
+Với phần tracing, mở Jaeger tại `http://localhost:16686`, chọn service `kong` hoặc service NestJS vừa gọi và nói:
 
-> Distributed tracing dùng OpenTelemetry và Jaeger. Kong tạo span gateway, truyền `traceparent` xuống NestJS service, còn service tạo span xử lý request/RabbitMQ. Khi một request chậm, nhóm có thể xem chậm ở gateway, service hay dependency nào.
+> Distributed tracing dùng OpenTelemetry và Jaeger. Kong tạo span gateway và gửi vào Jaeger qua Zipkin endpoint, còn service NestJS tạo span xử lý request/RabbitMQ qua OTLP HTTP. Khi một request chậm, nhóm có thể xem chậm ở gateway, service hay dependency nào.
 
 Điểm nhấn:
 

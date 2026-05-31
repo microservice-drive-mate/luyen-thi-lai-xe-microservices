@@ -60,12 +60,6 @@ spec:
               value: 0.0.0.0:8001
             - name: KONG_PROXY_LISTEN
               value: 0.0.0.0:8000
-            {{ if .Values.tracing.enabled }}
-            - name: KONG_TRACING_INSTRUMENTATIONS
-              value: all
-            - name: KONG_TRACING_SAMPLING_RATE
-              value: {{ .Values.tracing.kongSamplingRate | quote }}
-            {{ end }}
           readinessProbe:
             httpGet:
               path: /status
