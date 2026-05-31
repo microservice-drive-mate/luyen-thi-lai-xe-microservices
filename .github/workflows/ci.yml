@@ -468,6 +468,15 @@ jobs:
             ingress: {
               apiHost: env.API_HOST,
               authHost: env.AUTH_HOST,
+              ...(env.API_SCHEME === 'https' ? {
+                annotations: {
+                  'cert-manager.io/cluster-issuer': 'letsencrypt-http01',
+                },
+                tls: {
+                  enabled: true,
+                  secretName: 'luyen-thi-lai-xe-tls',
+                },
+              } : {}),
             },
             config: {
               frontendOrigin: env.FRONTEND_ORIGIN,
