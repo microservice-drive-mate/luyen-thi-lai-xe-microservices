@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: Legacy SSH Compose Deploy
 
 on:
   workflow_run:
@@ -15,10 +15,9 @@ on:
           - staging
           - production
       deploy_host:
-        description: "VPS host or public IP"
+        description: "Remote VM host or public IP, for example GCP Compute Engine"
         type: string
         required: true
-        default: "103.153.74.191"
       deploy_path:
         description: "Remote deployment directory"
         type: string
@@ -40,7 +39,7 @@ permissions:
   packages: read
 
 concurrency:
-  group: deploy-vps-${{ github.event.inputs.deploy_env || 'production' }}
+  group: deploy-compose-${{ github.event.inputs.deploy_env || 'production' }}
   cancel-in-progress: false
 
 jobs:
@@ -60,14 +59,14 @@ jobs:
 
     env:
       DEPLOY_ENV: ${{ github.event.inputs.deploy_env || 'production' }}
-      DEPLOY_HOST: ${{ github.event.inputs.deploy_host || secrets.VPS_HOST || '103.153.74.191' }}
-      DEPLOY_PATH: ${{ github.event.inputs.deploy_path || secrets.VPS_DEPLOY_PATH || '/opt/luyen-thi-lai-xe-microservices' }}
+      DEPLOY_HOST: ${{ github.event.inputs.deploy_host || secrets.DEPLOY_HOST || secrets.VPS_HOST }}
+      DEPLOY_PATH: ${{ github.event.inputs.deploy_path || secrets.DEPLOY_PATH || secrets.VPS_DEPLOY_PATH || '/opt/luyen-thi-lai-xe-microservices' }}
       GHCR_OWNER: ${{ github.event.inputs.ghcr_owner || 'nhactaohocbai' }}
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.event.workflow_run.head_sha || 'latest' }}
-      DEPLOY_USER: ${{ secrets.VPS_USER }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER || secrets.VPS_USER }}
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY || secrets.VPS_SSH_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -76,7 +75,7 @@ jobs:
         shell: bash
         run: |
           missing=0
-          for name in VPS_USER VPS_SSH_KEY GHCR_USERNAME GHCR_TOKEN; do
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY GHCR_USERNAME GHCR_TOKEN; do
             if [[ -z "${!name:-}" ]]; then
               echo "::error::Missing required secret: ${name}"
               missing=1
@@ -92,7 +91,7 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "${VPS_SSH_KEY}" > ~/.ssh/id_ed25519
+          printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
