@@ -375,6 +375,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          
+          # Cài đặt numpy để tăng tốc và tối ưu hóa băng thông IAP tunnel (ngăn chặn treo mạng khi truyền manifest lớn)
+          echo "🚀 Installing NumPy to optimize Google Cloud IAP tunnel bandwidth..."
+          pip install --no-cache-dir numpy
+          
           gcloud compute start-iap-tunnel "$GCP_VM_NAME" 6443 \
             --local-host-port=127.0.0.1:16443 \
             --zone="$GCP_VM_ZONE" \
