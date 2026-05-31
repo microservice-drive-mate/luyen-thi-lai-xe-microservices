@@ -47,9 +47,11 @@ Quy ước:
 
 - Khi có sự cố, tạo issue bằng template `Incident report`.
 - Issue incident phải có label `incident`.
+- Workflow `Incident Labeler` tự gắn label môi trường, severity và change-failure/rollback dựa trên issue form.
 - Đóng issue khi hệ thống đã khôi phục.
 - Nếu sự cố do deploy gây ra, thêm label `change-failure`, `deploy-failure` hoặc `rollback`.
 - Sau incident lớn, tạo thêm issue `Postmortem`.
+- Quy trình chi tiết nằm ở `guides/devops/INCIDENT-POSTMORTEM-PROCESS.md`.
 
 ### Monitoring và logs
 
@@ -197,11 +199,11 @@ Khi production hóa sâu hơn, nên tách rõ:
 
 1. Alert hoặc smoke test phát hiện lỗi.
 2. Tạo GitHub issue bằng template `Incident report`.
-3. Gắn label `incident`.
-4. Nếu lỗi do deploy, gắn thêm `change-failure` hoặc `rollback`.
+3. Chọn đúng môi trường và severity trong form.
+4. Nếu lỗi do deploy, tick các checkbox change-failure/rollback/deploy-failure.
 5. Xử lý theo runbook.
 6. Khi hệ thống khôi phục, đóng issue.
-7. Với incident quan trọng, tạo thêm issue `Postmortem`.
+7. Với incident `sev1` hoặc `sev2`, tạo thêm issue `Postmortem`.
 8. Chạy lại `npm run dora:report` hoặc workflow `DORA Metrics Report`.
 
 ## 7. Kịch bản demo với giảng viên
@@ -236,4 +238,4 @@ Nếu chạy trên GitHub:
 - Kết nối Jenkins build history nếu Jenkins là pipeline chính.
 - Thêm OpenTelemetry hoặc Jaeger để tracing end-to-end.
 - Bổ sung business metrics như số lượt làm bài thi, tỷ lệ pass/fail, notification delivery success.
-- Chuẩn hóa postmortem bắt buộc cho incident SEV1/SEV2.
+- Tự động kiểm tra postmortem còn mở quá deadline và nhắc owner xử lý.

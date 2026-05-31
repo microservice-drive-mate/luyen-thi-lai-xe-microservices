@@ -3,11 +3,13 @@ description: Ghi nhận sự cố vận hành để tính MTTR và Change Failur
 title: "[Incident] "
 labels:
   - incident
+  - needs-triage
 body:
   - type: markdown
     attributes:
       value: |
         Dùng template này khi staging/production gặp sự cố cần theo dõi. Đóng issue khi hệ thống đã khôi phục để script DORA tính MTTR từ `created_at` đến `closed_at`.
+        Workflow `Incident Labeler` sẽ tự gắn label môi trường, severity và change-failure/rollback dựa trên các lựa chọn bên dưới.
 
   - type: dropdown
     id: environment
@@ -57,6 +59,13 @@ body:
         - label: Sự cố do deploy mới gây ra
         - label: Cần rollback hoặc redeploy về tag cũ
         - label: Smoke test hoặc health check fail sau deploy
+
+  - type: checkboxes
+    id: postmortem_required
+    attributes:
+      label: Postmortem
+      options:
+        - label: Incident này cần postmortem sau khi khôi phục
 
   - type: textarea
     id: impact

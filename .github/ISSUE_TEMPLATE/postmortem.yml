@@ -3,11 +3,13 @@ description: Tổng kết sau incident để cải thiện quy trình DevOps.
 title: "[Postmortem] "
 labels:
   - postmortem
+  - needs-review
 body:
   - type: markdown
     attributes:
       value: |
         Tạo postmortem sau incident quan trọng. Nếu incident do deploy gây ra, thêm label `change-failure` hoặc `rollback` vào issue incident để báo cáo DORA tính Change Failure Rate.
+        Postmortem bắt buộc với incident `sev1` và `sev2`.
 
   - type: input
     id: incident_link

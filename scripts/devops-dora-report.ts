@@ -47,6 +47,7 @@ type IncidentRecord = {
   id?: string;
   title: string;
   environment?: string;
+  severity?: string;
   startedAt: string;
   resolvedAt?: string;
   causedByDeploySha?: string;
@@ -58,6 +59,7 @@ type Incident = {
   id: string;
   title: string;
   environment: string;
+  severity: string;
   startedAt: Date;
   resolvedAt?: Date;
   labels: string[];
@@ -169,7 +171,8 @@ async function listIncidents(): Promise<Incident[]> {
       incidents.push({
         id: `#${issue.number}`,
         title: issue.title,
-        environment: labels.includes('production') ? 'production' : 'unknown',
+        environment: inferIncidentEnvironment(labels),
+        severity: inferIncidentSeverity(labels),
         startedAt: new Date(issue.created_at),
         resolvedAt: issue.closed_at ? new Date(issue.closed_at) : undefined,
         labels,
@@ -194,6 +197,7 @@ async function readLocalIncidents(filePath: string): Promise<Incident[]> {
     id: record.id ?? `local-${index + 1}`,
     title: record.title,
     environment: record.environment ?? 'unknown',
+    severity: record.severity ?? inferIncidentSeverity(record.labels ?? []),
     startedAt: new Date(record.startedAt),
     resolvedAt: record.resolvedAt ? new Date(record.resolvedAt) : undefined,
     labels: record.labels ?? [],
@@ -290,6 +294,15 @@ function buildMarkdownReport(
       ['change-failure', 'deploy-failure', 'rollback'].includes(label),
     ),
   );
+  const sev1Incidents = incidents.filter(
+    (incident) => incident.severity === 'sev1',
+  );
+  const sev2Incidents = incidents.filter(
+    (incident) => incident.severity === 'sev2',
+  );
+  const needsPostmortemIncidents = incidents.filter((incident) =>
+    incident.labels.includes('needs-postmortem'),
+  );
   const changeFailureSignals =
     failedDeployments.length + changeFailureIncidents.length;
   const changeFailureRate =
@@ -351,10 +364,12 @@ function buildMarkdownReport(
     '',
     `- Tổng incident: ${incidents.length}`,
     `- Đã resolve: ${resolvedIncidents.length}`,
+    `- SEV1/SEV2: ${sev1Incidents.length + sev2Incidents.length}`,
+    `- Cần postmortem: ${needsPostmortemIncidents.length}`,
     `- Incident liên quan change failure/rollback: ${changeFailureIncidents.length}`,
     '',
-    '| Bắt đầu | Kết thúc | MTTR | Môi trường | Labels | Tiêu đề |',
-    '| --- | --- | ---: | --- | --- | --- |',
+    '| Bắt đầu | Kết thúc | MTTR | Môi trường | Severity | Labels | Tiêu đề |',
+    '| --- | --- | ---: | --- | --- | --- | --- |',
     ...incidents.slice(0, 20).map((incident) => {
       const mttr = incident.resolvedAt
         ? incident.resolvedAt.getTime() - incident.startedAt.getTime()
@@ -366,10 +381,10 @@ function buildMarkdownReport(
       return `| ${formatDateTime(incident.startedAt)} | ${
         incident.resolvedAt ? formatDateTime(incident.resolvedAt) : 'Đang mở'
       } | ${formatDuration(mttr)} | ${incident.environment} | ${
-        incident.labels.join(', ') || '-'
-      } | ${title} |`;
+        incident.severity
+      } | ${incident.labels.join(', ') || '-'} | ${title} |`;
     }),
-    incidents.length === 0 ? '| Chưa có dữ liệu | - | - | - | - | - |' : '',
+    incidents.length === 0 ? '| Chưa có dữ liệu | - | - | - | - | - | - |' : '',
     '',
     '## Nhận xét nhanh',
     '',
@@ -416,6 +431,15 @@ function buildJsonReport(deployments: Deployment[], incidents: Incident[]) {
       ['change-failure', 'deploy-failure', 'rollback'].includes(label),
     ),
   );
+  const sev1Incidents = incidents.filter(
+    (incident) => incident.severity === 'sev1',
+  );
+  const sev2Incidents = incidents.filter(
+    (incident) => incident.severity === 'sev2',
+  );
+  const needsPostmortemIncidents = incidents.filter((incident) =>
+    incident.labels.includes('needs-postmortem'),
+  );
   const changeFailureSignals =
     failedDeployments.length + changeFailureIncidents.length;
 
@@ -435,6 +459,9 @@ function buildJsonReport(deployments: Deployment[], incidents: Incident[]) {
       averageLeadTimeMs: average(leadTimes),
       incidents: incidents.length,
       resolvedIncidents: resolvedIncidents.length,
+      sev1Incidents: sev1Incidents.length,
+      sev2Incidents: sev2Incidents.length,
+      needsPostmortemIncidents: needsPostmortemIncidents.length,
       averageMttrMs: average(mttrs),
       changeFailureSignals,
       changeFailureRate:
@@ -564,6 +591,26 @@ function normalizeLabels(labels: GitHubIssue['labels']): string[] {
     .map((label) => (typeof label === 'string' ? label : (label.name ?? '')))
     .map((label) => label.trim().toLowerCase())
     .filter(Boolean);
+}
+
+function inferIncidentEnvironment(labels: string[]): string {
+  for (const environment of ['production', 'staging', 'local']) {
+    if (labels.includes(environment)) {
+      return environment;
+    }
+  }
+
+  return 'unknown';
+}
+
+function inferIncidentSeverity(labels: string[]): string {
+  for (const severity of ['sev1', 'sev2', 'sev3', 'sev4']) {
+    if (labels.includes(severity)) {
+      return severity;
+    }
+  }
+
+  return 'unknown';
 }
 
 function dedupeIncidents(incidents: Incident[]): Incident[] {

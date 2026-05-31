@@ -1,0 +1,152 @@
+name: Incident Labeler
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  label-incident:
+    name: Label incident and postmortem issues
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Apply standard incident labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || "";
+            const title = issue.title || "";
+            const currentLabels = new Set((issue.labels || []).map((label) => label.name));
+            const labelsToEnsure = {
+              "incident": "Ghi nhận sự cố vận hành để tính MTTR.",
+              "postmortem": "Tổng kết sau incident.",
+              "needs-triage": "Cần phân loại và xác nhận mức độ ảnh hưởng.",
+              "needs-review": "Cần review trước khi đóng.",
+              "needs-postmortem": "Incident cần postmortem sau khi khôi phục.",
+              "production": "Sự cố xảy ra ở production.",
+              "staging": "Sự cố xảy ra ở staging.",
+              "local": "Sự cố tái hiện ở local/dev.",
+              "sev1": "Hệ thống ngừng phục vụ hoặc mất dữ liệu.",
+              "sev2": "Chức năng chính lỗi, ảnh hưởng nhiều user.",
+              "sev3": "Lỗi cục bộ hoặc có workaround.",
+              "sev4": "Cảnh báo hoặc lỗi nhỏ.",
+              "change-failure": "Deploy thành công nhưng gây lỗi runtime.",
+              "deploy-failure": "Deploy/smoke/health check fail.",
+              "rollback": "Cần rollback hoặc redeploy về tag cũ."
+            };
+            const labelColors = {
+              "incident": "D73A4A",
+              "postmortem": "5319E7",
+              "needs-triage": "FBCA04",
+              "needs-review": "FBCA04",
+              "needs-postmortem": "BFDADC",
+              "production": "B60205",
+              "staging": "0E8A16",
+              "local": "C2E0C6",
+              "sev1": "B60205",
+              "sev2": "D93F0B",
+              "sev3": "FBCA04",
+              "sev4": "C5DEF5",
+              "change-failure": "D73A4A",
+              "deploy-failure": "D73A4A",
+              "rollback": "D73A4A"
+            };
+
+            const desiredLabels = new Set();
+
+            if (/^\[incident\]/i.test(title) || currentLabels.has("incident")) {
+              desiredLabels.add("incident");
+              desiredLabels.add("needs-triage");
+            }
+
+            if (/^\[postmortem\]/i.test(title) || currentLabels.has("postmortem")) {
+              desiredLabels.add("postmortem");
+              desiredLabels.add("needs-review");
+            }
+
+            const environment = getSection(body, "Môi trường").toLowerCase();
+            for (const value of ["production", "staging", "local"]) {
+              if (environment.includes(value)) {
+                desiredLabels.add(value);
+              }
+            }
+
+            const severity = getSection(body, "Mức độ ảnh hưởng").toLowerCase();
+            if (severity.includes("sev1")) {
+              desiredLabels.add("sev1");
+              desiredLabels.add("needs-postmortem");
+            } else if (severity.includes("sev2")) {
+              desiredLabels.add("sev2");
+              desiredLabels.add("needs-postmortem");
+            } else if (severity.includes("sev3")) {
+              desiredLabels.add("sev3");
+            } else if (severity.includes("sev4")) {
+              desiredLabels.add("sev4");
+            }
+
+            if (body.includes("- [x] Sự cố do deploy mới gây ra")) {
+              desiredLabels.add("change-failure");
+            }
+
+            if (body.includes("- [x] Cần rollback hoặc redeploy về tag cũ")) {
+              desiredLabels.add("rollback");
+              desiredLabels.add("change-failure");
+            }
+
+            if (body.includes("- [x] Smoke test hoặc health check fail sau deploy")) {
+              desiredLabels.add("deploy-failure");
+            }
+
+            if (body.includes("- [x] Incident này cần postmortem sau khi khôi phục")) {
+              desiredLabels.add("needs-postmortem");
+            }
+
+            for (const label of desiredLabels) {
+              await ensureLabel(label, labelsToEnsure[label] || label, labelColors[label] || "EDEDED");
+            }
+
+            const labelsToAdd = [...desiredLabels].filter((label) => !currentLabels.has(label));
+            if (labelsToAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labelsToAdd
+              });
+            }
+
+            function getSection(markdown, heading) {
+              const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+              const pattern = new RegExp(`### ${escaped}\\s+([\\s\\S]*?)(?=\\n### |$)`, "i");
+              return markdown.match(pattern)?.[1]?.trim() || "";
+            }
+
+            async function ensureLabel(name, description, color) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name,
+                  description,
+                  color
+                });
+              }
+            }

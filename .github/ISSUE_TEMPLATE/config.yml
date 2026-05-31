@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Hướng dẫn incident/postmortem
+    url: https://github.com/quangtienngo661/luyen-thi-lai-xe-microservices/blob/main/guides/devops/INCIDENT-POSTMORTEM-PROCESS.md
+    about: Đọc quy trình Phase 2 trước khi tạo incident hoặc postmortem.
