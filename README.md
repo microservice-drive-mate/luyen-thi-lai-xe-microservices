@@ -230,6 +230,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - Main Image Release: build đủ 10 production images, Trivy scan, push GHCR bằng tag `${git_sha}` và `latest`, rồi auto deploy GCP staging bằng Helm.
   - Production Release: chạy thủ công bằng immutable image tag, gắn GitHub Environment `production`.
   - Jenkins: pipeline tự host/legacy cho GHCR + Docker Compose deploy qua SSH/VM hoặc Compute Engine; GitHub Actions vẫn là đường chính cho GCP/GKE.
+  - DORA Metrics Report: đo Deployment Frequency, Lead Time for Changes, MTTR và Change Failure Rate theo `guides/devops/DORA-METRICS.md`.
 - Deployment Phase 5:
   - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.
   - Target hiện tại là GCP/GKE, self-contained dependencies trong cluster cho giai đoạn MVP.
@@ -254,6 +255,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 - Phase 6.1-6.5 Logging + ELK + Correlation ID + Metrics + Alerting ở [guides/devops/OBSERVABILITY-ELK.md](./guides/devops/OBSERVABILITY-ELK.md)
 - Runbook Observability ở [guides/devops/OBSERVABILITY-RUNBOOK.md](./guides/devops/OBSERVABILITY-RUNBOOK.md)
 - Tổng hợp trạng thái và gap DevOps ở [DEVOPS-SUMMARY.md](./DEVOPS-SUMMARY.md)
+- Đo lường DevOps theo DORA ở [guides/devops/DORA-METRICS.md](./guides/devops/DORA-METRICS.md)
 
 ## 11. Quy trình làm việc
 

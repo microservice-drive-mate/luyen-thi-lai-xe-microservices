@@ -97,6 +97,10 @@ Luồng production/staging hiện chốt **10 application services**:
 - Jenkins:
   - `Jenkinsfile` có lint, typecheck, test, build, image push, staging deploy và production manual approval.
   - Vai trò hiện tại là pipeline tự host/legacy cho Docker Compose deploy qua SSH/VM hoặc Compute Engine; GitHub Actions vẫn là đường chính cho GCP/GKE bằng Helm.
+- Đo lường DevOps theo DORA:
+  - `.github/workflows/dora-report.yml`: chạy thủ công hoặc định kỳ hằng tuần để tạo DORA report artifact.
+  - `scripts/devops-dora-report.ts`: tổng hợp Deployment Frequency, Lead Time for Changes, MTTR và Change Failure Rate từ GitHub Actions và incident issues.
+  - `.github/ISSUE_TEMPLATE/incident_report.yml` và `.github/ISSUE_TEMPLATE/postmortem.yml`: chuẩn hóa dữ liệu incident/postmortem để tính MTTR/CFR.
 - DevSecOps baseline:
   - Trivy image scan với `severity: CRITICAL,HIGH`, `exit-code: 1`.
   - PR thay đổi DevOps/shared files sẽ build/scan đủ 10 production services.
