@@ -278,6 +278,6 @@ Nếu chạy trên GitHub:
 
 - Ghi deployment event vào database hoặc object storage để không phụ thuộc hoàn toàn vào GitHub Actions history.
 - Kết nối sâu Jenkins build history nếu Jenkins là pipeline chính lâu dài.
-- Thêm OpenTelemetry hoặc Jaeger để tracing end-to-end.
+- Tối ưu sampling/retention cho OpenTelemetry hoặc Jaeger khi chạy production lâu dài.
 - Bổ sung business metrics như số lượt làm bài thi, tỷ lệ pass/fail, notification delivery success.
 - Tự động kiểm tra postmortem còn mở quá deadline và nhắc owner xử lý.

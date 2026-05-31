@@ -5,7 +5,7 @@
 
 ## Tóm tắt điều hành
 
-Repo hiện tại đã đủ tốt cho **MVP/demo trên local hoặc GCP**, đồng thời đã có baseline cho **CI/CD tách luồng, DevSecOps cơ bản và Kubernetes/GKE deployment**. Nếu đối chiếu theo checklist DevOps trong `DEVOPS (2).docx`, trạng thái tổng quan là:
+Repo hiện tại đã đủ tốt cho **MVP/demo trên local hoặc GCP**, đồng thời đã có baseline cho **CI/CD tách luồng, DevSecOps cơ bản, Kubernetes/GKE deployment và observability đủ 3 trụ cột metrics/logs/traces**. Nếu đối chiếu theo checklist DevOps trong `DEVOPS (2).docx`, trạng thái tổng quan là:
 
 - **Mức sẵn sàng DevOps cho MVP**: khoảng **90%**.
 - **Mức sẵn sàng production day-2 operations**: khoảng **75-80%**.
@@ -146,12 +146,18 @@ Luồng production/staging hiện chốt **10 application services**:
   - HTTP request count/latency/status class.
   - Node/process metrics từ `prom-client`.
   - RabbitMQ retry/DLQ metrics.
+- Distributed tracing Phase 6:
+  - `packages/common/src/tracing/`: khởi động OpenTelemetry SDK, HTTP tracing middleware và Nest/RabbitMQ tracing interceptor.
+  - Kong bật plugin `opentelemetry` trong `kong/kong.yaml`, `kong/kong.dev.yaml` và Helm ConfigMap.
+  - Jaeger được thêm vào Docker Compose và Helm chart để xem trace end-to-end.
+  - `resilientFetch`/Axios resilience tự inject `traceparent` cho outbound HTTP.
 - Prometheus scrape config:
   - `docker/prometheus/prometheus.yml`
   - `docker/prometheus/prometheus.local.yml`
 - DORA dashboard:
   - `docker/grafana/dashboards/dora-metrics.json`
   - `dora-metrics-exporter` đọc `reports/dora/dora.prom` qua textfile collector.
+- Hướng dẫn tracing nằm ở `guides/devops/OPENTELEMETRY-JAEGER-TRACING.md`.
 - Alert rules:
   - service metrics endpoint down.
   - high 5xx rate.

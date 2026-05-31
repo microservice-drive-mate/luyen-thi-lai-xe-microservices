@@ -5,6 +5,7 @@ import type {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from 'axios';
+import { context, propagation, type TextMapSetter } from '@opentelemetry/api';
 
 export interface CircuitBreakerOptions {
   failureThreshold?: number;
@@ -53,6 +54,7 @@ export async function resilientFetch(
 ): Promise<Response> {
   const normalized = normalizeOptions(options);
   assertCircuitClosed(normalized);
+  const headers = injectTraceContext(init.headers);
 
   for (let attempt = 0; attempt <= normalized.retries; attempt += 1) {
     const controller = new AbortController();
@@ -66,6 +68,7 @@ export async function resilientFetch(
     try {
       const response = await fetch(input, {
         ...init,
+        headers,
         signal: controller.signal,
       });
 
@@ -108,6 +111,7 @@ export function configureAxiosResilience(
   axiosInstance.interceptors.request.use((config) => {
     assertCircuitClosed(normalized);
     config.timeout = config.timeout ?? normalized.timeoutMs;
+    propagation.inject(context.active(), config.headers, traceHeaderSetter);
     return config;
   });
 
@@ -217,4 +221,27 @@ function backoffMs(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const traceHeaderSetter: TextMapSetter<
+  Headers | Record<string, unknown> | undefined
+> = {
+  set(carrier, key, value) {
+    if (!carrier) {
+      return;
+    }
+
+    if (carrier instanceof Headers) {
+      carrier.set(key, value);
+      return;
+    }
+
+    carrier[key] = value;
+  },
+};
+
+function injectTraceContext(headers: RequestInit['headers']): Headers {
+  const carrier = new Headers(headers);
+  propagation.inject(context.active(), carrier, traceHeaderSetter);
+  return carrier;
 }

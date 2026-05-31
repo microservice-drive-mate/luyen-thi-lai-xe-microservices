@@ -413,6 +413,15 @@ kubectl get pvc -n staging
 kubectl rollout status deployment -l app.kubernetes.io/component=app -n staging --timeout=10m
 ```
 
+Nếu bật tracing mặc định trong chart, kiểm tra thêm Jaeger:
+
+```bash
+kubectl get pods -n staging | grep jaeger
+kubectl port-forward svc/luyen-thi-lai-xe-jaeger 16686:16686 -n staging
+```
+
+Sau đó mở `http://localhost:16686`, chọn service `kong-gateway` để xem trace request đi qua Kong và các service.
+
 Smoke test:
 
 ```bash

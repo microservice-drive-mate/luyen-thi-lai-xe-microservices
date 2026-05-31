@@ -378,6 +378,7 @@ Mở file:
 - `guides/devops/OBSERVABILITY-ELK.md`
 - `guides/devops/OBSERVABILITY-RUNBOOK.md`
 - `guides/devops/DORA-GRAFANA-DASHBOARD.md`
+- `guides/devops/OPENTELEMETRY-JAEGER-TRACING.md`
 
 Lệnh demo:
 
@@ -393,6 +394,7 @@ Nếu đang chạy local:
 curl http://localhost:3002/health/live
 curl http://localhost:3002/health/ready
 curl http://localhost:3002/metrics
+curl -H "x-correlation-id: demo-trace-001" http://localhost:8000/user-service/health
 ```
 
 Lời thoại gợi ý:
@@ -403,11 +405,16 @@ Với phần DORA, mở Grafana dashboard `DORA Metrics` và nói:
 
 > Dự án không chỉ quan sát runtime mà còn đo hiệu quả DevOps. Deployment event từ GitHub Actions/Jenkins được tổng hợp thành DORA report, export sang Prometheus metrics và hiển thị trên Grafana gồm Deployment Frequency, Lead Time for Changes, Change Failure Rate và MTTR.
 
+Với phần tracing, mở Jaeger tại `http://localhost:16686`, chọn service `kong-gateway` hoặc `kong-dev` và nói:
+
+> Phase 6 bổ sung distributed tracing bằng OpenTelemetry và Jaeger. Kong tạo span gateway, truyền `traceparent` xuống NestJS service, còn service tạo span xử lý request/RabbitMQ. Khi một request chậm, nhóm có thể xem chậm ở gateway, service hay dependency nào.
+
 Điểm nhấn:
 
 - Health check dùng cho Kubernetes probes.
 - Metrics dùng cho Prometheus/Grafana.
 - DORA dashboard dùng để theo dõi tốc độ và độ ổn định của delivery.
+- Jaeger dùng để xem trace end-to-end từ Kong đến service.
 - Logs có correlation id để trace request qua nhiều service.
 - Có runbook để xử lý incident.
 

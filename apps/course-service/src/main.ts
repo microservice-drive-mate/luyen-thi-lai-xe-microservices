@@ -18,12 +18,17 @@ import {
   RabbitMqRetryInterceptor,
   runBootstrapWithRetries,
   setupMicroserviceSwagger,
+  startOpenTelemetry,
+  TracingInterceptor,
+  TracingMiddleware,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 
-installLocalDevTransientErrorGuard('course-service');
+const serviceName = 'course-service';
+startOpenTelemetry({ serviceName });
+installLocalDevTransientErrorGuard(serviceName);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -44,6 +49,7 @@ async function bootstrap() {
     )
     .useGlobalInterceptors(
       new CorrelationIdInterceptor(),
+      new TracingInterceptor(serviceName),
       new RabbitMqRetryInterceptor(
         { queue: rabbitmqQueue },
         app.get(MetricsService),
@@ -52,10 +58,12 @@ async function bootstrap() {
 
   app.enableCors();
   app.use(new CorrelationIdMiddleware().use);
+  app.use(new TracingMiddleware(serviceName).use);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),
-    new AccessLogInterceptor({ serviceName: 'course-service' }),
+    new TracingInterceptor(serviceName),
+    new AccessLogInterceptor({ serviceName }),
     new ApiResponseInterceptor(app.get(Reflector)),
   );
   app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
@@ -72,4 +80,4 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Course Service listening on port ${port}`);
 }
-void runBootstrapWithRetries('course-service', bootstrap);
+void runBootstrapWithRetries(serviceName, bootstrap);

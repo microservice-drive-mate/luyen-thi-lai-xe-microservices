@@ -33,6 +33,9 @@ export * from './metrics';
 // ============== MESSAGING =======================
 export * from './messaging';
 
+// ============== TRACING =========================
+export * from './tracing';
+
 // ============== SWAGGER =========================
 export * from './config/cors.setup';
 export * from './config/swagger.setup';

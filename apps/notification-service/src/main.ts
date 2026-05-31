@@ -19,11 +19,16 @@ import {
   RabbitMqRetryInterceptor,
   runBootstrapWithRetries,
   setupMicroserviceSwagger,
+  startOpenTelemetry,
+  TracingInterceptor,
+  TracingMiddleware,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
 
-installLocalDevTransientErrorGuard('notification-service');
+const serviceName = 'notification-service';
+startOpenTelemetry({ serviceName });
+installLocalDevTransientErrorGuard(serviceName);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -38,9 +43,11 @@ async function bootstrap() {
   const port = configService.get<number>('port') ?? 3000;
 
   app.use(new CorrelationIdMiddleware().use);
+  app.use(new TracingMiddleware(serviceName).use);
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),
-    new AccessLogInterceptor({ serviceName: 'notification-service' }),
+    new TracingInterceptor(serviceName),
+    new AccessLogInterceptor({ serviceName }),
     new ApiResponseInterceptor(app.get(Reflector)),
   );
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
@@ -58,6 +65,7 @@ async function bootstrap() {
     )
     .useGlobalInterceptors(
       new CorrelationIdInterceptor(),
+      new TracingInterceptor(serviceName),
       new RabbitMqRetryInterceptor(
         { queue: rabbitmqQueue },
         app.get(MetricsService),
@@ -68,4 +76,4 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Notification Service listening on port ${port}`);
 }
-void runBootstrapWithRetries('notification-service', bootstrap);
+void runBootstrapWithRetries(serviceName, bootstrap);

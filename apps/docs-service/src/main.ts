@@ -11,11 +11,16 @@ import {
   installLocalDevTransientErrorGuard,
   runBootstrapWithRetries,
   setupCors,
+  startOpenTelemetry,
+  TracingInterceptor,
+  TracingMiddleware,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
 
-installLocalDevTransientErrorGuard('docs-service');
+const serviceName = 'docs-service';
+startOpenTelemetry({ serviceName });
+installLocalDevTransientErrorGuard(serviceName);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -24,10 +29,12 @@ async function bootstrap() {
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
   setupCors(app);
   app.use(new CorrelationIdMiddleware().use);
+  app.use(new TracingMiddleware(serviceName).use);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),
-    new AccessLogInterceptor({ serviceName: 'docs-service' }),
+    new TracingInterceptor(serviceName),
+    new AccessLogInterceptor({ serviceName }),
     new ApiResponseInterceptor(app.get(Reflector)),
   );
   app.useGlobalFilters(new ApiExceptionFilter());
@@ -56,4 +63,4 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Docs Service running at http://localhost:${port}/docs`);
 }
-void runBootstrapWithRetries('docs-service', bootstrap);
+void runBootstrapWithRetries(serviceName, bootstrap);
