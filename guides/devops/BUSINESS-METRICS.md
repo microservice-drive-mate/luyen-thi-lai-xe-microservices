@@ -1,6 +1,6 @@
-# Phase 7 - Business Metrics
+# Business Metrics
 
-Phase 7 bổ sung nhóm chỉ số nghiệp vụ để giảng viên thấy hệ thống không chỉ có CI/CD, DORA, metrics kỹ thuật và tracing, mà còn đo được hành vi thật của người dùng trong sản phẩm luyện thi.
+Business metrics bổ sung nhóm chỉ số nghiệp vụ để giảng viên thấy hệ thống không chỉ có CI/CD, DORA, metrics kỹ thuật và tracing, mà còn đo được hành vi thật của người dùng trong sản phẩm luyện thi.
 
 Luồng dữ liệu:
 
@@ -119,7 +119,7 @@ Kịch bản demo nhanh:
 
 Khi trình bày, nói ngắn gọn:
 
-> Phase 7 bổ sung business metrics. Các use case nghiệp vụ tự ghi counter vào Prometheus, Grafana hiển thị số người dùng mới, lượt làm bài thi, pass/fail, tiến độ học, kết quả gửi notification và upload media. Vì vậy nhóm có thể theo dõi sản phẩm đang được dùng ra sao, không chỉ theo dõi CPU, memory hay request latency.
+> Business metrics bổ sung chỉ số nghiệp vụ. Các use case nghiệp vụ tự ghi counter vào Prometheus, Grafana hiển thị số người dùng mới, lượt làm bài thi, pass/fail, tiến độ học, kết quả gửi notification và upload media. Vì vậy nhóm có thể theo dõi sản phẩm đang được dùng ra sao, không chỉ theo dõi CPU, memory hay request latency.
 
 ## 7. Lưu ý vận hành
 

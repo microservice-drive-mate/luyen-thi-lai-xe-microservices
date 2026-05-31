@@ -229,7 +229,7 @@ Lời thoại tiếp:
 
 > Sau build, workflow scan Trivy rồi push image lên GHCR với 2 tag: Git SHA và `latest`. Git SHA dùng cho staging/production vì immutable; `latest` chỉ tiện cho demo nhanh.
 
-Phase 8 trong GitHub Actions:
+Release safety trong GitHub Actions:
 
 > Sau Trivy, pipeline sinh SBOM dạng SPDX cho từng image và upload thành artifact. Khi push image lên GHCR, pipeline ký immutable tag `${github.sha}` bằng Cosign keyless signing, gắn SBOM attestation và verify chữ ký. Nhờ vậy release artifact có thể audit dependency và truy vết nguồn gốc build từ GitHub Actions.
 
@@ -427,11 +427,11 @@ Với phần DORA, mở Grafana dashboard `DORA Metrics` và nói:
 
 Với phần business metrics, mở Grafana dashboard `Business Metrics` và nói:
 
-> Phase 7 bổ sung chỉ số nghiệp vụ. Các use case tạo user, bắt đầu/nộp bài thi, hoàn tất bài học, gửi notification và upload media đều ghi counter vào Prometheus. Nhờ vậy nhóm biết hệ thống đang tạo ra giá trị nghiệp vụ nào, ví dụ bao nhiêu lượt thi được hoàn tất, tỷ lệ pass/fail ra sao, notification lỗi bao nhiêu và upload media có ổn định không.
+> Business metrics bổ sung chỉ số nghiệp vụ. Các use case tạo user, bắt đầu/nộp bài thi, hoàn tất bài học, gửi notification và upload media đều ghi counter vào Prometheus. Nhờ vậy nhóm biết hệ thống đang tạo ra giá trị nghiệp vụ nào, ví dụ bao nhiêu lượt thi được hoàn tất, tỷ lệ pass/fail ra sao, notification lỗi bao nhiêu và upload media có ổn định không.
 
 Với phần tracing, mở Jaeger tại `http://localhost:16686`, chọn service `kong-gateway` hoặc `kong-dev` và nói:
 
-> Phase 6 bổ sung distributed tracing bằng OpenTelemetry và Jaeger. Kong tạo span gateway, truyền `traceparent` xuống NestJS service, còn service tạo span xử lý request/RabbitMQ. Khi một request chậm, nhóm có thể xem chậm ở gateway, service hay dependency nào.
+> Distributed tracing dùng OpenTelemetry và Jaeger. Kong tạo span gateway, truyền `traceparent` xuống NestJS service, còn service tạo span xử lý request/RabbitMQ. Khi một request chậm, nhóm có thể xem chậm ở gateway, service hay dependency nào.
 
 Điểm nhấn:
 
@@ -572,7 +572,7 @@ Trả lời:
 
 Trả lời:
 
-> Có baseline DevSecOps: Trivy scan image với HIGH/CRITICAL gate, hardcoded secrets được chuyển sang env/placeholder, runtime image prune dev dependencies và loại `npm/npx/corepack/yarn` để giảm CVE surface. Phase 8 trên GitHub Actions đã thêm SBOM artifact, Cosign keyless signing và SBOM attestation cho immutable image tag. Phần hardening tiếp theo là secret manager chính thức và admission policy bắt buộc verify signature ở Kubernetes.
+> Có baseline DevSecOps: Trivy scan image với HIGH/CRITICAL gate, hardcoded secrets được chuyển sang env/placeholder, runtime image prune dev dependencies và loại `npm/npx/corepack/yarn` để giảm CVE surface. Release safety trên GitHub Actions đã thêm SBOM artifact, Cosign keyless signing và SBOM attestation cho immutable image tag. Phần hardening tiếp theo là secret manager chính thức và admission policy bắt buộc verify signature ở Kubernetes.
 
 ### Nếu service chết thì Kubernetes phát hiện thế nào?
 

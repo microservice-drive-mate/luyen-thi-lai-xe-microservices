@@ -1,6 +1,6 @@
-# Phase 5 - Triển Khai Kubernetes
+# Triển Khai Kubernetes
 
-Phase 5 triển khai phạm vi production lên một Kubernetes runtime thật. Target chính hiện tại là **GCP/GKE**. K3s/VPS chỉ còn là hướng lab nội bộ hoặc fallback legacy.
+Tài liệu này triển khai phạm vi production lên một Kubernetes runtime thật. Target chính hiện tại là **GCP/GKE**. K3s/VPS chỉ còn là hướng lab nội bộ hoặc fallback legacy.
 
 Checklist GCP đầy đủ, bao gồm sizing cluster, DNS, static IP, TLS và GitHub secrets, nằm ở `guides/devops/GCP-SETUP.md`.
 
@@ -18,9 +18,9 @@ Bao gồm:
 - Liveness/readiness probes và `resources.requests`/`resources.limits`.
 - Helm rollback.
 
-Không nằm trong Phase 5:
+Không nằm trong phạm vi Kubernetes baseline:
 
-- Terraform, HPA và load testing. Các phần này thuộc Phase 9.
+- Terraform, HPA và load testing. Các phần này thuộc production hardening sau MVP.
 - Chuyển toàn bộ ELK/Prometheus/Grafana sang Kubernetes.
 - Vault hoặc External Secrets integration.
 
@@ -201,7 +201,7 @@ SMOKE_BASE_URL=https://api.example.com bash scripts/k8s-smoke.sh
 
 Rollback sẽ đưa Kubernetes release về revision cũ, bao gồm app image tags và rendered config. Database migrations không tự reverse; nếu migration không backward compatible thì cần tạo migration tiếp theo thay vì kỳ vọng rollback DB tự xử lý.
 
-Từ Phase 8, rollback có thể chạy bằng GitHub Actions workflow `Rollback Release`. Workflow này nhận `target_environment`, `helm_revision`, `confirm_rollback`, tùy chọn chạy smoke test sau rollback và ghi deployment event để DORA report tính được rollback/change failure.
+Hiện tại rollback có thể chạy bằng GitHub Actions workflow `Rollback Release`. Workflow này nhận `target_environment`, `helm_revision`, `confirm_rollback`, tùy chọn chạy smoke test sau rollback và ghi deployment event để DORA report tính được rollback/change failure.
 
 ## K3s Legacy Lab
 

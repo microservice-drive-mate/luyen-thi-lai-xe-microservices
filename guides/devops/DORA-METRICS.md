@@ -147,7 +147,7 @@ Trong artifact có:
 
 ## 5. Grafana dashboard cho DORA
 
-Phase 5 đã đưa DORA report lên Prometheus/Grafana:
+DORA Grafana dashboard đã đưa DORA report lên Prometheus/Grafana:
 
 ```bash
 npm run dora:report

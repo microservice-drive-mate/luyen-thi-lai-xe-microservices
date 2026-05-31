@@ -1,6 +1,6 @@
-# Phase 8 - Release Safety Cho GitHub Actions
+# Release Safety Cho GitHub Actions
 
-Phase 8 chỉ tập trung vào GitHub Actions, không thay đổi Jenkins. Mục tiêu là làm release an toàn hơn sau khi đã có CI/CD, GHCR, Helm deploy, DORA và business metrics.
+Phần release safety này chỉ tập trung vào GitHub Actions, không thay đổi Jenkins. Mục tiêu là làm release an toàn hơn sau khi đã có CI/CD, GHCR, Helm deploy, DORA và business metrics.
 
 ## 1. Thành phần đã thêm
 
@@ -84,7 +84,7 @@ Nên mở 3 nơi:
 
 Lời thoại gợi ý:
 
-> Phase 8 bổ sung release safety trên GitHub Actions. Mỗi image sau khi build sẽ có SBOM, được ký bằng Cosign và verify chữ ký. Nếu deploy lỗi, nhóm có workflow rollback Helm revision có kiểm soát, chạy smoke test sau rollback và ghi deployment event để DORA report phản ánh đúng.
+> Release safety bổ sung vào GitHub Actions. Mỗi image sau khi build sẽ có SBOM, được ký bằng Cosign và verify chữ ký. Nếu deploy lỗi, nhóm có workflow rollback Helm revision có kiểm soát, chạy smoke test sau rollback và ghi deployment event để DORA report phản ánh đúng.
 
 ## 6. Lưu ý vận hành
 

@@ -1,6 +1,6 @@
-# Phase 6 - OpenTelemetry và Jaeger tracing end-to-end
+# OpenTelemetry và Jaeger tracing end-to-end
 
-Phase 6 bổ sung distributed tracing để nhìn được một request đi qua **Kong Gateway** và các NestJS microservices như thế nào.
+Distributed tracing bổ sung OpenTelemetry/Jaeger để nhìn được một request đi qua **Kong Gateway** và các NestJS microservices như thế nào.
 
 Mục tiêu demo:
 
@@ -211,7 +211,7 @@ Trong Jaeger, tìm service:
 
 ## 9. Lời thoại demo với giảng viên
 
-> Ở các phase trước, dự án đã có metrics bằng Prometheus/Grafana và logs bằng ELK. Phase 6 bổ sung trụ cột thứ ba của observability là traces. Khi client gọi API qua Kong, Kong tạo span gateway và truyền trace context xuống service bằng chuẩn W3C `traceparent`. Service NestJS tiếp tục tạo span xử lý request, span handler và span message consumer. Tất cả được export qua OTLP HTTP về Jaeger, nên nhóm có thể nhìn một request đang chậm ở gateway, service hay dependency nào.
+> Ở các phase trước, dự án đã có metrics bằng Prometheus/Grafana và logs bằng ELK. Distributed tracing bổ sung trụ cột thứ ba của observability là traces. Khi client gọi API qua Kong, Kong tạo span gateway và truyền trace context xuống service bằng chuẩn W3C `traceparent`. Service NestJS tiếp tục tạo span xử lý request, span handler và span message consumer. Tất cả được export qua OTLP HTTP về Jaeger, nên nhóm có thể nhìn một request đang chậm ở gateway, service hay dependency nào.
 
 Điểm nên chỉ trên màn hình:
 

@@ -1,14 +1,14 @@
-# Phase 3 - Deployment Event Store
+# Deployment Event Store
 
-Phase 3 bổ sung **deployment event store** để dữ liệu deploy bền hơn và không phụ thuộc hoàn toàn vào GitHub Actions history.
+Deployment event store bổ sung **deployment event store** để dữ liệu deploy bền hơn và không phụ thuộc hoàn toàn vào GitHub Actions history.
 
-Trước Phase 3, DORA report đọc trực tiếp GitHub Actions workflow runs. Cách đó đủ cho MVP, nhưng có hạn chế:
+Trước khi có deployment event store, DORA report đọc trực tiếp GitHub Actions workflow runs. Cách đó đủ cho MVP, nhưng có hạn chế:
 
 - GitHub Actions history có thể bị giới hạn hoặc khó truy xuất lâu dài.
 - Jenkins hoặc deploy thủ công không tự xuất hiện trong cùng một nguồn dữ liệu.
 - Khi cần audit deploy, nên có record rõ ràng: deploy lúc nào, image tag nào, môi trường nào, kết quả ra sao.
 
-Phase 3 giải quyết bằng cách ghi mỗi lần deploy thành một JSON event.
+Deployment event store giải quyết bằng cách ghi mỗi lần deploy thành một JSON event.
 
 ## 1. File và workflow liên quan
 
@@ -132,7 +132,7 @@ Nếu local bị GitHub API rate limit, DORA report vẫn có thể chạy nếu
 
 Lời thoại gợi ý:
 
-> Ở Phase 3, nhóm không chỉ đọc lịch sử workflow tạm thời mà ghi mỗi lần deploy thành một deployment event. Event này lưu môi trường, image tag, Git SHA, trạng thái, thời gian bắt đầu/kết thúc và link workflow. DORA report ưu tiên đọc event store, nên sau này có thể gom dữ liệu từ GitHub Actions, Jenkins hoặc manual deploy vào cùng một schema.
+> Nhóm không chỉ đọc lịch sử workflow tạm thời mà ghi mỗi lần deploy thành một deployment event. Event này lưu môi trường, image tag, Git SHA, trạng thái, thời gian bắt đầu/kết thúc và link workflow. DORA report ưu tiên đọc event store, nên sau này có thể gom dữ liệu từ GitHub Actions, Jenkins hoặc manual deploy vào cùng một schema.
 
 Demo nhanh:
 

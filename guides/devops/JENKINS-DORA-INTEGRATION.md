@@ -1,8 +1,8 @@
-# Phase 4 - Jenkins DORA Integration
+# Jenkins DORA Integration
 
-Phase 4 kết nối Jenkins vào cùng cơ chế đo DORA của dự án.
+Jenkins DORA integration kết nối Jenkins vào cùng cơ chế đo DORA của dự án.
 
-Sau Phase 3, GitHub Actions deploy đã ghi `deployment event` JSON. Phase 4 làm tương tự cho Jenkins để dữ liệu deploy từ self-hosted CI cũng đi về cùng schema.
+Sau khi GitHub Actions deploy đã ghi `deployment event` JSON, Jenkins cũng ghi dữ liệu deploy từ self-hosted CI về cùng schema.
 
 ## 1. Mục tiêu
 

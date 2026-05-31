@@ -1,6 +1,6 @@
-# Phase 5 - DORA Grafana Dashboard
+# DORA Grafana Dashboard
 
-Phase 5 đưa DORA report từ file Markdown/JSON lên Grafana để demo trực quan hơn.
+DORA Grafana dashboard đưa DORA report từ file Markdown/JSON lên Grafana để demo trực quan hơn.
 
 Luồng dữ liệu:
 
@@ -154,7 +154,7 @@ Nếu dashboard chưa thấy dữ liệu ngay, chờ 15-30 giây vì Prometheus 
 
 Kịch bản nói ngắn gọn:
 
-> Sau khi pipeline deploy xong, dự án ghi deployment event từ GitHub Actions hoặc Jenkins. DORA report tổng hợp thành JSON/Markdown. Ở Phase 5, nhóm export report đó sang Prometheus metrics, Prometheus scrape qua textfile collector, và Grafana hiển thị bốn chỉ số DORA chính: Deployment Frequency, Lead Time for Changes, Change Failure Rate và MTTR. Nhờ vậy nhóm không chỉ nói pipeline chạy được, mà còn đo được tốc độ và độ ổn định của quy trình delivery.
+> Sau khi pipeline deploy xong, dự án ghi deployment event từ GitHub Actions hoặc Jenkins. DORA report tổng hợp thành JSON/Markdown. Nhóm export report đó sang Prometheus metrics, Prometheus scrape qua textfile collector, và Grafana hiển thị bốn chỉ số DORA chính: Deployment Frequency, Lead Time for Changes, Change Failure Rate và MTTR. Nhờ vậy nhóm không chỉ nói pipeline chạy được, mà còn đo được tốc độ và độ ổn định của quy trình delivery.
 
 Các điểm nên chỉ trên màn hình:
 

@@ -1,8 +1,8 @@
-# Phase 2 - Quy trình Incident và Postmortem
+# Quy trình Incident và Postmortem
 
 Tài liệu này chuẩn hóa quy trình ghi nhận sự cố để báo cáo DORA tính được **MTTR** và **Change Failure Rate** đáng tin hơn.
 
-Phase 1 đã có script tạo DORA report. Phase 2 bổ sung quy trình vận hành:
+Dự án đã có script tạo DORA report. Quy trình incident/postmortem bổ sung vận hành:
 
 - Khi nào phải tạo incident.
 - Cách phân loại severity.
@@ -117,4 +117,4 @@ Nếu incident chưa đóng, script vẫn liệt kê nhưng chưa tính vào MTT
 
 ## 7. Câu nói demo
 
-> Phase 2 giúp biến incident thành dữ liệu đo lường. Khi có sự cố, nhóm tạo issue theo template, workflow tự gắn label môi trường/severity/change-failure. Khi issue đóng, DORA report tính được MTTR. Nếu incident liên quan deploy hoặc rollback, report cũng phản ánh vào Change Failure Rate.
+> Quy trình incident/postmortem giúp biến incident thành dữ liệu đo lường. Khi có sự cố, nhóm tạo issue theo template, workflow tự gắn label môi trường/severity/change-failure. Khi issue đóng, DORA report tính được MTTR. Nếu incident liên quan deploy hoặc rollback, report cũng phản ánh vào Change Failure Rate.
