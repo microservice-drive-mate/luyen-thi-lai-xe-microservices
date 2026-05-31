@@ -200,40 +200,52 @@ Tóm tắt vận hành:
 7. Quan sát HPA scale.
 8. Destroy infra khi demo/test xong để tránh tốn credit.
 
-Lệnh Terraform:
+Lệnh Terraform (Khuyến nghị di chuyển vào thư mục terraform trước):
 
 ```powershell
-terraform -chdir=terraform init
-terraform -chdir=terraform fmt -check -recursive
-terraform -chdir=terraform validate
-terraform -chdir=terraform plan -var-file=terraform.tfvars
-terraform -chdir=terraform apply -var-file=terraform.tfvars
+# 1. Di chuyển vào thư mục terraform
+cd terraform
 
+# 2. Khởi tạo dự án
+terraform init
+
+# 3. Tự động định dạng code
+terraform fmt -recursive
+
+# 4. Kiểm tra cú pháp hợp lệ
+terraform validate
+
+# 5. Xem trước kế hoạch triển khai (Dry-run)
+terraform plan
+
+# 6. Thực thi triển khai thực tế trên GCP (nhập yes để xác nhận)
+terraform apply
 ```
 
-Lấy thông tin output:
+Lấy thông tin output (Chạy trong thư mục terraform):
 
 ```powershell
-terraform -chdir=terraform output public_ip
-terraform -chdir=terraform output api_host
-terraform -chdir=terraform output auth_host
-terraform -chdir=terraform output kubeconfig_fetch_command_powershell
-
+terraform output public_ip
+terraform output api_host
+terraform output auth_host
+terraform output kubeconfig_fetch_command_powershell
 ```
 
 Load test bằng Docker k6:
+*(⚠️ Do môi trường staging dùng domain nip.io với SSL/TLS của Traefik không thuộc CA tin cậy toàn cầu, cần thêm flag `--insecure-skip-tls-verify` để bỏ qua lỗi xác thực chứng chỉ).*
 
 ```powershell
+# Chạy Smoke Test (tải nhẹ 30s)
 docker run --rm `
   -v "${PWD}/load-tests:/scripts:ro" `
   -e BASE_URL="https://api.<static-ip>.nip.io" `
-  grafana/k6 run /scripts/scenarios/smoke.js
+  grafana/k6 run --insecure-skip-tls-verify /scripts/scenarios/smoke.js
 
+# Chạy Load Test (giả lập 50 users trong 12 phút)
 docker run --rm `
   -v "${PWD}/load-tests:/scripts:ro" `
   -e BASE_URL="https://api.<static-ip>.nip.io" `
-  grafana/k6 run /scripts/scenarios/load.js
-
+  grafana/k6 run --insecure-skip-tls-verify /scripts/scenarios/load.js
 ```
 
 Quan sát autoscale:
@@ -242,14 +254,12 @@ Quan sát autoscale:
 kubectl get hpa -n staging -w
 kubectl get pods -n staging -w
 kubectl top pods -n staging
-
 ```
 
-Destroy khi không dùng:
+Destroy khi không dùng (Chạy trong thư mục terraform):
 
 ```powershell
-terraform -chdir=terraform destroy -var-file=terraform.tfvars
-
+terraform destroy
 ```
 
 ---
