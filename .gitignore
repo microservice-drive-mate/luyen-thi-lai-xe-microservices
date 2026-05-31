@@ -26,6 +26,7 @@ charts/**/values-*.local.yaml
 charts/**/values-*.secret.yaml
 rendered-*.yaml
 kubeconfig*.yaml
+local-deploy-values.yaml
 
 # Local Terraform state and credentials
 terraform/terraform.tfvars

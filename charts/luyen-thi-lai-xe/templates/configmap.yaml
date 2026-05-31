@@ -6,6 +6,7 @@ metadata:
     {{- include "lttl.labels" . | nindent 4 }}
 data:
   NODE_ENV: {{ .Values.global.nodeEnv | quote }}
+  NODE_TLS_REJECT_UNAUTHORIZED: "0"
   CONSUL_URL: {{ printf "http://%s-consul:8500" (include "lttl.fullname" .) | quote }}
   KEYCLOAK_AUTH_SERVER_URL: {{ .Values.config.keycloakPublicUrl | quote }}
   KEYCLOAK_REALM: {{ .Values.secrets.keycloakRealm | quote }}
