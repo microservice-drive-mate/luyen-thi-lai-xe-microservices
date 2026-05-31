@@ -108,7 +108,10 @@ jobs:
             .filter(Boolean);
 
           const values = {
-            global: { imageTag: env.IMAGE_TAG },
+            global: {
+              imageTag: env.IMAGE_TAG,
+              imageRegistry: `ghcr.io/${{ github.repository_owner }}`,
+            },
             migration: { imageTag: env.IMAGE_TAG },
             imagePullSecret: {
               enabled: true,

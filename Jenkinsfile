@@ -9,10 +9,14 @@ pipeline {
     timestamps()
   }
 
+  parameters {
+    string(name: 'GHCR_OWNER', defaultValue: 'replace-with-github-owner', description: 'GHCR owner/namespace chứa image của dự án')
+  }
+
   environment {
     APP_NAME = 'luyen-thi-lai-xe'
     REGISTRY = 'ghcr.io'
-    GHCR_OWNER = 'nhactaohocbai'
+    GHCR_OWNER = "${params.GHCR_OWNER}"
     DOCKER_BUILDKIT = '1'
     COMPOSE_DOCKER_CLI_BUILD = '1'
     SERVICES = 'identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service audit-service'

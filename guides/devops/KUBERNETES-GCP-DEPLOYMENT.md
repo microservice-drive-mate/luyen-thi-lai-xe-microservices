@@ -143,9 +143,11 @@ GCP/GKE không build source code. Cluster chỉ pull image đã có trên GHCR t
 Pattern image hiện tại:
 
 ```text
-ghcr.io/nhactaohocbai/luyen-thi-lai-xe-<service>:<tag>
-ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:<tag>
+ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-<service>:<tag>
+ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:<tag>
 ```
+
+`${{ github.repository_owner }}` chỉ được GitHub Actions tự động thay khi workflow chạy. Nếu deploy thủ công bằng Helm, dùng `ghcr.io/<github-owner>` qua `--set global.imageRegistry=...`.
 
 Với deploy thủ công, có thể dùng một Git SHA tag đã tồn tại trên GHCR:
 
@@ -156,6 +158,7 @@ helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
   --wait \
   --wait-for-jobs \
   --timeout 25m \
+  --set global.imageRegistry=ghcr.io/<github-owner> \
   --set global.imageTag=<existing-ghcr-tag> \
   --set migration.imageTag=<existing-ghcr-tag>
 ```

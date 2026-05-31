@@ -252,8 +252,8 @@ Mục tiêu: chứng minh artifact đã được đóng gói và lưu ở regist
 Mở GitHub Packages/GHCR hoặc dùng lệnh:
 
 ```bash
-docker pull ghcr.io/nhactaohocbai/luyen-thi-lai-xe-user-service:<tag>
-docker pull ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:<tag>
+docker pull ghcr.io/<github-owner>/luyen-thi-lai-xe-user-service:<tag>
+docker pull ghcr.io/<github-owner>/luyen-thi-lai-xe-migration-runner:<tag>
 ```
 
 Lời thoại gợi ý:
@@ -357,7 +357,7 @@ Lời thoại gợi ý:
 
 Điểm nhấn:
 
-- `global.imageRegistry` trỏ về `ghcr.io/nhactaohocbai`.
+- `global.imageRegistry` trỏ về `ghcr.io/${{ github.repository_owner }}` khi chạy qua GitHub Actions.
 - `global.imageTag` là tag image sẽ pull.
 - `migration-runner` chạy Prisma migration ngoài runtime container.
 - GKE pull image từ GHCR bằng `imagePullSecret`.

@@ -1,5 +1,5 @@
 global:
-  imageRegistry: ghcr.io/nhactaohocbai
+  imageRegistry: ghcr.io/replace-with-github-owner
   imageTag: latest
   imagePullPolicy: IfNotPresent
   nodeEnv: production

@@ -32,7 +32,7 @@ on:
         description: "GHCR owner/namespace used by service images"
         type: string
         required: true
-        default: "nhactaohocbai"
+        default: ""
 
 permissions:
   contents: read
@@ -61,7 +61,7 @@ jobs:
       DEPLOY_ENV: ${{ github.event.inputs.deploy_env || 'production' }}
       DEPLOY_HOST: ${{ github.event.inputs.deploy_host || secrets.DEPLOY_HOST || secrets.VPS_HOST }}
       DEPLOY_PATH: ${{ github.event.inputs.deploy_path || secrets.DEPLOY_PATH || secrets.VPS_DEPLOY_PATH || '/opt/luyen-thi-lai-xe-microservices' }}
-      GHCR_OWNER: ${{ github.event.inputs.ghcr_owner || 'nhactaohocbai' }}
+      GHCR_OWNER: ${{ github.event.inputs.ghcr_owner || github.repository_owner }}
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.event.workflow_run.head_sha || 'latest' }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER || secrets.VPS_USER }}
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
