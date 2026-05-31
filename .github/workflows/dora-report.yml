@@ -31,6 +31,7 @@ jobs:
       DORA_DEPLOY_WORKFLOWS: ${{ inputs.deploy_workflows || 'Main Image Release,Production Release,Legacy SSH Compose Deploy' }}
       DORA_OUTPUT: reports/dora/dora-report.md
       DORA_JSON_OUTPUT: reports/dora/dora-report.json
+      DORA_DEPLOYMENT_EVENTS_DIR: reports/deployments
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
@@ -43,6 +44,33 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Download deployment event artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/deployments
+          workflows=(
+            "Main Image Release"
+            "Production Release"
+            "Legacy SSH Compose Deploy"
+          )
+
+          for workflow in "${workflows[@]}"; do
+            echo "[dora-report] Downloading deployment events from workflow: ${workflow}"
+            gh run list --workflow "${workflow}" --limit 30 --json databaseId --jq '.[].databaseId' | while read -r run_id; do
+              if [[ -z "${run_id}" ]]; then
+                continue
+              fi
+
+              gh run download "${run_id}" \
+                --pattern "deployment-event-*" \
+                --dir reports/deployments \
+                || true
+            done
+          done
 
       - name: Generate DORA metrics report
         run: npm run dora:report

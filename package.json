@@ -22,6 +22,7 @@
     "smoke": "tsx scripts/smoke.ts",
     "observability:smoke": "tsx scripts/observability-smoke.ts",
     "rabbitmq:smoke": "tsx scripts/rabbitmq-resilience-smoke.ts",
+    "deployment:record": "node scripts/devops-record-deployment.js",
     "dora:report": "tsx scripts/devops-dora-report.ts",
     "infra:up": "docker compose -f docker-compose.infra.yml up -d",
     "infra:down": "docker compose -f docker-compose.infra.yml down",

@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 type WorkflowRun = {
@@ -66,13 +66,47 @@ type Incident = {
   url?: string;
 };
 
+type DeploymentEventRecord = {
+  schemaVersion?: number;
+  eventId?: string;
+  source?: string;
+  provider?: string;
+  repository?: string;
+  workflow?: string;
+  workflowRunId?: string;
+  workflowRunAttempt?: string;
+  job?: string;
+  environment?: string;
+  deploymentType?: string;
+  deploymentTarget?: string;
+  releaseName?: string;
+  namespace?: string;
+  gitSha?: string;
+  imageTag?: string;
+  branch?: string;
+  status?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  deployUrl?: string;
+  actor?: string;
+  trigger?: string;
+  rollbackOf?: string;
+  smokeStatus?: string;
+  metadata?: Record<string, unknown>;
+};
+
 type Deployment = {
-  id: number;
+  id: number | string;
+  eventId?: string;
+  source: string;
   workflow: string;
+  workflowRunId?: string;
+  workflowRunAttempt?: string;
   environment: string;
   event: string;
   branch: string;
   sha: string;
+  imageTag: string;
   conclusion: string;
   startedAt: Date;
   finishedAt: Date;
@@ -94,6 +128,8 @@ const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
 const outputPath = process.env.DORA_OUTPUT ?? 'reports/dora/dora-report.md';
 const jsonOutputPath =
   process.env.DORA_JSON_OUTPUT ?? outputPath.replace(/\.md$/i, '.json');
+const deploymentEventsDir =
+  process.env.DORA_DEPLOYMENT_EVENTS_DIR ?? 'reports/deployments';
 const deployWorkflowNames = parseCsv(
   process.env.DORA_DEPLOY_WORKFLOWS ??
     'Main Image Release,Production Release,Legacy SSH Compose Deploy',
@@ -109,15 +145,35 @@ async function main(): Promise<void> {
     );
   }
 
-  const workflowRuns = await listWorkflowRuns();
-  const deployments = workflowRuns
-    .filter((run) => isDeployWorkflow(run.name ?? ''))
-    .map(toDeployment)
-    .sort((a, b) => b.finishedAt.getTime() - a.finishedAt.getTime());
+  const eventDeployments = await listDeploymentEvents();
+  let workflowDeployments: Deployment[] = [];
+
+  try {
+    const workflowRuns = await listWorkflowRuns();
+    workflowDeployments = workflowRuns
+      .filter((run) => isDeployWorkflow(run.name ?? ''))
+      .map(toDeployment);
+  } catch (error) {
+    console.warn(
+      `[dora-report] Cannot read GitHub Actions runs: ${formatError(error)}`,
+    );
+  }
+
+  const deployments = mergeDeployments([
+    ...eventDeployments,
+    ...workflowDeployments,
+  ]).sort((a, b) => b.finishedAt.getTime() - a.finishedAt.getTime());
 
   await hydrateLeadTimes(deployments);
 
-  const incidents = await listIncidents();
+  let incidents: Incident[] = [];
+  try {
+    incidents = await listIncidents();
+  } catch (error) {
+    console.warn(
+      `[dora-report] Cannot read incident issues: ${formatError(error)}`,
+    );
+  }
   const report = buildMarkdownReport(deployments, incidents);
   const jsonReport = buildJsonReport(deployments, incidents);
 
@@ -146,6 +202,58 @@ async function listWorkflowRuns(): Promise<WorkflowRun[]> {
   }
 
   return allRuns.filter((run) => new Date(run.created_at) >= fromDate);
+}
+
+async function listDeploymentEvents(): Promise<Deployment[]> {
+  const files = await findJsonFiles(deploymentEventsDir);
+  const deployments: Deployment[] = [];
+
+  for (const file of files) {
+    try {
+      const raw = await readFile(file, 'utf8');
+      const parsed = JSON.parse(raw) as DeploymentEventRecord;
+      const deployment = toDeploymentFromEvent(parsed, file);
+
+      if (deployment.finishedAt >= fromDate) {
+        deployments.push(deployment);
+      }
+    } catch (error) {
+      console.warn(
+        `[dora-report] Cannot read deployment event ${file}: ${formatError(error)}`,
+      );
+    }
+  }
+
+  return deployments;
+}
+
+async function findJsonFiles(directory: string): Promise<string[]> {
+  try {
+    const entries = await readdir(directory, { withFileTypes: true });
+    const files = await Promise.all(
+      entries.map(async (entry) => {
+        const entryPath = path.join(directory, entry.name);
+
+        if (entry.isDirectory()) {
+          return findJsonFiles(entryPath);
+        }
+
+        if (entry.isFile() && entry.name.endsWith('.json')) {
+          return [entryPath];
+        }
+
+        return [];
+      }),
+    );
+
+    return files.flat();
+  } catch (error) {
+    if (isFileNotFound(error)) {
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 async function listIncidents(): Promise<Incident[]> {
@@ -212,6 +320,10 @@ async function hydrateLeadTimes(deployments: Deployment[]): Promise<void> {
   const commitDateCache = new Map<string, Date | undefined>();
 
   for (const deployment of successfulDeployments) {
+    if (!looksLikeGitSha(deployment.sha)) {
+      continue;
+    }
+
     if (!commitDateCache.has(deployment.sha)) {
       commitDateCache.set(deployment.sha, await getCommitDate(deployment.sha));
     }
@@ -321,6 +433,7 @@ function buildMarkdownReport(
     `- Repository: \`${repository}\``,
     `- Khoảng thời gian: ${days} ngày gần nhất, từ ${formatDate(fromDate)} đến ${formatDate(now)}`,
     `- Workflow deploy được tính: ${deployWorkflowNames.map((name) => `\`${name}\``).join(', ')}`,
+    `- Deployment event store: \`${deploymentEventsDir}\``,
     `- Tạo lúc: ${formatDateTime(now)}`,
     '',
     '## Tổng quan',
@@ -340,24 +453,25 @@ function buildMarkdownReport(
     `- Bị hủy thủ công: ${cancelledDeployments.length}`,
     `- Trung bình mỗi ngày: ${formatNumber(deploymentFrequency)} deploy/ngày`,
     '',
-    '| Thời gian | Workflow | Môi trường | Kết quả | Branch | SHA | Link |',
-    '| --- | --- | --- | --- | --- | --- | --- |',
+    '| Thời gian | Nguồn | Workflow | Môi trường | Kết quả | Branch | SHA/Image | Link |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
     ...deployments
       .slice(0, 20)
       .map((deployment) =>
         [
           formatDateTime(deployment.finishedAt),
+          deployment.source,
           deployment.workflow,
           deployment.environment,
           deployment.conclusion,
           deployment.branch,
-          deployment.sha.slice(0, 12),
-          `[run](${deployment.url})`,
+          deployment.imageTag || deployment.sha.slice(0, 12),
+          deployment.url ? `[run](${deployment.url})` : '-',
         ].join(' | '),
       )
       .map((row) => `| ${row} |`),
     deployments.length === 0
-      ? '| Chưa có dữ liệu | - | - | - | - | - | - |'
+      ? '| Chưa có dữ liệu | - | - | - | - | - | - | - |'
       : '',
     '',
     '## Dữ liệu incident',
@@ -546,6 +660,32 @@ function isFailedDeployConclusion(conclusion: string): boolean {
   return ['failure', 'timed_out', 'action_required'].includes(conclusion);
 }
 
+function normalizeDeploymentStatus(value: string): string {
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === 'succeeded') {
+    return 'success';
+  }
+
+  if (normalized === 'failed') {
+    return 'failure';
+  }
+
+  if (normalized === 'canceled') {
+    return 'cancelled';
+  }
+
+  if (normalized === 'timeout') {
+    return 'timed_out';
+  }
+
+  return normalized || 'unknown';
+}
+
+function looksLikeGitSha(value: string): boolean {
+  return /^[0-9a-f]{7,40}$/i.test(value);
+}
+
 function isResolvedIncident(
   incident: Incident,
 ): incident is Incident & { resolvedAt: Date } {
@@ -555,16 +695,65 @@ function isResolvedIncident(
 function toDeployment(run: WorkflowRun): Deployment {
   return {
     id: run.id,
+    source: 'github-actions-history',
     workflow: run.name ?? 'unknown',
+    workflowRunId: String(run.id),
     environment: inferEnvironment(run),
     event: run.event,
     branch: run.head_branch ?? 'unknown',
     sha: run.head_sha,
+    imageTag: run.head_sha,
     conclusion: run.conclusion ?? run.status,
     startedAt: new Date(run.run_started_at ?? run.created_at),
     finishedAt: new Date(run.updated_at),
     url: run.html_url,
   };
+}
+
+function toDeploymentFromEvent(
+  record: DeploymentEventRecord,
+  filePath: string,
+): Deployment {
+  const finishedAt = new Date(record.finishedAt ?? record.startedAt ?? now);
+  const startedAt = new Date(
+    record.startedAt ?? record.finishedAt ?? finishedAt,
+  );
+  const sha = record.gitSha || record.imageTag || '';
+
+  return {
+    id: record.eventId ?? filePath,
+    eventId: record.eventId,
+    source: record.source ?? record.provider ?? 'deployment-event',
+    workflow: record.workflow ?? 'unknown',
+    workflowRunId: record.workflowRunId,
+    workflowRunAttempt: record.workflowRunAttempt,
+    environment: record.environment ?? 'unknown',
+    event: record.trigger ?? 'deployment_event',
+    branch: record.branch ?? 'unknown',
+    sha,
+    imageTag: record.imageTag ?? sha,
+    conclusion: normalizeDeploymentStatus(record.status ?? 'unknown'),
+    startedAt,
+    finishedAt,
+    url: record.deployUrl ?? '',
+  };
+}
+
+function mergeDeployments(deployments: Deployment[]): Deployment[] {
+  const merged = new Map<string, Deployment>();
+
+  for (const deployment of deployments) {
+    const key = deployment.workflowRunId
+      ? `${deployment.workflowRunId}:${deployment.environment}`
+      : `${deployment.source}:${deployment.id}:${deployment.environment}`;
+    const existing = merged.get(key);
+
+    if (!existing || existing.source === 'github-actions-history') {
+      merged.set(key, deployment);
+    }
+  }
+
+  return [...merged.values()];
 }
 
 function inferEnvironment(run: WorkflowRun): string {
@@ -769,6 +958,14 @@ function detectRepository(): string | undefined {
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isFileNotFound(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    (error as NodeJS.ErrnoException).code === 'ENOENT'
+  );
 }
 
 void main().catch((error) => {

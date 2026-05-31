@@ -22,7 +22,7 @@ Dự án đã có CI/CD, GHCR, GCP/GKE, Jenkins, Prometheus, Grafana, ELK, backu
 
 ### GitHub Actions
 
-Script lấy dữ liệu từ GitHub Actions API để đọc các workflow deploy:
+Script ưu tiên đọc deployment event JSON được sinh sau mỗi lần deploy. Nếu chưa có event, script fallback sang GitHub Actions API để đọc các workflow deploy:
 
 - `Main Image Release`
 - `Production Release`
@@ -35,6 +35,8 @@ Các workflow này cho biết:
 - kết quả thành công hay thất bại
 - link workflow run
 - thời gian hoàn tất deploy
+
+Chi tiết event store nằm ở `guides/devops/DEPLOYMENT-EVENT-STORE.md`.
 
 ### GitHub Issues
 
