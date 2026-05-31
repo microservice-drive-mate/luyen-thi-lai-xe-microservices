@@ -1,0 +1,38 @@
+global:
+  imageRegistry: ghcr.io/<github-owner>
+  imageTag: replace-with-git-sha-that-passed-main-release
+  storageClassName: local-path
+
+ingress:
+  apiHost: api.replace-with-static-ip.nip.io
+  authHost: auth.replace-with-static-ip.nip.io
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-http01
+  tls:
+    enabled: true
+    secretName: luyen-thi-lai-xe-tls
+
+config:
+  frontendOrigin: https://api.replace-with-static-ip.nip.io
+  gatewayPublicUrl: https://api.replace-with-static-ip.nip.io
+  keycloakPublicUrl: https://auth.replace-with-static-ip.nip.io
+  corsOrigins:
+    - https://api.replace-with-static-ip.nip.io
+    - https://auth.replace-with-static-ip.nip.io
+
+imagePullSecret:
+  enabled: true
+  username: replace-with-ghcr-username
+  token: change-me
+
+seed:
+  enabled: true
+
+secrets:
+  postgresPassword: change-me
+  rabbitmqPassword: change-me
+  rabbitmqErlangCookie: change-me-rabbitmq-cookie
+  keycloakAdminPassword: change-me
+  keycloakClientSecret: change-me
+  storageAccountName: replace-with-storage-account
+  storageAccountKey: change-me

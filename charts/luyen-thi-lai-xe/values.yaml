@@ -1,9 +1,9 @@
 global:
-  imageRegistry: ghcr.io/nhactaohocbai
+  imageRegistry: ghcr.io/replace-with-github-owner
   imageTag: latest
   imagePullPolicy: IfNotPresent
   nodeEnv: production
-  storageClassName: standard-rwo
+  storageClassName: local-path
 
 imagePullSecret:
   enabled: false
@@ -13,10 +13,13 @@ imagePullSecret:
 
 ingress:
   enabled: true
-  className: gce
+  className: traefik
   apiHost: api.127.0.0.1.nip.io
   authHost: auth.127.0.0.1.nip.io
   annotations: {}
+  tls:
+    enabled: false
+    secretName: luyen-thi-lai-xe-tls
 
 config:
   frontendOrigin: http://localhost:3000
@@ -32,6 +35,22 @@ config:
   logFormat: json
   questionServiceTimeoutMs: "3000"
   userServiceTimeoutMs: "3000"
+
+tracing:
+  enabled: true
+  otlpTracesEndpoint: ""
+  kongZipkinEndpoint: ""
+  propagators: tracecontext,baggage
+  kongSamplingRate: "1.0"
+  jaeger:
+    image: jaegertracing/jaeger:2.5.0
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
 
 secrets:
   postgresUser: user
@@ -54,11 +73,11 @@ appDefaults:
   port: 3000
   resources:
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 150m
+      memory: 256Mi
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 750m
+      memory: 768Mi
   probes:
     liveness:
       initialDelaySeconds: 30
@@ -70,12 +89,31 @@ appDefaults:
       periodSeconds: 10
       timeoutSeconds: 3
       failureThreshold: 6
+  # HPA — Horizontal Pod Autoscaler defaults
+  # Bật cho từng service riêng bằng cách set hpa.enabled: true
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPU: 70
+    targetMemory: 80
 
 services:
   - name: identity-service
     image: luyen-thi-lai-xe-identity-service
     dbName: identity_db
     usesRedis: true
+    resources:
+      requests:
+        cpu: 250m
+        memory: 384Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
     routes:
       - name: identity-route
         paths: ["/auth"]
@@ -102,6 +140,17 @@ services:
   - name: exam-service
     image: luyen-thi-lai-xe-exam-service
     dbName: exam_db
+    resources:
+      requests:
+        cpu: 250m
+        memory: 384Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 4
     routes:
       - name: exam-route
         paths: ["/exams"]
@@ -116,6 +165,17 @@ services:
     image: luyen-thi-lai-xe-course-service
     dbName: course_db
     usesRedis: true
+    resources:
+      requests:
+        cpu: 200m
+        memory: 384Mi
+      limits:
+        cpu: 750m
+        memory: 768Mi
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
     routes:
       - name: course-route
         paths: ["/courses", "/enrollments"]
@@ -150,6 +210,17 @@ services:
     image: luyen-thi-lai-xe-analytics-service
     dbName: analytics_db
     usesRedis: true
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
     routes:
       - name: analytics-route
         paths: ["/analytics"]
@@ -161,6 +232,17 @@ services:
     image: luyen-thi-lai-xe-simulation-service
     dbName: simulation_db
     usesRedis: true
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
     routes:
       - name: simulation-route
         paths: ["/simulation"]
@@ -171,6 +253,13 @@ services:
   - name: media-service
     image: luyen-thi-lai-xe-media-service
     dbName: media_db
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 2Gi
     routes:
       - name: media-route
         paths: ["/media"]
@@ -197,15 +286,26 @@ postgres:
   storage: 10Gi
   resources:
     requests:
-      cpu: 250m
-      memory: 512Mi
-    limits:
       cpu: "1"
-      memory: 1Gi
+      memory: 2Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi
 
 rabbitmq:
   image: rabbitmq:3-management-alpine
   storage: 2Gi
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1500m
+      memory: 2Gi
+
+redis:
+  image: redis:7-alpine
+  storage: 1Gi
   resources:
     requests:
       cpu: 100m
@@ -214,24 +314,13 @@ rabbitmq:
       cpu: 500m
       memory: 512Mi
 
-redis:
-  image: redis:7-alpine
-  storage: 1Gi
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 250m
-      memory: 256Mi
-
 consul:
   image: hashicorp/consul:1.19
   storage: 1Gi
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi
     limits:
       cpu: 500m
       memory: 512Mi
@@ -240,9 +329,22 @@ keycloak:
   image: quay.io/keycloak/keycloak:24.0
   replicas: 1
   args: ["start", "--import-realm"]
+  hostnameUrl: ""
+  hostnameAdminUrl: ""
   hostnameStrict: "false"
   httpEnabled: "true"
   proxyHeaders: xforwarded
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1500m
+      memory: 2Gi
+
+kong:
+  image: kong:3.7
+  replicas: 1
   resources:
     requests:
       cpu: 250m
@@ -251,28 +353,38 @@ keycloak:
       cpu: "1"
       memory: 1Gi
 
-kong:
-  image: kong:3.7
-  replicas: 1
-  resources:
-    requests:
-      cpu: 100m
-      memory: 512Mi
-    limits:
-      cpu: 500m
-      memory: 1Gi
-
 migration:
   image: luyen-thi-lai-xe-migration-runner
   imageTag: ""
   backoffLimit: 1
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
+      cpu: 250m
       memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+seed:
+  enabled: false
+  backoffLimit: 1
+  services:
+    - identity-service
+    - user-service
+    - media-service
+    - question-service
+    - exam-service
+    - course-service
+    - analytics-service
+    - notification-service
+    - simulation-service
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
 
 jobs:
   image: curlimages/curl:8.11.1

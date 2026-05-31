@@ -123,3 +123,131 @@ spec:
               {{- end }}
           resources:
             {{- toYaml .Values.migration.resources | nindent 12 }}
+{{- if .Values.seed.enabled }}
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "lttl.seedJobName" . }}
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: seed
+spec:
+  backoffLimit: {{ .Values.seed.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "lttl.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: seed
+    spec:
+      restartPolicy: Never
+      {{- if .Values.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ include "lttl.imagePullSecretName" . }}
+      {{- end }}
+      containers:
+        - name: seed-runner
+          image: {{ include "lttl.migrationImage" . | quote }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" . }}
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" . }}
+                  key: POSTGRES_PASSWORD
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" . }}
+                  key: KEYCLOAK_ADMIN
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" . }}
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" . }}
+                  key: KEYCLOAK_CLIENT_SECRET
+            - name: KEYCLOAK_AUTH_SERVER_URL
+              value: "http://{{ include "lttl.fullname" . }}-keycloak:8080"
+            - name: KEYCLOAK_REALM
+              value: {{ .Values.secrets.keycloakRealm | quote }}
+            - name: KEYCLOAK_CLIENT_ID
+              value: {{ .Values.secrets.keycloakClientId | quote }}
+            - name: NODE_ENV
+              value: "production"
+            - name: CHECKPOINT_DISABLE
+              value: "1"
+            - name: PRISMA_HIDE_UPDATE_MESSAGE
+              value: "true"
+          command:
+            - sh
+            - -ec
+            - |
+              node - <<'NODE'
+              const net = require('node:net');
+              const targets = [
+                { name: 'Postgres', host: '{{ include "lttl.fullname" . }}-postgres', port: 5432 },
+                { name: 'Keycloak', host: '{{ include "lttl.fullname" . }}-keycloak', port: 8080 },
+              ];
+              const timeoutMs = 180000;
+
+              function tryConnect(target) {
+                return new Promise((resolve, reject) => {
+                  const socket = net.createConnection({
+                    host: target.host,
+                    port: target.port,
+                  });
+                  socket.setTimeout(2000);
+                  socket.once('connect', () => {
+                    socket.destroy();
+                    resolve();
+                  });
+                  socket.once('timeout', () => {
+                    socket.destroy();
+                    reject(new Error('timeout'));
+                  });
+                  socket.once('error', reject);
+                });
+              }
+
+              (async () => {
+                for (const target of targets) {
+                  const started = Date.now();
+                  while (Date.now() - started < timeoutMs) {
+                    try {
+                      await tryConnect(target);
+                      break;
+                    } catch {
+                      await new Promise((resolve) => setTimeout(resolve, 2000));
+                    }
+                  }
+
+                  if (Date.now() - started >= timeoutMs) {
+                    console.error(`${target.name} was not reachable at ${target.host}:${target.port}`);
+                    process.exit(1);
+                  }
+                }
+              })();
+              NODE
+
+              {{- range .Values.services }}
+              {{- if has .name $.Values.seed.services }}
+              echo "[seed] {{ .name }}"
+              cd "/workspace/apps/{{ .name }}"
+              DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@{{ include "lttl.fullname" $ }}-postgres:5432/{{ .dbName }}" \
+                tsx prisma/seed.ts
+              cd /workspace
+              {{- end }}
+              {{- end }}
+          resources:
+            {{- toYaml .Values.seed.resources | nindent 12 }}
+{{- end }}

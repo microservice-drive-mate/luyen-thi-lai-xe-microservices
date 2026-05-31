@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
+import { IUseCase, MetricsService } from '@repo/common';
 import { UserProfile } from '../../../domain/aggregates/user-profile/user-profile.aggregate';
+import { UserRole } from '../../../domain/aggregates/user-profile/user-profile.types';
 import { UserAlreadyExistsException } from '../../../domain/exceptions/user-already-exists.exception';
 import { UserProfileRepository } from '../../../domain/repositories/user-profile.repository';
 import { CreateUserProfileCommand } from './create-user-profile.command';
-import { UserRole } from '../../../domain/aggregates/user-profile/user-profile.types';
 
 export class CreateUserProfileResult {
   constructor(
@@ -19,7 +19,10 @@ export class CreateUserProfileResult {
 export class CreateUserProfileUseCase
   implements IUseCase<CreateUserProfileCommand, CreateUserProfileResult>
 {
-  constructor(private readonly userProfileRepository: UserProfileRepository) {}
+  constructor(
+    private readonly userProfileRepository: UserProfileRepository,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   async execute(
     command: CreateUserProfileCommand,
@@ -57,6 +60,10 @@ export class CreateUserProfileUseCase
     });
 
     await this.userProfileRepository.save(profile);
+    this.metricsService.recordUserCreated({
+      role: profile.role,
+      source: 'identity-event',
+    });
 
     return new CreateUserProfileResult(
       profile.id,

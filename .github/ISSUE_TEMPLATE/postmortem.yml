@@ -1,0 +1,75 @@
+name: Postmortem
+description: Tổng kết sau incident để cải thiện quy trình DevOps.
+title: "[Postmortem] "
+labels:
+  - postmortem
+  - needs-review
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tạo postmortem sau incident quan trọng. Nếu incident do deploy gây ra, thêm label `change-failure` hoặc `rollback` vào issue incident để báo cáo DORA tính Change Failure Rate.
+        Postmortem bắt buộc với incident `sev1` và `sev2`.
+
+  - type: input
+    id: incident_link
+    attributes:
+      label: Incident liên quan
+      placeholder: "#123"
+    validations:
+      required: true
+
+  - type: input
+    id: timeline
+    attributes:
+      label: Thời gian sự cố
+      description: Ghi khoảng thời gian bắt đầu - khôi phục.
+      placeholder: "2026-05-31T20:30:00+07:00 - 2026-05-31T21:05:00+07:00"
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Tóm tắt
+      placeholder: "Sự cố là gì, ảnh hưởng ai, đã khôi phục bằng cách nào?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: root_cause
+    attributes:
+      label: Nguyên nhân gốc
+      placeholder: "Ví dụ: config Consul sai, migration không backward-compatible, image tag thiếu..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_went_well
+    attributes:
+      label: Điều đã làm tốt
+      placeholder: "Alert phát hiện nhanh, rollback rõ ràng, runbook đủ thông tin..."
+
+  - type: textarea
+    id: what_went_wrong
+    attributes:
+      label: Điều chưa tốt
+      placeholder: "Thiếu smoke test cho endpoint X, log chưa đủ correlation ID..."
+
+  - type: textarea
+    id: action_items
+    attributes:
+      label: Action items
+      description: Liệt kê việc cần làm, owner và deadline.
+      placeholder: |
+        - [ ] Thêm smoke test cho /exams/submit - owner: ... - deadline: ...
+        - [ ] Bổ sung alert RabbitMQ DLQ - owner: ... - deadline: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: dora_notes
+    attributes:
+      label: Ghi chú DORA
+      description: Sự cố này có làm tăng MTTR/CFR không? Có rollback không?
+      placeholder: "MTTR 35 phút, có rollback Helm revision 12 -> 11, tính là change-failure."

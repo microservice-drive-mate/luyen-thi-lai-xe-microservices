@@ -6,8 +6,9 @@ metadata:
     {{- include "lttl.labels" . | nindent 4 }}
 data:
   NODE_ENV: {{ .Values.global.nodeEnv | quote }}
+  NODE_TLS_REJECT_UNAUTHORIZED: "0"
   CONSUL_URL: {{ printf "http://%s-consul:8500" (include "lttl.fullname" .) | quote }}
-  KEYCLOAK_AUTH_SERVER_URL: {{ printf "http://%s-keycloak:8080" (include "lttl.fullname" .) | quote }}
+  KEYCLOAK_AUTH_SERVER_URL: {{ .Values.config.keycloakPublicUrl | quote }}
   KEYCLOAK_REALM: {{ .Values.secrets.keycloakRealm | quote }}
   KEYCLOAK_CLIENT_ID: {{ .Values.secrets.keycloakClientId | quote }}
   KEYCLOAK_TIMEOUT_MS: "10000"
@@ -155,6 +156,12 @@ data:
           header_name: x-correlation-id
           generator: uuid#counter
           echo_downstream: true
+      {{ if .Values.tracing.enabled }}
+      - name: zipkin
+        config:
+          http_endpoint: {{ default (printf "http://%s-jaeger:9411/api/v2/spans" (include "lttl.fullname" .)) .Values.tracing.kongZipkinEndpoint | quote }}
+          sample_ratio: {{ .Values.tracing.kongSamplingRate }}
+      {{ end }}
       - name: rate-limiting
         config:
           second: 100

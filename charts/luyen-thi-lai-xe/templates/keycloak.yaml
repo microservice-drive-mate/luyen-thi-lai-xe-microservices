@@ -78,8 +78,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "lttl.secretName" . }}
                   key: KEYCLOAK_ADMIN_PASSWORD
-            - name: KC_HOSTNAME
-              value: {{ .Values.ingress.authHost | quote }}
+            - name: KC_HOSTNAME_URL
+              value: {{ default .Values.config.keycloakPublicUrl .Values.keycloak.hostnameUrl | quote }}
+            - name: KC_HOSTNAME_ADMIN_URL
+              value: {{ default .Values.config.keycloakPublicUrl .Values.keycloak.hostnameAdminUrl | quote }}
             - name: KC_HOSTNAME_STRICT
               value: {{ .Values.keycloak.hostnameStrict | quote }}
             - name: KC_HTTP_ENABLED

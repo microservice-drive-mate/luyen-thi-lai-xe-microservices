@@ -1,0 +1,60 @@
+{{/*
+  HPA — Horizontal Pod Autoscaler
+  Tự động mở rộng số lượng pods dựa trên CPU/Memory utilization.
+  Chỉ tạo HPA cho services có .hpa.enabled = true trong values.yaml.
+  Yêu cầu: metrics-server phải được cài đặt trong cluster (K3s đã tích hợp sẵn).
+*/}}
+{{- range .Values.services }}
+{{- $hpa := .hpa | default dict }}
+{{- $hpaEnabled := false }}
+{{- if hasKey $hpa "enabled" }}
+  {{- $hpaEnabled = $hpa.enabled }}
+{{- else if and (hasKey $.Values.appDefaults "hpa") (hasKey $.Values.appDefaults.hpa "enabled") }}
+  {{- $hpaEnabled = $.Values.appDefaults.hpa.enabled }}
+{{- end }}
+{{- if $hpaEnabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "lttl.componentName" (dict "root" $ "name" .name) }}
+  labels:
+    {{- include "lttl.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: hpa
+    app.kubernetes.io/service-name: {{ .name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "lttl.componentName" (dict "root" $ "name" .name) }}
+  {{- $hpaDefaults := $.Values.appDefaults.hpa | default dict }}
+  minReplicas: {{ $hpa.minReplicas | default $hpaDefaults.minReplicas | default 1 }}
+  maxReplicas: {{ $hpa.maxReplicas | default $hpaDefaults.maxReplicas | default 5 }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $hpa.targetCPU | default $hpaDefaults.targetCPU | default 70 }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $hpa.targetMemory | default $hpaDefaults.targetMemory | default 80 }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: {{ $hpa.scaleUpStabilization | default 60 }}
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: {{ $hpa.scaleDownStabilization | default 300 }}
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120
+{{- end }}
+{{- end }}

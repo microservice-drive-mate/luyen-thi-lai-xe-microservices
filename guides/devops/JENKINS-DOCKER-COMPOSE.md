@@ -17,6 +17,7 @@ Tài liệu này mô tả luồng CI/CD đã được căn chỉnh để triển
 - `scripts/deploy-staging.sh`
 - `scripts/deploy-prod.sh`
 - `scripts/deploy-compose.sh`
+- `scripts/devops-record-deployment.js`
 - `docker/logstash/logstash.conf`
 
 ## 3. Jenkins cần có gì
@@ -169,7 +170,31 @@ Rollback nhanh nhất:
 
 File `.last-deployed-tag` trên server giúp biết image tag gần nhất đã triển khai.
 
-## 11. Việc nên làm tiếp
+## 11. DORA deployment event
+
+`Jenkinsfile` ghi deployment event sau `Deploy Staging` và `Deploy Production`.
+
+Event được lưu ở:
+
+```text
+reports/deployments/events/*.json
+```
+
+Jenkins archive các file này làm build artifact. Khi cần tính DORA từ Jenkins deploy, tải artifact về và đặt vào:
+
+```text
+reports/deployments/events/
+```
+
+Sau đó chạy:
+
+```bash
+npm run dora:report
+```
+
+Chi tiết nằm ở `guides/devops/JENKINS-DORA-INTEGRATION.md`.
+
+## 12. Việc nên làm tiếp
 
 - Thêm TLS/reverse proxy trước Kong nếu expose ra Internet.
 - Thêm Trivy image scan, secret scan, dependency audit và SBOM vào pipeline trước khi push/deploy image.

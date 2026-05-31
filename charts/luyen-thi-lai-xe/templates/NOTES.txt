@@ -2,14 +2,14 @@ Phase 5 Kubernetes release installed:
 
   Release: {{ .Release.Name }}
   Namespace: {{ .Release.Namespace }}
-  API host: {{ .Values.ingress.apiHost }}
-  Keycloak host: {{ .Values.ingress.authHost }}
+  API URL: {{ .Values.config.gatewayPublicUrl }}
+  Keycloak URL: {{ .Values.config.keycloakPublicUrl }}
   Image tag: {{ .Values.global.imageTag }}
 
 Smoke test examples:
 
-  curl http://{{ .Values.ingress.apiHost }}/identity-service/health/live
-  curl http://{{ .Values.ingress.apiHost }}/identity-service/health/ready
+  curl {{ .Values.config.gatewayPublicUrl }}/identity-service/health/live
+  curl {{ .Values.config.gatewayPublicUrl }}/identity-service/health/ready
 
 Rollback:
 

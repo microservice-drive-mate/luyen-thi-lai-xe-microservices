@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
   packages: write
 
 jobs:
@@ -181,8 +182,8 @@ jobs:
 
             if docker buildx build \
               --file "./apps/${{ matrix.service }}/Dockerfile" \
-              --tag "ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest" \
-              --tag "ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}" \
+              --tag "ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest" \
+              --tag "ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}" \
               --cache-from "type=gha,scope=${{ matrix.service }}" \
               --cache-to "type=gha,mode=max,scope=${{ matrix.service }}" \
               --provenance=false \
@@ -204,7 +205,7 @@ jobs:
       - name: Scan Docker Image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          image-ref: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
           scanners: vuln
           format: table
           vuln-type: os,library
@@ -212,20 +213,60 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.service }}.spdx.json
+          dependency-snapshot: false
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.service }}-${{ github.sha }}
+          path: sbom-${{ matrix.service }}.spdx.json
+          retention-days: 90
+
       - name: Push Docker Image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
-          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
-          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest
+          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest
+
+      - name: Install Cosign
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign immutable image and attach SBOM attestation
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}"
+          cosign sign --yes "$IMAGE"
+          cosign attest --yes --predicate "sbom-${{ matrix.service }}.spdx.json" --type spdxjson "$IMAGE"
+
+      - name: Verify image signature
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/ci.yml@refs/heads/main" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}"
 
       - name: Get image size
         id: size
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          docker pull ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest 2>/dev/null || true
-          SIZE=$(docker image inspect ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest \
+          docker pull ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest 2>/dev/null || true
+          SIZE=$(docker image inspect ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest \
             --format='{{.Size}}' 2>/dev/null | awk '{printf "%.1f MB", $1/1024/1024}' || echo "N/A")
           echo "size=$SIZE" >> "$GITHUB_OUTPUT"
 
@@ -281,8 +322,8 @@ jobs:
           set -euo pipefail
           docker buildx build \
             --file Dockerfile.migration-runner \
-            --tag ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }} \
-            --tag ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:latest \
+            --tag ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }} \
+            --tag ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:latest \
             --cache-from type=gha,scope=migration-runner \
             --cache-to type=gha,mode=max,scope=migration-runner \
             --provenance=false \
@@ -292,7 +333,7 @@ jobs:
       - name: Scan Migration Runner with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
+          image-ref: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
           scanners: vuln
           format: table
           vuln-type: os,library
@@ -300,12 +341,49 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+      - name: Generate Migration Runner SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
+          format: spdx-json
+          output-file: sbom-migration-runner.spdx.json
+          dependency-snapshot: false
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Upload Migration Runner SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-migration-runner-${{ github.sha }}
+          path: sbom-migration-runner.spdx.json
+          retention-days: 90
+
       - name: Push Migration Runner Image
         shell: bash
         run: |
           set -euo pipefail
-          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
-          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:latest
+          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:latest
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign immutable migration runner image and attach SBOM attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}"
+          cosign sign --yes "$IMAGE"
+          cosign attest --yes --predicate "sbom-migration-runner.spdx.json" --type spdxjson "$IMAGE"
+
+      - name: Verify migration runner image signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/ci.yml@refs/heads/main" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}"
 
       - name: Build Summary
         if: always()
@@ -343,6 +421,7 @@ jobs:
       AUTH_HOST: ${{ vars.STAGING_AUTH_HOST }}
       FRONTEND_ORIGIN: ${{ vars.STAGING_FRONTEND_ORIGIN }}
       API_SCHEME: ${{ vars.STAGING_API_SCHEME }}
+      STAGING_SEED_ENABLED: ${{ vars.STAGING_SEED_ENABLED }}
       GHCR_PULL_USERNAME: ${{ secrets.GHCR_PULL_USERNAME }}
       GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
       POSTGRES_PASSWORD: ${{ secrets.STAGING_POSTGRES_PASSWORD }}
@@ -352,12 +431,53 @@ jobs:
       KEYCLOAK_CLIENT_SECRET: ${{ secrets.STAGING_KEYCLOAK_CLIENT_SECRET }}
       STORAGE_ACCOUNT_NAME: ${{ secrets.STAGING_STORAGE_ACCOUNT_NAME }}
       STORAGE_ACCOUNT_KEY: ${{ secrets.STAGING_STORAGE_ACCOUNT_KEY }}
+      GCP_VM_NAME: luyen-thi-lai-xe-staging-k3s
+      GCP_VM_ZONE: asia-southeast1-b
+      GCP_PROJECT_ID: devops-497910
     steps:
       - uses: actions/checkout@v4
+
+      - name: Mark deployment start
+        shell: bash
+        run: echo "DEPLOYMENT_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
 
       - uses: azure/setup-helm@v4
 
       - uses: azure/setup-kubectl@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Start IAP tunnel to K3s API
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Cài đặt numpy để tăng tốc và tối ưu hóa băng thông IAP tunnel (ngăn chặn treo mạng khi truyền manifest lớn)
+          echo "🚀 Installing NumPy to optimize Google Cloud IAP tunnel bandwidth..."
+          pip install --no-cache-dir numpy
+
+          gcloud compute start-iap-tunnel "$GCP_VM_NAME" 6443 \
+            --local-host-port=127.0.0.1:16443 \
+            --zone="$GCP_VM_ZONE" \
+            --project="$GCP_PROJECT_ID" &
+          TUNNEL_PID=$!
+          echo "TUNNEL_PID=$TUNNEL_PID" >> "$GITHUB_ENV"
+          for i in $(seq 1 60); do
+            if nc -z 127.0.0.1 16443 2>/dev/null; then
+              echo "✅ IAP tunnel ready (attempt $i)"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "❌ IAP tunnel failed to start within 60s"
+          kill "$TUNNEL_PID" 2>/dev/null || true
+          exit 1
 
       - name: Validate Kubernetes deployment inputs
         shell: bash
@@ -416,7 +536,11 @@ jobs:
             .filter(Boolean);
 
           const values = {
-            global: { imageTag: env.IMAGE_TAG },
+            global: {
+              imageTag: env.IMAGE_TAG,
+              imageRegistry: `ghcr.io/${{ github.repository_owner }}`,
+              storageClassName: 'local-path'
+            },
             migration: { imageTag: env.IMAGE_TAG },
             imagePullSecret: {
               enabled: true,
@@ -426,12 +550,24 @@ jobs:
             ingress: {
               apiHost: env.API_HOST,
               authHost: env.AUTH_HOST,
+              ...(env.API_SCHEME === 'https' ? {
+                annotations: {
+                  'cert-manager.io/cluster-issuer': 'letsencrypt-http01',
+                },
+                tls: {
+                  enabled: true,
+                  secretName: 'luyen-thi-lai-xe-tls',
+                },
+              } : {}),
             },
             config: {
               frontendOrigin: env.FRONTEND_ORIGIN,
               gatewayPublicUrl: env.GATEWAY_PUBLIC_URL,
               keycloakPublicUrl: env.KEYCLOAK_PUBLIC_URL,
               corsOrigins: [...new Set(origins)],
+            },
+            seed: {
+              enabled: String(env.STAGING_SEED_ENABLED || '').toLowerCase() === 'true',
             },
             secrets: {
               postgresPassword: env.POSTGRES_PASSWORD,
@@ -447,6 +583,37 @@ jobs:
           fs.writeFileSync(env.HELM_VALUES_FILE, JSON.stringify(values, null, 2));
           NODE
 
+      - name: Auto-heal stuck Helm release and cleanup old jobs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # 1. Tự động gỡ kẹt release Helm nếu có
+          STATUS=$(helm list -n staging -f "^luyen-thi-lai-xe$" -o json | jq -r '.[0].status // empty')
+          echo "Current Helm release status: $STATUS"
+
+          if [[ "$STATUS" == "pending-upgrade" || "$STATUS" == "pending-install" || "$STATUS" == "pending-rollback" ]]; then
+            echo "⚠️ Helm release is stuck in '$STATUS' state. Attempting self-healing..."
+            
+            # Tìm revision bị kẹt từ lịch sử Helm
+            STUCK_REVISION=$(helm history luyen-thi-lai-xe -n staging -o json | jq -r '.[] | select(.status=="pending-upgrade" or .status=="pending-install" or .status=="pending-rollback") | .revision' | tail -n 1)
+            
+            if [[ -n "$STUCK_REVISION" ]]; then
+              echo "🗑️ Deleting stuck Helm release secret for revision v$STUCK_REVISION..."
+              kubectl delete secret "sh.helm.release.v1.luyen-thi-lai-xe.v$STUCK_REVISION" -n staging || true
+              echo "✅ Stuck release state cleared."
+            else
+              echo "⚠️ Could not identify stuck revision from history. Proceeding anyway..."
+            fi
+          else
+            echo "✅ Helm release is not stuck (Status: '${STATUS:-not-deployed}'). No action needed."
+          fi
+
+          # 2. Dọn dẹp các Job cũ để tránh lỗi immutable khi Helm upgrade
+          echo "🧹 Cleaning up old Jobs to avoid immutable field errors..."
+          kubectl delete jobs -n staging -l app.kubernetes.io/instance=luyen-thi-lai-xe --ignore-not-found
+          echo "✅ Old jobs cleanup completed."
+
       - name: Deploy Helm release
         shell: bash
         run: |
@@ -460,13 +627,117 @@ jobs:
             --timeout 25m \
             -f "$RUNNER_TEMP/staging-values.json"
 
+      - name: Debug deployment failure
+        if: failure()
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "========== HELM RELEASE STATUS =========="
+          helm list -n staging || true
+          echo ""
+          echo "========== HELM HISTORY =========="
+          helm history luyen-thi-lai-xe -n staging || true
+          echo ""
+          echo "========== STORAGE CLASSES =========="
+          kubectl get storageclass || true
+          echo ""
+          echo "========== PVCs =========="
+          kubectl get pvc -n staging || true
+          echo ""
+          echo "========== ALL PODS =========="
+          kubectl get pods -n staging -o wide || true
+          echo ""
+          echo "========== POD DESCRIPTIONS =========="
+          for pod in $(kubectl get pods -n staging --no-headers -o custom-columns=":metadata.name" 2>/dev/null | head -20); do
+            echo "--- Describing pod: $pod ---"
+            kubectl describe pod "$pod" -n staging 2>/dev/null | tail -40
+            echo ""
+          done
+          echo ""
+          echo "========== KONG ROLLOUT DEBUG =========="
+          kubectl describe deployment luyen-thi-lai-xe-kong -n staging 2>/dev/null || true
+          echo ""
+          kubectl get rs,pods -n staging -l app.kubernetes.io/component=kong -o wide 2>/dev/null || true
+          echo ""
+          for pod in $(kubectl get pods -n staging -l app.kubernetes.io/component=kong --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do
+            echo "--- Describing Kong pod: $pod ---"
+            kubectl describe pod "$pod" -n staging 2>/dev/null || true
+            echo ""
+            echo "--- Current Kong logs: $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --tail=120 2>/dev/null || true
+            echo ""
+            echo "--- Previous Kong logs: $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --previous --tail=120 2>/dev/null || true
+            echo ""
+          done
+          echo ""
+          echo "========== NON-RUNNING POD DEBUG =========="
+          for pod in $(kubectl get pods -n staging --field-selector=status.phase!=Running,status.phase!=Succeeded --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do
+            echo "--- Describing non-running pod: $pod ---"
+            kubectl describe pod "$pod" -n staging 2>/dev/null || true
+            echo ""
+            echo "--- Current logs: $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --tail=120 2>/dev/null || true
+            echo ""
+            echo "--- Previous logs: $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --previous --tail=120 2>/dev/null || true
+            echo ""
+          done
+          echo ""
+          echo "========== POD LOGS (last 30 lines per container) =========="
+          for pod in $(kubectl get pods -n staging --no-headers -o custom-columns=":metadata.name" 2>/dev/null | head -10); do
+            echo "--- Logs for pod: $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --tail=30 2>/dev/null || true
+            echo ""
+          done
+          echo ""
+          echo "========== EVENTS (last 50) =========="
+          kubectl get events -n staging --sort-by='.metadata.creationTimestamp' 2>/dev/null | tail -50 || true
+          echo ""
+          echo "========== NODE RESOURCES =========="
+          kubectl top nodes 2>/dev/null || kubectl describe nodes | grep -A 20 "Allocated resources" || true
+
       - name: Verify rollout and smoke
         shell: bash
         run: |
           set -euo pipefail
           kubectl wait --for=condition=complete job -l app.kubernetes.io/component=consul-seed -n staging --timeout=10m
           kubectl wait --for=condition=complete job -l app.kubernetes.io/component=migration -n staging --timeout=10m
+          if kubectl get job -l app.kubernetes.io/component=seed -n staging --no-headers 2>/dev/null | grep -q .; then
+            kubectl wait --for=condition=complete job -l app.kubernetes.io/component=seed -n staging --timeout=15m
+          fi
           kubectl rollout status deployment -l app.kubernetes.io/component=app -n staging --timeout=10m
           kubectl get jobs -n staging
           API_SCHEME="${API_SCHEME:-http}"
           SMOKE_BASE_URL="${API_SCHEME}://${API_HOST}" bash scripts/k8s-smoke.sh
+
+      - name: Cleanup IAP tunnel
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${TUNNEL_PID:-}" ]]; then
+            kill "$TUNNEL_PID" 2>/dev/null || true
+            echo "IAP tunnel (PID $TUNNEL_PID) terminated"
+          fi
+
+      - name: Record deployment event
+        if: always()
+        env:
+          DEPLOYMENT_ENVIRONMENT: staging
+          DEPLOYMENT_TYPE: helm
+          DEPLOYMENT_TARGET: gcp-k3s
+          DEPLOYMENT_RELEASE_NAME: luyen-thi-lai-xe
+          DEPLOYMENT_NAMESPACE: staging
+          DEPLOYMENT_IMAGE_TAG: ${{ github.sha }}
+          DEPLOYMENT_GIT_SHA: ${{ github.sha }}
+          DEPLOYMENT_STATUS: ${{ job.status }}
+          DEPLOYMENT_SMOKE_STATUS: ${{ job.status }}
+        run: npm run deployment:record
+
+      - name: Upload deployment event
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-event-staging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/deployments/events/
+          retention-days: 90

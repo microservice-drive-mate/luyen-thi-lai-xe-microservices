@@ -7,6 +7,12 @@ import { DEMO_PASSWORD, allDemoUsers } from '../../../scripts/demo-seed-data';
 
 const connectionString = process.env.DATABASE_URL;
 const CONSUL_URL = process.env.CONSUL_URL || 'http://127.0.0.1:8500';
+const MANAGED_REALM_ROLES = [
+  'ADMIN',
+  'CENTER_MANAGER',
+  'INSTRUCTOR',
+  'STUDENT',
+] as const;
 
 if (!connectionString) {
   throw new Error('DATABASE_URL is required to seed identity data');
@@ -177,6 +183,36 @@ async function getRealmRole(
   return response.data;
 }
 
+async function ensureRealmRole(
+  adminBaseUrl: string,
+  token: string,
+  roleName: string,
+): Promise<void> {
+  try {
+    await getRealmRole(adminBaseUrl, token, roleName);
+    return;
+  } catch (error) {
+    if (!axios.isAxiosError(error) || error.response?.status !== 404) {
+      throw error;
+    }
+  }
+
+  await axios.post(
+    `${adminBaseUrl}/roles`,
+    { name: roleName },
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+async function ensureManagedRealmRoles(
+  adminBaseUrl: string,
+  token: string,
+): Promise<void> {
+  for (const roleName of MANAGED_REALM_ROLES) {
+    await ensureRealmRole(adminBaseUrl, token, roleName);
+  }
+}
+
 async function getUserRealmRoles(
   adminBaseUrl: string,
   token: string,
@@ -198,7 +234,9 @@ async function assignRealmRole(
   const role = await getRealmRole(adminBaseUrl, token, roleName);
   const currentRoles = await getUserRealmRoles(adminBaseUrl, token, userId);
   const managedRoles = currentRoles.filter((item) =>
-    ['ADMIN', 'CENTER_MANAGER', 'INSTRUCTOR', 'STUDENT'].includes(item.name),
+    MANAGED_REALM_ROLES.includes(
+      item.name as (typeof MANAGED_REALM_ROLES)[number],
+    ),
   );
 
   if (managedRoles.length > 0) {
@@ -320,6 +358,7 @@ async function seedKeycloak() {
   const token = await getAdminToken(config);
   const adminBaseUrl = `${config.authServerUrl}/admin/realms/${config.realm}`;
 
+  await ensureManagedRealmRoles(adminBaseUrl, token);
   await removeConflictingKeycloakUsers(adminBaseUrl, token);
   await partialImportDemoUsers(adminBaseUrl, token);
 

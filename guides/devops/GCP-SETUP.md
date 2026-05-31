@@ -331,22 +331,28 @@ Nếu GHCR đã có image của các services rồi, GCP/GKE chỉ cần pull v�
 Chart hiện đang dùng image theo pattern:
 
 ```text
-ghcr.io/nhactaohocbai/luyen-thi-lai-xe-<service>:<tag>
+ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-<service>:<tag>
+```
+
+Trong GitHub Actions, `${{ github.repository_owner }}` được tự động thay bằng owner của repository. Nếu deploy thủ công ngoài GitHub Actions, thay bằng owner thật:
+
+```text
+ghcr.io/<github-owner>/luyen-thi-lai-xe-<service>:<tag>
 ```
 
 Ví dụ:
 
 ```text
-ghcr.io/nhactaohocbai/luyen-thi-lai-xe-user-service:latest
-ghcr.io/nhactaohocbai/luyen-thi-lai-xe-user-service:<git-sha>
-ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:<git-sha>
+ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-user-service:latest
+ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-user-service:<git-sha>
+ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:<git-sha>
 ```
 
 Các giá trị Helm cần quan tâm:
 
 ```yaml
 global:
-  imageRegistry: ghcr.io/nhactaohocbai
+  imageRegistry: ghcr.io/<github-owner>
   imageTag: <existing-ghcr-tag>
 
 migration:
@@ -368,8 +374,8 @@ Khuyến nghị:
 Có thể kiểm tra image tồn tại bằng Docker:
 
 ```bash
-docker pull ghcr.io/nhactaohocbai/luyen-thi-lai-xe-user-service:<existing-ghcr-tag>
-docker pull ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:<existing-ghcr-tag>
+docker pull ghcr.io/<github-owner>/luyen-thi-lai-xe-user-service:<existing-ghcr-tag>
+docker pull ghcr.io/<github-owner>/luyen-thi-lai-xe-migration-runner:<existing-ghcr-tag>
 ```
 
 Nếu chỉ muốn deploy thủ công từ image đã có:
@@ -382,6 +388,7 @@ helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
   --wait-for-jobs \
   --timeout 25m \
   -f charts/luyen-thi-lai-xe/values-staging.example.yaml \
+  --set global.imageRegistry=ghcr.io/<github-owner> \
   --set global.imageTag=<existing-ghcr-tag> \
   --set migration.imageTag=<existing-ghcr-tag>
 ```
@@ -400,6 +407,7 @@ helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
   --wait-for-jobs \
   --timeout 25m \
   -f charts/luyen-thi-lai-xe/values-staging.example.yaml \
+  --set global.imageRegistry=ghcr.io/<github-owner> \
   --set global.imageTag=<git-sha-da-pass-ci> \
   --set migration.imageTag=<git-sha-da-pass-ci>
 ```
@@ -412,6 +420,15 @@ kubectl get ingress -n staging
 kubectl get pvc -n staging
 kubectl rollout status deployment -l app.kubernetes.io/component=app -n staging --timeout=10m
 ```
+
+Nếu bật tracing mặc định trong chart, kiểm tra thêm Jaeger:
+
+```bash
+kubectl get pods -n staging | grep jaeger
+kubectl port-forward svc/luyen-thi-lai-xe-jaeger 16686:16686 -n staging
+```
+
+Sau đó mở `http://localhost:16686`, chọn service `kong` để xem trace request đi qua Kong và các service.
 
 Smoke test:
 

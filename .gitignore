@@ -26,6 +26,14 @@ charts/**/values-*.local.yaml
 charts/**/values-*.secret.yaml
 rendered-*.yaml
 kubeconfig*.yaml
+local-deploy-values.yaml
+
+# Local Terraform state and credentials
+terraform/terraform.tfvars
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform/
+terraform/.terraform.lock.hcl
 
 # Consul seed production (chứa secrets thật - không commit)
 consul-seed-production.json
@@ -41,6 +49,8 @@ pids
 *.pid
 *.seed
 backups/
+reports/dora/
+reports/deployments/
 
 # Testing
 **/coverage/
@@ -56,3 +66,8 @@ backups/
 .DS_Store
 *.pem
 context
+
+# DevOps presentation and lessons learned documents
+devops_presentation_walkthrough.md
+devops_lessons_learned.md
+devops_detailed_ops_walkthrough.md

@@ -1,15 +1,15 @@
 # Tổng kết hạ tầng DevOps - Luyện Thi Lái Xe Microservices
 
 **Cập nhật lần cuối**: Tháng 05/2026
-**Phạm vi đã kiểm tra**: Docker local/hybrid, Docker Compose full stack, Docker Compose deploy legacy, CI/CD, Kubernetes baseline cho GCP/GKE, observability, resilience, backup và runbook.
+**Phạm vi đã kiểm tra**: Docker local/hybrid, Docker Compose full stack, Docker Compose deploy legacy, CI/CD, Kubernetes baseline cho GCP/GKE, observability, business metrics, resilience, backup và runbook.
 
 ## Tóm tắt điều hành
 
-Repo hiện tại đã đủ tốt cho **MVP/demo trên local hoặc GCP**, đồng thời đã có baseline cho **CI/CD tách luồng, DevSecOps cơ bản và Kubernetes/GKE deployment**. Nếu đối chiếu theo checklist DevOps trong `DEVOPS (2).docx`, trạng thái tổng quan là:
+Repo hiện tại đã đủ tốt cho **MVP/demo trên local hoặc GCP**, đồng thời đã có baseline cho **CI/CD tách luồng, DevSecOps cơ bản, Kubernetes/GKE deployment, observability đủ 3 trụ cột metrics/logs/traces và business metrics**. Nếu đối chiếu theo checklist DevOps trong `DEVOPS (2).docx`, trạng thái tổng quan là:
 
 - **Mức sẵn sàng DevOps cho MVP**: khoảng **90%**.
 - **Mức sẵn sàng production day-2 operations**: khoảng **75-80%**.
-- **Chưa đạt mức production enterprise hoàn chỉnh**: còn thiếu secret manager chính thức, SBOM/signing, offsite/PITR backup, load test, HPA và Terraform.
+- **Chưa đạt mức production enterprise hoàn chỉnh**: còn thiếu secret manager chính thức, offsite/PITR backup, load test, HPA và Terraform. SBOM/signing và rollback workflow đã có baseline trên GitHub Actions.
 
 Kết quả kiểm tra tĩnh trước đó:
 
@@ -93,12 +93,27 @@ Luồng production/staging hiện chốt **10 application services**:
   - `.github/workflows/pr-validation.yml`: validate PR vào `main`, chạy quality gate, detect changed services, build image và Trivy scan, không push image.
   - `.github/workflows/ci.yml`: main image release, quality gate, build + Trivy scan đủ 10 production services, push GHCR với `${github.sha}` và `latest`, rồi auto deploy GCP staging bằng Helm. Có thể tắt auto deploy bằng repository variable `GCP_AUTO_DEPLOY_ENABLED=false`.
   - `.github/workflows/production-release.yml`: production release thủ công bằng immutable `image_tag`, gắn GitHub Environment `production`.
+  - `.github/workflows/rollback-release.yml`: rollback Helm release thủ công theo revision cho `staging` hoặc `production`, có smoke test và deployment event.
   - `.github/workflows/devops-smoke.yml`: smoke suites cho observability, RabbitMQ resilience và restore test.
 - Jenkins:
   - `Jenkinsfile` có lint, typecheck, test, build, image push, staging deploy và production manual approval.
   - Vai trò hiện tại là pipeline tự host/legacy cho Docker Compose deploy qua SSH/VM hoặc Compute Engine; GitHub Actions vẫn là đường chính cho GCP/GKE bằng Helm.
+- Đo lường DevOps theo DORA:
+  - `.github/workflows/dora-report.yml`: chạy thủ công hoặc định kỳ hằng tuần để tạo DORA report artifact.
+  - `.github/workflows/incident-labeler.yml`: tự gắn label môi trường, severity và change-failure/rollback cho incident issues.
+  - `scripts/devops-record-deployment.js`: ghi deployment event JSON sau mỗi lần deploy.
+  - `scripts/devops-dora-report.ts`: tổng hợp Deployment Frequency, Lead Time for Changes, MTTR và Change Failure Rate từ GitHub Actions và incident issues.
+  - `scripts/devops-dora-prometheus-export.ts`: export DORA JSON sang Prometheus textfile metrics để Grafana hiển thị.
+  - `Jenkinsfile`: ghi Jenkins deployment event sau `Deploy Staging` và `Deploy Production`, rồi archive artifact cho DORA.
+  - `.github/ISSUE_TEMPLATE/incident_report.yml` và `.github/ISSUE_TEMPLATE/postmortem.yml`: chuẩn hóa dữ liệu incident/postmortem để tính MTTR/CFR.
+  - `guides/devops/INCIDENT-POSTMORTEM-PROCESS.md`: quy trình cho incident severity, label chuẩn và postmortem bắt buộc với SEV1/SEV2.
+  - `guides/devops/DEPLOYMENT-EVENT-STORE.md`: quy trình để lưu deployment events và giảm phụ thuộc vào GitHub Actions history.
+  - `guides/devops/JENKINS-DORA-INTEGRATION.md`: quy trình để gom Jenkins deploy vào cùng DORA event schema.
+  - `guides/devops/DORA-GRAFANA-DASHBOARD.md`: quy trình đưa DORA metrics lên Prometheus/Grafana.
 - DevSecOps baseline:
   - Trivy image scan với `severity: CRITICAL,HIGH`, `exit-code: 1`.
+  - GitHub Actions sinh SBOM SPDX JSON cho image và upload artifact.
+  - GitHub Actions ký immutable image tag `${github.sha}` bằng Cosign keyless signing, gắn SBOM attestation và verify chữ ký.
   - PR thay đổi DevOps/shared files sẽ build/scan đủ 10 production services.
   - Hardcoded secrets trong Compose/Consul seed đã được chuyển dần sang env variable hoặc placeholder.
 - Registry:
@@ -111,7 +126,7 @@ Luồng production/staging hiện chốt **10 application services**:
   - local/hybrid.
   - full Docker stack.
   - Docker Compose deploy legacy qua SSH/VM.
-- Kubernetes Phase 5 baseline:
+- Kubernetes baseline:
   - Helm chart tại `charts/luyen-thi-lai-xe`.
   - Target hiện tại: GCP/GKE.
   - K3s chỉ còn là lựa chọn lab/fallback nếu cần thử nhanh ngoài GCP.
@@ -121,7 +136,7 @@ Luồng production/staging hiện chốt **10 application services**:
   - App Deployments có `resources.requests`, `resources.limits`, `/health/live` và `/health/ready` probes.
   - GitHub Actions deploy staging/production bằng Helm và kubeconfig base64.
   - `scripts/k8s-smoke.sh` verify health endpoints qua Kong.
-- Hướng dẫn chi tiết: `guides/devops/PHASE5-KUBERNETES.md`.
+- Hướng dẫn chi tiết: `guides/devops/KUBERNETES-GCP-DEPLOYMENT.md`.
 
 ### Observability
 
@@ -134,9 +149,27 @@ Luồng production/staging hiện chốt **10 application services**:
   - HTTP request count/latency/status class.
   - Node/process metrics từ `prom-client`.
   - RabbitMQ retry/DLQ metrics.
+- Distributed tracing:
+  - `packages/common/src/tracing/`: khởi động OpenTelemetry SDK, HTTP tracing middleware và Nest/RabbitMQ tracing interceptor.
+  - Kong bật plugin `zipkin` trong `kong/kong.yaml`, `kong/kong.dev.yaml` và Helm ConfigMap để gửi span gateway vào Jaeger.
+  - Jaeger được thêm vào Docker Compose và Helm chart để xem trace end-to-end.
+  - `resilientFetch`/Axios resilience tự inject `traceparent` cho outbound HTTP.
 - Prometheus scrape config:
   - `docker/prometheus/prometheus.yml`
   - `docker/prometheus/prometheus.local.yml`
+- DORA dashboard:
+  - `docker/grafana/dashboards/dora-metrics.json`
+  - `dora-metrics-exporter` đọc `reports/dora/dora.prom` qua textfile collector.
+- Business metrics:
+  - `users_created_total`: số user profile mới theo role và nguồn tạo.
+  - `exam_sessions_started_total`: số lượt học viên bắt đầu bài thi theo hạng bằng.
+  - `exam_sessions_completed_total`: số lượt nộp bài theo pass/fail, trạng thái và lỗi câu điểm liệt.
+  - `course_lessons_completed_total` và `course_enrollments_completed_total`: tiến độ hoàn tất bài học/khóa học.
+  - `notifications_delivery_total`: kết quả gửi notification theo kênh, event và trạng thái.
+  - `media_upload_total`: kết quả upload media theo mode, MIME type và trạng thái.
+  - Dashboard Grafana: `docker/grafana/dashboards/business-metrics.json`.
+  - Hướng dẫn: `guides/devops/BUSINESS-METRICS.md`.
+- Hướng dẫn tracing nằm ở `guides/devops/OPENTELEMETRY-JAEGER-TRACING.md`.
 - Alert rules:
   - service metrics endpoint down.
   - high 5xx rate.
@@ -146,6 +179,8 @@ Luồng production/staging hiện chốt **10 application services**:
 - Grafana provisioning:
   - datasource Prometheus.
   - dashboard `microservices-observability.json`.
+  - dashboard `dora-metrics.json`.
+  - dashboard `business-metrics.json`.
 - ELK:
   - Elasticsearch, Logstash, Kibana trong Compose.
   - `AppLoggerModule` dùng Winston + optional HTTP transport tới Logstash.
@@ -187,8 +222,10 @@ Luồng production/staging hiện chốt **10 application services**:
   - `guides/devops/RABBITMQ-RESILIENCE.md`
   - `guides/devops/HTTP-RESILIENCE.md`
   - `guides/devops/JENKINS-DOCKER-COMPOSE.md`
-  - `guides/devops/PHASE5-KUBERNETES.md`
+  - `guides/devops/KUBERNETES-GCP-DEPLOYMENT.md`
   - `guides/devops/GCP-SETUP.md`
+  - `guides/devops/BUSINESS-METRICS.md`
+  - `guides/devops/GITHUB-ACTIONS-RELEASE-SAFETY.md`
   - `guides/devops/DEVOPS-DEMO-SCRIPT.md`
 
 ## Phần còn thiếu
@@ -196,15 +233,15 @@ Luồng production/staging hiện chốt **10 application services**:
 ### P0/P1 - Security hardening còn lại
 
 - Chưa có secret manager chính thức như Google Secret Manager hoặc Vault.
-- Chưa có SBOM bằng Syft/CycloneDX.
-- Chưa sign image/release bằng Cosign hoặc có provenance policy đầy đủ.
+- SBOM và Cosign signing đã có baseline trong GitHub Actions; chưa có admission policy bắt buộc verify signature ở Kubernetes.
+- Chưa có provenance policy đầy đủ ở runtime.
 - Nếu secret thật từng bị paste/push, cần rotate ngoài repo.
 
 ### P1 - Release hardening còn lại
 
 - Main workflow vẫn push cả `${github.sha}` và `latest`; production release đã dùng immutable `image_tag`, nhưng cần policy vận hành rõ ràng: production chỉ chọn SHA/release tag đã pass.
 - Production approval trên GitHub phụ thuộc Environment protection rule ngoài repo; cần cấu hình reviewer trong GitHub Environments.
-- Rollback đã có hướng dẫn và Helm rollback path, nhưng nên bổ sung workflow/job riêng cho rollback có tham số.
+- Rollback đã có workflow GitHub Actions theo Helm revision; cần chạy thử trên staging thật và lưu bằng chứng rollback pass.
 
 ### P1 - Runtime verification
 
@@ -236,11 +273,11 @@ Chưa có:
 | Docker & Compose | Đã làm | 95% | 10 app services deploy đủ; `docs-service` dev-only. |
 | Local/dev bootstrap | Đã làm | 90% | README có first-run flow. |
 | Database migration/seed | Đã làm | 90% | CI/deploy có migration path; Kubernetes có migration Job. |
-| CI/CD | Đã làm nền | 85% | PR validation, main image release, production manual release đã có; rollback job riêng còn thiếu. |
-| DevSecOps baseline | Đã làm nền | 75% | Trivy HIGH/CRITICAL gate có; SBOM/signing/secret manager còn thiếu. |
+| CI/CD | Đã làm nền | 90% | PR validation, main image release, production manual release và rollback workflow đã có. |
+| DevSecOps baseline | Đã làm nền | 82% | Trivy HIGH/CRITICAL gate, SBOM artifact và Cosign signing có; secret manager/admission policy còn thiếu. |
 | Compose deployment legacy | Đã làm | 85% | Compose deploy + migrations + health smoke; dùng cho VM/Compute Engine nếu cần fallback. |
 | Kubernetes baseline | Đã làm nền | 70% | Helm/GKE scaffold có; HPA/load test/Terraform còn thiếu. |
-| Observability | Đã làm | 85% | Prometheus/Grafana/ELK/alerts có; cần verify runtime và bổ sung business metrics. |
+| Observability | Đã làm | 90% | Prometheus/Grafana/ELK/alerts/tracing/DORA/business metrics có; cần verify runtime trên GKE thật. |
 | Health/metrics/logging | Đã làm | 90% | Đã đồng bộ common modules. |
 | HTTP/RabbitMQ resilience | Đã làm | 85% | Retry/DLQ/circuit breaker có; idempotency durable còn là follow-up. |
 | Backup/restore/runbook | Đã làm | 80% | Daily backup + restore test có; offsite/PITR còn thiếu. |
@@ -266,12 +303,11 @@ Chưa có:
 
 ### Gần hạn
 
-1. Thêm rollback GitHub Action/Jenkins parameterized job.
-2. Generate SBOM cho image bằng Syft/CycloneDX và upload artifact.
-3. Thêm Cosign signing/provenance nếu cần hardening sâu hơn.
-4. Đẩy backup offsite lên S3/Azure Blob và document restore từ offsite.
-5. Thêm k6 smoke/load script cho các luồng chính: login, làm bài thi, nộp bài, upload media.
-6. Thêm business metrics: exam completion rate, pass/fail count, notification delivery outcome.
+1. Chạy thử `Rollback Release` trên staging thật và lưu bằng chứng smoke pass.
+2. Thêm admission policy hoặc Kyverno/Gatekeeper rule để chỉ cho chạy image đã ký Cosign nếu harden sâu hơn.
+3. Đẩy backup offsite lên S3/Azure Blob và document restore từ offsite.
+4. Thêm k6 smoke/load script cho các luồng chính: login, làm bài thi, nộp bài, upload media.
+5. Thêm alert hoặc dashboard panel nâng cao cho business metrics, ví dụ pass rate giảm mạnh, notification failure tăng hoặc upload media lỗi bất thường.
 
 ### Sau MVP
 

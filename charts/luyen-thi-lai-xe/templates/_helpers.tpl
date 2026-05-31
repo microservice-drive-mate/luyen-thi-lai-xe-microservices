@@ -46,6 +46,10 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{ include "lttl.fullname" . }}-migrate-{{ .Release.Revision }}
 {{- end -}}
 
+{{- define "lttl.seedJobName" -}}
+{{ include "lttl.fullname" . }}-seed-{{ .Release.Revision }}
+{{- end -}}
+
 {{- define "lttl.componentName" -}}
 {{- printf "%s-%s" (include "lttl.fullname" .root) .name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}

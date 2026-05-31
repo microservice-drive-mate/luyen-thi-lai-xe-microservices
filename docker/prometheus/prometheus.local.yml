@@ -25,6 +25,14 @@ scrape_configs:
         labels:
           environment: development-local
 
+  - job_name: dora
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - dora-metrics-exporter:9100
+        labels:
+          environment: development-local
+
   - job_name: microservices-local
     metrics_path: /metrics
     static_configs:

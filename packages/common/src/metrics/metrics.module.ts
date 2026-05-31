@@ -1,10 +1,11 @@
-import { DynamicModule, Module } from '@nestjs/common';
+import { DynamicModule, Global, Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { MetricsController } from './metrics.controller';
 import { METRICS_MODULE_OPTIONS } from './metrics.constants';
 import { MetricsInterceptor } from './metrics.interceptor';
 import { MetricsModuleOptions, MetricsService } from './metrics.service';
 
+@Global()
 @Module({})
 // biome-ignore lint/complexity/noStaticOnlyClass: Nest dynamic modules conventionally expose a static register method.
 export class MetricsModule {

@@ -1,0 +1,3 @@
+# Phase 9 intentionally exposes one static public IP for the demo ingress hosts:
+# api.<static-ip>.nip.io and auth.<static-ip>.nip.io.
+GCP-0031

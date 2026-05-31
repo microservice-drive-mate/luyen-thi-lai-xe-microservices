@@ -1,0 +1,32 @@
+# Terraform local artifacts
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+.terraform/
+
+# Local variables and plans
+*.tfvars
+!terraform.tfvars.example
+*.tfplan
+*.tfplan.*
+
+# Crash logs and overrides
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Generated access files
+kubeconfig*
+*.pem
+*.key
+id_rsa*
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

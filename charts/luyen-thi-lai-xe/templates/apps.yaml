@@ -29,7 +29,16 @@ metadata:
     app.kubernetes.io/component: app
     app.kubernetes.io/service-name: {{ .name }}
 spec:
+  {{- $hpa := .hpa | default dict }}
+  {{- $hpaEnabled := false }}
+  {{- if hasKey $hpa "enabled" }}
+    {{- $hpaEnabled = $hpa.enabled }}
+  {{- else if and (hasKey $.Values.appDefaults "hpa") (hasKey $.Values.appDefaults.hpa "enabled") }}
+    {{- $hpaEnabled = $.Values.appDefaults.hpa.enabled }}
+  {{- end }}
+  {{- if not $hpaEnabled }}
   replicas: {{ default $.Values.appDefaults.replicaCount .replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "lttl.selectorLabels" $ | nindent 6 }}
@@ -41,6 +50,9 @@ spec:
         {{- include "lttl.selectorLabels" $ | nindent 8 }}
         app.kubernetes.io/component: app
         app.kubernetes.io/service-name: {{ .name }}
+      annotations:
+        checksum/config: {{ toYaml $.Values.config | sha256sum }}
+        checksum/secrets: {{ toYaml $.Values.secrets | sha256sum }}
     spec:
       serviceAccountName: {{ include "lttl.serviceAccountName" $ }}
       {{- if $.Values.imagePullSecret.enabled }}
@@ -124,6 +136,17 @@ spec:
               value: {{ .name | quote }}
             - name: PORT
               value: "3000"
+            {{ if $.Values.tracing.enabled }}
+            - name: OTEL_TRACING_ENABLED
+              value: "true"
+            - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+              value: {{ default (printf "http://%s-jaeger:4318/v1/traces" (include "lttl.fullname" $)) $.Values.tracing.otlpTracesEndpoint | quote }}
+            - name: OTEL_PROPAGATORS
+              value: {{ $.Values.tracing.propagators | quote }}
+            {{ else }}
+            - name: OTEL_TRACING_ENABLED
+              value: "false"
+            {{ end }}
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:

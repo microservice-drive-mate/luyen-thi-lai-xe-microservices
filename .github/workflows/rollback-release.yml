@@ -1,0 +1,284 @@
+name: Rollback Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Môi trường cần rollback"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      helm_revision:
+        description: "Helm revision cần rollback về, xem bằng: helm history luyen-thi-lai-xe -n <namespace>"
+        required: true
+        type: string
+      confirm_rollback:
+        description: "Xác nhận rollback release"
+        required: true
+        type: boolean
+        default: false
+      run_smoke:
+        description: "Chạy smoke test sau rollback"
+        required: true
+        type: boolean
+        default: true
+      rollback_reason:
+        description: "Lý do rollback để lưu vào deployment event"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rollback-staging:
+    name: Rollback Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: inputs.target_environment == 'staging' && inputs.confirm_rollback == true
+    environment: staging
+    concurrency:
+      group: deploy-gcp-staging
+      cancel-in-progress: false
+    env:
+      NAMESPACE: staging
+      RELEASE_NAME: luyen-thi-lai-xe
+      TARGET_REVISION: ${{ inputs.helm_revision }}
+      KUBE_CONFIG_B64: ${{ secrets.STAGING_KUBE_CONFIG_B64 }}
+      API_HOST: ${{ vars.STAGING_API_HOST }}
+      API_SCHEME: ${{ vars.STAGING_API_SCHEME }}
+      GCP_VM_NAME: luyen-thi-lai-xe-staging-k3s
+      GCP_VM_ZONE: asia-southeast1-b
+      GCP_PROJECT_ID: devops-497910
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mark rollback start
+        shell: bash
+        run: echo "DEPLOYMENT_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - uses: azure/setup-helm@v4
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Start IAP tunnel to K3s API
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --no-cache-dir numpy
+
+          gcloud compute start-iap-tunnel "$GCP_VM_NAME" 6443 \
+            --local-host-port=127.0.0.1:16443 \
+            --zone="$GCP_VM_ZONE" \
+            --project="$GCP_PROJECT_ID" &
+          TUNNEL_PID=$!
+          echo "TUNNEL_PID=$TUNNEL_PID" >> "$GITHUB_ENV"
+
+          for attempt in $(seq 1 60); do
+            if nc -z 127.0.0.1 16443 2>/dev/null; then
+              echo "IAP tunnel ready on attempt ${attempt}"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "IAP tunnel failed to start within 60s" >&2
+          kill "$TUNNEL_PID" 2>/dev/null || true
+          exit 1
+
+      - name: Configure kubeconfig
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${KUBE_CONFIG_B64:-}" ]]; then
+            echo "Missing STAGING_KUBE_CONFIG_B64" >&2
+            exit 1
+          fi
+
+          mkdir -p ~/.kube
+          printf '%s' "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
+
+      - name: Capture current Helm revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm history "$RELEASE_NAME" -n "$NAMESPACE"
+          CURRENT_REVISION=$(helm history "$RELEASE_NAME" -n "$NAMESPACE" -o json \
+            | jq -r 'map(select(.status == "deployed")) | last | .revision // ""')
+          echo "CURRENT_REVISION=${CURRENT_REVISION}" >> "$GITHUB_ENV"
+          echo "Rollback target revision: ${TARGET_REVISION}"
+
+      - name: Rollback Helm release
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm rollback "$RELEASE_NAME" "$TARGET_REVISION" \
+            --namespace "$NAMESPACE" \
+            --wait \
+            --timeout 15m
+          helm history "$RELEASE_NAME" -n "$NAMESPACE"
+
+      - name: Verify rollout and smoke
+        if: inputs.run_smoke == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl rollout status deployment -l app.kubernetes.io/component=app -n "$NAMESPACE" --timeout=10m
+          API_SCHEME="${API_SCHEME:-http}"
+          SMOKE_BASE_URL="${API_SCHEME}://${API_HOST}" bash scripts/k8s-smoke.sh
+
+      - name: Cleanup IAP tunnel
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${TUNNEL_PID:-}" ]]; then
+            kill "$TUNNEL_PID" 2>/dev/null || true
+          fi
+
+      - name: Record rollback deployment event
+        if: always()
+        shell: bash
+        env:
+          DEPLOYMENT_ENVIRONMENT: staging
+          DEPLOYMENT_TYPE: helm-rollback
+          DEPLOYMENT_TARGET: gcp-k3s
+          DEPLOYMENT_RELEASE_NAME: luyen-thi-lai-xe
+          DEPLOYMENT_NAMESPACE: staging
+          DEPLOYMENT_IMAGE_TAG: helm-revision-${{ inputs.helm_revision }}
+          DEPLOYMENT_GIT_SHA: ${{ github.sha }}
+          DEPLOYMENT_STATUS: ${{ job.status }}
+          DEPLOYMENT_SMOKE_STATUS: ${{ job.status }}
+          ROLLBACK_REASON: ${{ inputs.rollback_reason }}
+        run: |
+          set -euo pipefail
+          export DEPLOYMENT_ROLLBACK_OF="${CURRENT_REVISION:-unknown}"
+          export DEPLOYMENT_METADATA_JSON
+          DEPLOYMENT_METADATA_JSON=$(jq -nc \
+            --arg targetRevision "$TARGET_REVISION" \
+            --arg previousRevision "${CURRENT_REVISION:-unknown}" \
+            --arg reason "${ROLLBACK_REASON:-}" \
+            '{targetRevision: $targetRevision, previousRevision: $previousRevision, reason: $reason}')
+          npm run deployment:record
+
+      - name: Upload rollback deployment event
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-event-rollback-staging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/deployments/events/
+          retention-days: 90
+
+  rollback-production:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: inputs.target_environment == 'production' && inputs.confirm_rollback == true
+    environment: production
+    concurrency:
+      group: deploy-gcp-production
+      cancel-in-progress: false
+    env:
+      NAMESPACE: production
+      RELEASE_NAME: luyen-thi-lai-xe
+      TARGET_REVISION: ${{ inputs.helm_revision }}
+      KUBE_CONFIG_B64: ${{ secrets.PRODUCTION_KUBE_CONFIG_B64 }}
+      API_HOST: ${{ vars.PRODUCTION_API_HOST }}
+      API_SCHEME: ${{ vars.PRODUCTION_API_SCHEME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mark rollback start
+        shell: bash
+        run: echo "DEPLOYMENT_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - uses: azure/setup-helm@v4
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${KUBE_CONFIG_B64:-}" ]]; then
+            echo "Missing PRODUCTION_KUBE_CONFIG_B64" >&2
+            exit 1
+          fi
+
+          mkdir -p ~/.kube
+          printf '%s' "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
+
+      - name: Capture current Helm revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm history "$RELEASE_NAME" -n "$NAMESPACE"
+          CURRENT_REVISION=$(helm history "$RELEASE_NAME" -n "$NAMESPACE" -o json \
+            | jq -r 'map(select(.status == "deployed")) | last | .revision // ""')
+          echo "CURRENT_REVISION=${CURRENT_REVISION}" >> "$GITHUB_ENV"
+          echo "Rollback target revision: ${TARGET_REVISION}"
+
+      - name: Rollback Helm release
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm rollback "$RELEASE_NAME" "$TARGET_REVISION" \
+            --namespace "$NAMESPACE" \
+            --wait \
+            --timeout 15m
+          helm history "$RELEASE_NAME" -n "$NAMESPACE"
+
+      - name: Verify rollout and smoke
+        if: inputs.run_smoke == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl rollout status deployment -l app.kubernetes.io/component=app -n "$NAMESPACE" --timeout=10m
+          API_SCHEME="${API_SCHEME:-http}"
+          SMOKE_BASE_URL="${API_SCHEME}://${API_HOST}" bash scripts/k8s-smoke.sh
+
+      - name: Record rollback deployment event
+        if: always()
+        shell: bash
+        env:
+          DEPLOYMENT_ENVIRONMENT: production
+          DEPLOYMENT_TYPE: helm-rollback
+          DEPLOYMENT_TARGET: gke
+          DEPLOYMENT_RELEASE_NAME: luyen-thi-lai-xe
+          DEPLOYMENT_NAMESPACE: production
+          DEPLOYMENT_IMAGE_TAG: helm-revision-${{ inputs.helm_revision }}
+          DEPLOYMENT_GIT_SHA: ${{ github.sha }}
+          DEPLOYMENT_STATUS: ${{ job.status }}
+          DEPLOYMENT_SMOKE_STATUS: ${{ job.status }}
+          ROLLBACK_REASON: ${{ inputs.rollback_reason }}
+        run: |
+          set -euo pipefail
+          export DEPLOYMENT_ROLLBACK_OF="${CURRENT_REVISION:-unknown}"
+          export DEPLOYMENT_METADATA_JSON
+          DEPLOYMENT_METADATA_JSON=$(jq -nc \
+            --arg targetRevision "$TARGET_REVISION" \
+            --arg previousRevision "${CURRENT_REVISION:-unknown}" \
+            --arg reason "${ROLLBACK_REASON:-}" \
+            '{targetRevision: $targetRevision, previousRevision: $previousRevision, reason: $reason}')
+          npm run deployment:record
+
+      - name: Upload rollback deployment event
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-event-rollback-production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/deployments/events/
+          retention-days: 90

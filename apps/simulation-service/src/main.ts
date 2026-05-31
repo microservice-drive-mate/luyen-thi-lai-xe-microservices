@@ -14,12 +14,17 @@ import {
   installLocalDevTransientErrorGuard,
   runBootstrapWithRetries,
   setupMicroserviceSwagger,
+  startOpenTelemetry,
+  TracingInterceptor,
+  TracingMiddleware,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 
-installLocalDevTransientErrorGuard('simulation-service');
+const serviceName = 'simulation-service';
+startOpenTelemetry({ serviceName });
+installLocalDevTransientErrorGuard(serviceName);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -28,9 +33,11 @@ async function bootstrap() {
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   app.use(new CorrelationIdMiddleware().use);
+  app.use(new TracingMiddleware(serviceName).use);
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),
-    new AccessLogInterceptor({ serviceName: 'simulation-service' }),
+    new TracingInterceptor(serviceName),
+    new AccessLogInterceptor({ serviceName }),
     new ApiResponseInterceptor(app.get(Reflector)),
   );
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
@@ -48,4 +55,4 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Simulation Service listening on port ${port}`);
 }
-void runBootstrapWithRetries('simulation-service', bootstrap);
+void runBootstrapWithRetries(serviceName, bootstrap);

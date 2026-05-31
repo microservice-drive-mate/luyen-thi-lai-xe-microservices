@@ -1,6 +1,6 @@
 # Kịch bản demo DevOps - Luyện Thi Lái Xe Microservices
 
-Tài liệu này là kịch bản demo phần DevOps để thuyết trình với giảng viên. Mục tiêu là chứng minh dự án không chỉ chạy được ở local, mà đã có pipeline DevOps tương đối đầy đủ: container hóa, CI/CD, DevSecOps, registry, deploy lên GCP/GKE, health check, observability, resilience, backup/restore và runbook.
+Tài liệu này là kịch bản demo phần DevOps để thuyết trình với giảng viên. Mục tiêu là chứng minh dự án không chỉ chạy được ở local, mà đã có pipeline DevOps tương đối đầy đủ: container hóa, CI/CD, DevSecOps, registry, deploy lên GCP/GKE, health check, observability, business metrics, resilience, backup/restore và runbook.
 
 ## 1. Mục tiêu demo
 
@@ -11,7 +11,8 @@ Sau buổi demo, giảng viên cần thấy rõ 6 điểm:
 3. GCP/GKE không build source code; GKE chỉ pull image đã có từ GHCR theo tag được Helm truyền vào.
 4. Jenkins vẫn được giữ như pipeline CI/CD tự host cho luồng nội bộ hoặc legacy Docker Compose trên VM/Compute Engine.
 5. Hệ thống có nền tảng vận hành: health check, metrics, logs, alert rules, smoke test, backup/restore.
-6. Nhóm hiểu rõ phần đã làm, phần còn thiếu và hướng production hardening tiếp theo.
+6. Hệ thống đo được cả technical metrics, DORA metrics và business metrics như lượt làm bài thi, pass/fail, notification delivery và upload media.
+7. Nhóm hiểu rõ phần đã làm, phần còn thiếu và hướng production hardening tiếp theo.
 
 ## 2. Thời lượng gợi ý
 
@@ -23,10 +24,10 @@ Sau buổi demo, giảng viên cần thấy rõ 6 điểm:
 | CI/CD + DevSecOps | 4 phút | PR validation, build image, Trivy, GHCR. |
 | Jenkins CI/CD legacy | 2 phút | Self-hosted pipeline, GHCR, Docker Compose deploy qua SSH. |
 | GCP/GKE deployment | 4 phút | GKE pull image từ GHCR, Helm deploy, smoke test. |
-| Observability/Resilience/Backup | 4 phút | Health, metrics, logs, RabbitMQ DLQ, restore test. |
+| Observability/Business Metrics/Resilience/Backup | 5 phút | Health, metrics, logs, DORA, business metrics, tracing, RabbitMQ DLQ, restore test. |
 | Kết luận + Q&A | 2 phút | Đánh giá mức hoàn thành và roadmap. |
 
-Tổng thời lượng: khoảng 22 phút. Nếu chỉ có 10-12 phút, ưu tiên mở bài, kiến trúc, CI/CD chính, GCP/GKE và kết luận; Jenkins có thể nói ngắn trong 30-45 giây như pipeline thay thế.
+Tổng thời lượng: khoảng 23 phút. Nếu chỉ có 10-12 phút, ưu tiên mở bài, kiến trúc, CI/CD chính, GCP/GKE, DORA/business metrics và kết luận; Jenkins có thể nói ngắn trong 30-45 giây như pipeline thay thế.
 
 ## 3. Chuẩn bị trước buổi demo
 
@@ -49,6 +50,11 @@ Mở sẵn các tab:
   - Workloads.
   - Services & Ingress.
   - Logs Explorer nếu có.
+- Grafana dashboards:
+  - `Microservices Observability`.
+  - `DORA Metrics`.
+  - `Business Metrics`.
+- Jaeger UI nếu demo tracing.
 - Swagger/docs hoặc Kong endpoint nếu môi trường đang chạy.
 
 ### 3.2. Chuẩn bị terminal
@@ -94,6 +100,7 @@ Nếu internet, GitHub Actions hoặc GCP gặp vấn đề:
   - `guides/devops/JENKINS-DOCKER-COMPOSE.md`
   - `charts/luyen-thi-lai-xe/values.yaml`
   - `guides/devops/GCP-SETUP.md`
+  - `guides/devops/GITHUB-ACTIONS-RELEASE-SAFETY.md`
   - `DEVOPS-SUMMARY.md`
 
 ## 4. Mở bài
@@ -192,6 +199,7 @@ Mở file:
 - `.github/workflows/pr-validation.yml`
 - `.github/workflows/ci.yml`
 - `.github/workflows/production-release.yml`
+- `.github/workflows/rollback-release.yml`
 
 ### 7.1. Pull Request Validation
 
@@ -221,11 +229,21 @@ Lời thoại tiếp:
 
 > Sau build, workflow scan Trivy rồi push image lên GHCR với 2 tag: Git SHA và `latest`. Git SHA dùng cho staging/production vì immutable; `latest` chỉ tiện cho demo nhanh.
 
+Release safety trong GitHub Actions:
+
+> Sau Trivy, pipeline sinh SBOM dạng SPDX cho từng image và upload thành artifact. Khi push image lên GHCR, pipeline ký immutable tag `${github.sha}` bằng Cosign keyless signing, gắn SBOM attestation và verify chữ ký. Nhờ vậy release artifact có thể audit dependency và truy vết nguồn gốc build từ GitHub Actions.
+
 ### 7.3. Production Release
 
 Lời thoại gợi ý:
 
 > Production không tự deploy mỗi lần push. Production release là manual workflow, yêu cầu nhập `image_tag` và có GitHub Environment `production` để bật reviewer/manual approval. Đây là cách giảm rủi ro khi đưa code lên production.
+
+### 7.4. Rollback Release
+
+Lời thoại gợi ý:
+
+> Nếu deploy lỗi, nhóm có workflow `Rollback Release`. Workflow yêu cầu chọn môi trường, nhập Helm revision, bật xác nhận rollback, sau đó chạy `helm rollback`, chờ rollout, smoke test và ghi deployment event cho DORA.
 
 ## 8. Demo 3 - GHCR Image Registry
 
@@ -234,8 +252,8 @@ Mục tiêu: chứng minh artifact đã được đóng gói và lưu ở regist
 Mở GitHub Packages/GHCR hoặc dùng lệnh:
 
 ```bash
-docker pull ghcr.io/nhactaohocbai/luyen-thi-lai-xe-user-service:<tag>
-docker pull ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:<tag>
+docker pull ghcr.io/<github-owner>/luyen-thi-lai-xe-user-service:<tag>
+docker pull ghcr.io/<github-owner>/luyen-thi-lai-xe-migration-runner:<tag>
 ```
 
 Lời thoại gợi ý:
@@ -339,7 +357,7 @@ Lời thoại gợi ý:
 
 Điểm nhấn:
 
-- `global.imageRegistry` trỏ về `ghcr.io/nhactaohocbai`.
+- `global.imageRegistry` trỏ về `ghcr.io/${{ github.repository_owner }}` khi chạy qua GitHub Actions.
 - `global.imageTag` là tag image sẽ pull.
 - `migration-runner` chạy Prisma migration ngoài runtime container.
 - GKE pull image từ GHCR bằng `imagePullSecret`.
@@ -373,14 +391,21 @@ Mở file:
 
 - `docker/prometheus/prometheus.yml`
 - `docker/prometheus/alerts.yml`
-- `docker/grafana/provisioning/dashboards/microservices-observability.json`
+- `docker/grafana/dashboards/microservices-observability.json`
+- `docker/grafana/dashboards/dora-metrics.json`
+- `docker/grafana/dashboards/business-metrics.json`
 - `guides/devops/OBSERVABILITY-ELK.md`
 - `guides/devops/OBSERVABILITY-RUNBOOK.md`
+- `guides/devops/DORA-GRAFANA-DASHBOARD.md`
+- `guides/devops/OPENTELEMETRY-JAEGER-TRACING.md`
+- `guides/devops/BUSINESS-METRICS.md`
 
 Lệnh demo:
 
 ```bash
 npm run observability:smoke
+npm run dora:report
+npm run dora:export-prometheus
 ```
 
 Nếu đang chạy local:
@@ -389,16 +414,32 @@ Nếu đang chạy local:
 curl http://localhost:3002/health/live
 curl http://localhost:3002/health/ready
 curl http://localhost:3002/metrics
+curl -H "x-correlation-id: demo-trace-001" http://localhost:8000/user-service/health
 ```
 
 Lời thoại gợi ý:
 
 > Mỗi service expose health endpoints và metrics. Prometheus scrape `/metrics`, Grafana có dashboard, alert rules theo dõi service down, 5xx rate, p95 latency, memory/CPU và RabbitMQ DLQ/retry backlog. Logs được chuẩn hóa qua Winston, correlation id và optional Logstash transport.
 
+Với phần DORA, mở Grafana dashboard `DORA Metrics` và nói:
+
+> Dự án không chỉ quan sát runtime mà còn đo hiệu quả DevOps. Deployment event từ GitHub Actions/Jenkins được tổng hợp thành DORA report, export sang Prometheus metrics và hiển thị trên Grafana gồm Deployment Frequency, Lead Time for Changes, Change Failure Rate và MTTR.
+
+Với phần business metrics, mở Grafana dashboard `Business Metrics` và nói:
+
+> Business metrics bổ sung chỉ số nghiệp vụ. Các use case tạo user, bắt đầu/nộp bài thi, hoàn tất bài học, gửi notification và upload media đều ghi counter vào Prometheus. Nhờ vậy nhóm biết hệ thống đang tạo ra giá trị nghiệp vụ nào, ví dụ bao nhiêu lượt thi được hoàn tất, tỷ lệ pass/fail ra sao, notification lỗi bao nhiêu và upload media có ổn định không.
+
+Với phần tracing, mở Jaeger tại `http://localhost:16686`, chọn service `kong` hoặc service NestJS vừa gọi và nói:
+
+> Distributed tracing dùng OpenTelemetry và Jaeger. Kong tạo span gateway và gửi vào Jaeger qua Zipkin endpoint, còn service NestJS tạo span xử lý request/RabbitMQ qua OTLP HTTP. Khi một request chậm, nhóm có thể xem chậm ở gateway, service hay dependency nào.
+
 Điểm nhấn:
 
 - Health check dùng cho Kubernetes probes.
 - Metrics dùng cho Prometheus/Grafana.
+- DORA dashboard dùng để theo dõi tốc độ và độ ổn định của delivery.
+- Business Metrics dashboard dùng để theo dõi hành vi sản phẩm: user mới, bài thi, pass/fail, tiến độ học, notification và media upload.
+- Jaeger dùng để xem trace end-to-end từ Kong đến service.
 - Logs có correlation id để trace request qua nhiều service.
 - Có runbook để xử lý incident.
 
@@ -474,7 +515,7 @@ Lời thoại gợi ý:
 
 Lời thoại gợi ý:
 
-> Tổng kết lại, phần DevOps của dự án hiện đã đủ tốt cho MVP/demo trên local hoặc GCP. Nhóm đã có containerization, CI/CD, DevSecOps scan, GHCR registry, Helm/GKE deployment baseline, health checks, smoke tests, observability, resilience và backup/restore. Những phần còn thiếu như Terraform, HPA, load test, SBOM/signing, Google Secret Manager và managed database đã được ghi rõ trong roadmap, chứ không bị bỏ qua.
+> Tổng kết lại, phần DevOps của dự án hiện đã đủ tốt cho MVP/demo trên local hoặc GCP. Nhóm đã có containerization, CI/CD, DevSecOps scan, SBOM/signing baseline, GHCR registry, Helm/GKE deployment baseline, rollback workflow, health checks, smoke tests, observability, resilience và backup/restore. Những phần còn thiếu như Terraform, HPA, load test, admission policy verify image signature, Google Secret Manager và managed database đã được ghi rõ trong roadmap, chứ không bị bỏ qua.
 
 Nên nhấn mạnh:
 
@@ -531,7 +572,7 @@ Trả lời:
 
 Trả lời:
 
-> Có baseline DevSecOps: Trivy scan image với HIGH/CRITICAL gate, hardcoded secrets được chuyển sang env/placeholder, runtime image prune dev dependencies và loại `npm/npx/corepack/yarn` để giảm CVE surface. Phần hardening tiếp theo là SBOM, Cosign signing, provenance và secret manager chính thức.
+> Có baseline DevSecOps: Trivy scan image với HIGH/CRITICAL gate, hardcoded secrets được chuyển sang env/placeholder, runtime image prune dev dependencies và loại `npm/npx/corepack/yarn` để giảm CVE surface. Release safety trên GitHub Actions đã thêm SBOM artifact, Cosign keyless signing và SBOM attestation cho immutable image tag. Phần hardening tiếp theo là secret manager chính thức và admission policy bắt buộc verify signature ở Kubernetes.
 
 ### Nếu service chết thì Kubernetes phát hiện thế nào?
 
@@ -619,6 +660,7 @@ Slide 3 - Runtime:
 Slide 4 - Operations:
 
 - Prometheus/Grafana/ELK.
+- DORA metrics và business metrics.
 - RabbitMQ retry/DLQ.
 - Backup/restore.
 - Runbooks.
@@ -629,7 +671,7 @@ Slide 5 - Roadmap:
 - HPA/load test.
 - Google Secret Manager.
 - Cloud SQL/PITR.
-- SBOM/Cosign.
+- Admission policy verify Cosign signature.
 
 ## 20. Kết bài ngắn gọn
 

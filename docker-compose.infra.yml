@@ -415,6 +415,8 @@ services:
     ports:
       - "8000:8000"
       - "8001:8001"
+    depends_on:
+      - jaeger
 
   # ── Observability (ELK Stack) ─────────────────────────────────────────────
   # Hybrid dev mode still needs ELK because services run local and send logs
@@ -459,6 +461,28 @@ services:
       elasticsearch:
         condition: service_healthy
 
+  jaeger:
+    image: jaegertracing/jaeger:2.5.0
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+      - "9411:9411"
+    restart: unless-stopped
+
+  dora-metrics-exporter:
+    image: prom/node-exporter:v1.8.2
+    command:
+      - --collector.disable-defaults
+      - --collector.textfile
+      - --collector.textfile.directory=/textfile
+      - --web.listen-address=:9100
+    volumes:
+      - ./reports/dora:/textfile:ro
+    restart: unless-stopped
+
   # ── Observability (Metrics) ───────────────────────────────────────────────
   prometheus:
     image: prom/prometheus:v2.55.1
@@ -477,6 +501,7 @@ services:
       - --web.console.templates=/usr/share/prometheus/consoles
     depends_on:
       - alertmanager
+      - dora-metrics-exporter
     restart: unless-stopped
 
   alertmanager:

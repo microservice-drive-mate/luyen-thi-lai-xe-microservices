@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
+import { MetricsService } from '@repo/common';
 import { NotificationRepository } from '../../domain/repositories/notification.repository';
 
 interface NotificationEventPayload {
@@ -15,7 +16,10 @@ interface NotificationEventPayload {
 export class MessagingController {
   private readonly logger = new Logger(MessagingController.name);
 
-  constructor(private readonly repository: NotificationRepository) {}
+  constructor(
+    private readonly repository: NotificationRepository,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   @EventPattern('exam.session.passed')
   async handleExamPassed(
@@ -23,7 +27,7 @@ export class MessagingController {
   ): Promise<void> {
     await this.handleSafely('exam.session.passed', async () => {
       const userId = payload.studentId ?? payload.userId;
-      if (!userId) return;
+      if (!userId) return 'skipped';
       await this.repository.createNotification({
         userId,
         title: 'Exam passed',
@@ -31,6 +35,7 @@ export class MessagingController {
         data: payload,
         sentAt: new Date(),
       });
+      return 'success';
     });
   }
 
@@ -40,7 +45,7 @@ export class MessagingController {
   ): Promise<void> {
     await this.handleSafely('exam.session.failed', async () => {
       const userId = payload.studentId ?? payload.userId;
-      if (!userId) return;
+      if (!userId) return 'skipped';
       await this.repository.createNotification({
         userId,
         title: 'Exam failed',
@@ -48,16 +53,27 @@ export class MessagingController {
         data: payload,
         sentAt: new Date(),
       });
+      return 'success';
     });
   }
 
   private async handleSafely(
     eventName: string,
-    handler: () => Promise<void>,
+    handler: () => Promise<'success' | 'skipped'>,
   ): Promise<void> {
     try {
-      await handler();
+      const status = await handler();
+      this.metricsService.recordNotificationDelivery({
+        channel: 'in_app',
+        event: eventName,
+        status,
+      });
     } catch (error) {
+      this.metricsService.recordNotificationDelivery({
+        channel: 'in_app',
+        event: eventName,
+        status: 'failure',
+      });
       this.logger.error(
         `Failed to handle ${eventName}: ${(error as Error).message}`,
       );
