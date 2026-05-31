@@ -14,6 +14,7 @@ Phase 3 giải quyết bằng cách ghi mỗi lần deploy thành một JSON eve
 
 - `scripts/devops-record-deployment.js`: ghi deployment event JSON.
 - `scripts/devops-dora-report.ts`: đọc deployment event store trước, fallback sang GitHub Actions history.
+- `Jenkinsfile`: ghi event cho Jenkins Docker Compose deploy.
 - `.github/workflows/ci.yml`: ghi event cho deploy staging GCP/K3s.
 - `.github/workflows/production-release.yml`: ghi event cho production Helm release.
 - `.github/workflows/deploy-compose-legacy.yml`: ghi event cho legacy Docker Compose deploy.
@@ -154,6 +155,6 @@ reports/dora/dora-report.md
 ## 7. Việc nên làm tiếp
 
 - Ghi deployment event vào Cloud Storage hoặc database thay vì chỉ upload GitHub artifact.
-- Thêm Jenkins API integration để ghi event từ Jenkins build history.
+- Thêm Jenkins API integration để tự tải event artifacts từ Jenkins build history.
 - Thêm workflow rollback có tham số và ghi `rollbackOf`.
 - Đẩy deployment event thành Prometheus metrics hoặc Grafana datasource.

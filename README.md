@@ -233,6 +233,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - DORA Metrics Report: đo Deployment Frequency, Lead Time for Changes, MTTR và Change Failure Rate theo `guides/devops/DORA-METRICS.md`.
   - Incident/Postmortem Phase 2: issue templates + auto labeler để chuẩn hóa dữ liệu MTTR/CFR theo `guides/devops/INCIDENT-POSTMORTEM-PROCESS.md`.
   - Deployment Event Store Phase 3: mỗi lần deploy ghi event JSON và upload artifact để DORA report đọc theo `guides/devops/DEPLOYMENT-EVENT-STORE.md`.
+  - Jenkins DORA Integration Phase 4: Jenkinsfile ghi deployment event sau staging/production deploy và archive artifact theo `guides/devops/JENKINS-DORA-INTEGRATION.md`.
 - Deployment Phase 5:
   - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.
   - Target hiện tại là GCP/GKE, self-contained dependencies trong cluster cho giai đoạn MVP.
@@ -260,6 +261,7 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 - Đo lường DevOps theo DORA ở [guides/devops/DORA-METRICS.md](./guides/devops/DORA-METRICS.md)
 - Quy trình incident/postmortem cho DORA Phase 2 ở [guides/devops/INCIDENT-POSTMORTEM-PROCESS.md](./guides/devops/INCIDENT-POSTMORTEM-PROCESS.md)
 - Deployment event store cho DORA Phase 3 ở [guides/devops/DEPLOYMENT-EVENT-STORE.md](./guides/devops/DEPLOYMENT-EVENT-STORE.md)
+- Jenkins DORA integration Phase 4 ở [guides/devops/JENKINS-DORA-INTEGRATION.md](./guides/devops/JENKINS-DORA-INTEGRATION.md)
 
 ## 11. Quy trình làm việc
 

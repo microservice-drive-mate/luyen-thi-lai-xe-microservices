@@ -38,6 +38,23 @@ Các workflow này cho biết:
 
 Chi tiết event store nằm ở `guides/devops/DEPLOYMENT-EVENT-STORE.md`.
 
+### Jenkins
+
+Jenkins cũng ghi deployment event cùng schema sau các stage deploy:
+
+- `Deploy Staging`
+- `Deploy Production`
+
+Event Jenkins được archive dưới dạng build artifact:
+
+```text
+reports/deployments/events/*.json
+```
+
+Khi cần đưa Jenkins data vào DORA report, tải artifact từ Jenkins và đặt vào `reports/deployments/events/`, sau đó chạy `npm run dora:report`.
+
+Chi tiết nằm ở `guides/devops/JENKINS-DORA-INTEGRATION.md`.
+
 ### GitHub Issues
 
 MTTR cần dữ liệu incident. Dự án dùng GitHub issue template:

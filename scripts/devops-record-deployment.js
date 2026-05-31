@@ -3,12 +3,21 @@ const path = require('node:path');
 
 const outputDir =
   process.env.DEPLOYMENT_EVENT_DIR || 'reports/deployments/events';
+const detectedProvider = process.env.JENKINS_URL ? 'jenkins' : 'github-actions';
 const environment =
   process.env.DEPLOYMENT_ENVIRONMENT || process.env.DEPLOY_ENV || 'unknown';
 const workflow =
-  process.env.DEPLOYMENT_WORKFLOW || process.env.GITHUB_WORKFLOW || 'unknown';
-const runId = process.env.GITHUB_RUN_ID || 'local';
-const runAttempt = process.env.GITHUB_RUN_ATTEMPT || '1';
+  process.env.DEPLOYMENT_WORKFLOW ||
+  process.env.GITHUB_WORKFLOW ||
+  process.env.JOB_NAME ||
+  'unknown';
+const runId =
+  process.env.GITHUB_RUN_ID ||
+  process.env.BUILD_ID ||
+  process.env.BUILD_NUMBER ||
+  'local';
+const runAttempt =
+  process.env.GITHUB_RUN_ATTEMPT || process.env.BUILD_NUMBER || '1';
 const eventId =
   process.env.DEPLOYMENT_EVENT_ID ||
   `${runId}-${runAttempt}-${environment}-${Date.now()}`;
@@ -25,6 +34,7 @@ const repository =
 const serverUrl = process.env.GITHUB_SERVER_URL || 'https://github.com';
 const deployUrl =
   process.env.DEPLOYMENT_URL ||
+  process.env.BUILD_URL ||
   (repository !== 'unknown' && runId !== 'local'
     ? `${serverUrl}/${repository}/actions/runs/${runId}`
     : '');
@@ -34,13 +44,13 @@ const status = normalizeStatus(
 const event = {
   schemaVersion: 1,
   eventId,
-  source: process.env.DEPLOYMENT_SOURCE || 'github-actions',
-  provider: process.env.DEPLOYMENT_PROVIDER || 'github-actions',
+  source: process.env.DEPLOYMENT_SOURCE || detectedProvider,
+  provider: process.env.DEPLOYMENT_PROVIDER || detectedProvider,
   repository,
   workflow,
   workflowRunId: runId,
   workflowRunAttempt: runAttempt,
-  job: process.env.GITHUB_JOB || '',
+  job: process.env.GITHUB_JOB || process.env.STAGE_NAME || '',
   environment,
   deploymentType: process.env.DEPLOYMENT_TYPE || 'unknown',
   deploymentTarget: process.env.DEPLOYMENT_TARGET || '',
@@ -49,16 +59,22 @@ const event = {
   gitSha:
     process.env.DEPLOYMENT_GIT_SHA ||
     process.env.GITHUB_SHA ||
+    process.env.GIT_COMMIT ||
     process.env.IMAGE_TAG ||
     '',
   imageTag: process.env.DEPLOYMENT_IMAGE_TAG || process.env.IMAGE_TAG || '',
-  branch: process.env.GITHUB_REF_NAME || process.env.DEPLOYMENT_BRANCH || '',
+  branch:
+    process.env.GITHUB_REF_NAME ||
+    process.env.DEPLOYMENT_BRANCH ||
+    process.env.BRANCH_NAME ||
+    process.env.GIT_BRANCH ||
+    '',
   status,
   startedAt,
   finishedAt,
   deployUrl,
-  actor: process.env.GITHUB_ACTOR || '',
-  trigger: process.env.GITHUB_EVENT_NAME || '',
+  actor: process.env.GITHUB_ACTOR || process.env.BUILD_USER_ID || '',
+  trigger: process.env.GITHUB_EVENT_NAME || process.env.BUILD_CAUSE || '',
   rollbackOf: process.env.DEPLOYMENT_ROLLBACK_OF || '',
   smokeStatus: process.env.DEPLOYMENT_SMOKE_STATUS || status,
   metadata: parseMetadata(process.env.DEPLOYMENT_METADATA_JSON),
@@ -83,8 +99,16 @@ function normalizeStatus(value) {
     return 'failure';
   }
 
-  if (normalized === 'cancelled' || normalized === 'canceled') {
+  if (
+    normalized === 'cancelled' ||
+    normalized === 'canceled' ||
+    normalized === 'aborted'
+  ) {
     return 'cancelled';
+  }
+
+  if (normalized === 'unstable') {
+    return 'failure';
   }
 
   if (normalized === 'timed_out' || normalized === 'timeout') {
