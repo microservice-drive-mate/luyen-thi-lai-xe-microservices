@@ -49,6 +49,8 @@ pids
 *.pid
 *.seed
 backups/
+reports/dora/
+reports/deployments/
 
 # Testing
 **/coverage/

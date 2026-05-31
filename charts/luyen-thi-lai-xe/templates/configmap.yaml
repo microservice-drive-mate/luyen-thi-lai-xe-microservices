@@ -156,6 +156,13 @@ data:
           header_name: x-correlation-id
           generator: uuid#counter
           echo_downstream: true
+      {{ if .Values.tracing.enabled }}
+      - name: opentelemetry
+        config:
+          traces_endpoint: {{ default (printf "http://%s-jaeger:4318/v1/traces" (include "lttl.fullname" .)) .Values.tracing.otlpTracesEndpoint | quote }}
+          resource_attributes:
+            service.name: {{ .Values.tracing.kongServiceName | quote }}
+      {{ end }}
       - name: rate-limiting
         config:
           second: 100

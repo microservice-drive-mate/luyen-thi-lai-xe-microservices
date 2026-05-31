@@ -1,0 +1,87 @@
+name: DORA Metrics Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Khoảng thời gian cần đo, tính theo ngày"
+        type: string
+        required: true
+        default: "30"
+      deploy_workflows:
+        description: "Danh sách workflow deploy, phân tách bằng dấu phẩy"
+        type: string
+        required: true
+        default: "Main Image Release,Production Release,Rollback Release,Legacy SSH Compose Deploy"
+  schedule:
+    - cron: "0 1 * * 1"
+
+permissions:
+  actions: read
+  contents: read
+  issues: read
+
+jobs:
+  dora-report:
+    name: Generate DORA Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DORA_DAYS: ${{ inputs.days || '30' }}
+      DORA_DEPLOY_WORKFLOWS: ${{ inputs.deploy_workflows || 'Main Image Release,Production Release,Rollback Release,Legacy SSH Compose Deploy' }}
+      DORA_OUTPUT: reports/dora/dora-report.md
+      DORA_JSON_OUTPUT: reports/dora/dora-report.json
+      DORA_DEPLOYMENT_EVENTS_DIR: reports/deployments
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download deployment event artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/deployments
+          workflows=(
+            "Main Image Release"
+            "Production Release"
+            "Rollback Release"
+            "Legacy SSH Compose Deploy"
+          )
+
+          for workflow in "${workflows[@]}"; do
+            echo "[dora-report] Downloading deployment events from workflow: ${workflow}"
+            gh run list --workflow "${workflow}" --limit 30 --json databaseId --jq '.[].databaseId' | while read -r run_id; do
+              if [[ -z "${run_id}" ]]; then
+                continue
+              fi
+
+              gh run download "${run_id}" \
+                --pattern "deployment-event-*" \
+                --dir reports/deployments \
+                || true
+            done
+          done
+
+      - name: Generate DORA metrics report
+        run: npm run dora:report
+
+      - name: Export DORA Prometheus metrics
+        run: npm run dora:export-prometheus
+
+      - name: Upload DORA report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dora-report-${{ github.run_number }}
+          path: reports/dora/
+          retention-days: 30

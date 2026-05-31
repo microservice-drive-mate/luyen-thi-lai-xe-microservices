@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IUseCase } from '@repo/common';
+import { IUseCase, MetricsService } from '@repo/common';
 import { ExamSession } from '../../../domain/aggregates/exam-session/exam-session.aggregate';
 import {
   ExamTopicDistributionItem,
@@ -31,6 +31,7 @@ export class StartSessionUseCase
     private readonly sessionRepository: ExamSessionRepository,
     private readonly questionPoolClient: QuestionPoolClient,
     private readonly userProfileClient: UserProfileClient,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async execute(command: StartSessionCommand): Promise<ExamSessionResult> {
@@ -123,6 +124,9 @@ export class StartSessionUseCase
     });
 
     await this.sessionRepository.save(session);
+    this.metricsService.recordExamSessionStarted({
+      licenseCategory: session.licenseCategory,
+    });
     return ExamSessionResult.fromAggregate(session);
   }
 

@@ -199,6 +199,11 @@ plugins:
       header_name: x-correlation-id
       generator: uuid#counter
       echo_downstream: true
+  - name: opentelemetry
+    config:
+      traces_endpoint: http://jaeger:4318/v1/traces
+      resource_attributes:
+        service.name: kong-gateway
   - name: rate-limiting
     config:
       second: 100

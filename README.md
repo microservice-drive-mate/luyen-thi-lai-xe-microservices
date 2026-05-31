@@ -223,19 +223,27 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 - Trạng thái tổng quan:
   - MVP/local/GCP đã khá đầy đủ: Docker, Kong, Consul, RabbitMQ, Keycloak, ELK, Prometheus/Grafana, backup, runbook.
   - CI/CD đã có PR validation, main image release, Trivy scan và production release thủ công bằng immutable image tag.
-  - Production hardening còn thiếu: secret manager chính thức, SBOM/signing, rollback workflow riêng, load test, HPA và Terraform.
+  - Production hardening còn thiếu: secret manager chính thức, load test, HPA và Terraform. SBOM/signing và rollback workflow đã có baseline trong GitHub Actions.
 - Production scope đã chốt: 10 services; `docs-service` chỉ dùng cho Dev.
-- CI/CD Phase 4:
+- CI/CD:
   - Pull Request Validation: quality gate, build image, Trivy scan, không push image.
   - Main Image Release: build đủ 10 production images, Trivy scan, push GHCR bằng tag `${git_sha}` và `latest`, rồi auto deploy GCP staging bằng Helm.
   - Production Release: chạy thủ công bằng immutable image tag, gắn GitHub Environment `production`.
   - Jenkins: pipeline tự host/legacy cho GHCR + Docker Compose deploy qua SSH/VM hoặc Compute Engine; GitHub Actions vẫn là đường chính cho GCP/GKE.
-- Deployment Phase 5:
+  - DORA Metrics Report: đo Deployment Frequency, Lead Time for Changes, MTTR và Change Failure Rate theo `guides/devops/DORA-METRICS.md`.
+  - Incident/Postmortem: issue templates + auto labeler để chuẩn hóa dữ liệu MTTR/CFR theo `guides/devops/INCIDENT-POSTMORTEM-PROCESS.md`.
+  - Deployment Event Store: mỗi lần deploy ghi event JSON và upload artifact để DORA report đọc theo `guides/devops/DEPLOYMENT-EVENT-STORE.md`.
+  - Jenkins DORA Integration: Jenkinsfile ghi deployment event sau staging/production deploy và archive artifact theo `guides/devops/JENKINS-DORA-INTEGRATION.md`.
+  - DORA Grafana Dashboard: export DORA JSON sang Prometheus metrics và hiển thị dashboard theo `guides/devops/DORA-GRAFANA-DASHBOARD.md`.
+  - OpenTelemetry/Jaeger: trace end-to-end từ Kong đến NestJS services theo `guides/devops/OPENTELEMETRY-JAEGER-TRACING.md`.
+  - Business Metrics: đo user mới, lượt làm bài thi, pass/fail, hoàn tất bài học/khóa học, notification delivery và upload media theo `guides/devops/BUSINESS-METRICS.md`.
+  - GitHub Actions Release Safety: SBOM, Cosign signing và rollback workflow theo `guides/devops/GITHUB-ACTIONS-RELEASE-SAFETY.md`.
+- Deployment:
   - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.
   - Target hiện tại là GCP/GKE, self-contained dependencies trong cluster cho giai đoạn MVP.
   - GCP/GKE chỉ pull image từ GHCR theo tag được truyền vào Helm; không build source code trên GCP.
   - K3s/VPS chỉ còn là hướng lab hoặc fallback legacy, không phải target production chính.
-  - Hướng dẫn setup nằm ở `guides/devops/PHASE5-KUBERNETES.md`.
+  - Hướng dẫn setup nằm ở `guides/devops/KUBERNETES-GCP-DEPLOYMENT.md`.
   - Checklist GCP chi tiết nằm ở `guides/devops/GCP-SETUP.md`.
   - Kịch bản demo DevOps nằm ở `guides/devops/DEVOPS-DEMO-SCRIPT.md`.
 - Health endpoints chuẩn:
@@ -251,9 +259,17 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
   - [Jenkinsfile](./Jenkinsfile)
   - [docker-compose.deploy.yml](./docker-compose.deploy.yml)
   - [guides/devops/JENKINS-DOCKER-COMPOSE.md](./guides/devops/JENKINS-DOCKER-COMPOSE.md)
-- Phase 6.1-6.5 Logging + ELK + Correlation ID + Metrics + Alerting ở [guides/devops/OBSERVABILITY-ELK.md](./guides/devops/OBSERVABILITY-ELK.md)
+- Logging + ELK + Correlation ID + Metrics + Alerting ở [guides/devops/OBSERVABILITY-ELK.md](./guides/devops/OBSERVABILITY-ELK.md)
 - Runbook Observability ở [guides/devops/OBSERVABILITY-RUNBOOK.md](./guides/devops/OBSERVABILITY-RUNBOOK.md)
 - Tổng hợp trạng thái và gap DevOps ở [DEVOPS-SUMMARY.md](./DEVOPS-SUMMARY.md)
+- Đo lường DevOps theo DORA ở [guides/devops/DORA-METRICS.md](./guides/devops/DORA-METRICS.md)
+- Quy trình incident/postmortem cho DORA ở [guides/devops/INCIDENT-POSTMORTEM-PROCESS.md](./guides/devops/INCIDENT-POSTMORTEM-PROCESS.md)
+- Deployment event store cho DORA ở [guides/devops/DEPLOYMENT-EVENT-STORE.md](./guides/devops/DEPLOYMENT-EVENT-STORE.md)
+- Jenkins DORA integration ở [guides/devops/JENKINS-DORA-INTEGRATION.md](./guides/devops/JENKINS-DORA-INTEGRATION.md)
+- DORA Grafana dashboard ở [guides/devops/DORA-GRAFANA-DASHBOARD.md](./guides/devops/DORA-GRAFANA-DASHBOARD.md)
+- OpenTelemetry/Jaeger tracing ở [guides/devops/OPENTELEMETRY-JAEGER-TRACING.md](./guides/devops/OPENTELEMETRY-JAEGER-TRACING.md)
+- Business metrics ở [guides/devops/BUSINESS-METRICS.md](./guides/devops/BUSINESS-METRICS.md)
+- GitHub Actions release safety ở [guides/devops/GITHUB-ACTIONS-RELEASE-SAFETY.md](./guides/devops/GITHUB-ACTIONS-RELEASE-SAFETY.md)
 
 ## 11. Quy trình làm việc
 

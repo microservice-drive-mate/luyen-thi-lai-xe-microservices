@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
   packages: write
 
 jobs:
@@ -212,6 +213,23 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.service }}.spdx.json
+          dependency-snapshot: false
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.service }}-${{ github.sha }}
+          path: sbom-${{ matrix.service }}.spdx.json
+          retention-days: 90
+
       - name: Push Docker Image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
@@ -219,6 +237,29 @@ jobs:
           set -euo pipefail
           docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
           docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest
+
+      - name: Install Cosign
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign immutable image and attach SBOM attestation
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}"
+          cosign sign --yes "$IMAGE"
+          cosign attest --yes --predicate "sbom-${{ matrix.service }}.spdx.json" --type spdxjson "$IMAGE"
+
+      - name: Verify image signature
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/ci.yml@refs/heads/main" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}"
 
       - name: Get image size
         id: size
@@ -300,12 +341,49 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+      - name: Generate Migration Runner SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
+          format: spdx-json
+          output-file: sbom-migration-runner.spdx.json
+          dependency-snapshot: false
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Upload Migration Runner SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-migration-runner-${{ github.sha }}
+          path: sbom-migration-runner.spdx.json
+          retention-days: 90
+
       - name: Push Migration Runner Image
         shell: bash
         run: |
           set -euo pipefail
           docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
           docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:latest
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign immutable migration runner image and attach SBOM attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}"
+          cosign sign --yes "$IMAGE"
+          cosign attest --yes --predicate "sbom-migration-runner.spdx.json" --type spdxjson "$IMAGE"
+
+      - name: Verify migration runner image signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/ci.yml@refs/heads/main" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}"
 
       - name: Build Summary
         if: always()
@@ -359,6 +437,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Mark deployment start
+        shell: bash
+        run: echo "DEPLOYMENT_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
       - uses: azure/setup-helm@v4
 
       - uses: azure/setup-kubectl@v4
@@ -375,11 +457,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          
+
           # Cài đặt numpy để tăng tốc và tối ưu hóa băng thông IAP tunnel (ngăn chặn treo mạng khi truyền manifest lớn)
           echo "🚀 Installing NumPy to optimize Google Cloud IAP tunnel bandwidth..."
           pip install --no-cache-dir numpy
-          
+
           gcloud compute start-iap-tunnel "$GCP_VM_NAME" 6443 \
             --local-host-port=127.0.0.1:16443 \
             --zone="$GCP_VM_ZONE" \
@@ -505,11 +587,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          
+
           # 1. Tự động gỡ kẹt release Helm nếu có
           STATUS=$(helm list -n staging -f "^luyen-thi-lai-xe$" -o json | jq -r '.[0].status // empty')
           echo "Current Helm release status: $STATUS"
-          
+
           if [[ "$STATUS" == "pending-upgrade" || "$STATUS" == "pending-install" || "$STATUS" == "pending-rollback" ]]; then
             echo "⚠️ Helm release is stuck in '$STATUS' state. Attempting self-healing..."
             
@@ -607,3 +689,25 @@ jobs:
             kill "$TUNNEL_PID" 2>/dev/null || true
             echo "IAP tunnel (PID $TUNNEL_PID) terminated"
           fi
+
+      - name: Record deployment event
+        if: always()
+        env:
+          DEPLOYMENT_ENVIRONMENT: staging
+          DEPLOYMENT_TYPE: helm
+          DEPLOYMENT_TARGET: gcp-k3s
+          DEPLOYMENT_RELEASE_NAME: luyen-thi-lai-xe
+          DEPLOYMENT_NAMESPACE: staging
+          DEPLOYMENT_IMAGE_TAG: ${{ github.sha }}
+          DEPLOYMENT_GIT_SHA: ${{ github.sha }}
+          DEPLOYMENT_STATUS: ${{ job.status }}
+          DEPLOYMENT_SMOKE_STATUS: ${{ job.status }}
+        run: npm run deployment:record
+
+      - name: Upload deployment event
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-event-staging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/deployments/events/
+          retention-days: 90

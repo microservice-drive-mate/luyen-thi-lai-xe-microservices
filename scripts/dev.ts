@@ -12,6 +12,18 @@ const env: NodeJS.ProcessEnv = {
     process.env.CONSUL_URL || localEnv.CONSUL_URL || 'http://127.0.0.1:8500',
   LOGSTASH_ENABLED: process.env.LOGSTASH_ENABLED ?? 'false',
   NODE_ENV: 'development-local',
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
+    process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
+    localEnv.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
+    'http://localhost:4318/v1/traces',
+  OTEL_PROPAGATORS:
+    process.env.OTEL_PROPAGATORS ??
+    localEnv.OTEL_PROPAGATORS ??
+    'tracecontext,baggage',
+  OTEL_TRACING_ENABLED:
+    process.env.OTEL_TRACING_ENABLED ??
+    localEnv.OTEL_TRACING_ENABLED ??
+    'false',
   REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
 };
 

@@ -1,0 +1,98 @@
+name: Incident report
+description: Ghi nhận sự cố vận hành để tính MTTR và Change Failure Rate.
+title: "[Incident] "
+labels:
+  - incident
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Dùng template này khi staging/production gặp sự cố cần theo dõi. Đóng issue khi hệ thống đã khôi phục để script DORA tính MTTR từ `created_at` đến `closed_at`.
+        Workflow `Incident Labeler` sẽ tự gắn label môi trường, severity và change-failure/rollback dựa trên các lựa chọn bên dưới.
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Môi trường
+      options:
+        - production
+        - staging
+        - local
+        - unknown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Mức độ ảnh hưởng
+      options:
+        - SEV1 - Hệ thống ngừng phục vụ
+        - SEV2 - Chức năng chính lỗi
+        - SEV3 - Lỗi cục bộ/có workaround
+        - SEV4 - Cảnh báo hoặc lỗi nhỏ
+    validations:
+      required: true
+
+  - type: input
+    id: detected_at
+    attributes:
+      label: Thời điểm phát hiện
+      description: Dùng ISO 8601 nếu có thể, ví dụ 2026-05-31T20:30:00+07:00.
+      placeholder: "2026-05-31T20:30:00+07:00"
+    validations:
+      required: true
+
+  - type: input
+    id: related_deploy
+    attributes:
+      label: Deploy/Git SHA liên quan
+      description: Điền image tag, Git SHA, workflow URL hoặc Jenkins build URL nếu sự cố liên quan deploy.
+      placeholder: "df2af3a hoặc https://github.com/.../actions/runs/..."
+
+  - type: checkboxes
+    id: failure_type
+    attributes:
+      label: Phân loại để tính DORA
+      options:
+        - label: Sự cố do deploy mới gây ra
+        - label: Cần rollback hoặc redeploy về tag cũ
+        - label: Smoke test hoặc health check fail sau deploy
+
+  - type: checkboxes
+    id: postmortem_required
+    attributes:
+      label: Postmortem
+      options:
+        - label: Incident này cần postmortem sau khi khôi phục
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Ảnh hưởng người dùng/hệ thống
+      description: Mô tả chức năng bị ảnh hưởng, phạm vi và dấu hiệu quan sát được.
+      placeholder: "Ví dụ: Kong trả 502 cho /exams, user không nộp bài thi được."
+    validations:
+      required: true
+
+  - type: textarea
+    id: detection
+    attributes:
+      label: Cách phát hiện
+      description: Alert, Grafana, smoke test, log ELK, user report...
+      placeholder: "Prometheus alert HighHttp5xxRate firing, smoke test fail..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Hành động khắc phục tạm thời
+      placeholder: "Rollback Helm revision, restart deployment, scale pod, revert config..."
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Bằng chứng/log/link liên quan
+      placeholder: "Grafana panel, Kibana query, kubectl logs, workflow URL..."

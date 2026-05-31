@@ -9,10 +9,14 @@ pipeline {
     timestamps()
   }
 
+  parameters {
+    string(name: 'GHCR_OWNER', defaultValue: 'replace-with-github-owner', description: 'GHCR owner/namespace chứa image của dự án')
+  }
+
   environment {
     APP_NAME = 'luyen-thi-lai-xe'
     REGISTRY = 'ghcr.io'
-    GHCR_OWNER = 'nhactaohocbai'
+    GHCR_OWNER = "${params.GHCR_OWNER}"
     DOCKER_BUILDKIT = '1'
     COMPOSE_DOCKER_CLI_BUILD = '1'
     SERVICES = 'identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service audit-service'
@@ -122,6 +126,9 @@ pipeline {
         branch 'main'
       }
       steps {
+        script {
+          env.DEPLOYMENT_STARTED_AT = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.TimeZone.getTimeZone('UTC'))
+        }
         withCredentials([
           usernamePassword(
             credentialsId: 'ghcr-credentials',
@@ -144,6 +151,28 @@ pipeline {
           }
         }
       }
+      post {
+        always {
+          script {
+            withEnv([
+              'DEPLOYMENT_SOURCE=jenkins',
+              'DEPLOYMENT_PROVIDER=jenkins',
+              "DEPLOYMENT_WORKFLOW=${env.JOB_NAME ?: 'Jenkinsfile'}",
+              'DEPLOYMENT_ENVIRONMENT=staging',
+              'DEPLOYMENT_TYPE=docker-compose',
+              'DEPLOYMENT_TARGET=ssh-vm',
+              "DEPLOYMENT_IMAGE_TAG=${env.IMAGE_TAG ?: ''}",
+              "DEPLOYMENT_GIT_SHA=${env.GIT_COMMIT ?: env.IMAGE_TAG ?: ''}",
+              "DEPLOYMENT_STATUS=${currentBuild.currentResult?.toLowerCase() ?: 'unknown'}",
+              "DEPLOYMENT_SMOKE_STATUS=${currentBuild.currentResult?.toLowerCase() ?: 'unknown'}",
+              "DEPLOYMENT_BRANCH=${env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''}",
+            ]) {
+              sh 'npm run deployment:record || true'
+            }
+          }
+          archiveArtifacts artifacts: 'reports/deployments/events/*.json', allowEmptyArchive: true
+        }
+      }
     }
 
     stage('Deploy Production') {
@@ -152,6 +181,9 @@ pipeline {
       }
       steps {
         input message: "Deploy ${env.IMAGE_TAG} to production?"
+        script {
+          env.DEPLOYMENT_STARTED_AT = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.TimeZone.getTimeZone('UTC'))
+        }
         withCredentials([
           usernamePassword(
             credentialsId: 'ghcr-credentials',
@@ -172,6 +204,28 @@ pipeline {
               bash ./scripts/deploy-prod.sh
             '''
           }
+        }
+      }
+      post {
+        always {
+          script {
+            withEnv([
+              'DEPLOYMENT_SOURCE=jenkins',
+              'DEPLOYMENT_PROVIDER=jenkins',
+              "DEPLOYMENT_WORKFLOW=${env.JOB_NAME ?: 'Jenkinsfile'}",
+              'DEPLOYMENT_ENVIRONMENT=production',
+              'DEPLOYMENT_TYPE=docker-compose',
+              'DEPLOYMENT_TARGET=ssh-vm',
+              "DEPLOYMENT_IMAGE_TAG=${env.IMAGE_TAG ?: ''}",
+              "DEPLOYMENT_GIT_SHA=${env.GIT_COMMIT ?: env.IMAGE_TAG ?: ''}",
+              "DEPLOYMENT_STATUS=${currentBuild.currentResult?.toLowerCase() ?: 'unknown'}",
+              "DEPLOYMENT_SMOKE_STATUS=${currentBuild.currentResult?.toLowerCase() ?: 'unknown'}",
+              "DEPLOYMENT_BRANCH=${env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''}",
+            ]) {
+              sh 'npm run deployment:record || true'
+            }
+          }
+          archiveArtifacts artifacts: 'reports/deployments/events/*.json', allowEmptyArchive: true
         }
       }
     }

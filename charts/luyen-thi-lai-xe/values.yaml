@@ -1,5 +1,5 @@
 global:
-  imageRegistry: ghcr.io/nhactaohocbai
+  imageRegistry: ghcr.io/replace-with-github-owner
   imageTag: latest
   imagePullPolicy: IfNotPresent
   nodeEnv: production
@@ -35,6 +35,22 @@ config:
   logFormat: json
   questionServiceTimeoutMs: "3000"
   userServiceTimeoutMs: "3000"
+
+tracing:
+  enabled: true
+  otlpTracesEndpoint: ""
+  propagators: tracecontext,baggage
+  kongServiceName: kong-gateway
+  kongSamplingRate: "1.0"
+  jaeger:
+    image: jaegertracing/jaeger:2.5.0
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
 
 secrets:
   postgresUser: user

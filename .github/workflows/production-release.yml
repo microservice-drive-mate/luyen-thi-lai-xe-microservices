@@ -43,6 +43,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Mark deployment start
+        shell: bash
+        run: echo "DEPLOYMENT_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
       - uses: azure/setup-helm@v4
 
       - uses: azure/setup-kubectl@v4
@@ -104,7 +108,10 @@ jobs:
             .filter(Boolean);
 
           const values = {
-            global: { imageTag: env.IMAGE_TAG },
+            global: {
+              imageTag: env.IMAGE_TAG,
+              imageRegistry: `ghcr.io/${{ github.repository_owner }}`,
+            },
             migration: { imageTag: env.IMAGE_TAG },
             imagePullSecret: {
               enabled: true,
@@ -161,3 +168,25 @@ jobs:
           kubectl get jobs -n production
           API_SCHEME="${API_SCHEME:-http}"
           SMOKE_BASE_URL="${API_SCHEME}://${API_HOST}" bash scripts/k8s-smoke.sh
+
+      - name: Record deployment event
+        if: always()
+        env:
+          DEPLOYMENT_ENVIRONMENT: production
+          DEPLOYMENT_TYPE: helm
+          DEPLOYMENT_TARGET: gke
+          DEPLOYMENT_RELEASE_NAME: luyen-thi-lai-xe
+          DEPLOYMENT_NAMESPACE: production
+          DEPLOYMENT_IMAGE_TAG: ${{ inputs.image_tag }}
+          DEPLOYMENT_GIT_SHA: ${{ inputs.image_tag }}
+          DEPLOYMENT_STATUS: ${{ job.status }}
+          DEPLOYMENT_SMOKE_STATUS: ${{ job.status }}
+        run: npm run deployment:record
+
+      - name: Upload deployment event
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-event-production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/deployments/events/
+          retention-days: 90
