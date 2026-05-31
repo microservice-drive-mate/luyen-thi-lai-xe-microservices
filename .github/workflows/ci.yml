@@ -181,8 +181,8 @@ jobs:
 
             if docker buildx build \
               --file "./apps/${{ matrix.service }}/Dockerfile" \
-              --tag "ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest" \
-              --tag "ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}" \
+              --tag "ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest" \
+              --tag "ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}" \
               --cache-from "type=gha,scope=${{ matrix.service }}" \
               --cache-to "type=gha,mode=max,scope=${{ matrix.service }}" \
               --provenance=false \
@@ -204,7 +204,7 @@ jobs:
       - name: Scan Docker Image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          image-ref: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
           scanners: vuln
           format: table
           vuln-type: os,library
@@ -217,15 +217,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
-          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest
+          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest
 
       - name: Get image size
         id: size
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          docker pull ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest 2>/dev/null || true
-          SIZE=$(docker image inspect ghcr.io/nhactaohocbai/luyen-thi-lai-xe-${{ matrix.service }}:latest \
+          docker pull ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest 2>/dev/null || true
+          SIZE=$(docker image inspect ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest \
             --format='{{.Size}}' 2>/dev/null | awk '{printf "%.1f MB", $1/1024/1024}' || echo "N/A")
           echo "size=$SIZE" >> "$GITHUB_OUTPUT"
 
@@ -281,8 +281,8 @@ jobs:
           set -euo pipefail
           docker buildx build \
             --file Dockerfile.migration-runner \
-            --tag ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }} \
-            --tag ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:latest \
+            --tag ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }} \
+            --tag ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:latest \
             --cache-from type=gha,scope=migration-runner \
             --cache-to type=gha,mode=max,scope=migration-runner \
             --provenance=false \
@@ -292,7 +292,7 @@ jobs:
       - name: Scan Migration Runner with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
+          image-ref: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
           scanners: vuln
           format: table
           vuln-type: os,library
@@ -304,8 +304,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
-          docker push ghcr.io/nhactaohocbai/luyen-thi-lai-xe-migration-runner:latest
+          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:latest
 
       - name: Build Summary
         if: always()
