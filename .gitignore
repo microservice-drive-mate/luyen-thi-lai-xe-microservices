@@ -27,6 +27,13 @@ charts/**/values-*.secret.yaml
 rendered-*.yaml
 kubeconfig*.yaml
 
+# Local Terraform state and credentials
+terraform/terraform.tfvars
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+
 # Consul seed production (chứa secrets thật - không commit)
 consul-seed-production.json
 consul-seed-development.json
