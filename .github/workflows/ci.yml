@@ -449,7 +449,7 @@ jobs:
             .filter(Boolean);
 
           const values = {
-            global: { imageTag: env.IMAGE_TAG },
+            global: { imageTag: env.IMAGE_TAG, storageClassName: 'local-path' },
             migration: { imageTag: env.IMAGE_TAG },
             imagePullSecret: {
               enabled: true,

@@ -3,7 +3,7 @@ global:
   imageTag: latest
   imagePullPolicy: IfNotPresent
   nodeEnv: production
-  storageClassName: standard-rwo
+  storageClassName: local-path
 
 imagePullSecret:
   enabled: false
