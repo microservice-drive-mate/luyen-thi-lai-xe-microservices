@@ -483,6 +483,32 @@ jobs:
           fs.writeFileSync(env.HELM_VALUES_FILE, JSON.stringify(values, null, 2));
           NODE
 
+      - name: Auto-heal stuck Helm release
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          # Kiểm tra xem release có tồn tại và đang bị kẹt hay không
+          STATUS=$(helm list -n staging -f "^luyen-thi-lai-xe$" -o json | jq -r '.[0].status // empty')
+          echo "Current Helm release status: $STATUS"
+          
+          if [[ "$STATUS" == "pending-upgrade" || "$STATUS" == "pending-install" || "$STATUS" == "pending-rollback" ]]; then
+            echo "⚠️ Helm release is stuck in '$STATUS' state. Attempting self-healing..."
+            
+            # Tìm revision bị kẹt từ lịch sử Helm
+            STUCK_REVISION=$(helm history luyen-thi-lai-xe -n staging -o json | jq -r '.[] | select(.status=="pending-upgrade" or .status=="pending-install" or .status=="pending-rollback") | .revision' | tail -n 1)
+            
+            if [[ -n "$STUCK_REVISION" ]]; then
+              echo "🗑️ Deleting stuck Helm release secret for revision v$STUCK_REVISION..."
+              kubectl delete secret "sh.helm.release.v1.luyen-thi-lai-xe.v$STUCK_REVISION" -n staging || true
+              echo "✅ Stuck release state cleared. Next helm upgrade can proceed safely."
+            else
+              echo "⚠️ Could not identify stuck revision from history. Proceeding anyway..."
+            fi
+          else
+            echo "✅ Helm release is not stuck (Status: '${STATUS:-not-deployed}'). No action needed."
+          fi
+
       - name: Deploy Helm release
         shell: bash
         run: |
