@@ -536,6 +536,46 @@ jobs:
             --timeout 25m \
             -f "$RUNNER_TEMP/staging-values.json"
 
+      - name: Debug deployment failure
+        if: failure()
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "========== HELM RELEASE STATUS =========="
+          helm list -n staging --all || true
+          echo ""
+          echo "========== HELM HISTORY =========="
+          helm history luyen-thi-lai-xe -n staging || true
+          echo ""
+          echo "========== STORAGE CLASSES =========="
+          kubectl get storageclass || true
+          echo ""
+          echo "========== PVCs =========="
+          kubectl get pvc -n staging || true
+          echo ""
+          echo "========== ALL PODS =========="
+          kubectl get pods -n staging -o wide || true
+          echo ""
+          echo "========== POD DESCRIPTIONS =========="
+          for pod in $(kubectl get pods -n staging --no-headers -o custom-columns=":metadata.name" 2>/dev/null | head -20); do
+            echo "--- Describing pod: $pod ---"
+            kubectl describe pod "$pod" -n staging 2>/dev/null | tail -40
+            echo ""
+          done
+          echo ""
+          echo "========== POD LOGS (last 30 lines per container) =========="
+          for pod in $(kubectl get pods -n staging --no-headers -o custom-columns=":metadata.name" 2>/dev/null | head -10); do
+            echo "--- Logs for pod: $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --tail=30 2>/dev/null || true
+            echo ""
+          done
+          echo ""
+          echo "========== EVENTS (last 50) =========="
+          kubectl get events -n staging --sort-by='.metadata.creationTimestamp' 2>/dev/null | tail -50 || true
+          echo ""
+          echo "========== NODE RESOURCES =========="
+          kubectl top nodes 2>/dev/null || kubectl describe nodes | grep -A 20 "Allocated resources" || true
+
       - name: Verify rollout and smoke
         shell: bash
         run: |
