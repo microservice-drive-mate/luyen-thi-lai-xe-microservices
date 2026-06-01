@@ -10,7 +10,8 @@ const env: NodeJS.ProcessEnv = {
   ...process.env,
   CONSUL_URL:
     process.env.CONSUL_URL || localEnv.CONSUL_URL || 'http://127.0.0.1:8500',
-  LOGSTASH_ENABLED: process.env.LOGSTASH_ENABLED ?? 'false',
+  LOGSTASH_ENABLED:
+    process.env.LOGSTASH_ENABLED ?? localEnv.LOGSTASH_ENABLED ?? 'false',
   NODE_ENV: 'development-local',
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
     process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
