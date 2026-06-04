@@ -17,17 +17,17 @@ export class SendWelcomeEmailUseCase
     command: SendWelcomeEmailCommand,
   ): Promise<NotificationRecord[]> {
     const greeting = command.fullName
-      ? `Xin chÃ o ${command.fullName},`
-      : 'Xin chÃ o,';
+      ? `Xin chào ${command.fullName},`
+      : 'Xin chào,';
     const body =
       `${greeting}\n\n` +
-      'ChÃºc má»«ng báº¡n Ä‘Ã£ tham gia há»‡ thá»‘ng Luyá»‡n thi lÃ¡i xe. ' +
-      'Báº¡n cÃ³ thá»ƒ báº¯t Ä‘áº§u cÃ¡c khÃ³a há»c vÃ  lÃ m bÃ i luyá»‡n Ä‘á» ngay bÃ¢y giá».';
+      'Chúc mừng bạn đã tham gia hệ thống Luyện thi lái xe. ' +
+      'Bạn có thể bắt đầu các khóa học và làm bài luyện đề ngay bây giờ.';
     return this.dispatcher.dispatch({
       eventType: 'identity.user.created',
       userId: command.userId,
       recipientEmail: command.email,
-      title: 'ChÃ o má»«ng Ä‘áº¿n vá»›i Luyá»‡n thi lÃ¡i xe',
+      title: 'Chào mừng đến với Luyện thi lái xe',
       body,
       data: { email: command.email },
       channels: [NotificationType.IN_APP, NotificationType.EMAIL],

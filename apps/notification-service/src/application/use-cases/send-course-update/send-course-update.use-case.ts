@@ -25,7 +25,7 @@ export class SendCourseUpdateUseCase
       eventType: 'course.updated',
       userId: command.userId,
       recipientEmail: command.email,
-      title: `Cáº­p nháº­t khÃ³a há»c: ${command.courseTitle}`,
+      title: `Cập nhật khóa học: ${command.courseTitle}`,
       body: command.updateSummary,
       data: {
         courseId: command.courseId,

@@ -17,14 +17,14 @@ export class SendPasswordResetUseCase
     command: SendPasswordResetCommand,
   ): Promise<NotificationRecord[]> {
     const body =
-      'Báº¡n (hoáº·c ai Ä‘Ã³) Ä‘Ã£ yÃªu cáº§u Ä‘áº·t láº¡i máº­t kháº©u cho tÃ i khoáº£n nÃ y. ' +
-      `Truy cáº­p liÃªn káº¿t sau Ä‘á»ƒ tiáº¿p tá»¥c: ${command.resetUrl}\n\n` +
-      'Náº¿u khÃ´ng pháº£i báº¡n, vui lÃ²ng bá» qua email nÃ y.';
+      'Bạn (hoặc ai đó) đã yêu cầu đặt lại mật khẩu cho tài khoản này. ' +
+      `Truy cập liên kết sau để tiếp tục: ${command.resetUrl}\n\n` +
+      'Nếu không phải bạn, vui lòng bỏ qua email này.';
     return this.dispatcher.dispatch({
       eventType: 'identity.user.password-reset-requested',
       userId: command.userId,
       recipientEmail: command.email,
-      title: 'YÃªu cáº§u Ä‘áº·t láº¡i máº­t kháº©u',
+      title: 'Yêu cầu đặt lại mật khẩu',
       body,
       data: { resetUrl: command.resetUrl },
       channels: [NotificationType.EMAIL],

@@ -15,14 +15,12 @@ export class SendExamResultUseCase
 
   async execute(command: SendExamResultCommand): Promise<NotificationRecord[]> {
     const isPassed = command.eventType === 'exam.session.passed';
-    const title = isPassed
-      ? 'Báº¡n Ä‘Ã£ vÆ°á»£t qua bÃ i thi'
-      : 'BÃ i thi chÆ°a Ä‘áº¡t';
+    const title = isPassed ? 'Bạn đã vượt qua bài thi' : 'Bài thi chưa đạt';
     const body = isPassed
-      ? `ChÃºc má»«ng! Báº¡n Ä‘Ã£ hoÃ n thÃ nh bÃ i thi ${command.licenseCategory ?? ''}. ${
-          typeof command.score === 'number' ? `Äiá»ƒm: ${command.score}.` : ''
+      ? `Chúc mừng! Bạn đã hoàn thành bài thi ${command.licenseCategory ?? ''}. ${
+          typeof command.score === 'number' ? `Điểm: ${command.score}.` : ''
         }`.trim()
-      : 'HÃ£y Ã´n láº¡i cÃ¡c nhÃ³m cÃ¢u há»i thÆ°á»ng sai vÃ  lÃ m thÃªm bÃ i luyá»‡n Ä‘á».';
+      : 'Hãy ôn lại các nhóm câu hỏi thường sai và làm thêm bài luyện đề.';
     const channels: NotificationType[] = [
       NotificationType.IN_APP,
       NotificationType.PUSH,
