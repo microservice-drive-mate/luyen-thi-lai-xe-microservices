@@ -254,24 +254,26 @@ export class ConsulConfigFactory {
           }
         : undefined,
       smtp:
-        env.NOTIFICATION_SMTP_HOST ||
-        env.NOTIFICATION_SMTP_PORT ||
-        env.NOTIFICATION_SMTP_USER ||
-        env.NOTIFICATION_SMTP_PASS ||
-        env.NOTIFICATION_SMTP_FROM
+        env.KEYCLOAK_SMTP_HOST ||
+        env.KEYCLOAK_SMTP_PORT ||
+        env.KEYCLOAK_SMTP_USER ||
+        env.KEYCLOAK_SMTP_PASSWORD ||
+        env.KEYCLOAK_SMTP_FROM
           ? {
-              host: env.NOTIFICATION_SMTP_HOST,
-              port: env.NOTIFICATION_SMTP_PORT
-                ? parseInt(env.NOTIFICATION_SMTP_PORT, 10)
+              host: env.KEYCLOAK_SMTP_HOST,
+              port: env.KEYCLOAK_SMTP_PORT
+                ? parseInt(env.KEYCLOAK_SMTP_PORT, 10)
                 : undefined,
-              user: env.NOTIFICATION_SMTP_USER,
-              pass: env.NOTIFICATION_SMTP_PASS,
-              from: env.NOTIFICATION_SMTP_FROM,
+              user: env.KEYCLOAK_SMTP_USER,
+              pass: env.KEYCLOAK_SMTP_PASSWORD,
+              from: env.KEYCLOAK_SMTP_FROM,
+              secure: parseBoolean(env.KEYCLOAK_SMTP_SSL),
+              starttls: parseBoolean(env.KEYCLOAK_SMTP_STARTTLS),
             }
           : undefined,
-      push: env.NOTIFICATION_FCM_CREDENTIALS
+      push: env.FCM_CREDENTIALS
         ? {
-            fcmCredentials: env.NOTIFICATION_FCM_CREDENTIALS,
+            fcmCredentials: env.FCM_CREDENTIALS,
           }
         : undefined,
       retry:
@@ -518,4 +520,20 @@ export class ConsulConfigFactory {
 
     return 'development';
   }
+}
+
+function parseBoolean(value: string | undefined): boolean | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+
+  return undefined;
 }

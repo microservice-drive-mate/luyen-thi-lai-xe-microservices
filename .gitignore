@@ -35,11 +35,6 @@ terraform/*.tfstate.*
 terraform/.terraform/
 terraform/.terraform.lock.hcl
 
-# Consul seed production (chứa secrets thật - không commit)
-consul-seed-production.json
-consul-seed-development.json
-consul-seed-development-local.json
-
 # Logs & Debug
 **/*.log
 npm-debug.log*

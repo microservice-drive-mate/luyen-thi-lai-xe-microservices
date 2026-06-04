@@ -22,6 +22,9 @@ export class SmtpMailProvider extends MailProvider implements OnModuleInit {
     const port = Number(this.configService.get<number>('smtp.port') ?? 1025);
     const user = this.configService.get<string>('smtp.user') ?? '';
     const pass = this.configService.get<string>('smtp.pass') ?? '';
+    const secure =
+      this.configService.get<boolean>('smtp.secure') ?? port === 465;
+    const starttls = this.configService.get<boolean>('smtp.starttls') ?? false;
     this.fromAddress =
       this.configService.get<string>('smtp.from') ??
       'no-reply@luyen-thi-lai-xe.local';
@@ -30,7 +33,8 @@ export class SmtpMailProvider extends MailProvider implements OnModuleInit {
     this.transporter = nodemailer.createTransport({
       host,
       port,
-      secure: port === 465,
+      secure,
+      requireTLS: starttls,
       auth,
     });
     this.logger.log(`Đã sẵn sàng kết nối SMTP (host=${host} port=${port})`);

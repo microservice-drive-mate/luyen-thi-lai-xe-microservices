@@ -29,7 +29,15 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "10000"
+      "keycloak.timeoutMs": "10000",
+      "smtp.host": "${KEYCLOAK_SMTP_HOST}",
+      "smtp.port": "${KEYCLOAK_SMTP_PORT:-587}",
+      "smtp.user": "${KEYCLOAK_SMTP_USER}",
+      "smtp.pass": "${KEYCLOAK_SMTP_PASSWORD}",
+      "smtp.from": "${KEYCLOAK_SMTP_FROM}",
+      "smtp.secure": "${KEYCLOAK_SMTP_SSL:-false}",
+      "smtp.starttls": "${KEYCLOAK_SMTP_STARTTLS:-true}",
+      "push.fcmCredentials": "${FCM_CREDENTIALS:-}"
     },
     "user-service": {
       "port": "3000",

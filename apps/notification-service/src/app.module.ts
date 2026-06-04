@@ -109,6 +109,8 @@ import { MessagingController } from './presentation/messaging/messaging.controll
               user: Joi.string().allow('').default(''),
               pass: Joi.string().allow('').default(''),
               from: Joi.string().default('no-reply@luyen-thi-lai-xe.local'),
+              secure: Joi.boolean().optional(),
+              starttls: Joi.boolean().optional(),
             }).default(),
             push: Joi.object({
               fcmCredentials: Joi.string().allow('').default(''),

@@ -41,7 +41,15 @@
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
       "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
-      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-10000}"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-10000}",
+      "smtp.host": "${KEYCLOAK_SMTP_HOST:-localhost}",
+      "smtp.port": "${KEYCLOAK_SMTP_PORT:-1025}",
+      "smtp.user": "${KEYCLOAK_SMTP_USER:-}",
+      "smtp.pass": "${KEYCLOAK_SMTP_PASSWORD:-}",
+      "smtp.from": "${KEYCLOAK_SMTP_FROM:-no-reply@luyen-thi-lai-xe.local}",
+      "smtp.secure": "${KEYCLOAK_SMTP_SSL:-false}",
+      "smtp.starttls": "${KEYCLOAK_SMTP_STARTTLS:-false}",
+      "push.fcmCredentials": "${FCM_CREDENTIALS:-}"
     },
     "exam-service": {
       "port": "3003",
