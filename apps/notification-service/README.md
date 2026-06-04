@@ -79,6 +79,7 @@ KEYCLOAK_SMTP_FROM=your-email@gmail.com
 FCM_CREDENTIALS={"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n","client_email":"firebase-adminsdk-...@....iam.gserviceaccount.com"}
 
 NOTIFICATION_RETRY_MAX_ATTEMPTS=3
+# Optional override. When omitted, retry queues use 5000, 30000, 120000 ms.
 NOTIFICATION_RETRY_INTERVAL_MS=300000
 ```
 
@@ -94,19 +95,19 @@ Config loader hiện thử nhiều vị trí `.env` phổ biến (`.env`, `../.e
 
 Consul keys quan trọng:
 
-| Key | Local default | Docker default | Ghi chú |
-| --- | --- | --- | --- |
-| `port` | `3006` | `3000` | Docker map host `3006:3000` |
-| `database.url` | `postgresql://user:password@localhost:5437/notification_db` | `postgresql://user:password@db-notification:5432/notification_db` | DB riêng của notification |
-| `rabbitmq.url` | `amqp://localhost:5672` | `amqp://rabbitmq:5672` | Queue chính `notification_service_events` |
-| `smtp.host` | từ `KEYCLOAK_SMTP_HOST` | từ `KEYCLOAK_SMTP_HOST` | Dùng chung mail thật với Keycloak |
-| `smtp.port` | từ `KEYCLOAK_SMTP_PORT` | từ `KEYCLOAK_SMTP_PORT` | Gmail thường là `587` |
-| `smtp.from` | từ `KEYCLOAK_SMTP_FROM` | từ `KEYCLOAK_SMTP_FROM` | From address |
-| `smtp.secure` | từ `KEYCLOAK_SMTP_SSL` | từ `KEYCLOAK_SMTP_SSL` | `true` cho SMTP 465 |
-| `smtp.starttls` | từ `KEYCLOAK_SMTP_STARTTLS` | từ `KEYCLOAK_SMTP_STARTTLS` | `true` cho SMTP 587 yêu cầu STARTTLS |
-| `push.fcmCredentials` | từ `FCM_CREDENTIALS` | từ `FCM_CREDENTIALS` | Firebase service-account JSON. Để trống thì skip push |
-| `retry.maxAttempts` | `3` | `3` | Số lần retry trước khi vào DLQ |
-| `retry.intervalMs` | `300000` | `300000` | Delay mỗi lần retry |
+| Key                   | Local default                                               | Docker default                                                    | Ghi chú                                                                                                          |
+| --------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `port`                | `3006`                                                      | `3000`                                                            | Docker map host `3006:3000`                                                                                      |
+| `database.url`        | `postgresql://user:password@localhost:5437/notification_db` | `postgresql://user:password@db-notification:5432/notification_db` | DB riêng của notification                                                                                        |
+| `rabbitmq.url`        | `amqp://localhost:5672`                                     | `amqp://rabbitmq:5672`                                            | Queue chính `notification_service_events`                                                                        |
+| `smtp.host`           | từ `KEYCLOAK_SMTP_HOST`                                     | từ `KEYCLOAK_SMTP_HOST`                                           | Dùng chung mail thật với Keycloak                                                                                |
+| `smtp.port`           | từ `KEYCLOAK_SMTP_PORT`                                     | từ `KEYCLOAK_SMTP_PORT`                                           | Gmail thường là `587`                                                                                            |
+| `smtp.from`           | từ `KEYCLOAK_SMTP_FROM`                                     | từ `KEYCLOAK_SMTP_FROM`                                           | From address                                                                                                     |
+| `smtp.secure`         | từ `KEYCLOAK_SMTP_SSL`                                      | từ `KEYCLOAK_SMTP_SSL`                                            | `true` cho SMTP 465                                                                                              |
+| `smtp.starttls`       | từ `KEYCLOAK_SMTP_STARTTLS`                                 | từ `KEYCLOAK_SMTP_STARTTLS`                                       | `true` cho SMTP 587 yêu cầu STARTTLS                                                                             |
+| `push.fcmCredentials` | từ `FCM_CREDENTIALS`                                        | từ `FCM_CREDENTIALS`                                              | Firebase service-account JSON. Để trống thì skip push                                                            |
+| `retry.maxAttempts`   | `3`                                                         | `3`                                                               | Số lần retry trước khi vào DLQ                                                                                   |
+| `retry.intervalMs`    | `5000, 30000, 120000`                                       | `5000, 30000, 120000`                                             | Default retry delays; chỉ set `NOTIFICATION_RETRY_INTERVAL_MS` khi muốn mọi retry queue dùng cùng một TTL custom |
 
 Sau khi sửa `.env`, seed lại Consul để notification-service nhận lại SMTP/FCM config:
 
@@ -128,24 +129,24 @@ npm --workspace=apps/notification-service run start:dev
 
 URL hay dùng:
 
-| Mục đích | URL |
-| --- | --- |
-| Swagger | `http://localhost:3006/docs` |
-| Metrics | `http://localhost:3006/metrics` |
-| Health | `http://localhost:3006/health` |
+| Mục đích    | URL                                        |
+| ----------- | ------------------------------------------ |
+| Swagger     | `http://localhost:3006/docs`               |
+| Metrics     | `http://localhost:3006/metrics`            |
+| Health      | `http://localhost:3006/health`             |
 | RabbitMQ UI | `http://localhost:15672` (`guest`/`guest`) |
-| Consul UI | `http://localhost:8500` |
+| Consul UI   | `http://localhost:8500`                    |
 
 ## HTTP API
 
-| Method | Path | Ai dùng | Mục đích |
-| --- | --- | --- | --- |
-| `GET` | `/notifications/me?page=1&size=20` | Authenticated user | Lấy notification của user hiện tại theo JWT `sub` |
-| `PATCH` | `/notifications/:id/read` | Authenticated user | Đánh dấu notification đã đọc |
-| `POST` | `/notifications/devices` | App/mobile frontend | Đăng ký device token |
-| `DELETE` | `/notifications/devices/:token` | App/mobile frontend | Hủy device token |
-| `POST` | `/admin/academic-warnings` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` | Queue academic warning, trả `202 Accepted` |
-| `GET` | `/metrics` | Prometheus/internal | Scrape metrics |
+| Method   | Path                               | Ai dùng                                 | Mục đích                                          |
+| -------- | ---------------------------------- | --------------------------------------- | ------------------------------------------------- |
+| `GET`    | `/notifications/me?page=1&size=20` | Authenticated user                      | Lấy notification của user hiện tại theo JWT `sub` |
+| `PATCH`  | `/notifications/:id/read`          | Authenticated user                      | Đánh dấu notification đã đọc                      |
+| `POST`   | `/notifications/devices`           | App/mobile frontend                     | Đăng ký device token                              |
+| `DELETE` | `/notifications/devices/:token`    | App/mobile frontend                     | Hủy device token                                  |
+| `POST`   | `/admin/academic-warnings`         | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` | Queue academic warning, trả `202 Accepted`        |
+| `GET`    | `/metrics`                         | Prometheus/internal                     | Scrape metrics                                    |
 
 Ví dụ tạo academic warning:
 
@@ -183,18 +184,18 @@ Service-to-service không gọi HTTP controller của notification-service để
 Trong service publisher, ưu tiên helper chung:
 
 ```ts
-import { ClientsModule } from '@nestjs/microservices';
-import { ConfigService } from '@nestjs/config';
-import { createRabbitMqClientOptions } from '@repo/common';
+import { ClientsModule } from "@nestjs/microservices";
+import { ConfigService } from "@nestjs/config";
+import { createRabbitMqClientOptions } from "@repo/common";
 
-export const NOTIFICATION_SERVICE_CLIENT = 'NOTIFICATION_SERVICE_CLIENT';
+export const NOTIFICATION_SERVICE_CLIENT = "NOTIFICATION_SERVICE_CLIENT";
 
 ClientsModule.registerAsync([
   {
     name: NOTIFICATION_SERVICE_CLIENT,
     inject: [ConfigService],
     useFactory: (configService: ConfigService) =>
-      createRabbitMqClientOptions(configService, 'notification_service_events'),
+      createRabbitMqClientOptions(configService, "notification_service_events"),
   },
 ]);
 ```
@@ -203,26 +204,26 @@ Emit event:
 
 ```ts
 await lastValueFrom(
-  notificationClient.emit('course.updated', {
-    recipientId: 'user-id',
-    recipientEmail: 'student@example.com',
-    courseId: 'course-id',
-    courseTitle: 'B2 cơ bản',
-    updateSummary: 'Khóa học vừa được cập nhật lịch học mới.',
+  notificationClient.emit("course.updated", {
+    recipientId: "user-id",
+    recipientEmail: "student@example.com",
+    courseId: "course-id",
+    courseTitle: "B2 cơ bản",
+    updateSummary: "Khóa học vừa được cập nhật lịch học mới.",
   }),
 );
 ```
 
 Notification-service hiện consume:
 
-| Event pattern | Payload chính | Kênh gửi |
-| --- | --- | --- |
-| `identity.user.created` | `userId`, `email`, `fullName?` | `IN_APP`, `EMAIL` |
-| `identity.user.password-reset-requested` | `userId`, `email`, `resetUrl` | `EMAIL` |
-| `exam.session.passed` | `studentId` hoặc `userId`, `email?`, `sessionId?`, `licenseCategory?`, `score?` | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có email |
-| `exam.session.failed` | giống `exam.session.passed` | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có email |
-| `notification.academic-warning.queued` | `warningId?`, `studentId`, `reason`, `severity`, `message`, `createdById`, `studentEmail?` | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có `studentEmail` |
-| `course.updated` | `recipientId`, `recipientEmail?`, `courseId`, `courseTitle`, `updateSummary` | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có email |
+| Event pattern                            | Payload chính                                                                              | Kênh gửi                                             |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| `identity.user.created`                  | `userId`, `email`, `fullName?`                                                             | `IN_APP`, `EMAIL`                                    |
+| `identity.user.password-reset-requested` | `userId`, `email`, `resetUrl`                                                              | `EMAIL`                                              |
+| `exam.session.passed`                    | `studentId` hoặc `userId`, `email?`, `sessionId?`, `licenseCategory?`, `score?`            | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có email          |
+| `exam.session.failed`                    | giống `exam.session.passed`                                                                | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có email          |
+| `notification.academic-warning.queued`   | `warningId?`, `studentId`, `reason`, `severity`, `message`, `createdById`, `studentEmail?` | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có `studentEmail` |
+| `course.updated`                         | `recipientId`, `recipientEmail?`, `courseId`, `courseTitle`, `updateSummary`               | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có email          |
 
 ## Retry Và DLQ
 
@@ -230,13 +231,13 @@ Runtime hiện tại dùng common `assertRabbitMqResilienceTopology` và `Rabbit
 
 Topology:
 
-| Thành phần | Tên |
-| --- | --- |
-| Queue chính | `notification_service_events` |
+| Thành phần  | Tên                                                                               |
+| ----------- | --------------------------------------------------------------------------------- |
+| Queue chính | `notification_service_events`                                                     |
 | Retry queue | `notification_service_events.retry.1`, `notification_service_events.retry.2`, ... |
-| DLQ | `notification_service_events.dlq` |
+| DLQ         | `notification_service_events.dlq`                                                 |
 
-Số retry queue bằng `retry.maxAttempts`. Mỗi retry queue có TTL bằng `retry.intervalMs` và dead-letter routing quay lại queue chính bằng default exchange.
+Số retry queue bằng `retry.maxAttempts`. Khi không override, các retry queue dùng default TTL chung `5000`, `30000`, `120000` ms. Nếu set `retry.intervalMs`, mỗi retry queue sẽ dùng cùng TTL đó và dead-letter routing quay lại queue chính bằng default exchange.
 
 Luồng lỗi:
 
@@ -251,11 +252,11 @@ Lưu ý local: nếu trước đó RabbitMQ đã tạo queue theo topology cũ, 
 
 Schema Prisma nằm ở `apps/notification-service/prisma/schema.prisma`.
 
-| Model | Ý nghĩa |
-| --- | --- |
-| `Notification` | Một bản ghi notification/kênh gửi, có `status`, `eventType`, `isRead`, `retryCount`, `errorMessage`, `deliveredAt` |
-| `AcademicWarning` | Audit warning học tập, có delivery status và thông tin retry |
-| `DeviceToken` | Device token của user để gửi push |
+| Model             | Ý nghĩa                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `Notification`    | Một bản ghi notification/kênh gửi, có `status`, `eventType`, `isRead`, `retryCount`, `errorMessage`, `deliveredAt` |
+| `AcademicWarning` | Audit warning học tập, có delivery status và thông tin retry                                                       |
+| `DeviceToken`     | Device token của user để gửi push                                                                                  |
 
 Lệnh hay dùng:
 

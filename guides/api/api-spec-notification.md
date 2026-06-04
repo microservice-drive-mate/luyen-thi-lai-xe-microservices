@@ -17,12 +17,12 @@ SMTP dùng các biến `KEYCLOAK_SMTP_*` trong root `.env`. Push dùng `FCM_CRED
 
 ## Authentication
 
-| Endpoint | Role |
-| --- | --- |
-| `POST /admin/academic-warnings` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
-| `GET /notifications/me` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
-| `PATCH /notifications/:id/read` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
-| `POST /notifications/devices` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
+| Endpoint                               | Role                                               |
+| -------------------------------------- | -------------------------------------------------- |
+| `POST /admin/academic-warnings`        | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`            |
+| `GET /notifications/me`                | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
+| `PATCH /notifications/:id/read`        | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
+| `POST /notifications/devices`          | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
 | `DELETE /notifications/devices/:token` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
 
 ---
@@ -70,24 +70,24 @@ Academic warning delivery status values: `PENDING`, `QUEUED`, `PENDING_RETRY`, `
 
 ### `Notification`
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `id` | `uuid` | Notification id |
-| `userId` | `uuid` | Recipient user id |
-| `type` | `NotificationType` | Bản ghi theo kênh delivery |
-| `eventType` | `string | null` | Event nguồn, ví dụ `identity.user.created` |
-| `title` | `string` | Tiêu đề notification |
-| `body` | `string` | Nội dung notification |
-| `data` | `object` | Metadata bổ sung |
-| `status` | `NotificationStatus` | Delivery status của bản ghi theo kênh |
-| `retryCount` | `number` | Số lần retry từ RabbitMQ headers/payload |
-| `errorMessage` | `string | null` | Lỗi delivery gần nhất |
-| `isRead` | `boolean` | Recipient đã đọc hay chưa |
-| `readAt` | `string | null` | Thời điểm đọc |
-| `sentAt` | `string | null` | Legacy/send timestamp field |
-| `deliveredAt` | `string | null` | Thời điểm delivery thành công |
-| `createdAt` | `string` | Thời điểm tạo |
-| `updatedAt` | `string` | Thời điểm cập nhật cuối |
+| Field          | Type                 | Description                              |
+| -------------- | -------------------- | ---------------------------------------- | ------------------------------------------ |
+| `id`           | `uuid`               | Notification id                          |
+| `userId`       | `uuid`               | Recipient user id                        |
+| `type`         | `NotificationType`   | Bản ghi theo kênh delivery               |
+| `eventType`    | `string              | null`                                    | Event nguồn, ví dụ `identity.user.created` |
+| `title`        | `string`             | Tiêu đề notification                     |
+| `body`         | `string`             | Nội dung notification                    |
+| `data`         | `object`             | Metadata bổ sung                         |
+| `status`       | `NotificationStatus` | Delivery status của bản ghi theo kênh    |
+| `retryCount`   | `number`             | Số lần retry từ RabbitMQ headers/payload |
+| `errorMessage` | `string              | null`                                    | Lỗi delivery gần nhất                      |
+| `isRead`       | `boolean`            | Recipient đã đọc hay chưa                |
+| `readAt`       | `string              | null`                                    | Thời điểm đọc                              |
+| `sentAt`       | `string              | null`                                    | Legacy/send timestamp field                |
+| `deliveredAt`  | `string              | null`                                    | Thời điểm delivery thành công              |
+| `createdAt`    | `string`             | Thời điểm tạo                            |
+| `updatedAt`    | `string`             | Thời điểm cập nhật cuối                  |
 
 ### `ListNotificationsResponse`
 
@@ -149,14 +149,14 @@ HTTP API chỉ chấp nhận requested channel `IN_APP`. Email và push được
 
 **Validation**
 
-| Field | Required | Rule |
-| --- | --- | --- |
-| `studentId` | conditional | UUID. Field single recipient giữ để backward-compatible |
-| `studentIds` | conditional | Non-empty UUID array. Bắt buộc khi không gửi `studentId` |
-| `deliveryChannels` | no | Non-empty enum array. Endpoint này chỉ chấp nhận `IN_APP` |
-| `reason` | yes | Non-empty string |
-| `severity` | yes | Non-empty string, recommended values: `LOW`, `MEDIUM`, `HIGH` |
-| `message` | yes | Non-empty string |
+| Field              | Required    | Rule                                                          |
+| ------------------ | ----------- | ------------------------------------------------------------- |
+| `studentId`        | conditional | UUID. Field single recipient giữ để backward-compatible       |
+| `studentIds`       | conditional | Non-empty UUID array. Bắt buộc khi không gửi `studentId`      |
+| `deliveryChannels` | no          | Non-empty enum array. Endpoint này chỉ chấp nhận `IN_APP`     |
+| `reason`           | yes         | Non-empty string                                              |
+| `severity`         | yes         | Non-empty string, recommended values: `LOW`, `MEDIUM`, `HIGH` |
+| `message`          | yes         | Non-empty string                                              |
 
 **Response `202`**
 
@@ -188,10 +188,10 @@ Trả về notifications của current user theo thứ tự mới nhất trướ
 
 **Query Parameters**
 
-| Name | Type | Required | Default | Rule |
-| --- | --- | --- | --- | --- |
-| `page` | `number` | no | `1` | Minimum 1 |
-| `size` | `number` | no | `20` | Minimum 1, maximum 100 |
+| Name   | Type     | Required | Default | Rule                   |
+| ------ | -------- | -------- | ------- | ---------------------- |
+| `page` | `number` | no       | `1`     | Minimum 1              |
+| `size` | `number` | no       | `20`    | Minimum 1, maximum 100 |
 
 **Response `200`**
 
@@ -223,9 +223,9 @@ Trả về notifications của current user theo thứ tự mới nhất trướ
 
 **Path Parameters**
 
-| Name | Type | Required | Description |
-| --- | --- | --- | --- |
-| `id` | `uuid` | yes | Notification id |
+| Name | Type   | Required | Description     |
+| ---- | ------ | -------- | --------------- |
+| `id` | `uuid` | yes      | Notification id |
 
 **Response `200`**
 
@@ -280,10 +280,10 @@ Trả về notifications của current user theo thứ tự mới nhất trướ
 }
 ```
 
-| Field | Required | Rule |
-| --- | --- | --- |
-| `token` | yes | Non-empty string |
-| `platform` | yes | `ios` hoặc `android` |
+| Field      | Required | Rule                 |
+| ---------- | -------- | -------------------- |
+| `token`    | yes      | Non-empty string     |
+| `platform` | yes      | `ios` hoặc `android` |
 
 **Response `201`**
 
@@ -321,14 +321,14 @@ Xóa một device token registration.
 
 Notification-service consume RabbitMQ messages từ queue `notification_service_events`.
 
-| Event | Required payload | Effect |
-| --- | --- | --- |
-| `identity.user.created` | `userId`, `email`, `fullName?` | Gửi welcome `IN_APP` và `EMAIL` |
-| `identity.user.password-reset-requested` | `userId`, `email`, `resetUrl` | Gửi password reset `EMAIL` khi có publisher emit event này |
-| `exam.session.passed` | `studentId` hoặc `userId`; optional `email`, `sessionId`, `licenseCategory`, `score` | Gửi kết quả `IN_APP`, `PUSH`, và thêm `EMAIL` nếu có `email` |
-| `exam.session.failed` | Giống `exam.session.passed` | Gửi kết quả `IN_APP`, `PUSH`, và thêm `EMAIL` nếu có `email` |
-| `notification.academic-warning.queued` | `studentId`, `reason`, `severity`, `message`, `createdById`, optional `warningId`, `studentEmail` | Gửi academic warning `IN_APP`, `PUSH`, và thêm `EMAIL` nếu có `studentEmail` |
-| `course.updated` | `recipientId`, `courseId`, `courseTitle`, `updateSummary`, optional `recipientEmail` | Gửi course update `IN_APP`, `PUSH`, và thêm `EMAIL` nếu có `recipientEmail` |
+| Event                                    | Required payload                                                                                  | Effect                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `identity.user.created`                  | `userId`, `email`, `fullName?`                                                                    | Gửi welcome `IN_APP` và `EMAIL`                                              |
+| `identity.user.password-reset-requested` | `userId`, `email`, `resetUrl`                                                                     | Gửi password reset `EMAIL` khi có publisher emit event này                   |
+| `exam.session.passed`                    | `studentId` hoặc `userId`; optional `email`, `sessionId`, `licenseCategory`, `score`              | Gửi kết quả `IN_APP`, `PUSH`, và thêm `EMAIL` nếu có `email`                 |
+| `exam.session.failed`                    | Giống `exam.session.passed`                                                                       | Gửi kết quả `IN_APP`, `PUSH`, và thêm `EMAIL` nếu có `email`                 |
+| `notification.academic-warning.queued`   | `studentId`, `reason`, `severity`, `message`, `createdById`, optional `warningId`, `studentEmail` | Gửi academic warning `IN_APP`, `PUSH`, và thêm `EMAIL` nếu có `studentEmail` |
+| `course.updated`                         | `recipientId`, `courseId`, `courseTitle`, `updateSummary`, optional `recipientEmail`              | Gửi course update `IN_APP`, `PUSH`, và thêm `EMAIL` nếu có `recipientEmail`  |
 
 Invalid payload sẽ được skip khi handler có thể xác định thiếu recipient một cách an toàn. Delivery failures sẽ throw lên common RabbitMQ retry interceptor.
 
@@ -342,4 +342,4 @@ RabbitMQ resilience được cung cấp bởi `@repo/common`:
 - Retry queues: `notification_service_events.retry.1`, `notification_service_events.retry.2`, ...
 - DLQ: `notification_service_events.dlq`
 
-`retry.maxAttempts` quyết định số retry queues được tạo. `retry.intervalMs` quyết định TTL của mỗi retry queue, default là `300000`.
+`retry.maxAttempts` quyết định số retry queues được tạo. Khi không override, các retry queue dùng default TTL `5000`, `30000`, `120000` ms. `retry.intervalMs` chỉ dùng khi muốn mọi retry queue dùng cùng một TTL custom.

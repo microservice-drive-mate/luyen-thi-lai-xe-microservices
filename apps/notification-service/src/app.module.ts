@@ -116,8 +116,8 @@ import { MessagingController } from './presentation/messaging/messaging.controll
               fcmCredentials: Joi.string().allow('').default(''),
             }).default(),
             retry: Joi.object({
-              maxAttempts: Joi.number().default(3),
-              intervalMs: Joi.number().default(300000),
+              maxAttempts: Joi.number().optional(),
+              intervalMs: Joi.number().optional(),
             }).default(),
             notification: Joi.object({
               warningRetryIntervalMs: Joi.number().default(300000),

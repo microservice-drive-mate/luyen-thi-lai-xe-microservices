@@ -12,6 +12,7 @@ import {
   CorrelationIdInterceptor,
   CorrelationIdMiddleware,
   createRabbitMqConsumerOptions,
+  DEFAULT_RABBITMQ_RETRY_DELAYS_MS,
   getRabbitMqUrl,
   installLocalDevTransientErrorGuard,
   MetricsService,
@@ -88,14 +89,32 @@ async function bootstrap() {
 void runBootstrapWithRetries(serviceName, bootstrap);
 
 function createRetryDelays(configService: ConfigService): number[] {
+  const configuredMaxAttempts = configService.get<number>('retry.maxAttempts');
+  const configuredIntervalMs = configService.get<number>('retry.intervalMs');
+
+  if (
+    configuredMaxAttempts === undefined &&
+    configuredIntervalMs === undefined
+  ) {
+    return DEFAULT_RABBITMQ_RETRY_DELAYS_MS;
+  }
+
   const maxAttempts = Math.max(
     1,
-    configService.get<number>('retry.maxAttempts') ?? 3,
+    configuredMaxAttempts ?? DEFAULT_RABBITMQ_RETRY_DELAYS_MS.length,
   );
-  const intervalMs = Math.max(
-    1000,
-    configService.get<number>('retry.intervalMs') ?? 300000,
-  );
+
+  if (configuredIntervalMs === undefined) {
+    return Array.from(
+      { length: maxAttempts },
+      (_, index) =>
+        DEFAULT_RABBITMQ_RETRY_DELAYS_MS[
+          Math.min(index, DEFAULT_RABBITMQ_RETRY_DELAYS_MS.length - 1)
+        ],
+    );
+  }
+
+  const intervalMs = Math.max(1000, configuredIntervalMs);
 
   return Array.from({ length: maxAttempts }, () => intervalMs);
 }
