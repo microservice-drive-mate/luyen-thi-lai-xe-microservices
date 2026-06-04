@@ -10,7 +10,7 @@ export class ConsulConfigFactory {
   private static readonly logger = new Logger(ConsulConfigFactory.name);
 
   static envFilePaths(): string[] {
-    return ['.env', '../../.env'];
+    return ['.env', '../.env', '../../.env', '../../../.env'];
   }
 
   /**

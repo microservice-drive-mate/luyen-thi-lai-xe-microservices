@@ -64,7 +64,7 @@ src/
 
 ## Config
 
-Không cần tạo `.env` riêng trong `apps/notification-service`. Đặt biến local/dev ở file `.env` root repo.
+Notification-service có thể có `.env` riêng trong `apps/notification-service` để override các biến chạy service như `CONSUL_URL`, `DATABASE_URL`, `RABBITMQ_URL`, `KEYCLOAK_AUTH_SERVER_URL`. Tuy nhiên SMTP và push nên đặt ở `.env` root repo để Consul seed đồng bộ và các service dùng chung.
 
 ```env
 KEYCLOAK_SMTP_HOST=smtp.gmail.com
@@ -90,6 +90,8 @@ Config được resolve theo thứ tự chung của repo:
 
 Notification-service dùng chung SMTP config với Keycloak: `KEYCLOAK_SMTP_HOST`, `KEYCLOAK_SMTP_PORT`, `KEYCLOAK_SMTP_USER`, `KEYCLOAK_SMTP_PASSWORD`, `KEYCLOAK_SMTP_FROM`, `KEYCLOAK_SMTP_SSL`, `KEYCLOAK_SMTP_STARTTLS`. Push dùng `FCM_CREDENTIALS` từ root `.env`; đây là JSON service account Firebase Admin SDK trên một dòng.
 
+Config loader hiện thử nhiều vị trí `.env` phổ biến (`.env`, `../.env`, `../../.env`, `../../../.env`) để khi chạy từ root repo hoặc từ workspace service vẫn đọc được cả file `.env` gần service và file `.env` root. Nếu một biến trùng nhau, ưu tiên thực tế phụ thuộc cách process đã được khởi tạo; vì vậy các secret dùng chung như SMTP/FCM nên chỉ đặt một nguồn ở root `.env`.
+
 Consul keys quan trọng:
 
 | Key | Local default | Docker default | Ghi chú |
@@ -106,7 +108,7 @@ Consul keys quan trọng:
 | `retry.maxAttempts` | `3` | `3` | Số lần retry trước khi vào DLQ |
 | `retry.intervalMs` | `300000` | `300000` | Delay mỗi lần retry |
 
-Sau khi sửa `.env`, seed lại Consul:
+Sau khi sửa `.env`, seed lại Consul để notification-service nhận lại SMTP/FCM config:
 
 ```bash
 npm run consul:seed:local

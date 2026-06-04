@@ -11,7 +11,7 @@
 
 Notification-service lưu in-app notifications, gửi email qua SMTP, gửi push qua Firebase Cloud Messaging, và consume RabbitMQ events từ các service khác. Frontend gọi các API được bảo vệ bằng `Authorization: Bearer <access_token>`; current user id được đọc từ JWT `sub`.
 
-SMTP dùng các biến `KEYCLOAK_SMTP_*` trong root `.env`. Push dùng `FCM_CREDENTIALS`; nếu biến này trống thì push delivery sẽ bị skip nhưng service vẫn chạy.
+SMTP dùng các biến `KEYCLOAK_SMTP_*` trong root `.env`. Push dùng `FCM_CREDENTIALS`; nếu biến này trống thì push delivery sẽ bị skip nhưng service vẫn chạy. File `apps/notification-service/.env` có thể dùng để override các biến chạy riêng của service như `CONSUL_URL`, `DATABASE_URL`, `RABBITMQ_URL`, nhưng SMTP/FCM nên giữ ở root `.env` để Consul seed đồng bộ.
 
 ---
 
