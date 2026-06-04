@@ -1,10 +1,15 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { SendAcademicWarningUseCase } from '../../application/use-cases/send-academic-warning.use-case';
-import { SendCourseUpdateUseCase } from '../../application/use-cases/send-course-update.use-case';
-import { SendExamResultUseCase } from '../../application/use-cases/send-exam-result.use-case';
-import { SendPasswordResetUseCase } from '../../application/use-cases/send-password-reset.use-case';
-import { SendWelcomeEmailUseCase } from '../../application/use-cases/send-welcome-email.use-case';
+import { SendAcademicWarningCommand } from '../../application/use-cases/send-academic-warning/send-academic-warning.command';
+import { SendAcademicWarningUseCase } from '../../application/use-cases/send-academic-warning/send-academic-warning.use-case';
+import { SendCourseUpdateCommand } from '../../application/use-cases/send-course-update/send-course-update.command';
+import { SendCourseUpdateUseCase } from '../../application/use-cases/send-course-update/send-course-update.use-case';
+import { SendExamResultCommand } from '../../application/use-cases/send-exam-result/send-exam-result.command';
+import { SendExamResultUseCase } from '../../application/use-cases/send-exam-result/send-exam-result.use-case';
+import { SendPasswordResetCommand } from '../../application/use-cases/send-password-reset/send-password-reset.command';
+import { SendPasswordResetUseCase } from '../../application/use-cases/send-password-reset/send-password-reset.use-case';
+import { SendWelcomeEmailCommand } from '../../application/use-cases/send-welcome-email/send-welcome-email.command';
+import { SendWelcomeEmailUseCase } from '../../application/use-cases/send-welcome-email/send-welcome-email.use-case';
 import { NotificationMetrics } from '../../infrastructure/metrics/notification.metrics';
 
 interface RetryablePayload {
@@ -67,12 +72,14 @@ export class MessagingController {
   ): Promise<void> {
     this.metrics.recordConsumed('identity.user.created');
     if (!payload.userId || !payload.email) return;
-    await this.sendWelcomeEmailUseCase.execute({
-      userId: payload.userId,
-      email: payload.email,
-      fullName: payload.fullName,
-      retryCount: payload.retryCount,
-    });
+    await this.sendWelcomeEmailUseCase.execute(
+      new SendWelcomeEmailCommand(
+        payload.userId,
+        payload.email,
+        payload.fullName,
+        payload.retryCount,
+      ),
+    );
   }
 
   @EventPattern('identity.user.password-reset-requested')
@@ -81,12 +88,14 @@ export class MessagingController {
   ): Promise<void> {
     this.metrics.recordConsumed('identity.user.password-reset-requested');
     if (!payload.userId || !payload.email || !payload.resetUrl) return;
-    await this.sendPasswordResetUseCase.execute({
-      userId: payload.userId,
-      email: payload.email,
-      resetUrl: payload.resetUrl,
-      retryCount: payload.retryCount,
-    });
+    await this.sendPasswordResetUseCase.execute(
+      new SendPasswordResetCommand(
+        payload.userId,
+        payload.email,
+        payload.resetUrl,
+        payload.retryCount,
+      ),
+    );
   }
 
   @EventPattern('exam.session.passed')
@@ -96,15 +105,17 @@ export class MessagingController {
     this.metrics.recordConsumed('exam.session.passed');
     const userId = payload.studentId ?? payload.userId;
     if (!userId) return;
-    await this.sendExamResultUseCase.execute({
-      eventType: 'exam.session.passed',
-      userId,
-      email: payload.email,
-      licenseCategory: payload.licenseCategory,
-      sessionId: payload.sessionId,
-      score: payload.score,
-      retryCount: payload.retryCount,
-    });
+    await this.sendExamResultUseCase.execute(
+      new SendExamResultCommand(
+        'exam.session.passed',
+        userId,
+        payload.email,
+        payload.licenseCategory,
+        payload.sessionId,
+        payload.score,
+        payload.retryCount,
+      ),
+    );
   }
 
   @EventPattern('exam.session.failed')
@@ -114,15 +125,17 @@ export class MessagingController {
     this.metrics.recordConsumed('exam.session.failed');
     const userId = payload.studentId ?? payload.userId;
     if (!userId) return;
-    await this.sendExamResultUseCase.execute({
-      eventType: 'exam.session.failed',
-      userId,
-      email: payload.email,
-      licenseCategory: payload.licenseCategory,
-      sessionId: payload.sessionId,
-      score: payload.score,
-      retryCount: payload.retryCount,
-    });
+    await this.sendExamResultUseCase.execute(
+      new SendExamResultCommand(
+        'exam.session.failed',
+        userId,
+        payload.email,
+        payload.licenseCategory,
+        payload.sessionId,
+        payload.score,
+        payload.retryCount,
+      ),
+    );
   }
 
   @EventPattern('notification.academic-warning.queued')
@@ -130,16 +143,18 @@ export class MessagingController {
     @Payload() payload: AcademicWarningQueuedPayload,
   ): Promise<void> {
     this.metrics.recordConsumed('notification.academic-warning.queued');
-    await this.sendAcademicWarningUseCase.execute({
-      studentId: payload.studentId,
-      reason: payload.reason,
-      severity: payload.severity,
-      message: payload.message,
-      createdById: payload.createdById,
-      studentEmail: payload.studentEmail,
-      warningId: payload.warningId,
-      retryCount: payload.retryCount,
-    });
+    await this.sendAcademicWarningUseCase.execute(
+      new SendAcademicWarningCommand(
+        payload.studentId,
+        payload.reason,
+        payload.severity,
+        payload.message,
+        payload.createdById,
+        payload.studentEmail,
+        payload.warningId,
+        payload.retryCount,
+      ),
+    );
   }
 
   @EventPattern('course.updated')
@@ -148,13 +163,15 @@ export class MessagingController {
   ): Promise<void> {
     this.metrics.recordConsumed('course.updated');
     if (!payload.recipientId) return;
-    await this.sendCourseUpdateUseCase.execute({
-      userId: payload.recipientId,
-      email: payload.recipientEmail,
-      courseId: payload.courseId,
-      courseTitle: payload.courseTitle,
-      updateSummary: payload.updateSummary,
-      retryCount: payload.retryCount,
-    });
+    await this.sendCourseUpdateUseCase.execute(
+      new SendCourseUpdateCommand(
+        payload.recipientId,
+        payload.courseId,
+        payload.courseTitle,
+        payload.updateSummary,
+        payload.recipientEmail,
+        payload.retryCount,
+      ),
+    );
   }
 }

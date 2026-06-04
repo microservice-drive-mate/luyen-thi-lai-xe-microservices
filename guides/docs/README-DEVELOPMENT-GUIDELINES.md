@@ -92,6 +92,21 @@ aggregate.clearDomainEvents();
 await eventPublisher.publishAll(events);
 ```
 
+Mỗi use case nên có một folder riêng theo action:
+
+```text
+application/use-cases/
+  create-user-profile/
+    create-user-profile.command.ts
+    create-user-profile.use-case.ts
+  get-user-profile/
+    get-user-profile.query.ts
+    get-user-profile.result.ts
+    get-user-profile.use-case.ts
+```
+
+Đặt các coordinator/helper services ngoài `use-cases`, ví dụ trong `application/services`, trừ khi chúng đại diện cho một application action có boundary `execute()` rõ ràng.
+
 ## Khai báo Module (Module Wiring)
 
 Ưu tiên cấu trúc sau:

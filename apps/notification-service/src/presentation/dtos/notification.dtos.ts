@@ -11,7 +11,7 @@ import {
 import {
   NotificationStatus,
   NotificationType,
-} from '@prisma/notification-client';
+} from '../../domain/repositories/notification.repository';
 import { NotificationRecord } from '../../domain/repositories/notification.repository';
 
 export class SendAcademicWarningRequestDto {

@@ -24,19 +24,18 @@ import {
 import { NotificationEventPublisher } from './application/ports/event-publisher.port';
 import { MailProvider } from './application/ports/mail.provider';
 import { PushProvider } from './application/ports/push.provider';
-import { NotificationDispatcher } from './application/use-cases/notification-dispatcher.service';
-import {
-  ListNotificationsUseCase,
-  MarkNotificationReadUseCase,
-  RetryAcademicWarningsUseCase,
-} from './application/use-cases/notification.use-cases';
-import { RegisterDeviceTokenUseCase } from './application/use-cases/register-device-token.use-case';
-import { SendAcademicWarningUseCase } from './application/use-cases/send-academic-warning.use-case';
-import { SendCourseUpdateUseCase } from './application/use-cases/send-course-update.use-case';
-import { SendExamResultUseCase } from './application/use-cases/send-exam-result.use-case';
-import { SendPasswordResetUseCase } from './application/use-cases/send-password-reset.use-case';
-import { SendWelcomeEmailUseCase } from './application/use-cases/send-welcome-email.use-case';
-import { UnregisterDeviceTokenUseCase } from './application/use-cases/unregister-device-token.use-case';
+import { NotificationDispatcher } from './application/services/notification-dispatcher.service';
+import { ListNotificationsUseCase } from './application/use-cases/list-notifications/list-notifications.use-case';
+import { MarkNotificationReadUseCase } from './application/use-cases/mark-notification-read/mark-notification-read.use-case';
+import { QueueAcademicWarningsUseCase } from './application/use-cases/queue-academic-warnings/queue-academic-warnings.use-case';
+import { RegisterDeviceTokenUseCase } from './application/use-cases/register-device-token/register-device-token.use-case';
+import { RetryAcademicWarningsUseCase } from './application/use-cases/retry-academic-warnings/retry-academic-warnings.use-case';
+import { SendAcademicWarningUseCase } from './application/use-cases/send-academic-warning/send-academic-warning.use-case';
+import { SendCourseUpdateUseCase } from './application/use-cases/send-course-update/send-course-update.use-case';
+import { SendExamResultUseCase } from './application/use-cases/send-exam-result/send-exam-result.use-case';
+import { SendPasswordResetUseCase } from './application/use-cases/send-password-reset/send-password-reset.use-case';
+import { SendWelcomeEmailUseCase } from './application/use-cases/send-welcome-email/send-welcome-email.use-case';
+import { UnregisterDeviceTokenUseCase } from './application/use-cases/unregister-device-token/unregister-device-token.use-case';
 import { DeviceTokenRepository } from './domain/repositories/device-token.repository';
 import { NotificationRepository } from './domain/repositories/notification.repository';
 import { NotificationMetrics } from './infrastructure/metrics/notification.metrics';
@@ -179,6 +178,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     ListNotificationsUseCase,
     MarkNotificationReadUseCase,
     RetryAcademicWarningsUseCase,
+    QueueAcademicWarningsUseCase,
     RegisterDeviceTokenUseCase,
     UnregisterDeviceTokenUseCase,
     { provide: APP_GUARD, useClass: AuthGuard },

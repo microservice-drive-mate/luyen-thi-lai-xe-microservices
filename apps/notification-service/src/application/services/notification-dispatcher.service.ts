@@ -1,8 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  NotificationStatus,
-  NotificationType,
-} from '@prisma/notification-client';
+import crypto from 'node:crypto';
 import { MailProvider } from '../ports/mail.provider';
 import {
   PushMessage,
@@ -11,8 +8,10 @@ import {
 } from '../ports/push.provider';
 import { DeviceTokenRepository } from '../../domain/repositories/device-token.repository';
 import {
+  Notification,
   NotificationRecord,
   NotificationRepository,
+  NotificationType,
 } from '../../domain/repositories/notification.repository';
 import { NotificationMetrics } from '../../infrastructure/metrics/notification.metrics';
 
@@ -47,36 +46,34 @@ export class NotificationDispatcher {
   async dispatch(input: DispatchInput): Promise<NotificationRecord[]> {
     const created: NotificationRecord[] = [];
     for (const channel of input.channels) {
-      const record = await this.repository.createNotification({
+      const notification = Notification.createQueued({
+        id: crypto.randomUUID(),
         userId: input.userId,
         title: input.title,
         body: input.body,
         type: channel,
         eventType: input.eventType,
         data: input.data ?? {},
-        status: NotificationStatus.QUEUED,
         retryCount: input.retryCount ?? 0,
       });
+      const record = await this.repository.createNotification(notification);
 
       try {
         await this.deliverOne(channel, record, input);
-        const delivered = await this.repository.updateDeliveryStatus(
-          record.id,
-          {
-            status: NotificationStatus.DELIVERED,
-            deliveredAt: new Date(),
-            errorMessage: null,
-          },
+        const deliveredNotification = Notification.reconstitute(record);
+        deliveredNotification.markDelivered();
+        const delivered = await this.repository.saveNotificationDelivery(
+          deliveredNotification,
         );
         this.metrics.recordSuccess(channel, input.eventType);
         created.push(delivered);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Unknown delivery error';
-        const failed = await this.repository.updateDeliveryStatus(record.id, {
-          status: NotificationStatus.FAILED,
-          errorMessage: message,
-        });
+        const failedNotification = Notification.reconstitute(record);
+        failedNotification.markFailed(message);
+        const failed =
+          await this.repository.saveNotificationDelivery(failedNotification);
         this.metrics.recordFailure(channel, input.eventType);
         created.push(failed);
         // Bubble up so the messaging layer can decide retry semantics.

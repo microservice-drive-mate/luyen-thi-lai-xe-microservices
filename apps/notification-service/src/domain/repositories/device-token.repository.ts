@@ -1,18 +1,14 @@
-export interface DeviceTokenRecord {
-  id: string;
-  userId: string;
-  token: string;
-  platform: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import {
+  DeviceToken,
+  DeviceTokenSnapshot,
+} from '../entities/device-token.entity';
+
+export { DeviceToken };
+
+export type DeviceTokenRecord = DeviceTokenSnapshot;
 
 export abstract class DeviceTokenRepository {
-  abstract upsert(input: {
-    userId: string;
-    token: string;
-    platform: string;
-  }): Promise<DeviceTokenRecord>;
+  abstract upsert(token: DeviceToken): Promise<DeviceTokenRecord>;
 
   abstract findByUser(userId: string): Promise<DeviceTokenRecord[]>;
 

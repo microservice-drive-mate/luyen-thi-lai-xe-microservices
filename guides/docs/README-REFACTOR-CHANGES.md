@@ -142,12 +142,49 @@ Hành vi tự động discovery (khám phá) các service tĩnh vẫn được g
 - Dữ liệu Bearer security global
 - Các `servers` sinh ra từ `swagger.serverUrl`, `SWAGGER_SERVER_URL`, hoặc service `port`
 
+### Supporting Context Domain Models
+
+`notification-service` và `analytics-service` đã được refactor để không còn là các context chỉ có repository/use case anemic.
+
+`notification-service` hiện có các domain model mới:
+
+- `Notification`: tạo queued/delivered notification, mark delivered, mark failed, mark read.
+- `AcademicWarning`: tạo warning, mark queued, mark pending retry, record retry failure.
+- `DeviceToken`: tạo registration snapshot với UUID được truyền từ application layer.
+
+Controller queue academic warning không còn gọi repository trực tiếp; luồng này đi qua `QueueAcademicWarningsUseCase`.
+
+`analytics-service` hiện có `StudentLearningProgress` aggregate/projection model để giữ:
+
+- Công thức average exam score sau mỗi exam completed event.
+- Date-only projection cho daily activity.
+- Lesson completion projection.
+- Pass rate và completion percentage.
+- Weak topics projection cho dashboard.
+
+Repository vẫn là nơi xử lý Prisma transaction, nhưng các công thức và state projection đã được đưa về domain.
+
+### Use Case Folder Structure
+
+`notification-service` use cases hiện đã được chia theo từng action, đồng bộ với convention của `user-service`:
+
+```text
+application/use-cases/
+  list-notifications/
+    list-notifications.query.ts
+    list-notifications.use-case.ts
+  mark-notification-read/
+    mark-notification-read.command.ts
+    mark-notification-read.use-case.ts
+```
+
+Pattern tương tự đã được áp dụng cho device-token registration, academic-warning queue/retry, và các workflow gửi notification. `NotificationDispatcher` đã được chuyển sang `application/services` vì nó là coordinator service, không phải một use case boundary trực tiếp.
+
 ## Thay Đổi Không Dự Định (Intentional Non-Changes)
 
 Các thay đổi sau đây đã được kiểm tra và cố ý giữ lại như cũ:
 
 - `new Date()` trong các hàm của domain: ít rủi ro hơn, code hiện tại sử dụng rất nhiều domain timestamps, và DB vẫn là nơi tạo persisted update timestamps nếu đã được cấu hình.
-- Các mô hình domain anemic của `notification-service` và `analytics-service`: chúng chỉ đóng vai trò context hỗ trợ (supporting/event-consumer) và không bắt buộc cần thiết lập thiết kế aggregate ngay tại thời điểm hiện tại.
 - Lượng thay đổi lớn (churn) của Swagger decorator trên từng controller: hầu hết các controller và DTOs đã có những annotation cần thiết; shared OpenAPI bổ sung các siêu dữ liệu còn khuyết mà không cần những chỉnh sửa cồng kềnh.
 
 ## Kiểm tra Đã Thực hiện
@@ -172,6 +209,8 @@ npx turbo run build
 npm --workspace=apps/question-service run test
 npm --workspace=apps/exam-service run test
 npm --workspace=apps/docs-service run test:e2e
+npm --workspace=apps/notification-service run test
+npm --workspace=apps/analytics-service run test
 ```
 
 Format/check Biome đã được tiến hành trên đường dẫn các service/common được sửa đổi:

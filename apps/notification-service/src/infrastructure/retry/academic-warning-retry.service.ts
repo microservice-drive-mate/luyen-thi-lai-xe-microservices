@@ -5,7 +5,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RetryAcademicWarningsUseCase } from '../../application/use-cases/notification.use-cases';
+import { RetryAcademicWarningsUseCase } from '../../application/use-cases/retry-academic-warnings/retry-academic-warnings.use-case';
 
 @Injectable()
 export class AcademicWarningRetryService

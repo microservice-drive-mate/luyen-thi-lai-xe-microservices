@@ -11,14 +11,14 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { NotificationType } from '@prisma/notification-client';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
-import { NotificationEventPublisher } from '../../application/ports/event-publisher.port';
-import {
-  ListNotificationsUseCase,
-  MarkNotificationReadUseCase,
-} from '../../application/use-cases/notification.use-cases';
-import { NotificationRepository } from '../../domain/repositories/notification.repository';
+import { ListNotificationsQuery } from '../../application/use-cases/list-notifications/list-notifications.query';
+import { ListNotificationsUseCase } from '../../application/use-cases/list-notifications/list-notifications.use-case';
+import { MarkNotificationReadCommand } from '../../application/use-cases/mark-notification-read/mark-notification-read.command';
+import { MarkNotificationReadUseCase } from '../../application/use-cases/mark-notification-read/mark-notification-read.use-case';
+import { QueueAcademicWarningsCommand } from '../../application/use-cases/queue-academic-warnings/queue-academic-warnings.command';
+import { QueueAcademicWarningsUseCase } from '../../application/use-cases/queue-academic-warnings/queue-academic-warnings.use-case';
+import { NotificationType } from '../../domain/repositories/notification.repository';
 import {
   AcademicWarningAcceptedResponseDto,
   ListNotificationsQueryDto,
@@ -38,8 +38,7 @@ export class NotificationController {
   constructor(
     private readonly listNotificationsUseCase: ListNotificationsUseCase,
     private readonly markNotificationReadUseCase: MarkNotificationReadUseCase,
-    private readonly eventPublisher: NotificationEventPublisher,
-    private readonly notificationRepository: NotificationRepository,
+    private readonly queueAcademicWarningsUseCase: QueueAcademicWarningsUseCase,
   ) {}
 
   @Post('admin/academic-warnings')
@@ -72,35 +71,20 @@ export class NotificationController {
       );
     }
 
-    const warnings = await Promise.all(
-      studentIds.map((studentId) =>
-        this.notificationRepository.createAcademicWarning({
-          studentId,
-          reason: dto.reason,
-          severity: dto.severity,
-          message: dto.message,
-          createdById: user.sub ?? '',
-        }),
-      ),
-    );
-
-    await Promise.all(
-      warnings.map((warning) =>
-        this.eventPublisher.publish('notification.academic-warning.queued', {
-          warningId: warning.id,
-          studentId: warning.studentId,
-          reason: dto.reason,
-          severity: dto.severity,
-          message: dto.message,
-          createdById: user.sub ?? '',
-        }),
+    const result = await this.queueAcademicWarningsUseCase.execute(
+      new QueueAcademicWarningsCommand(
+        studentIds,
+        dto.reason,
+        dto.severity,
+        dto.message,
+        user.sub ?? '',
       ),
     );
 
     return {
       status: 'ACCEPTED',
-      accepted: studentIds.length,
-      studentIds,
+      accepted: result.accepted,
+      studentIds: result.studentIds,
       message:
         'Academic warning notifications were queued for asynchronous delivery.',
     };
@@ -121,9 +105,11 @@ export class NotificationController {
     @Query() query: ListNotificationsQueryDto,
   ): Promise<ListNotificationsResponseDto> {
     const result = await this.listNotificationsUseCase.execute(
-      user.sub ?? '',
-      query.page ?? 1,
-      query.size ?? 20,
+      new ListNotificationsQuery(
+        user.sub ?? '',
+        query.page ?? 1,
+        query.size ?? 20,
+      ),
     );
     return ListNotificationsResponseDto.fromResult(result);
   }
@@ -143,8 +129,7 @@ export class NotificationController {
     @Param('id') id: string,
   ): Promise<NotificationResponseDto> {
     const result = await this.markNotificationReadUseCase.execute(
-      id,
-      user.sub ?? '',
+      new MarkNotificationReadCommand(id, user.sub ?? ''),
     );
     return NotificationResponseDto.fromRecord(result);
   }

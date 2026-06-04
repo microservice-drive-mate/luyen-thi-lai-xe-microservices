@@ -9,8 +9,10 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
-import { RegisterDeviceTokenUseCase } from '../../application/use-cases/register-device-token.use-case';
-import { UnregisterDeviceTokenUseCase } from '../../application/use-cases/unregister-device-token.use-case';
+import { RegisterDeviceTokenCommand } from '../../application/use-cases/register-device-token/register-device-token.command';
+import { RegisterDeviceTokenUseCase } from '../../application/use-cases/register-device-token/register-device-token.use-case';
+import { UnregisterDeviceTokenCommand } from '../../application/use-cases/unregister-device-token/unregister-device-token.command';
+import { UnregisterDeviceTokenUseCase } from '../../application/use-cases/unregister-device-token/unregister-device-token.use-case';
 import {
   DeviceTokenResponseDto,
   RegisterDeviceTokenRequestDto,
@@ -46,11 +48,9 @@ export class DeviceTokenController {
     @AuthenticatedUser() user: JwtPayload,
     @Body() dto: RegisterDeviceTokenRequestDto,
   ): Promise<DeviceTokenResponseDto> {
-    const record = await this.registerDeviceTokenUseCase.execute({
-      userId: user.sub ?? '',
-      token: dto.token,
-      platform: dto.platform,
-    });
+    const record = await this.registerDeviceTokenUseCase.execute(
+      new RegisterDeviceTokenCommand(user.sub ?? '', dto.token, dto.platform),
+    );
     return record;
   }
 
@@ -66,6 +66,8 @@ export class DeviceTokenController {
   })
   @ApiOperation({ summary: 'Huỷ đăng ký một device token theo giá trị token' })
   async unregister(@Param('token') token: string): Promise<void> {
-    await this.unregisterDeviceTokenUseCase.execute(token);
+    await this.unregisterDeviceTokenUseCase.execute(
+      new UnregisterDeviceTokenCommand(token),
+    );
   }
 }
