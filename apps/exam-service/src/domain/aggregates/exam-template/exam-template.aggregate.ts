@@ -65,7 +65,7 @@ export class ExamTemplate extends AggregateRoot<string> {
     });
     const now = new Date();
     return new ExamTemplate({
-      id: crypto.randomUUID(),
+      id: props.id,
       name: props.name.trim(),
       description: props.description?.trim() || null,
       licenseCategory: props.licenseCategory,

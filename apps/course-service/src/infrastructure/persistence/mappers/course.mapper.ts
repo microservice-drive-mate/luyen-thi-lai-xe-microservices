@@ -15,6 +15,8 @@ export interface RawLessonRow {
 }
 
 export interface RawCourseInstructorRow {
+  id: string;
+  courseId: string;
   instructorId: string;
 }
 
@@ -90,7 +92,11 @@ export const CourseMapper = {
         order: l.order,
         createdAt: l.createdAt,
       })),
-      instructorIds: raw.instructors.map((i) => i.instructorId),
+      instructors: raw.instructors.map((i) => ({
+        id: i.id,
+        courseId: i.courseId,
+        instructorId: i.instructorId,
+      })),
       requirement: raw.requirement
         ? {
             id: raw.requirement.id,

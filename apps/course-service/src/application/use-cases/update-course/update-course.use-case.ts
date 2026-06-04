@@ -29,7 +29,10 @@ export class UpdateCourseUseCase
     });
 
     if (command.requirement !== undefined && command.requirement !== null) {
-      course.setRequirements(command.requirement);
+      course.setRequirements({
+        id: course.requirement?.id ?? crypto.randomUUID(),
+        ...command.requirement,
+      });
     }
 
     await this.courseRepository.save(

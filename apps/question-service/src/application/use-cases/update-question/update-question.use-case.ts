@@ -54,7 +54,12 @@ export class UpdateQuestionUseCase
       isCritical: command.isCritical,
       isActive: command.isActive,
       topicId: command.topicId,
-      options: command.options,
+      options: command.options?.map((option) => ({
+        id: option.id ?? crypto.randomUUID(),
+        content: option.content,
+        isCorrect: option.isCorrect,
+        displayOrder: option.displayOrder,
+      })),
       expectedVersion: command.expectedVersion,
     });
 

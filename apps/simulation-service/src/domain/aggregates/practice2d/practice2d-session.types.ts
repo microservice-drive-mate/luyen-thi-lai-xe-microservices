@@ -40,6 +40,7 @@ export interface PracticeFeedbackProps {
 }
 
 export interface CreatePractice2dSessionProps {
+  id: string;
   studentId: string;
   licenseCategory: string;
   clientCapabilities: ClientCapabilities;

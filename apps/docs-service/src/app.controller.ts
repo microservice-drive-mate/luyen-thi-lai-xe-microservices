@@ -1,5 +1,13 @@
-import { Controller, Get, Logger, Query, SetMetadata } from '@nestjs/common';
-import { AppService, ServiceCandidate } from './app.service';
+import {
+  Controller,
+  Get,
+  Header,
+  Logger,
+  Param,
+  Query,
+  SetMetadata,
+} from '@nestjs/common';
+import { AppService, DocsServiceOption, ServiceCandidate } from './app.service';
 
 interface SwaggerUiConfig {
   urls: ServiceCandidate[];
@@ -12,62 +20,56 @@ export class AppController {
 
   constructor(private readonly appService: AppService) {}
 
-  /**
-   * Fetched by Swagger UI on every page load via `configUrl`.
-   * Returns the current list of alive services so the dropdown
-   * reflects reality without restarting docs-service.
-   */
   @Get('docs-config')
   @SetMetadata('skip-api-response', true)
   async getDocsConfig(): Promise<SwaggerUiConfig> {
-    const configuredCandidates = this.appService.buildCandidatesFromConfig();
-    let catalogCandidates: ServiceCandidate[] = [];
+    const urls = await this.appService.getAvailableServices();
 
-    if (configuredCandidates.length === 0) {
-      try {
-        catalogCandidates = await this.appService.buildCandidatesFromCatalog();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.logger.warn(`Consul catalog unavailable: ${msg}`);
-      }
-    }
-
-    const candidates = this.appService.mergeCandidates([
-      ...configuredCandidates,
-      ...catalogCandidates,
-      ...this.appService.buildLocalFallbackCandidates(),
-    ]);
-
-    const urls = await this.appService.probeAlive(candidates);
-
-    const dead = candidates
-      .filter((c) => !urls.some((u) => u.url === c.url))
-      .map((c) => c.name);
-
-    if (dead.length > 0) {
-      this.logger.debug(`Services not running (excluded): ${dead.join(', ')}`);
-    }
     if (urls.length > 0) {
       this.logger.debug(
-        `Active services: ${urls.map((u) => u.name).join(', ')}`,
+        `Active services: ${urls.map((service) => service.name).join(', ')}`,
       );
     }
 
     return {
       urls:
         urls.length > 0
-          ? urls.map((u) => ({
-              name: u.name,
-              url: this.appService.buildProxyUrl(u.url),
+          ? urls.map((service) => ({
+              name: service.name,
+              url: this.appService.buildProxyUrl(service.url),
             }))
           : [{ name: 'No services running', url: '/docs-json' }],
       deepLinking: true,
     };
   }
 
+  @Get('docs-services')
+  @SetMetadata('skip-api-response', true)
+  getDocsServices(): Promise<DocsServiceOption[]> {
+    return this.appService.getAvailableServiceOptions();
+  }
+
+  @Get('docs-json')
+  @SetMetadata('skip-api-response', true)
+  getDocsJson(): unknown {
+    return this.appService.buildPlaceholderDocument();
+  }
+
   @Get('docs-proxy')
   @SetMetadata('skip-api-response', true)
-  async getDocsProxy(@Query('url') url: string): Promise<unknown> {
-    return this.appService.fetchOpenApiDocument(url);
+  async getDocsProxy(
+    @Query('url') url?: string,
+    @Query('service') service?: string,
+  ): Promise<unknown> {
+    return this.appService.fetchOpenApiDocument({ service, url });
+  }
+
+  @Get('docs/scalar/:serviceName')
+  @Header('content-type', 'text/html; charset=utf-8')
+  @SetMetadata('skip-api-response', true)
+  async getScalarService(
+    @Param('serviceName') serviceName: string,
+  ): Promise<string> {
+    return this.appService.renderScalarPage(serviceName);
   }
 }

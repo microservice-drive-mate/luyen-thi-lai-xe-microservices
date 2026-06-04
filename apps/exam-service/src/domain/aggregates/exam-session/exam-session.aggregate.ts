@@ -84,7 +84,7 @@ export class ExamSession extends AggregateRoot<string> {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + props.durationMinutes * 60_000);
     return new ExamSession(
-      crypto.randomUUID(),
+      props.id,
       props.studentId,
       props.templateId,
       props.templateNameSnapshot ?? '',

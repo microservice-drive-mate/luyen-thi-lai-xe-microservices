@@ -24,6 +24,7 @@ export enum LicenseTier {
 
 export interface CreateUserProfileProps {
   id: string; // Keycloak userId — do bên ngoài cung cấp
+  studentDetailId?: string;
   fullName: string;
   email: string;
   role: UserRole;

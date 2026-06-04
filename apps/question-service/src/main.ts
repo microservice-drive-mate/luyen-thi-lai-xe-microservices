@@ -1,9 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
+import type { NextFunction, Request, Response } from 'express';
 import {
   ApiExceptionFilter,
   ApiResponseInterceptor,
@@ -56,8 +54,14 @@ async function bootstrap() {
     );
 
   app.enableCors();
-  app.use(new CorrelationIdMiddleware().use);
-  app.use(new TracingMiddleware(serviceName).use);
+  const correlationIdMiddleware = new CorrelationIdMiddleware();
+  const tracingMiddleware = new TracingMiddleware(serviceName);
+  app.use((request: Request, response: Response, next: NextFunction) =>
+    correlationIdMiddleware.use(request, response, next),
+  );
+  app.use((request: Request, response: Response, next: NextFunction) =>
+    tracingMiddleware.use(request, response, next),
+  );
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),

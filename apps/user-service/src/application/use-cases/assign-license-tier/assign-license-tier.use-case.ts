@@ -25,7 +25,11 @@ export class AssignLicenseTierUseCase
       throw new UserProfileNotFoundException(command.studentId);
     }
 
-    profile.assignLicenseTier(command.newLicenseTier, command.changedById);
+    profile.assignLicenseTier(
+      command.newLicenseTier,
+      command.changedById,
+      profile.studentDetail ? undefined : crypto.randomUUID(),
+    );
 
     const auditEvent = createAuditEvent({
       serviceName: 'user-service',

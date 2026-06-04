@@ -22,13 +22,18 @@ export enum QuestionDifficulty {
 }
 
 export interface QuestionOptionProps {
-  id?: string;
+  id: string;
   content: string;
   isCorrect: boolean;
   displayOrder: number;
 }
 
+export type QuestionOptionInputProps = Omit<QuestionOptionProps, 'id'> & {
+  id?: string;
+};
+
 export interface CreateQuestionProps {
+  id: string;
   content: string;
   type: QuestionType;
   licenseCategories: LicenseCategory[];
@@ -77,5 +82,5 @@ export interface ReconstituteQuestionProps {
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  options: Required<QuestionOptionProps>[];
+  options: QuestionOptionProps[];
 }

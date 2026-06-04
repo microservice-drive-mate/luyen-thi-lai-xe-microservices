@@ -19,9 +19,9 @@ export class Practice2dFeedback extends Entity<string> {
     super(id);
   }
 
-  static create(props: Omit<PracticeFeedbackProps, 'id'>): Practice2dFeedback {
+  static create(props: PracticeFeedbackProps): Practice2dFeedback {
     return new Practice2dFeedback(
-      crypto.randomUUID(),
+      props.id,
       props.telemetryType,
       props.errorCode,
       props.severity,

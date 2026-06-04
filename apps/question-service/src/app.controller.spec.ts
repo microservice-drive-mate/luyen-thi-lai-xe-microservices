@@ -12,16 +12,27 @@ import {
 } from './domain/exceptions/question.exceptions';
 
 const validQuestionProps = {
-  content: 'Khi gặp đèn đỏ, người lái xe phải làm gì?',
+  id: 'question-001',
+  content: 'What should a driver do at a red light?',
   type: QuestionType.THEORY,
   licenseCategories: [LicenseCategory.B2],
   difficulty: QuestionDifficulty.EASY,
-  explanation: 'Đèn đỏ yêu cầu dừng lại trước vạch dừng.',
+  explanation: 'A red light requires the driver to stop before the stop line.',
   topicId: '550e8400-e29b-41d4-a716-446655440000',
   createdById: 'creator-001',
   options: [
-    { content: 'Dừng lại', isCorrect: true, displayOrder: 1 },
-    { content: 'Đi tiếp nếu vắng người', isCorrect: false, displayOrder: 2 },
+    {
+      id: 'option-001',
+      content: 'Stop',
+      isCorrect: true,
+      displayOrder: 1,
+    },
+    {
+      id: 'option-002',
+      content: 'Continue if the road is empty',
+      isCorrect: false,
+      displayOrder: 2,
+    },
   ],
 };
 
@@ -40,8 +51,8 @@ describe('Question aggregate', () => {
       Question.create({
         ...validQuestionProps,
         options: [
-          { content: 'A', isCorrect: true, displayOrder: 1 },
-          { content: 'B', isCorrect: true, displayOrder: 2 },
+          { id: 'option-001', content: 'A', isCorrect: true, displayOrder: 1 },
+          { id: 'option-002', content: 'B', isCorrect: true, displayOrder: 2 },
         ],
       }),
     ).toThrow(InvalidQuestionException);
@@ -62,15 +73,15 @@ describe('Question aggregate', () => {
 
     question.update({
       expectedVersion: 1,
-      content: 'Nội dung mới',
+      content: 'Updated content',
     });
 
     expect(question.version).toBe(2);
-    expect(question.content).toBe('Nội dung mới');
+    expect(question.content).toBe('Updated content');
     expect(() =>
       question.update({
         expectedVersion: 1,
-        content: 'Nội dung cũ',
+        content: 'Old content',
       }),
     ).toThrow(QuestionVersionConflictException);
   });
@@ -89,7 +100,7 @@ describe('Question aggregate', () => {
     expect(() =>
       question.update({
         expectedVersion: 2,
-        content: 'Không hợp lệ',
+        content: 'Invalid update',
       }),
     ).toThrow(QuestionAlreadyDeletedException);
   });

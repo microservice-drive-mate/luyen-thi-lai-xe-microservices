@@ -62,7 +62,7 @@ export class UserProfile extends AggregateRoot<string> {
     const studentDetail =
       props.role === UserRole.STUDENT
         ? new StudentDetail(
-            crypto.randomUUID(),
+            UserProfile.requireStudentDetailId(props.studentDetailId),
             props.licenseTier ?? null,
             props.enrolledAt ?? null,
             null,
@@ -146,14 +146,14 @@ export class UserProfile extends AggregateRoot<string> {
     this._isActive = true;
   }
 
-  syncRole(newRole: UserRole): void {
+  syncRole(newRole: UserRole, studentDetailId?: string): void {
     const wasStudent = this._role === UserRole.STUDENT;
     const becomesStudent = newRole === UserRole.STUDENT;
     this._role = newRole;
 
     if (!wasStudent && becomesStudent && !this._studentDetail) {
       this._studentDetail = new StudentDetail(
-        crypto.randomUUID(),
+        UserProfile.requireStudentDetailId(studentDetailId),
         null,
         null,
         null,
@@ -164,13 +164,17 @@ export class UserProfile extends AggregateRoot<string> {
     }
   }
 
-  assignLicenseTier(newTier: LicenseTier, changedById: string): void {
+  assignLicenseTier(
+    newTier: LicenseTier,
+    changedById: string,
+    studentDetailId?: string,
+  ): void {
     if (this._role !== UserRole.STUDENT) {
       throw new UserNotStudentException();
     }
     if (!this._studentDetail) {
       this._studentDetail = new StudentDetail(
-        crypto.randomUUID(),
+        UserProfile.requireStudentDetailId(studentDetailId),
         null,
         null,
         null,
@@ -241,5 +245,12 @@ export class UserProfile extends AggregateRoot<string> {
 
   clearPendingAuditEntry(): void {
     this._pendingAuditEntry = null;
+  }
+
+  private static requireStudentDetailId(id?: string): string {
+    if (!id?.trim()) {
+      throw new Error('Student detail id is required');
+    }
+    return id;
   }
 }

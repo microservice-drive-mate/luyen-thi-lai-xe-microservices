@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
+import { UserRole } from '../../../domain/aggregates/user-profile/user-profile.types';
 import { UserProfileRepository } from '../../../domain/repositories/user-profile.repository';
 import { SyncUserRoleCommand } from './sync-user-role.command';
 
@@ -20,7 +21,11 @@ export class SyncUserRoleUseCase
       return;
     }
 
-    profile.syncRole(command.newRole);
+    const studentDetailId =
+      command.newRole === UserRole.STUDENT && !profile.studentDetail
+        ? crypto.randomUUID()
+        : undefined;
+    profile.syncRole(command.newRole, studentDetailId);
     await this.userProfileRepository.save(profile);
   }
 }

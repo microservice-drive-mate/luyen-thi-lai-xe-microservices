@@ -34,8 +34,12 @@ export class CourseRequirement extends Entity<string> {
     courseId: string,
     props: CreateRequirementProps,
   ): CourseRequirement {
+    if (!props.id?.trim()) {
+      throw new Error('Course requirement id is required');
+    }
+
     return new CourseRequirement(
-      crypto.randomUUID(),
+      props.id,
       courseId,
       props.minAge ?? null,
       props.prerequisites ?? null,

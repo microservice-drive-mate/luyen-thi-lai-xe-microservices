@@ -14,7 +14,7 @@ export interface ExamQuestionOptionSnapshot {
 }
 
 export interface ExamQuestionSnapshot {
-  id?: string;
+  id: string;
   questionId: string;
   questionContent: string;
   imageUrl?: string | null;
@@ -30,6 +30,7 @@ export interface ExamQuestionSnapshot {
 }
 
 export interface CreateExamSessionProps {
+  id: string;
   studentId: string;
   templateId: string;
   templateNameSnapshot?: string;

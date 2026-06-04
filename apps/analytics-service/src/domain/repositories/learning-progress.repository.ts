@@ -1,39 +1,12 @@
-export interface ProgressDashboard {
-  studentId: string;
-  completionPct: number;
-  studiedCount: number;
-  attemptCount: number;
-  passRate: number;
-  totalStudyMinutes: number;
-  avgExamScore: number;
-  trend: Array<{
-    date: string;
-    attempts: number;
-    correctAnswers: number;
-    questionsAnswered: number;
-  }>;
-  weakTopics: Array<{
-    topicId: string | null;
-    topicName: string | null;
-    incorrectCount: number;
-    accuracyRate: number;
-  }>;
-  lastActivityAt: Date | null;
-}
+import type {
+  ExamCompletedPayload,
+  ProgressDashboard,
+} from '../aggregates/learning-progress/learning-progress.aggregate';
 
-export interface ExamCompletedPayload {
-  sessionId: string;
-  studentId: string;
-  score: number;
-  isPassed: boolean;
-  occurredAt?: string;
-  questions?: Array<{
-    questionId: string;
-    topicId?: string | null;
-    topicName?: string | null;
-    isCorrect?: boolean | null;
-  }>;
-}
+export type {
+  ExamCompletedPayload,
+  ProgressDashboard,
+} from '../aggregates/learning-progress/learning-progress.aggregate';
 
 export abstract class LearningProgressRepository {
   abstract ensureStudent(studentId: string): Promise<void>;

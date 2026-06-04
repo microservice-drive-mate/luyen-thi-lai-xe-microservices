@@ -23,7 +23,10 @@ export class StartPractice2dSessionUseCase
   async execute(
     command: StartPractice2dSessionCommand,
   ): Promise<Practice2dSessionResult> {
-    const session = Practice2dSession.create(command);
+    const session = Practice2dSession.create({
+      id: crypto.randomUUID(),
+      ...command,
+    });
     await this.repository.save(session);
     return Practice2dSessionResult.fromAggregate(session);
   }
@@ -43,14 +46,17 @@ export class IngestPractice2dTelemetryUseCase
     if (!session)
       throw new Practice2dSessionNotFoundException(command.sessionId);
     session.assertOwner(command.studentId);
-    const feedback = session.ingestTelemetry({
-      type: command.type,
-      speedKmh: command.speedKmh,
-      laneOffset: command.laneOffset,
-      collision: command.collision,
-      signal: command.signal,
-      payload: command.payload,
-    });
+    const feedback = session.ingestTelemetry(
+      {
+        type: command.type,
+        speedKmh: command.speedKmh,
+        laneOffset: command.laneOffset,
+        collision: command.collision,
+        signal: command.signal,
+        payload: command.payload,
+      },
+      crypto.randomUUID(),
+    );
     await this.repository.save(session);
     return {
       id: feedback.id,

@@ -36,7 +36,7 @@ export class ExamSessionQuestion extends Entity<string> {
   static create(props: ExamQuestionSnapshot): ExamSessionQuestion {
     ExamSessionQuestion.validate(props);
     return new ExamSessionQuestion(
-      props.id ?? crypto.randomUUID(),
+      props.id,
       props.questionId,
       props.questionContent.trim(),
       props.imageUrl ?? null,

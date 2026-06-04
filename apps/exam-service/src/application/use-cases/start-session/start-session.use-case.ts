@@ -80,6 +80,7 @@ export class StartSessionUseCase
     }
 
     const session = ExamSession.create({
+      id: crypto.randomUUID(),
       studentId: command.studentId,
       templateId: template.id,
       templateNameSnapshot: template.name,
@@ -107,6 +108,7 @@ export class StartSessionUseCase
             ? this.shuffle(question.options)
             : question.options;
           return {
+            id: crypto.randomUUID(),
             questionId: question.id,
             questionContent: question.content,
             imageUrl: question.imageUrl,

@@ -1,96 +1,37 @@
 import {
+  AcademicWarning,
+  AcademicWarningDeliveryStatus,
+  AcademicWarningSnapshot,
+} from '../aggregates/academic-warning/academic-warning.aggregate';
+import {
+  Notification,
+  NotificationSnapshot,
   NotificationStatus,
   NotificationType,
-} from '@prisma/notification-client';
+} from '../aggregates/notification/notification.aggregate';
 
-export enum AcademicWarningDeliveryStatus {
-  PENDING = 'PENDING',
-  QUEUED = 'QUEUED',
-  PENDING_RETRY = 'PENDING_RETRY',
-  FAILED = 'FAILED',
-  SENT = 'SENT',
-}
+export {
+  AcademicWarning,
+  AcademicWarningDeliveryStatus,
+  Notification,
+  NotificationStatus,
+  NotificationType,
+};
 
-export interface NotificationRecord {
-  id: string;
-  userId: string;
-  type: NotificationType;
-  eventType: string | null;
-  title: string;
-  body: string;
-  data: unknown;
-  status: NotificationStatus;
-  retryCount: number;
-  errorMessage: string | null;
-  isRead: boolean;
-  readAt: Date | null;
-  sentAt: Date | null;
-  deliveredAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface AcademicWarningRecord {
-  id: string;
-  studentId: string;
-  reason: string;
-  severity: string;
-  message: string;
-  createdById: string;
-  deliveryStatus: AcademicWarningDeliveryStatus;
-  retryAttempts: number;
-  nextRetryAt: Date | null;
-  notificationId: string | null;
-  lastError: string | null;
-  queuedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateNotificationInput {
-  userId: string;
-  title: string;
-  body: string;
-  data?: unknown;
-  type?: NotificationType;
-  eventType?: string;
-  status?: NotificationStatus;
-  retryCount?: number;
-  errorMessage?: string | null;
-  sentAt?: Date;
-  deliveredAt?: Date;
-}
-
-export interface UpdateDeliveryStatusInput {
-  status: NotificationStatus;
-  retryCount?: number;
-  errorMessage?: string | null;
-  deliveredAt?: Date | null;
-}
+export type NotificationRecord = NotificationSnapshot;
+export type AcademicWarningRecord = AcademicWarningSnapshot;
 
 export abstract class NotificationRepository {
   abstract createNotification(
-    input: CreateNotificationInput,
+    notification: Notification,
   ): Promise<NotificationRecord>;
 
-  abstract createAcademicWarning(input: {
-    studentId: string;
-    reason: string;
-    severity: string;
-    message: string;
-    createdById: string;
-  }): Promise<AcademicWarningRecord>;
+  abstract createAcademicWarning(
+    warning: AcademicWarning,
+  ): Promise<AcademicWarningRecord>;
 
-  abstract updateAcademicWarningDelivery(
-    id: string,
-    input: {
-      deliveryStatus: AcademicWarningDeliveryStatus;
-      notificationId?: string | null;
-      lastError?: string | null;
-      queuedAt?: Date | null;
-      nextRetryAt?: Date | null;
-      retryAttempts?: number;
-    },
+  abstract saveAcademicWarningDelivery(
+    warning: AcademicWarning,
   ): Promise<AcademicWarningRecord>;
 
   abstract findWarningsDueForRetry(
@@ -107,10 +48,16 @@ export abstract class NotificationRepository {
     total: number;
   }>;
 
-  abstract markRead(id: string, userId: string): Promise<NotificationRecord>;
-
-  abstract updateDeliveryStatus(
+  abstract findByUserAndId(
     id: string,
-    input: UpdateDeliveryStatusInput,
+    userId: string,
+  ): Promise<NotificationRecord | null>;
+
+  abstract saveNotificationReadState(
+    notification: Notification,
+  ): Promise<NotificationRecord>;
+
+  abstract saveNotificationDelivery(
+    notification: Notification,
   ): Promise<NotificationRecord>;
 }

@@ -1,7 +1,7 @@
 import {
   LicenseCategory,
   QuestionDifficulty,
-  QuestionOptionProps,
+  QuestionOptionInputProps,
   QuestionType,
 } from '../../../domain/aggregates/question/question.types';
 
@@ -19,6 +19,6 @@ export class UpdateQuestionCommand {
     readonly isCritical?: boolean,
     readonly isActive?: boolean,
     readonly topicId?: string,
-    readonly options?: QuestionOptionProps[],
+    readonly options?: QuestionOptionInputProps[],
   ) {}
 }

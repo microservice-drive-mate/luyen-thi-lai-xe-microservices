@@ -21,6 +21,7 @@ export class CreateTopicUseCase
         throw new QuestionTopicNotFoundException(command.parentId);
     }
     const topic = QuestionTopic.create({
+      id: crypto.randomUUID(),
       name: command.name,
       description: command.description,
       parentId: command.parentId,

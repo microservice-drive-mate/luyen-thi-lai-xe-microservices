@@ -12,7 +12,10 @@ export class CreateTemplateUseCase
   constructor(private readonly templateRepository: ExamTemplateRepository) {}
 
   async execute(command: CreateTemplateCommand): Promise<ExamTemplateResult> {
-    const template = ExamTemplate.create(command);
+    const template = ExamTemplate.create({
+      id: crypto.randomUUID(),
+      ...command,
+    });
     await this.templateRepository.save(
       template,
       createAuditEvent({

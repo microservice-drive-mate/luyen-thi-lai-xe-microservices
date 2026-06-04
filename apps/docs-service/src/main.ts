@@ -1,7 +1,8 @@
-import { NestFactory, Reflector } from '@nestjs/core';
-import { SwaggerModule } from '@nestjs/swagger';
-import { ConfigService } from '@nestjs/config';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { apiReference } from '@scalar/nestjs-api-reference';
+import type { NextFunction, Request, Response } from 'express';
 import {
   AccessLogInterceptor,
   ApiExceptionFilter,
@@ -28,8 +29,15 @@ async function bootstrap() {
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
   setupCors(app);
-  app.use(new CorrelationIdMiddleware().use);
-  app.use(new TracingMiddleware(serviceName).use);
+
+  const correlationIdMiddleware = new CorrelationIdMiddleware();
+  const tracingMiddleware = new TracingMiddleware(serviceName);
+  app.use((request: Request, response: Response, next: NextFunction) =>
+    correlationIdMiddleware.use(request, response, next),
+  );
+  app.use((request: Request, response: Response, next: NextFunction) =>
+    tracingMiddleware.use(request, response, next),
+  );
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),
@@ -42,23 +50,16 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('port') ?? 3009;
 
-  // Placeholder document — actual service specs are loaded dynamically
-  // by Swagger UI via the configUrl below.
-  const placeholderDocument = {
-    openapi: '3.0.0',
-    info: { title: 'Centralized API Documentation', version: '1.0.0' },
-    paths: {},
-  };
-
-  // configUrl tells Swagger UI to fetch /docs-config on every page load.
-  // That endpoint probes which services are alive at that moment, so the
-  // service dropdown updates on a simple browser refresh — no server restart.
-  SwaggerModule.setup('docs', app, placeholderDocument, {
-    explorer: true,
-    swaggerOptions: {
-      configUrl: '/docs-config',
-    },
+  const scalarReference = apiReference({
+    url: '/docs-proxy',
+    theme: 'purple',
+    pageTitle: 'Luyen Thi Lai Xe API Docs',
+    persistAuth: true,
+    showDeveloperTools: 'localhost',
   });
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.get('/docs', scalarReference);
+  httpAdapter.get('/docs/', scalarReference);
 
   await app.listen(port);
   logger.log(`Docs Service running at http://localhost:${port}/docs`);

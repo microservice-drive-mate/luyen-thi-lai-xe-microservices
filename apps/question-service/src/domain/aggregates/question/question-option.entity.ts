@@ -22,14 +22,14 @@ export class QuestionOption extends Entity<string> {
   static create(props: QuestionOptionProps): QuestionOption {
     QuestionOption.validate(props);
     return new QuestionOption(
-      props.id ?? crypto.randomUUID(),
+      props.id,
       props.content.trim(),
       props.isCorrect,
       props.displayOrder,
     );
   }
 
-  static reconstitute(props: Required<QuestionOptionProps>): QuestionOption {
+  static reconstitute(props: QuestionOptionProps): QuestionOption {
     return new QuestionOption(
       props.id,
       props.content,

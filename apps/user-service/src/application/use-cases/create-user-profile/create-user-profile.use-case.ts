@@ -46,6 +46,8 @@ export class CreateUserProfileUseCase
 
     const profile = UserProfile.create({
       id: command.id,
+      studentDetailId:
+        command.role === UserRole.STUDENT ? crypto.randomUUID() : undefined,
       fullName: command.fullName,
       email: command.email,
       role: command.role,

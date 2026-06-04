@@ -79,7 +79,7 @@ export class Practice2dSession extends AggregateRoot<string> {
     }
 
     return new Practice2dSession(
-      crypto.randomUUID(),
+      props.id,
       props.studentId,
       props.licenseCategory,
       props.clientCapabilities,
@@ -131,7 +131,10 @@ export class Practice2dSession extends AggregateRoot<string> {
     }
   }
 
-  ingestTelemetry(input: PracticeTelemetryInput): Practice2dFeedback {
+  ingestTelemetry(
+    input: PracticeTelemetryInput,
+    feedbackId: string,
+  ): Practice2dFeedback {
     this.assertActive();
     if (!input.type?.trim()) {
       throw new Practice2dInvalidRequestException('telemetry type is required');
@@ -142,7 +145,7 @@ export class Practice2dSession extends AggregateRoot<string> {
       this._telemetrySnapshot = input;
     }
 
-    const feedback = this.detectFeedback(input);
+    const feedback = this.detectFeedback(input, feedbackId);
     this._feedbackEvents.push(feedback);
     if (feedback.penalty > 0 || feedback.severity === FeedbackSeverity.FATAL) {
       this._errorCount += 1;
@@ -180,12 +183,27 @@ export class Practice2dSession extends AggregateRoot<string> {
     }
   }
 
-  private detectFeedback(input: PracticeTelemetryInput): Practice2dFeedback {
+  private detectFeedback(
+    input: PracticeTelemetryInput,
+    feedbackId: string,
+  ): Practice2dFeedback {
     if (input.collision) {
-      return this.feedback(input, 'COLLISION', FeedbackSeverity.FATAL, 100);
+      return this.feedback(
+        input,
+        feedbackId,
+        'COLLISION',
+        FeedbackSeverity.FATAL,
+        100,
+      );
     }
     if (typeof input.speedKmh === 'number' && input.speedKmh > 60) {
-      return this.feedback(input, 'OVERSPEED', FeedbackSeverity.WARNING, 10);
+      return this.feedback(
+        input,
+        feedbackId,
+        'OVERSPEED',
+        FeedbackSeverity.WARNING,
+        10,
+      );
     }
     if (
       typeof input.laneOffset === 'number' &&
@@ -193,16 +211,18 @@ export class Practice2dSession extends AggregateRoot<string> {
     ) {
       return this.feedback(
         input,
+        feedbackId,
         'LANE_DEPARTURE',
         FeedbackSeverity.WARNING,
         5,
       );
     }
-    return this.feedback(input, null, FeedbackSeverity.INFO, 0);
+    return this.feedback(input, feedbackId, null, FeedbackSeverity.INFO, 0);
   }
 
   private feedback(
     input: PracticeTelemetryInput,
+    feedbackId: string,
     errorCode: string | null,
     severity: FeedbackSeverity,
     penalty: number,
@@ -223,6 +243,7 @@ export class Practice2dSession extends AggregateRoot<string> {
     };
     const copy = errorCode ? messages[errorCode] : null;
     return Practice2dFeedback.create({
+      id: feedbackId,
       telemetryType: input.type,
       errorCode,
       severity,

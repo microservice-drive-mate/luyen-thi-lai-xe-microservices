@@ -20,6 +20,7 @@ export class AddLessonUseCase
     if (!course) throw new CourseNotFoundException(command.courseId);
 
     course.addLesson({
+      id: crypto.randomUUID(),
       title: command.title,
       content: command.content,
       order: command.order,

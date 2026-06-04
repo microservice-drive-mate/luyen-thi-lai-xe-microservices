@@ -22,6 +22,7 @@ export class AddCourseMaterialUseCase
     if (!course) throw new CourseNotFoundException(command.courseId);
 
     course.addMaterial({
+      id: crypto.randomUUID(),
       title: command.title,
       fileUrl: command.fileUrl,
       mediaFileId: command.mediaFileId,

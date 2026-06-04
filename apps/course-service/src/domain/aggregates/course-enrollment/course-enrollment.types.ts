@@ -5,6 +5,7 @@ export enum EnrollmentStatus {
 }
 
 export interface CreateEnrollmentProps {
+  id: string;
   courseId: string;
   studentId: string;
 }

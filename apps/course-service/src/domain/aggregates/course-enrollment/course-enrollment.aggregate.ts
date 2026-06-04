@@ -40,7 +40,7 @@ export class CourseEnrollment extends AggregateRoot<string> {
 
   static create(props: CreateEnrollmentProps): CourseEnrollment {
     return new CourseEnrollment(
-      crypto.randomUUID(),
+      props.id,
       props.courseId,
       props.studentId,
       EnrollmentStatus.ACTIVE,

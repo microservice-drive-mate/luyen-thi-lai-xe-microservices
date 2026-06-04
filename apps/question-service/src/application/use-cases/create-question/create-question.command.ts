@@ -1,7 +1,7 @@
 import {
   LicenseCategory,
   QuestionDifficulty,
-  QuestionOptionProps,
+  QuestionOptionInputProps,
   QuestionType,
 } from '../../../domain/aggregates/question/question.types';
 
@@ -14,7 +14,7 @@ export class CreateQuestionCommand {
     readonly explanation: string,
     readonly topicId: string,
     readonly createdById: string,
-    readonly options: QuestionOptionProps[],
+    readonly options: QuestionOptionInputProps[],
     readonly imageUrl?: string | null,
     readonly mediaFileId?: string | null,
     readonly isCritical?: boolean,

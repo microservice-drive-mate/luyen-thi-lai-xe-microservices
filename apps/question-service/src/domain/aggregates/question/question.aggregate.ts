@@ -66,7 +66,7 @@ export class Question extends AggregateRoot<string> {
 
     const now = new Date();
     const question = new Question({
-      id: crypto.randomUUID(),
+      id: props.id,
       content: props.content.trim(),
       type: props.type,
       licenseCategories: [...props.licenseCategories],
@@ -85,7 +85,7 @@ export class Question extends AggregateRoot<string> {
       createdAt: now,
       updatedAt: now,
       options: props.options.map((option) => ({
-        id: option.id ?? crypto.randomUUID(),
+        id: option.id,
         content: option.content.trim(),
         isCorrect: option.isCorrect,
         displayOrder: option.displayOrder,
@@ -206,7 +206,9 @@ export class Question extends AggregateRoot<string> {
     }
   }
 
-  private static validateQuestionProps(props: CreateQuestionProps): void {
+  private static validateQuestionProps(
+    props: Omit<CreateQuestionProps, 'id'>,
+  ): void {
     if (!props.content?.trim()) {
       throw new InvalidQuestionException('Question content is required');
     }

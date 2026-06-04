@@ -89,19 +89,19 @@ export class Course extends AggregateRoot<string> {
   }
 
   static create(props: CreateCourseProps): Course {
-    const id = crypto.randomUUID();
     const now = new Date();
 
-    const instructors = (props.instructorIds ?? []).map(
-      (iid) => new CourseInstructor(crypto.randomUUID(), id, iid),
+    const instructors = (props.instructors ?? []).map(
+      (instructor) =>
+        new CourseInstructor(instructor.id, props.id, instructor.instructorId),
     );
 
     const requirement = props.requirement
-      ? CourseRequirement.create(id, props.requirement)
+      ? CourseRequirement.create(props.id, props.requirement)
       : null;
 
     return new Course(
-      id,
+      props.id,
       props.courseCode ?? null,
       props.title,
       props.description ?? null,
@@ -127,8 +127,13 @@ export class Course extends AggregateRoot<string> {
 
   static reconstitute(props: ReconstituteCourseProps): Course {
     const lessons = props.lessons.map((l) => Lesson.reconstitute(l));
-    const instructors = props.instructorIds.map(
-      (iid) => new CourseInstructor(crypto.randomUUID(), props.id, iid),
+    const instructors = props.instructors.map(
+      (instructor) =>
+        new CourseInstructor(
+          instructor.id,
+          instructor.courseId,
+          instructor.instructorId,
+        ),
     );
     const requirement = props.requirement
       ? CourseRequirement.reconstitute(props.requirement)
@@ -204,7 +209,7 @@ export class Course extends AggregateRoot<string> {
 
   addLesson(props: CreateLessonProps): Lesson {
     const lesson = new Lesson(
-      crypto.randomUUID(),
+      props.id,
       this._id,
       props.title,
       props.content ?? null,
@@ -235,14 +240,14 @@ export class Course extends AggregateRoot<string> {
     this._updatedAt = new Date();
   }
 
-  addInstructor(instructorId: string): void {
+  addInstructor(instructorEntityId: string, instructorId: string): void {
     const exists = this._instructors.some(
       (i) => i.instructorId === instructorId,
     );
     if (exists)
       throw new InstructorAlreadyAssignedException(instructorId, this._id);
     this._instructors.push(
-      new CourseInstructor(crypto.randomUUID(), this._id, instructorId),
+      new CourseInstructor(instructorEntityId, this._id, instructorId),
     );
     this._version += 1;
     this._updatedAt = new Date();
@@ -268,7 +273,7 @@ export class Course extends AggregateRoot<string> {
 
   addMaterial(props: CreateMaterialProps): CourseMaterial {
     const material = new CourseMaterial(
-      crypto.randomUUID(),
+      props.id,
       this._id,
       props.title,
       props.fileUrl ?? null,

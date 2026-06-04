@@ -10,6 +10,7 @@ export enum LicenseCategory {
 }
 
 export interface CreateExamTemplateProps {
+  id: string;
   name: string;
   description?: string | null;
   licenseCategory: LicenseCategory;

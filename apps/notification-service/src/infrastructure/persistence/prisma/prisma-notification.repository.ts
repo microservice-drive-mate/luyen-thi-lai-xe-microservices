@@ -1,16 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
-  NotificationStatus,
-  NotificationType,
+  NotificationStatus as PrismaNotificationStatus,
+  NotificationType as PrismaNotificationType,
   Prisma,
 } from '@prisma/notification-client';
 import {
   AcademicWarningDeliveryStatus,
   AcademicWarningRecord,
-  CreateNotificationInput,
+  AcademicWarning,
+  Notification,
   NotificationRecord,
   NotificationRepository,
-  UpdateDeliveryStatusInput,
+  NotificationStatus,
+  NotificationType,
 } from '../../../domain/repositories/notification.repository';
 import { PrismaService } from './prisma.service';
 
@@ -21,61 +23,66 @@ export class PrismaNotificationRepository extends NotificationRepository {
   }
 
   async createNotification(
-    input: CreateNotificationInput,
+    notification: Notification,
   ): Promise<NotificationRecord> {
-    const sentAt =
-      input.sentAt ??
-      (input.status === NotificationStatus.DELIVERED ? new Date() : null);
-    return this.prisma.notification.create({
+    const snapshot = notification.toSnapshot();
+    const record = await this.prisma.notification.create({
       data: {
-        userId: input.userId,
-        title: input.title,
-        body: input.body,
-        type: input.type ?? NotificationType.IN_APP,
-        eventType: input.eventType ?? null,
-        data: (input.data ?? {}) as Prisma.InputJsonValue,
-        status: input.status ?? NotificationStatus.DELIVERED,
-        retryCount: input.retryCount ?? 0,
-        errorMessage: input.errorMessage ?? null,
-        sentAt,
-        deliveredAt: input.deliveredAt ?? null,
+        id: snapshot.id,
+        userId: snapshot.userId,
+        title: snapshot.title,
+        body: snapshot.body,
+        type: snapshot.type as PrismaNotificationType,
+        eventType: snapshot.eventType,
+        data: snapshot.data as Prisma.InputJsonValue,
+        status: snapshot.status as PrismaNotificationStatus,
+        retryCount: snapshot.retryCount,
+        errorMessage: snapshot.errorMessage,
+        sentAt: snapshot.sentAt,
+        deliveredAt: snapshot.deliveredAt,
+        isRead: snapshot.isRead,
+        readAt: snapshot.readAt,
       },
     });
+    return this.mapNotification(record);
   }
 
-  async createAcademicWarning(input: {
-    studentId: string;
-    reason: string;
-    severity: string;
-    message: string;
-    createdById: string;
-  }): Promise<AcademicWarningRecord> {
-    const record = await this.prisma.academicWarning.create({ data: input });
+  async createAcademicWarning(
+    warning: AcademicWarning,
+  ): Promise<AcademicWarningRecord> {
+    const snapshot = warning.toSnapshot();
+    const record = await this.prisma.academicWarning.create({
+      data: {
+        id: snapshot.id,
+        studentId: snapshot.studentId,
+        reason: snapshot.reason,
+        severity: snapshot.severity,
+        message: snapshot.message,
+        createdById: snapshot.createdById,
+        deliveryStatus: snapshot.deliveryStatus as never,
+        retryAttempts: snapshot.retryAttempts,
+        nextRetryAt: snapshot.nextRetryAt,
+        notificationId: snapshot.notificationId,
+        lastError: snapshot.lastError,
+        queuedAt: snapshot.queuedAt,
+      },
+    });
     return this.mapAcademicWarning(record);
   }
 
-  async updateAcademicWarningDelivery(
-    id: string,
-    input: {
-      deliveryStatus: AcademicWarningDeliveryStatus;
-      notificationId?: string | null;
-      lastError?: string | null;
-      queuedAt?: Date | null;
-      nextRetryAt?: Date | null;
-      retryAttempts?: number;
-    },
+  async saveAcademicWarningDelivery(
+    warning: AcademicWarning,
   ): Promise<AcademicWarningRecord> {
+    const snapshot = warning.toSnapshot();
     const record = await this.prisma.academicWarning.update({
-      where: { id },
+      where: { id: snapshot.id },
       data: {
-        deliveryStatus: input.deliveryStatus as never,
-        notificationId: input.notificationId,
-        lastError: input.lastError,
-        queuedAt: input.queuedAt,
-        nextRetryAt: input.nextRetryAt,
-        ...(input.retryAttempts !== undefined && {
-          retryAttempts: input.retryAttempts,
-        }),
+        deliveryStatus: snapshot.deliveryStatus as never,
+        notificationId: snapshot.notificationId,
+        lastError: snapshot.lastError,
+        queuedAt: snapshot.queuedAt,
+        nextRetryAt: snapshot.nextRetryAt,
+        retryAttempts: snapshot.retryAttempts,
       },
     });
     return this.mapAcademicWarning(record);
@@ -111,37 +118,73 @@ export class PrismaNotificationRepository extends NotificationRepository {
       }),
       this.prisma.notification.count({ where: { userId } }),
     ]);
-    return { items, total };
+    return { items: items.map((item) => this.mapNotification(item)), total };
   }
 
-  async markRead(id: string, userId: string): Promise<NotificationRecord> {
-    const item = await this.prisma.notification.findFirst({
+  async findByUserAndId(
+    id: string,
+    userId: string,
+  ): Promise<NotificationRecord | null> {
+    const record = await this.prisma.notification.findFirst({
       where: { id, userId },
     });
-    if (!item) throw new NotFoundException('Notification not found');
-    return this.prisma.notification.update({
-      where: { id },
-      data: { isRead: true, readAt: new Date() },
-    });
+    return record ? this.mapNotification(record) : null;
   }
 
-  async updateDeliveryStatus(
-    id: string,
-    input: UpdateDeliveryStatusInput,
+  async saveNotificationReadState(
+    notification: Notification,
   ): Promise<NotificationRecord> {
-    return this.prisma.notification.update({
-      where: { id },
+    const snapshot = notification.toSnapshot();
+    const record = await this.prisma.notification.update({
+      where: { id: snapshot.id },
       data: {
-        status: input.status,
-        retryCount: input.retryCount,
-        errorMessage: input.errorMessage,
-        deliveredAt: input.deliveredAt,
-        sentAt:
-          input.status === NotificationStatus.DELIVERED
-            ? (input.deliveredAt ?? new Date())
-            : undefined,
+        isRead: snapshot.isRead,
+        readAt: snapshot.readAt,
       },
     });
+    return this.mapNotification(record);
+  }
+
+  async saveNotificationDelivery(
+    notification: Notification,
+  ): Promise<NotificationRecord> {
+    const snapshot = notification.toSnapshot();
+    const record = await this.prisma.notification.update({
+      where: { id: snapshot.id },
+      data: {
+        status: snapshot.status as PrismaNotificationStatus,
+        retryCount: snapshot.retryCount,
+        errorMessage: snapshot.errorMessage,
+        deliveredAt: snapshot.deliveredAt,
+        sentAt: snapshot.sentAt,
+      },
+    });
+    return this.mapNotification(record);
+  }
+
+  private mapNotification(record: {
+    id: string;
+    userId: string;
+    type: unknown;
+    eventType: string | null;
+    title: string;
+    body: string;
+    data: unknown;
+    status: unknown;
+    retryCount: number;
+    errorMessage: string | null;
+    isRead: boolean;
+    readAt: Date | null;
+    sentAt: Date | null;
+    deliveredAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): NotificationRecord {
+    return {
+      ...record,
+      type: record.type as unknown as NotificationType,
+      status: record.status as unknown as NotificationStatus,
+    };
   }
 
   private mapAcademicWarning(record: {

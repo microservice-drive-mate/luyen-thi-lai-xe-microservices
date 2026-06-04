@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ScalarLandingController } from './scalar-landing.controller';
 import {
   AppLoggerModule,
   ConsulConfigFactory,
@@ -28,6 +29,7 @@ import Joi from 'joi';
                 'development-local',
                 'staging',
                 'production',
+                'test',
               )
               .default('development'),
             port: Joi.number().default(3009),
@@ -41,7 +43,7 @@ import Joi from 'joi';
       isGlobal: true,
     }),
   ],
-  controllers: [AppController],
+  controllers: [AppController, ScalarLandingController],
   providers: [AppService],
 })
 export class AppModule {}

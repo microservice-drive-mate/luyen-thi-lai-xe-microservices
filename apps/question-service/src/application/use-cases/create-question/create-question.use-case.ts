@@ -33,6 +33,7 @@ export class CreateQuestionUseCase
     if (isDuplicate) throw new QuestionDuplicateException();
 
     const question = Question.create({
+      id: crypto.randomUUID(),
       content: command.content,
       type: command.type,
       licenseCategories: command.licenseCategories,
@@ -44,7 +45,12 @@ export class CreateQuestionUseCase
       isActive: command.isActive,
       topicId: command.topicId,
       createdById: command.createdById,
-      options: command.options,
+      options: command.options.map((option) => ({
+        id: option.id ?? crypto.randomUUID(),
+        content: option.content,
+        isCorrect: option.isCorrect,
+        displayOrder: option.displayOrder,
+      })),
     });
 
     await this.questionRepository.save(question);

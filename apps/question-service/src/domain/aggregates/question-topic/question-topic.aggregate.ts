@@ -23,7 +23,7 @@ export class QuestionTopic extends AggregateRoot<string> {
   static create(props: CreateQuestionTopicProps): QuestionTopic {
     QuestionTopic.validateName(props.name);
     return new QuestionTopic({
-      id: crypto.randomUUID(),
+      id: props.id,
       name: props.name.trim(),
       description: props.description ?? null,
       parentId: props.parentId ?? null,

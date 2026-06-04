@@ -25,6 +25,7 @@ import { ExamTemplateRepository } from './domain/repositories/exam-template.repo
 
 function createTemplate() {
   return ExamTemplate.create({
+    id: 'template-id',
     name: 'De thi B2',
     description: 'De thi B2 strict distribution',
     licenseCategory: LicenseCategory.B2,
@@ -41,6 +42,7 @@ function createTemplate() {
 
 function createSession() {
   return ExamSession.create({
+    id: 'session-id',
     studentId: 'student-id',
     templateId: 'template-id',
     licenseCategory: LicenseCategory.B2,
@@ -49,6 +51,7 @@ function createSession() {
     maxCriticalMistakes: 0,
     questions: [
       {
+        id: 'session-question-1',
         questionId: 'q1',
         questionContent: 'Question 1',
         correctOptionId: 'q1-o1',
@@ -60,6 +63,7 @@ function createSession() {
         ],
       },
       {
+        id: 'session-question-2',
         questionId: 'q2',
         questionContent: 'Question 2',
         correctOptionId: 'q2-o1',
@@ -96,6 +100,7 @@ function createExpiredSession() {
     updatedAt: new Date(now.getTime() - 30 * 60_000),
     questions: [
       {
+        id: 'expired-session-question-1',
         questionId: 'q1',
         questionContent: 'Question 1',
         correctOptionId: 'q1-o1',
@@ -108,6 +113,7 @@ function createExpiredSession() {
         ],
       },
       {
+        id: 'expired-session-question-2',
         questionId: 'q2',
         questionContent: 'Question 2',
         correctOptionId: 'q2-o1',
@@ -150,6 +156,7 @@ describe('ExamSession domain', () => {
 
   it('passes when critical mistakes are within configured threshold', () => {
     const session = ExamSession.create({
+      id: 'threshold-session-id',
       studentId: 'student-id',
       templateId: 'template-id',
       licenseCategory: LicenseCategory.B2,
@@ -158,6 +165,7 @@ describe('ExamSession domain', () => {
       maxCriticalMistakes: 1,
       questions: [
         {
+          id: 'threshold-session-question-1',
           questionId: 'q1',
           questionContent: 'Question 1',
           correctOptionId: 'q1-o1',
@@ -169,6 +177,7 @@ describe('ExamSession domain', () => {
           ],
         },
         {
+          id: 'threshold-session-question-2',
           questionId: 'q2',
           questionContent: 'Question 2',
           correctOptionId: 'q2-o1',
@@ -215,6 +224,7 @@ describe('ExamTemplate domain', () => {
   it('rejects topic distribution totals that do not match totalQuestions', () => {
     expect(() =>
       ExamTemplate.create({
+        id: 'invalid-template-total',
         name: 'Invalid template',
         description: null,
         licenseCategory: LicenseCategory.B2,
@@ -233,6 +243,7 @@ describe('ExamTemplate domain', () => {
   it('rejects duplicate topic ids', () => {
     expect(() =>
       ExamTemplate.create({
+        id: 'invalid-template-duplicate-topic',
         name: 'Invalid template',
         description: null,
         licenseCategory: LicenseCategory.B2,
@@ -254,6 +265,7 @@ describe('ExamTemplate domain', () => {
   it('rejects maxCriticalMistakes greater than criticalQuestions', () => {
     expect(() =>
       ExamTemplate.create({
+        id: 'invalid-template-critical-mistakes',
         name: 'Invalid template',
         description: null,
         licenseCategory: LicenseCategory.B2,

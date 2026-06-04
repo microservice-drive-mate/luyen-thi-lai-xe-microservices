@@ -16,6 +16,7 @@ export enum CourseStatus {
 }
 
 export interface CreateCourseProps {
+  id: string;
   courseCode?: string | null;
   title: string;
   description?: string | null;
@@ -24,8 +25,13 @@ export interface CreateCourseProps {
   tuitionFee?: number;
   capacity?: number | null;
   createdById: string;
-  instructorIds?: string[];
+  instructors?: CreateCourseInstructorProps[];
   requirement?: CreateRequirementProps | null;
+}
+
+export interface CreateCourseInstructorProps {
+  id: string;
+  instructorId: string;
 }
 
 export interface ReconstituteCourseProps {
@@ -47,9 +53,15 @@ export interface ReconstituteCourseProps {
   createdAt: Date;
   updatedAt: Date;
   lessons: ReconstituteLessonProps[];
-  instructorIds: string[];
+  instructors: ReconstituteCourseInstructorProps[];
   requirement: ReconstituteRequirementProps | null;
   materials: ReconstituteMaterialProps[];
+}
+
+export interface ReconstituteCourseInstructorProps {
+  id: string;
+  courseId: string;
+  instructorId: string;
 }
 
 export interface UpdateCourseProps {
@@ -62,6 +74,7 @@ export interface UpdateCourseProps {
 }
 
 export interface CreateLessonProps {
+  id: string;
   title: string;
   content?: string | null;
   order: number;
@@ -83,6 +96,7 @@ export interface UpdateLessonProps {
 }
 
 export interface CreateRequirementProps {
+  id?: string;
   minAge?: number | null;
   prerequisites?: string | null;
   attendanceRate?: number;
@@ -111,6 +125,7 @@ export interface ReconstituteMaterialProps {
 }
 
 export interface CreateMaterialProps {
+  id: string;
   title: string;
   fileUrl?: string | null;
   mediaFileId?: string | null;

@@ -75,6 +75,7 @@ export class EnrollStudentUseCase
     }
 
     const enrollment = CourseEnrollment.create({
+      id: crypto.randomUUID(),
       courseId: command.courseId,
       studentId: command.studentId,
     });

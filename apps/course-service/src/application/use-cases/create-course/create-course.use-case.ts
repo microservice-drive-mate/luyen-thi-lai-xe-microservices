@@ -24,6 +24,7 @@ export class CreateCourseUseCase
       throw new CourseCodeAlreadyExistsException(command.courseCode);
     }
     const course = Course.create({
+      id: crypto.randomUUID(),
       courseCode: command.courseCode,
       title: command.title,
       description: command.description,
@@ -32,8 +33,13 @@ export class CreateCourseUseCase
       tuitionFee: command.tuitionFee,
       capacity: command.capacity,
       createdById: command.createdById,
-      instructorIds: command.instructorIds,
-      requirement: command.requirement ?? null,
+      instructors: command.instructorIds?.map((instructorId) => ({
+        id: crypto.randomUUID(),
+        instructorId,
+      })),
+      requirement: command.requirement
+        ? { id: crypto.randomUUID(), ...command.requirement }
+        : null,
     });
 
     await this.courseRepository.save(

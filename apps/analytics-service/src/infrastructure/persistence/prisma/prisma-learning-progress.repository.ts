@@ -1,16 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import {
+  LearningProfileSnapshot,
+  StudentLearningProgress,
+} from '../../../domain/aggregates/learning-progress/learning-progress.aggregate';
+import {
   ExamCompletedPayload,
   LearningProgressRepository,
   ProgressDashboard,
 } from '../../../domain/repositories/learning-progress.repository';
 import { PrismaService } from './prisma.service';
-
-function toDateOnly(value: Date): Date {
-  return new Date(
-    Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
-  );
-}
 
 @Injectable()
 export class PrismaLearningProgressRepository extends LearningProgressRepository {
@@ -27,20 +25,16 @@ export class PrismaLearningProgressRepository extends LearningProgressRepository
   }
 
   async recordExamCompleted(payload: ExamCompletedPayload): Promise<void> {
-    const occurredAt = payload.occurredAt
-      ? new Date(payload.occurredAt)
-      : new Date();
-    const date = toDateOnly(occurredAt);
     await this.prisma.$transaction(async (tx) => {
       const existing = await tx.studentLearningProfile.findUnique({
         where: { studentId: payload.studentId },
       });
-      const attempts = existing?.totalExamAttempts ?? 0;
-      const avg =
-        attempts === 0
-          ? payload.score
-          : ((existing?.avgExamScore ?? 0) * attempts + payload.score) /
-            (attempts + 1);
+      const profile = existing
+        ? StudentLearningProgress.reconstitute(
+            this.mapLearningProfile(existing),
+          )
+        : StudentLearningProgress.create(payload.studentId);
+      const projection = profile.recordExamCompleted(payload);
 
       await tx.studentLearningProfile.upsert({
         where: { studentId: payload.studentId },
@@ -49,38 +43,39 @@ export class PrismaLearningProgressRepository extends LearningProgressRepository
           studentId: payload.studentId,
           totalExamAttempts: 1,
           passedExams: payload.isPassed ? 1 : 0,
-          avgExamScore: avg,
-          lastActivityAt: occurredAt,
+          avgExamScore: projection.avgExamScore,
+          lastActivityAt: projection.occurredAt,
         },
         update: {
           totalExamAttempts: { increment: 1 },
           passedExams: { increment: payload.isPassed ? 1 : 0 },
-          avgExamScore: avg,
-          lastActivityAt: occurredAt,
+          avgExamScore: projection.avgExamScore,
+          lastActivityAt: projection.occurredAt,
         },
       });
 
       await tx.dailyActivity.upsert({
-        where: { studentId_date: { studentId: payload.studentId, date } },
+        where: {
+          studentId_date: {
+            studentId: projection.studentId,
+            date: projection.date,
+          },
+        },
         create: {
-          studentId: payload.studentId,
-          date,
+          studentId: projection.studentId,
+          date: projection.date,
           examsAttempted: 1,
-          questionsAnswered: payload.questions?.length ?? 0,
-          correctAnswers:
-            payload.questions?.filter((item) => item.isCorrect).length ?? 0,
+          questionsAnswered: projection.questionsAnswered,
+          correctAnswers: projection.correctAnswers,
         },
         update: {
           examsAttempted: { increment: 1 },
-          questionsAnswered: { increment: payload.questions?.length ?? 0 },
-          correctAnswers: {
-            increment:
-              payload.questions?.filter((item) => item.isCorrect).length ?? 0,
-          },
+          questionsAnswered: { increment: projection.questionsAnswered },
+          correctAnswers: { increment: projection.correctAnswers },
         },
       });
 
-      for (const question of payload.questions ?? []) {
+      for (const question of projection.questions) {
         await tx.questionAccuracyTracker.upsert({
           where: {
             studentId_questionId: {
@@ -95,12 +90,12 @@ export class PrismaLearningProgressRepository extends LearningProgressRepository
             topicName: question.topicName,
             totalAttempts: 1,
             correctAttempts: question.isCorrect ? 1 : 0,
-            lastAttemptAt: occurredAt,
+            lastAttemptAt: projection.occurredAt,
           },
           update: {
             totalAttempts: { increment: 1 },
             correctAttempts: { increment: question.isCorrect ? 1 : 0 },
-            lastAttemptAt: occurredAt,
+            lastAttemptAt: projection.occurredAt,
           },
         });
       }
@@ -127,26 +122,30 @@ export class PrismaLearningProgressRepository extends LearningProgressRepository
     studentId: string,
     minutes: number,
   ): Promise<void> {
-    const now = new Date();
-    const date = toDateOnly(now);
+    const projection =
+      StudentLearningProgress.create(studentId).recordLessonCompleted(minutes);
     await this.prisma.$transaction([
       this.prisma.studentLearningProfile.upsert({
         where: { studentId },
         create: {
           id: studentId,
           studentId,
-          totalStudyMinutes: minutes,
-          lastActivityAt: now,
+          totalStudyMinutes: projection.minutes,
+          lastActivityAt: projection.occurredAt,
         },
         update: {
-          totalStudyMinutes: { increment: minutes },
-          lastActivityAt: now,
+          totalStudyMinutes: { increment: projection.minutes },
+          lastActivityAt: projection.occurredAt,
         },
       }),
       this.prisma.dailyActivity.upsert({
-        where: { studentId_date: { studentId, date } },
-        create: { studentId, date, studyMinutes: minutes },
-        update: { studyMinutes: { increment: minutes } },
+        where: { studentId_date: { studentId, date: projection.date } },
+        create: {
+          studentId,
+          date: projection.date,
+          studyMinutes: projection.minutes,
+        },
+        update: { studyMinutes: { increment: projection.minutes } },
       }),
     ]);
   }
@@ -186,51 +185,27 @@ export class PrismaLearningProgressRepository extends LearningProgressRepository
       }),
     ]);
 
-    const passRate =
-      profile.totalExamAttempts === 0
-        ? 0
-        : Math.round((profile.passedExams / profile.totalExamAttempts) * 100);
-    const completionPct =
-      profile.coursesEnrolled === 0
-        ? 0
-        : Math.min(
-            100,
-            Math.round(
-              (profile.coursesCompleted / profile.coursesEnrolled) * 100,
-            ),
-          );
+    return StudentLearningProgress.reconstitute(
+      this.mapLearningProfile(profile),
+    ).buildDashboard(trendRows, weakRows);
+  }
 
-    const weakTopics = weakRows
-      .map((row) => {
-        const accuracyRate =
-          row.totalAttempts === 0 ? 0 : row.correctAttempts / row.totalAttempts;
-        return {
-          topicId: row.topicId,
-          topicName: row.topicName,
-          incorrectCount: row.totalAttempts - row.correctAttempts,
-          accuracyRate,
-        };
-      })
-      .filter((row) => row.incorrectCount > 0)
-      .sort((a, b) => b.incorrectCount - a.incorrectCount)
-      .slice(0, 5);
-
+  private mapLearningProfile(
+    record: LearningProfileSnapshot,
+  ): LearningProfileSnapshot {
     return {
-      studentId,
-      completionPct,
-      studiedCount: profile.totalStudyMinutes,
-      attemptCount: profile.totalExamAttempts,
-      passRate,
-      totalStudyMinutes: profile.totalStudyMinutes,
-      avgExamScore: profile.avgExamScore,
-      trend: trendRows.reverse().map((row) => ({
-        date: row.date.toISOString().slice(0, 10),
-        attempts: row.examsAttempted,
-        correctAnswers: row.correctAnswers,
-        questionsAnswered: row.questionsAnswered,
-      })),
-      weakTopics,
-      lastActivityAt: profile.lastActivityAt,
+      id: record.id,
+      studentId: record.studentId,
+      totalStudyMinutes: record.totalStudyMinutes,
+      totalExamAttempts: record.totalExamAttempts,
+      passedExams: record.passedExams,
+      avgExamScore: record.avgExamScore,
+      coursesEnrolled: record.coursesEnrolled,
+      coursesCompleted: record.coursesCompleted,
+      lastActivityAt: record.lastActivityAt,
+      resetAt: record.resetAt,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
     };
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  DeviceToken,
   DeviceTokenRecord,
   DeviceTokenRepository,
 } from '../../../domain/repositories/device-token.repository';
@@ -11,15 +12,17 @@ export class PrismaDeviceTokenRepository extends DeviceTokenRepository {
     super();
   }
 
-  async upsert(input: {
-    userId: string;
-    token: string;
-    platform: string;
-  }): Promise<DeviceTokenRecord> {
+  async upsert(token: DeviceToken): Promise<DeviceTokenRecord> {
+    const snapshot = token.toSnapshot();
     return this.prisma.deviceToken.upsert({
-      where: { token: input.token },
-      create: input,
-      update: { userId: input.userId, platform: input.platform },
+      where: { token: snapshot.token },
+      create: {
+        id: snapshot.id,
+        userId: snapshot.userId,
+        token: snapshot.token,
+        platform: snapshot.platform,
+      },
+      update: { userId: snapshot.userId, platform: snapshot.platform },
     });
   }
 
