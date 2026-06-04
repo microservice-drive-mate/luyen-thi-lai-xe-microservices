@@ -45,7 +45,15 @@ const rmqClientFactory = (queue: string) => ({
     options: {
       urls: [config.get<string>('rabbitmq.url') ?? 'amqp://127.0.0.1:5672'],
       queue,
-      queueOptions: { durable: true },
+      queueOptions:
+        queue === 'notification_service_events'
+          ? {
+              durable: true,
+              arguments: {
+                'x-dead-letter-exchange': 'notification.dlx',
+              },
+            }
+          : { durable: true },
     },
   }),
 });

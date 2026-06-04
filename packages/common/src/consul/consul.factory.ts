@@ -227,6 +227,39 @@ export class ConsulConfigFactory {
                 : undefined,
             }
           : undefined,
+      smtp:
+        env.NOTIFICATION_SMTP_HOST ||
+        env.NOTIFICATION_SMTP_PORT ||
+        env.NOTIFICATION_SMTP_USER ||
+        env.NOTIFICATION_SMTP_PASS ||
+        env.NOTIFICATION_SMTP_FROM
+          ? {
+              host: env.NOTIFICATION_SMTP_HOST,
+              port: env.NOTIFICATION_SMTP_PORT
+                ? parseInt(env.NOTIFICATION_SMTP_PORT, 10)
+                : undefined,
+              user: env.NOTIFICATION_SMTP_USER,
+              pass: env.NOTIFICATION_SMTP_PASS,
+              from: env.NOTIFICATION_SMTP_FROM,
+            }
+          : undefined,
+      push: env.NOTIFICATION_FCM_CREDENTIALS
+        ? {
+            fcmCredentials: env.NOTIFICATION_FCM_CREDENTIALS,
+          }
+        : undefined,
+      retry:
+        env.NOTIFICATION_RETRY_MAX_ATTEMPTS ||
+        env.NOTIFICATION_RETRY_INTERVAL_MS
+          ? {
+              maxAttempts: env.NOTIFICATION_RETRY_MAX_ATTEMPTS
+                ? parseInt(env.NOTIFICATION_RETRY_MAX_ATTEMPTS, 10)
+                : undefined,
+              intervalMs: env.NOTIFICATION_RETRY_INTERVAL_MS
+                ? parseInt(env.NOTIFICATION_RETRY_INTERVAL_MS, 10)
+                : undefined,
+            }
+          : undefined,
       services:
         env.QUESTION_SERVICE_URL || env.USER_SERVICE_URL
           ? {

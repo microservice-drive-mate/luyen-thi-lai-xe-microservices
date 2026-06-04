@@ -1,7 +1,7 @@
 # Notification Service API Specification
 
 **Base URL qua Kong:** `http://localhost:8000`  
-**Service paths:** `/notifications`, `/admin/academic-warnings`  
+**Service paths qua Kong:** `/notifications`, `/admin/academic-warnings`, `/notification-service/docs`  
 **Direct local:** `http://localhost:3006`  
 **Swagger UI:** `http://localhost:3006/docs`  
 **Swagger UI qua Kong:** `http://localhost:8000/notification-service/docs`  
@@ -9,25 +9,25 @@
 **OpenAPI JSON qua Kong:** `http://localhost:8000/notification-service/docs-json`  
 **Version:** 1.0.0
 
-Notification-service stores in-app notifications and academic warnings. Frontend calls protected APIs with `Authorization: Bearer <access_token>`; current user id is read from JWT `sub`. Do not send `x-user-id`.
+Notification-service lưu thông báo in-app, audit cảnh báo học tập và device token dùng cho push notification. Frontend gọi các HTTP API bằng `Authorization: Bearer <access_token>`. User hiện tại được lấy từ JWT `sub`; client không gửi `x-user-id`.
 
-Academic warning creation is synchronous for auditability. Delivery is represented as an in-app notification and can be extended later with email/push workers.
-
----
+Gửi thông báo nội bộ là luồng bất đồng bộ. Các service khác emit RabbitMQ event vào queue `notification_service_events`; notification-service consume event, tạo bản ghi `Notification`, gửi qua `IN_APP`, `EMAIL` hoặc `PUSH`, retry khi lỗi và đưa message vào DLQ khi vượt số lần retry.
 
 ## Authentication
+
+Tất cả endpoint dưới đây dùng `ApiBearerAuth` và Keycloak role guard.
 
 | Endpoint | Role |
 | --- | --- |
 | `POST /admin/academic-warnings` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 | `GET /notifications/me` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
 | `PATCH /notifications/:id/read` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
-
----
+| `POST /notifications/devices` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
+| `DELETE /notifications/devices/:token` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
 
 ## Response Format
 
-All successful responses are wrapped by the global `ApiResponseInterceptor`.
+Service dùng `ApiResponseInterceptor` từ `@repo/common`, nên response thành công được bọc dạng:
 
 ```json
 {
@@ -40,7 +40,7 @@ All successful responses are wrapped by the global `ApiResponseInterceptor`.
 }
 ```
 
-Error responses:
+Response lỗi thường có dạng:
 
 ```json
 {
@@ -52,80 +52,65 @@ Error responses:
 }
 ```
 
----
-
 ## Error Codes
 
-| HTTP | Code | Cause |
+| HTTP | Code | Nguyên nhân |
 | ---: | --- | --- |
-| 400 | `VALIDATION_ERROR` | Invalid body/query/path parameter |
-| 401 | `UNAUTHORIZED` | Missing or invalid access token |
-| 403 | `FORBIDDEN` | Token is valid but role is not allowed |
-| 404 | `NOT_FOUND` | Notification does not exist or does not belong to caller |
-| 500 | `INTERNAL_ERROR` | Database/event handling error |
-
----
+| 400 | `VALIDATION_ERROR` | Body/query/path không hợp lệ |
+| 401 | `UNAUTHORIZED` | Thiếu hoặc sai access token |
+| 403 | `FORBIDDEN` | Token hợp lệ nhưng role không được phép |
+| 404 | `NOT_FOUND` | Notification không tồn tại hoặc không thuộc user hiện tại |
+| 500 | `INTERNAL_ERROR` | Lỗi database, RabbitMQ hoặc provider gửi thông báo |
 
 ## Enums
 
 `NotificationType`: `IN_APP` | `EMAIL` | `PUSH` | `SMS`
 
-The current implementation creates `IN_APP` notifications. Other enum values are reserved for delivery-channel extensions.
+`NotificationStatus`: `PENDING` | `QUEUED` | `DELIVERED` | `FAILED`
 
----
+Code hiện tại dispatch các kênh `IN_APP`, `EMAIL`, `PUSH`. `SMS` chỉ là enum giữ chỗ trong schema Prisma.
 
 ## Shared Schemas
 
 ### `Notification`
 
-| Field | Type | Description |
+| Field | Type | Mô tả |
 | --- | --- | --- |
-| `id` | `uuid` | Notification id |
-| `userId` | `uuid` | Recipient user id |
-| `type` | `NotificationType` | Delivery type |
-| `title` | `string` | Short notification title |
-| `body` | `string` | Notification message |
-| `data` | `object` | Extra metadata, for example warning id or exam session id |
-| `isRead` | `boolean` | Whether current recipient has read it |
-| `readAt` | `string | null` | Read timestamp |
-| `sentAt` | `string | null` | Delivery timestamp |
-| `createdAt` | `string` | Creation timestamp |
+| `id` | `uuid` | ID thông báo |
+| `userId` | `string` | ID người nhận, lấy theo user id nội bộ/JWT `sub` |
+| `type` | `NotificationType` | Kênh gửi |
+| `eventType` | `string | null` | Event nguồn, ví dụ `identity.user.created` |
+| `title` | `string` | Tiêu đề |
+| `body` | `string` | Nội dung |
+| `data` | `object` | Metadata bổ sung |
+| `status` | `NotificationStatus` | Trạng thái gửi |
+| `retryCount` | `number` | Số lần retry ở message/event hiện tại |
+| `errorMessage` | `string | null` | Lỗi gửi gần nhất, nếu có |
+| `isRead` | `boolean` | User đã đọc hay chưa |
+| `readAt` | `string | null` | ISO datetime lúc đọc |
+| `sentAt` | `string | null` | ISO datetime lúc gửi/đánh dấu delivered |
+| `deliveredAt` | `string | null` | ISO datetime lúc gửi thành công |
+| `createdAt` | `string` | ISO datetime lúc tạo |
+| `updatedAt` | `string` | ISO datetime lúc cập nhật |
 
-### `ListNotificationsResponse`
+### `DeviceToken`
 
-```json
-{
-  "items": [
-    {
-      "id": "0b9cb629-4f43-4f4f-a936-7dc664a7351e",
-      "userId": "89ea9a17-1cce-4fff-855c-d32a081648cd",
-      "type": "IN_APP",
-      "title": "Academic warning: HIGH",
-      "body": "Bạn cần ôn lại nhóm câu hỏi thường sai trước khi thi tiếp.",
-      "data": {
-        "warningId": "48c7047d-3db9-4dc0-bb75-b68735ab51ea",
-        "reason": "LOW_EXAM_SCORE",
-        "severity": "HIGH"
-      },
-      "isRead": false,
-      "readAt": null,
-      "sentAt": "2026-05-21T10:00:00.000Z",
-      "createdAt": "2026-05-21T10:00:00.000Z"
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "size": 20
-}
-```
-
----
+| Field | Type | Mô tả |
+| --- | --- | --- |
+| `id` | `uuid` | ID bản ghi |
+| `userId` | `string` | User sở hữu token |
+| `token` | `string` | Device token FCM/APNs |
+| `platform` | `ios | android` | Nền tảng client gửi lên |
+| `createdAt` | `string` | ISO datetime lúc tạo |
+| `updatedAt` | `string` | ISO datetime lúc cập nhật |
 
 ## Endpoints
 
 ### POST `/admin/academic-warnings`
 
-Creates an academic warning record and an in-app notification for a student. `createdById` is taken from the caller JWT `sub`.
+Đưa một cảnh báo học tập vào hàng đợi. Controller publish event `notification.academic-warning.queued` vào RabbitMQ rồi trả `202 Accepted`. Worker của notification-service consume event này, tạo `AcademicWarning`, tạo thông báo `IN_APP`, gửi `PUSH`, và gửi `EMAIL` nếu payload event có `studentEmail`.
+
+Lưu ý theo code hiện tại: HTTP request body chưa có field `studentEmail`, nên luồng tạo cảnh báo qua endpoint này chỉ có `IN_APP` và `PUSH`; muốn có email cần publish event trực tiếp với `studentEmail`.
 
 **Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
 
@@ -148,14 +133,14 @@ Authorization: Bearer <admin_or_instructor_access_token>
 
 **Validation**
 
-| Field | Required | Rule |
+| Field | Bắt buộc | Quy tắc |
 | --- | --- | --- |
-| `studentId` | yes | UUID |
-| `reason` | yes | non-empty string |
-| `severity` | yes | non-empty string, recommended values: `LOW`, `MEDIUM`, `HIGH` |
-| `message` | yes | non-empty string |
+| `studentId` | có | UUID |
+| `reason` | có | string không rỗng |
+| `severity` | có | string không rỗng. Khuyến nghị: `LOW`, `MEDIUM`, `HIGH` |
+| `message` | có | string không rỗng |
 
-**Response `201`**
+**Response `202 Accepted`**
 
 ```json
 {
@@ -165,40 +150,30 @@ Authorization: Bearer <admin_or_instructor_access_token>
   "timestamp": "2026-05-21T10:00:00.000Z",
   "path": "/admin/academic-warnings",
   "data": {
-    "id": "0b9cb629-4f43-4f4f-a936-7dc664a7351e",
-    "userId": "89ea9a17-1cce-4fff-855c-d32a081648cd",
-    "type": "IN_APP",
-    "title": "Academic warning: HIGH",
-    "body": "Bạn cần ôn lại nhóm câu hỏi thường sai trước khi thi tiếp.",
-    "data": {
-      "warningId": "48c7047d-3db9-4dc0-bb75-b68735ab51ea",
-      "reason": "LOW_EXAM_SCORE",
-      "severity": "HIGH"
-    },
-    "isRead": false,
-    "readAt": null,
-    "sentAt": "2026-05-21T10:00:00.000Z",
-    "createdAt": "2026-05-21T10:00:00.000Z"
+    "status": "ACCEPTED",
+    "message": "Cảnh báo học tập đã được đưa vào hàng đợi; học viên sẽ nhận thông báo bất đồng bộ."
   }
 }
 ```
 
-**Common errors:** `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
+**Lỗi thường gặp:** `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
 
 ---
 
 ### GET `/notifications/me`
 
-Returns the current user's notifications in newest-first order.
+Trả về danh sách thông báo của người dùng hiện tại, mới nhất trước. User id lấy từ JWT `sub`.
 
 **Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
 
 **Query Parameters**
 
-| Name | Type | Required | Default | Rule |
+| Tên | Type | Bắt buộc | Mặc định | Xử lý trong code |
 | --- | --- | --- | --- | --- |
-| `page` | `number` | no | `1` | Minimum 1 |
-| `size` | `number` | no | `20` | Minimum 1, maximum 100 |
+| `page` | `number` | không | `1` | `Math.max(page, 1)` |
+| `size` | `number` | không | `20` | clamp trong khoảng `1..100` |
+
+DTO hiện tại chỉ dùng `@IsOptional()`, chưa có `@IsInt()`, `@Min()` hoặc `@Max()`. `ValidationPipe({ transform: true })` sẽ cố transform query primitive, sau đó use case tự clamp giá trị.
 
 **Response `200`**
 
@@ -215,15 +190,24 @@ Returns the current user's notifications in newest-first order.
         "id": "0b9cb629-4f43-4f4f-a936-7dc664a7351e",
         "userId": "89ea9a17-1cce-4fff-855c-d32a081648cd",
         "type": "IN_APP",
-        "title": "Exam completed",
-        "body": "Bạn đã hoàn thành bài thi mô phỏng.",
+        "eventType": "exam.session.passed",
+        "title": "Bạn đã vượt qua bài thi",
+        "body": "Chúc mừng! Bạn đã hoàn thành bài thi B2. Điểm: 28.",
         "data": {
-          "sessionId": "7976cf6d-5aab-4a6d-bd34-3e97bdade9cd"
+          "sessionId": "7976cf6d-5aab-4a6d-bd34-3e97bdade9cd",
+          "licenseCategory": "B2",
+          "score": 28,
+          "passed": true
         },
+        "status": "DELIVERED",
+        "retryCount": 0,
+        "errorMessage": null,
         "isRead": false,
         "readAt": null,
         "sentAt": "2026-05-21T10:00:00.000Z",
-        "createdAt": "2026-05-21T10:00:00.000Z"
+        "deliveredAt": "2026-05-21T10:00:00.000Z",
+        "createdAt": "2026-05-21T10:00:00.000Z",
+        "updatedAt": "2026-05-21T10:00:00.000Z"
       }
     ],
     "total": 1,
@@ -233,21 +217,21 @@ Returns the current user's notifications in newest-first order.
 }
 ```
 
-**Common errors:** `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
+**Lỗi thường gặp:** `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
 
 ---
 
 ### PATCH `/notifications/:id/read`
 
-Marks one notification as read. The service checks ownership with the caller JWT `sub`; users cannot mark another user's notification.
+Đánh dấu một thông báo là đã đọc. Repository tìm theo `{ id, userId }`, nên user không thể đánh dấu thông báo của user khác.
 
 **Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
 
 **Path Parameters**
 
-| Name | Type | Required | Description |
+| Tên | Type | Bắt buộc | Mô tả |
 | --- | --- | --- | --- |
-| `id` | `uuid` | yes | Notification id |
+| `id` | `string` | có | ID thông báo. Code hiện tại chưa validate UUID ở decorator |
 
 **Response `200`**
 
@@ -256,38 +240,139 @@ Marks one notification as read. The service checks ownership with the caller JWT
   "success": true,
   "code": "SUCCESS",
   "message": "OK",
-  "timestamp": "2026-05-21T10:00:00.000Z",
+  "timestamp": "2026-05-21T10:03:00.000Z",
   "path": "/notifications/0b9cb629-4f43-4f4f-a936-7dc664a7351e/read",
   "data": {
     "id": "0b9cb629-4f43-4f4f-a936-7dc664a7351e",
     "userId": "89ea9a17-1cce-4fff-855c-d32a081648cd",
     "type": "IN_APP",
-    "title": "Academic warning: HIGH",
+    "eventType": "notification.academic-warning.created",
+    "title": "Cảnh báo học tập: HIGH",
     "body": "Bạn cần ôn lại nhóm câu hỏi thường sai trước khi thi tiếp.",
     "data": {
       "warningId": "48c7047d-3db9-4dc0-bb75-b68735ab51ea",
       "reason": "LOW_EXAM_SCORE",
       "severity": "HIGH"
     },
+    "status": "DELIVERED",
+    "retryCount": 0,
+    "errorMessage": null,
     "isRead": true,
     "readAt": "2026-05-21T10:03:00.000Z",
     "sentAt": "2026-05-21T10:00:00.000Z",
-    "createdAt": "2026-05-21T10:00:00.000Z"
+    "deliveredAt": "2026-05-21T10:00:00.000Z",
+    "createdAt": "2026-05-21T10:00:00.000Z",
+    "updatedAt": "2026-05-21T10:03:00.000Z"
   }
 }
 ```
 
-**Common errors:** `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `INTERNAL_ERROR`.
+**Lỗi thường gặp:** `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `INTERNAL_ERROR`.
 
 ---
 
-## Events
+### POST `/notifications/devices`
 
-Notification-service consumes these event types:
+Đăng ký mới hoặc refresh device token FCM/APNs cho user hiện tại. Token là unique. Nếu token đã tồn tại, repository update lại `userId` và `platform`.
 
-| Event | Effect |
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
+
+**Headers**
+
+```http
+Authorization: Bearer <access_token>
+```
+
+**Body**
+
+```json
+{
+  "token": "fcm-device-token",
+  "platform": "android"
+}
+```
+
+**Validation**
+
+| Field | Bắt buộc | Quy tắc |
+| --- | --- | --- |
+| `token` | có | string không rỗng |
+| `platform` | có | `ios` hoặc `android` |
+
+**Response `201 Created`**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-21T10:00:00.000Z",
+  "path": "/notifications/devices",
+  "data": {
+    "id": "5ccf8781-1bbd-4d55-9a95-9e51d0b2fdf6",
+    "userId": "89ea9a17-1cce-4fff-855c-d32a081648cd",
+    "token": "fcm-device-token",
+    "platform": "android",
+    "createdAt": "2026-05-21T10:00:00.000Z",
+    "updatedAt": "2026-05-21T10:00:00.000Z"
+  }
+}
+```
+
+**Lỗi thường gặp:** `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
+
+---
+
+### DELETE `/notifications/devices/:token`
+
+Hủy đăng ký một device token. Code hiện tại xóa theo `token` và không lọc thêm `userId`; nếu token không tồn tại thì repository bỏ qua và vẫn trả `204 No Content`.
+
+Token cũng có thể bị xóa tự động khi FCM báo token không hợp lệ.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
+
+**Path Parameters**
+
+| Tên | Type | Bắt buộc | Mô tả |
+| --- | --- | --- | --- |
+| `token` | `string` | có | Device token cần hủy |
+
+**Response `204 No Content`**
+
+Không có body.
+
+**Lỗi thường gặp:** `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
+
+## Events Consumed
+
+Notification-service bind vào queue `notification_service_events`.
+
+| Event pattern | Payload chính | Kênh gửi |
+| --- | --- | --- |
+| `identity.user.created` | `userId`, `email`, `fullName?` | `IN_APP`, `EMAIL` |
+| `identity.user.password-reset-requested` | `userId`, `email`, `resetUrl` | `EMAIL` |
+| `exam.session.passed` | `studentId` hoặc `userId`, `email?`, `sessionId?`, `licenseCategory?`, `score?` | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có `email` |
+| `exam.session.failed` | giống `exam.session.passed` | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có `email` |
+| `notification.academic-warning.queued` | `studentId`, `reason`, `severity`, `message`, `createdById`, `studentEmail?`, `warningId?` | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có `studentEmail` |
+| `course.updated` | `recipientId`, `recipientEmail?`, `courseId`, `courseTitle`, `updateSummary` | `IN_APP`, `PUSH`, thêm `EMAIL` nếu có `recipientEmail` |
+
+Mỗi payload có thể kèm `retryCount`; field này do retry publisher set khi replay message.
+
+## RabbitMQ Retry và DLQ
+
+| Thành phần | Tên |
 | --- | --- |
-| `exam.session.passed` | Creates a non-blocking in-app notification for the student |
-| `exam.session.failed` | Creates a non-blocking in-app notification for the student |
+| Queue chính | `notification_service_events` |
+| Retry exchange | `notification.retry` |
+| Retry queue | `notification_service_retry` |
+| DLQ exchange | `notification.dlx` |
+| DLQ | `notification_service_dlq` |
 
-Event consumers log and skip invalid payloads so notification delivery does not block exam completion.
+Khi handler lỗi:
+
+1. Nếu chưa vượt `retry.maxAttempts`, service ack message gốc và publish lại vào retry exchange.
+2. Retry queue giữ message theo TTL `retry.intervalMs`.
+3. Hết TTL, RabbitMQ route message lại queue chính.
+4. Nếu vượt `retry.maxAttempts`, service nack message để dead-letter sang `notification_service_dlq`.
+
+Chi tiết chạy local, config Consul, Firebase/SMTP và ví dụ service-to-service nằm ở [`apps/notification-service/README.md`](../../apps/notification-service/README.md).

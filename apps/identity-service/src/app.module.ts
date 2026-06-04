@@ -106,7 +106,12 @@ import {
                 'amqp://localhost:5672',
             ],
             queue: 'notification_service_events',
-            queueOptions: { durable: true },
+            queueOptions: {
+              durable: true,
+              arguments: {
+                'x-dead-letter-exchange': 'notification.dlx',
+              },
+            },
           },
         }),
       },
