@@ -73,6 +73,10 @@ interface AmqpChannel extends RabbitMqChannel {
       deadLetterRoutingKey?: string;
     },
   ): Promise<unknown>;
+  deleteQueue(
+    queue: string,
+    options?: { ifUnused?: boolean; ifEmpty?: boolean },
+  ): Promise<unknown>;
   close(): Promise<void>;
 }
 
@@ -203,32 +207,102 @@ export async function assertRabbitMqResilienceTopology(
   const retryDelaysMs =
     options.retryDelaysMs ?? DEFAULT_RABBITMQ_RETRY_DELAYS_MS;
   const connection = await amqp.connect(url);
-  const channel = await connection.createChannel();
+  let channel = await connection.createChannel();
 
   try {
-    await channel.assertQueue(
-      options.queue,
-      createRabbitMqQueueOptions(options.queue),
-    );
-    await channel.assertQueue(getRabbitMqDlqName(options.queue), {
-      durable: true,
-    });
+    try {
+      await declareRabbitMqResilienceTopology(
+        channel,
+        options.queue,
+        retryDelaysMs,
+      );
+    } catch (error) {
+      if (!canResetLocalRetryTopology(error)) {
+        throw error;
+      }
 
-    for (const [index, delayMs] of retryDelaysMs.entries()) {
-      await channel.assertQueue(
-        getRabbitMqRetryQueueName(options.queue, index + 1),
-        {
-          durable: true,
-          messageTtl: delayMs,
-          deadLetterExchange: '',
-          deadLetterRoutingKey: options.queue,
-        },
+      const logger = new Logger('RabbitMqResilience');
+      logger.warn(
+        `RabbitMQ retry queue TTL changed for ${options.queue}; resetting local retry queues.`,
+      );
+      await closeChannelQuietly(channel);
+
+      const repairChannel = await connection.createChannel();
+      try {
+        await deleteRetryQueues(
+          repairChannel,
+          options.queue,
+          retryDelaysMs.length,
+        );
+      } finally {
+        await closeChannelQuietly(repairChannel);
+      }
+
+      channel = await connection.createChannel();
+      await declareRabbitMqResilienceTopology(
+        channel,
+        options.queue,
+        retryDelaysMs,
       );
     }
   } finally {
-    await channel.close();
+    await closeChannelQuietly(channel);
     await connection.close();
   }
+}
+
+async function declareRabbitMqResilienceTopology(
+  channel: AmqpChannel,
+  queue: string,
+  retryDelaysMs: number[],
+): Promise<void> {
+  await channel.assertQueue(queue, createRabbitMqQueueOptions(queue));
+  await channel.assertQueue(getRabbitMqDlqName(queue), {
+    durable: true,
+  });
+
+  for (const [index, delayMs] of retryDelaysMs.entries()) {
+    await channel.assertQueue(getRabbitMqRetryQueueName(queue, index + 1), {
+      durable: true,
+      messageTtl: delayMs,
+      deadLetterExchange: '',
+      deadLetterRoutingKey: queue,
+    });
+  }
+}
+
+async function deleteRetryQueues(
+  channel: AmqpChannel,
+  queue: string,
+  retryQueueCount: number,
+): Promise<void> {
+  for (let attempt = 1; attempt <= retryQueueCount; attempt += 1) {
+    await channel.deleteQueue(getRabbitMqRetryQueueName(queue, attempt), {
+      ifEmpty: false,
+      ifUnused: false,
+    });
+  }
+}
+
+async function closeChannelQuietly(channel: AmqpChannel): Promise<void> {
+  try {
+    await channel.close();
+  } catch {
+    // RabbitMQ closes the channel after PRECONDITION_FAILED.
+  }
+}
+
+function canResetLocalRetryTopology(error: unknown): boolean {
+  if (process.env.NODE_ENV !== 'development-local') {
+    return false;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes('PRECONDITION_FAILED') &&
+    message.includes('inequivalent arg') &&
+    message.includes('x-message-ttl')
+  );
 }
 
 @Injectable()
