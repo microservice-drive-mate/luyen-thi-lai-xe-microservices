@@ -3,13 +3,15 @@
 ## Setup
 
 ```powershell
-docker compose up -d db-notification rabbitmq consul consul-init
+docker compose up -d db-notification rabbitmq redis consul consul-init
 npm --workspace=apps/notification-service run db:deploy
 npm run db:seed
 npm --workspace=apps/notification-service run start:dev
 ```
 
 Use a real Keycloak token. Frontend and Swagger calls should send `Authorization: Bearer <access_token>`; do not send `x-user-id`.
+
+Redis is required because notification-service uses the Socket.IO Redis adapter. In hybrid dev, Consul should expose `config/development-local/notification-service/redis.url=redis://localhost:6379`.
 
 ## Firebase Push Setup
 
@@ -72,6 +74,39 @@ Content-Type: application/json
 ```
 
 Expected: response is an in-app notification for the student.
+
+## Realtime In-App Notification Test
+
+Install a temporary Socket.IO client if your frontend is not ready yet:
+
+```powershell
+npm install --no-save socket.io-client
+```
+
+Create a short local script outside tracked source or run the equivalent in the frontend:
+
+```ts
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3006/notifications', {
+  path: '/notifications/socket.io',
+  auth: { token: process.env.STUDENT_TOKEN },
+});
+
+socket.on('notification.connected', console.log);
+socket.on('notification.created', console.log);
+socket.on('notification.unread_count.updated', console.log);
+socket.on('notification.auth_failed', console.error);
+```
+
+With the socket connected, call `POST /admin/academic-warnings`. Expected realtime events:
+
+- `notification.created` with the new `IN_APP` notification and `unreadCount`.
+- `notification.unread_count.updated` with the latest unread count.
+
+Then call `PATCH /notifications/{notificationId}/read`. Expected realtime event:
+
+- `notification.unread_count.updated` with the unread count after marking the notification as read.
 
 ## Student Reads Notifications
 

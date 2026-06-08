@@ -131,6 +131,15 @@ export class PrismaNotificationRepository extends NotificationRepository {
     return record ? this.mapNotification(record) : null;
   }
 
+  async countUnreadByUser(userId: string): Promise<number> {
+    return this.prisma.notification.count({
+      where: {
+        userId,
+        isRead: false,
+      },
+    });
+  }
+
   async saveNotificationReadState(
     notification: Notification,
   ): Promise<NotificationRecord> {

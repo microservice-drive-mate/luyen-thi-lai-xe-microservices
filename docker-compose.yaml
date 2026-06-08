@@ -470,6 +470,7 @@ services:
       - CONSUL_URL=http://consul:8500
       - LOGSTASH_HOST=logstash
       - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
+      - REDIS_URL=redis://redis:6379
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=luyen-thi-lai-xe-realm
       - KEYCLOAK_CLIENT_ID=nestjs-backend
@@ -489,6 +490,8 @@ services:
       consul-init:
         condition: service_completed_successfully
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       mailpit:
         condition: service_started

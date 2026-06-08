@@ -2,12 +2,16 @@
 
 - **Base URL qua Kong:** `http://localhost:8000`
 - **Service paths:** `/notifications`, `/admin/academic-warnings`
+- **Realtime Socket.IO namespace:** `/notifications`
+- **Realtime Socket.IO path:** `/notifications/socket.io`
 - **Direct local:** `http://localhost:3006`
 - **Swagger UI:** `http://localhost:3006/docs`
 - **Swagger UI qua Kong:** `http://localhost:8000/notification-service/docs`
 - **OpenAPI JSON:** `http://localhost:3006/docs-json`
 - **OpenAPI JSON qua Kong:** `http://localhost:8000/notification-service/docs-json`
 - **Version:** `1.0.0`
+
+In-app notifications also support realtime delivery over Socket.IO. The client connects to namespace `/notifications` using Engine.IO path `/notifications/socket.io`. The same Keycloak access token is sent in `auth.token` or `Authorization: Bearer <access_token>` during the socket handshake.
 
 Notification-service lưu in-app notifications, gửi email qua SMTP, gửi push qua Firebase Cloud Messaging, và consume RabbitMQ events từ các service khác. Frontend gọi các API được bảo vệ bằng `Authorization: Bearer <access_token>`; current user id được đọc từ JWT `sub`.
 
@@ -24,6 +28,7 @@ SMTP dùng các biến `KEYCLOAK_SMTP_*` trong root `.env`. Push dùng `FCM_CRED
 | `PATCH /notifications/:id/read`        | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
 | `POST /notifications/devices`          | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
 | `DELETE /notifications/devices/:token` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
+| Socket.IO `/notifications`             | Valid Keycloak access token                         |
 
 ---
 
@@ -358,6 +363,49 @@ Backend chỉ xóa token thuộc current user đọc từ JWT `sub`.
 - Khi app background/quit, notification payload từ backend sẽ được OS/Firebase đưa vào system tray nếu app đã cấu hình đúng.
 
 Nếu `FCM_CREDENTIALS` trống, notification-service skip PUSH có kiểm soát và không đưa message vào retry/DLQ chỉ vì local/dev chưa có Firebase credential. Nếu đã cấu hình credential nhưng Firebase Admin init/send lỗi retryable, RabbitMQ retry/DLQ xử lý như các lỗi delivery khác.
+
+---
+
+## Realtime In-App Notifications
+
+Socket.IO is used only for realtime fan-out. REST APIs remain the source for listing notifications and marking them as read.
+
+### Connect
+
+Direct local:
+
+```ts
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3006/notifications', {
+  path: '/notifications/socket.io',
+  auth: { token: accessToken },
+});
+```
+
+Through Kong:
+
+```ts
+const socket = io('http://localhost:8000/notifications', {
+  path: '/notifications/socket.io',
+  auth: { token: accessToken },
+});
+```
+
+The service verifies the JWT signature with the Keycloak realm public key and rejects revoked tokens from the shared Redis token blacklist. After authentication succeeds, the socket joins room `user:{sub}`.
+
+### Server Events
+
+| Event                               | Payload                                                                     | When emitted                                              |
+| ----------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `notification.connected`            | `{ "userId": "<keycloak-sub>" }`                                            | Socket authentication succeeds                            |
+| `notification.auth_failed`          | `{ "reason": "missing_token" \| "missing_subject" \| "invalid_token" }`     | Socket authentication fails before disconnect             |
+| `notification.created`              | `{ "notification": Notification, "unreadCount": number }`                   | A new `IN_APP` notification is delivered for current user |
+| `notification.unread_count.updated` | `{ "unreadCount": number }`                                                 | A new `IN_APP` notification is delivered or marked read   |
+
+Realtime events are best-effort. If Socket.IO emit fails, the notification remains persisted and RabbitMQ delivery is not retried only because realtime fan-out failed.
+
+Redis is required for the Socket.IO adapter in multi-instance deployments. Use `REDIS_URL` or Consul key `config/<env>/notification-service/redis.url`.
 
 ---
 

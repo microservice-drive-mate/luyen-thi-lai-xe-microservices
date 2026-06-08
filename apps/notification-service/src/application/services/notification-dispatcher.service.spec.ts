@@ -8,6 +8,10 @@ import { DeviceTokenRepository } from '../../domain/repositories/device-token.re
 import { NotificationMetrics } from '../../infrastructure/metrics/notification.metrics';
 import { MailProvider } from '../ports/mail.provider';
 import { PushProvider, PushSendResult } from '../ports/push.provider';
+import {
+  NOTIFICATION_WS_EVENTS,
+  WsEmitterPort,
+} from '../ports/ws-emitter.port';
 import { NotificationDispatcher } from './notification-dispatcher.service';
 
 describe('NotificationDispatcher push delivery', () => {
@@ -22,6 +26,7 @@ describe('NotificationDispatcher push delivery', () => {
   let notificationRepository: {
     createNotification: jest.Mock;
     saveNotificationDelivery: jest.Mock;
+    countUnreadByUser: jest.Mock;
   };
   let deviceTokenRepository: {
     findByUser: jest.Mock;
@@ -35,6 +40,9 @@ describe('NotificationDispatcher push delivery', () => {
     recordFailure: jest.Mock;
     recordSkipped: jest.Mock;
   };
+  let wsEmitter: {
+    emitToUser: jest.Mock;
+  };
   let dispatcher: NotificationDispatcher;
 
   beforeEach(() => {
@@ -45,6 +53,7 @@ describe('NotificationDispatcher push delivery', () => {
       saveNotificationDelivery: jest.fn((notification: Notification) =>
         Promise.resolve(notification.toSnapshot()),
       ),
+      countUnreadByUser: jest.fn().mockResolvedValue(3),
     };
     deviceTokenRepository = {
       findByUser: jest.fn(),
@@ -58,6 +67,9 @@ describe('NotificationDispatcher push delivery', () => {
       recordFailure: jest.fn(),
       recordSkipped: jest.fn(),
     };
+    wsEmitter = {
+      emitToUser: jest.fn(),
+    };
 
     dispatcher = new NotificationDispatcher(
       notificationRepository as unknown as NotificationRepository,
@@ -65,6 +77,35 @@ describe('NotificationDispatcher push delivery', () => {
       { send: jest.fn() } as unknown as MailProvider,
       pushProvider as unknown as PushProvider,
       metrics as unknown as NotificationMetrics,
+      wsEmitter as unknown as WsEmitterPort,
+    );
+  });
+
+  it('emits realtime events for delivered in-app notifications', async () => {
+    const result = await dispatcher.dispatch({
+      ...baseInput,
+      channels: [NotificationType.IN_APP],
+    });
+
+    expect(result[0]).toMatchObject({
+      type: NotificationType.IN_APP,
+      status: NotificationStatus.DELIVERED,
+    });
+    expect(notificationRepository.countUnreadByUser).toHaveBeenCalledWith(
+      'user-1',
+    );
+    expect(wsEmitter.emitToUser).toHaveBeenCalledWith(
+      'user-1',
+      NOTIFICATION_WS_EVENTS.CREATED,
+      {
+        notification: result[0],
+        unreadCount: 3,
+      },
+    );
+    expect(wsEmitter.emitToUser).toHaveBeenCalledWith(
+      'user-1',
+      NOTIFICATION_WS_EVENTS.UNREAD_COUNT_UPDATED,
+      { unreadCount: 3 },
     );
   });
 

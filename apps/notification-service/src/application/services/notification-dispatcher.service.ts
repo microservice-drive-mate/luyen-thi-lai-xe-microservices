@@ -14,6 +14,12 @@ import {
   PushProvider,
   PushSendResult,
 } from '../ports/push.provider';
+import {
+  NOTIFICATION_WS_EVENTS,
+  NotificationCreatedPayload,
+  NotificationUnreadCountPayload,
+  WsEmitterPort,
+} from '../ports/ws-emitter.port';
 
 export interface DispatchInput {
   eventType: string;
@@ -41,6 +47,7 @@ export class NotificationDispatcher {
     private readonly mailProvider: MailProvider,
     private readonly pushProvider: PushProvider,
     private readonly metrics: NotificationMetrics,
+    private readonly wsEmitter: WsEmitterPort,
   ) {}
 
   async dispatch(input: DispatchInput): Promise<NotificationRecord[]> {
@@ -71,6 +78,9 @@ export class NotificationDispatcher {
           this.metrics.recordSuccess(channel, input.eventType);
         }
         created.push(delivered);
+        if (channel === NotificationType.IN_APP) {
+          await this.emitInAppDelivered(delivered);
+        }
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Unknown delivery error';
@@ -85,6 +95,37 @@ export class NotificationDispatcher {
       }
     }
     return created;
+  }
+
+  private async emitInAppDelivered(record: NotificationRecord): Promise<void> {
+    try {
+      const unreadCount = await this.repository.countUnreadByUser(
+        record.userId,
+      );
+      const createdPayload: NotificationCreatedPayload = {
+        notification: record,
+        unreadCount,
+      };
+      const unreadCountPayload: NotificationUnreadCountPayload = {
+        unreadCount,
+      };
+      this.wsEmitter.emitToUser(
+        record.userId,
+        NOTIFICATION_WS_EVENTS.CREATED,
+        createdPayload,
+      );
+      this.wsEmitter.emitToUser(
+        record.userId,
+        NOTIFICATION_WS_EVENTS.UNREAD_COUNT_UPDATED,
+        unreadCountPayload,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown websocket error';
+      this.logger.warn(
+        `Unable to emit realtime notification ${record.id}: ${message}`,
+      );
+    }
   }
 
   private async deliverOne(

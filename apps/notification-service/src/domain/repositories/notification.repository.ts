@@ -53,6 +53,8 @@ export abstract class NotificationRepository {
     userId: string,
   ): Promise<NotificationRecord | null>;
 
+  abstract countUnreadByUser(userId: string): Promise<number>;
+
   abstract saveNotificationReadState(
     notification: Notification,
   ): Promise<NotificationRecord>;

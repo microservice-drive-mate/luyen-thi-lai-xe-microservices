@@ -664,6 +664,7 @@ services:
       CONSUL_URL: http://consul:8500
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-notification:5432/${NOTIFICATION_DB_NAME:-notification_db}
       RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
       KEYCLOAK_AUTH_SERVER_URL: ${KEYCLOAK_AUTH_SERVER_URL:-http://keycloak:8080}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
@@ -672,6 +673,8 @@ services:
       db-notification:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       consul:
         condition: service_healthy

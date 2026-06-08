@@ -24,6 +24,11 @@ import {
 import { NotificationEventPublisher } from './application/ports/event-publisher.port';
 import { MailProvider } from './application/ports/mail.provider';
 import { PushProvider } from './application/ports/push.provider';
+import { SocketAuthPort } from './application/ports/socket-auth.port';
+import {
+  WsEmitterPort,
+  WsServerBinderPort,
+} from './application/ports/ws-emitter.port';
 import { NotificationDispatcher } from './application/services/notification-dispatcher.service';
 import { ListNotificationsUseCase } from './application/use-cases/list-notifications/list-notifications.use-case';
 import { MarkNotificationReadUseCase } from './application/use-cases/mark-notification-read/mark-notification-read.use-case';
@@ -39,6 +44,7 @@ import { UnregisterDeviceTokenUseCase } from './application/use-cases/unregister
 import { DeviceTokenRepository } from './domain/repositories/device-token.repository';
 import { NotificationRepository } from './domain/repositories/notification.repository';
 import { NotificationMetrics } from './infrastructure/metrics/notification.metrics';
+import { KeycloakJwtVerifierService } from './infrastructure/auth/keycloak-jwt-verifier.service';
 import {
   NOTIFICATION_EVENT_CLIENT,
   RabbitMqNotificationEventPublisher,
@@ -48,6 +54,8 @@ import { PrismaNotificationRepository } from './infrastructure/persistence/prism
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { FcmPushProvider } from './infrastructure/providers/fcm-push.provider';
 import { SmtpMailProvider } from './infrastructure/providers/smtp.provider';
+import { SocketIoNotificationEmitter } from './infrastructure/websockets/socket-io-notification-emitter.adapter';
+import { NotificationGateway } from './presentation/gateways/notification.gateway';
 import { DeviceTokenController } from './presentation/http/device-token.controller';
 import { NotificationController } from './presentation/http/notification.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';
@@ -60,6 +68,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
       dependencies: [
         { name: 'database', configKey: 'database.url' },
         { name: 'rabbitmq', configKey: 'rabbitmq.url' },
+        { name: 'redis', configKey: 'redis.url' },
         {
           name: 'keycloak',
           configKey: 'keycloak.authServerUrl',
@@ -95,6 +104,9 @@ import { MessagingController } from './presentation/messaging/messaging.controll
               connectionTimeout: Joi.number().default(10000),
               heartbeat: Joi.number().default(60),
             }).optional(),
+            redis: Joi.object({
+              url: Joi.string().default('redis://localhost:6379'),
+            }).default(),
             keycloak: Joi.object({
               authServerUrl: Joi.string().default('http://localhost:8080'),
               realm: Joi.string().default('luyen-thi-lai-xe-realm'),
@@ -164,12 +176,17 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     { provide: DeviceTokenRepository, useClass: PrismaDeviceTokenRepository },
     { provide: MailProvider, useClass: SmtpMailProvider },
     { provide: PushProvider, useClass: FcmPushProvider },
+    SocketIoNotificationEmitter,
+    { provide: WsEmitterPort, useExisting: SocketIoNotificationEmitter },
+    { provide: WsServerBinderPort, useExisting: SocketIoNotificationEmitter },
+    { provide: SocketAuthPort, useClass: KeycloakJwtVerifierService },
     {
       provide: NotificationEventPublisher,
       useClass: RabbitMqNotificationEventPublisher,
     },
     NotificationDispatcher,
     NotificationMetrics,
+    NotificationGateway,
     SendWelcomeEmailUseCase,
     SendExamResultUseCase,
     SendAcademicWarningUseCase,
