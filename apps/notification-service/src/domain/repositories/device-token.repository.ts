@@ -14,5 +14,7 @@ export abstract class DeviceTokenRepository {
 
   abstract deleteByToken(token: string): Promise<void>;
 
+  abstract deleteByUserAndToken(userId: string, token: string): Promise<void>;
+
   abstract deleteManyTokens(tokens: string[]): Promise<void>;
 }

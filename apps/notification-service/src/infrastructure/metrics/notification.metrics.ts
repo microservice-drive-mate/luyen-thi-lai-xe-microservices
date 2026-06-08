@@ -25,6 +25,14 @@ export class NotificationMetrics {
     });
   }
 
+  recordSkipped(channel: string, eventType?: string): void {
+    this.metricsService.recordNotificationDelivery({
+      channel,
+      event: eventType ?? 'unknown',
+      status: 'skipped',
+    });
+  }
+
   setDlqDepth(_depth: number): void {
     // DLQ counters are recorded by the common RabbitMQ retry interceptor.
   }

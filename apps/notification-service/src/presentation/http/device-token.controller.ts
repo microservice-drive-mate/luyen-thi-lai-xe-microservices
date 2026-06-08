@@ -16,6 +16,7 @@ import { UnregisterDeviceTokenUseCase } from '../../application/use-cases/unregi
 import {
   DeviceTokenResponseDto,
   RegisterDeviceTokenRequestDto,
+  UnregisterDeviceTokenParamsDto,
 } from '../dtos/device-token.dtos';
 
 interface JwtPayload {
@@ -41,8 +42,7 @@ export class DeviceTokenController {
     ],
   })
   @ApiOperation({
-    summary:
-      'Đăng ký device token của người dùng hiện tại để nhận push notification',
+    summary: 'Register current user device token to receive push notifications',
   })
   async register(
     @AuthenticatedUser() user: JwtPayload,
@@ -51,7 +51,7 @@ export class DeviceTokenController {
     const record = await this.registerDeviceTokenUseCase.execute(
       new RegisterDeviceTokenCommand(user.sub ?? '', dto.token, dto.platform),
     );
-    return record;
+    return DeviceTokenResponseDto.fromRecord(record);
   }
 
   @Delete(':token')
@@ -64,10 +64,15 @@ export class DeviceTokenController {
       'realm:STUDENT',
     ],
   })
-  @ApiOperation({ summary: 'Huỷ đăng ký một device token theo giá trị token' })
-  async unregister(@Param('token') token: string): Promise<void> {
+  @ApiOperation({
+    summary: 'Unregister current user device token by its value',
+  })
+  async unregister(
+    @AuthenticatedUser() user: JwtPayload,
+    @Param() params: UnregisterDeviceTokenParamsDto,
+  ): Promise<void> {
     await this.unregisterDeviceTokenUseCase.execute(
-      new UnregisterDeviceTokenCommand(token),
+      new UnregisterDeviceTokenCommand(user.sub ?? '', params.token),
     );
   }
 }

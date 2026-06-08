@@ -39,6 +39,12 @@ export class PrismaDeviceTokenRepository extends DeviceTokenRepository {
       .catch(() => undefined);
   }
 
+  async deleteByUserAndToken(userId: string, token: string): Promise<void> {
+    await this.prisma.deviceToken.deleteMany({
+      where: { userId, token },
+    });
+  }
+
   async deleteManyTokens(tokens: string[]): Promise<void> {
     if (tokens.length === 0) return;
     await this.prisma.deviceToken.deleteMany({

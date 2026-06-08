@@ -1,10 +1,10 @@
 # Notification Service
 
-Notification Service là service trung tâm để lưu và gửi thông báo cho hệ thống Luyện thi lái xe. Runtime hiện tại chạy NestJS HTTP API và RabbitMQ microservice trong cùng một process.
+Notification Service là service trung tâm để lưu và gửi thông báo cho hệ thống Luyện thi lái xe. Runtime hiện tại chạy NestJS HTTP API, Socket.IO gateway, và RabbitMQ microservice trong cùng một process.
 
 Service hỗ trợ 3 kênh:
 
-- `IN_APP`: tạo bản ghi trong database để frontend đọc qua API.
+- `IN_APP`: tạo bản ghi trong database để frontend đọc qua API và nhận realtime qua Socket.IO.
 - `EMAIL`: gửi email qua SMTP. Cấu hình SMTP dùng chung bộ biến `KEYCLOAK_SMTP_*` ở root `.env`.
 - `PUSH`: gửi push notification qua Firebase Cloud Messaging. Nếu chưa có `FCM_CREDENTIALS`, provider sẽ bỏ qua push thật nhưng service vẫn chạy.
 
@@ -34,6 +34,10 @@ course-service -------/
                +----------------+----------------+
                v                v                v
             Postgres          SMTP           Firebase FCM
+               |
+               v
+             Redis
+       (Socket.IO adapter + token blacklist)
 ```
 
 Thư mục quan trọng:
@@ -47,6 +51,8 @@ src/
     device-token.controller.ts             # /notifications/devices
   presentation/messaging/
     messaging.controller.ts                # @EventPattern handlers
+  presentation/gateways/
+    notification.gateway.ts                # Socket.IO namespace /notifications
   application/use-cases/
     notification-dispatcher.service.ts
     send-welcome-email.use-case.ts
@@ -56,6 +62,9 @@ src/
     send-course-update.use-case.ts
   infrastructure/messaging/
     notification-event.publisher.ts        # Publish internal academic-warning event
+  infrastructure/websockets/
+    redis-socket-io.adapter.ts             # Socket.IO Redis adapter
+    socket-io-notification-emitter.adapter.ts
   infrastructure/providers/
     smtp.provider.ts
     fcm-push.provider.ts
@@ -81,6 +90,9 @@ FCM_CREDENTIALS={"type":"service_account","project_id":"...","private_key":"----
 NOTIFICATION_RETRY_MAX_ATTEMPTS=3
 # Optional override. When omitted, retry queues use 5000, 30000, 120000 ms.
 NOTIFICATION_RETRY_INTERVAL_MS=300000
+
+# Required for Socket.IO Redis adapter and token blacklist.
+REDIS_URL=redis://localhost:6379
 ```
 
 Config được resolve theo thứ tự chung của repo:
@@ -100,6 +112,7 @@ Consul keys quan trọng:
 | `port`                | `3006`                                                      | `3000`                                                            | Docker map host `3006:3000`                                                                                      |
 | `database.url`        | `postgresql://user:password@localhost:5437/notification_db` | `postgresql://user:password@db-notification:5432/notification_db` | DB riêng của notification                                                                                        |
 | `rabbitmq.url`        | `amqp://localhost:5672`                                     | `amqp://rabbitmq:5672`                                            | Queue chính `notification_service_events`                                                                        |
+| `redis.url`           | `redis://localhost:6379`                                    | `redis://redis:6379`                                              | Socket.IO Redis adapter và token blacklist                                                                       |
 | `smtp.host`           | từ `KEYCLOAK_SMTP_HOST`                                     | từ `KEYCLOAK_SMTP_HOST`                                           | Dùng chung mail thật với Keycloak                                                                                |
 | `smtp.port`           | từ `KEYCLOAK_SMTP_PORT`                                     | từ `KEYCLOAK_SMTP_PORT`                                           | Gmail thường là `587`                                                                                            |
 | `smtp.from`           | từ `KEYCLOAK_SMTP_FROM`                                     | từ `KEYCLOAK_SMTP_FROM`                                           | From address                                                                                                     |
@@ -134,6 +147,7 @@ URL hay dùng:
 | Swagger     | `http://localhost:3006/docs`               |
 | Metrics     | `http://localhost:3006/metrics`            |
 | Health      | `http://localhost:3006/health`             |
+| Socket.IO   | namespace `/notifications`, path `/notifications/socket.io` |
 | RabbitMQ UI | `http://localhost:15672` (`guest`/`guest`) |
 | Consul UI   | `http://localhost:8500`                    |
 
@@ -147,6 +161,77 @@ URL hay dùng:
 | `DELETE` | `/notifications/devices/:token`    | App/mobile frontend                     | Hủy device token                                  |
 | `POST`   | `/admin/academic-warnings`         | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` | Queue academic warning, trả `202 Accepted`        |
 | `GET`    | `/metrics`                         | Prometheus/internal                     | Scrape metrics                                    |
+
+## Realtime In-App Notifications
+
+Frontend kết nối Socket.IO để nhận realtime in-app notifications. REST API vẫn dùng để list notification và mark read.
+
+```ts
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3006/notifications', {
+  path: '/notifications/socket.io',
+  auth: { token: accessToken },
+});
+```
+
+Khi đi qua Kong, dùng `http://localhost:8000/notifications` với cùng `path`.
+
+Server events:
+
+| Event                               | Payload                                                   |
+| ----------------------------------- | --------------------------------------------------------- |
+| `notification.connected`            | `{ userId }`                                              |
+| `notification.auth_failed`          | `{ reason }`                                              |
+| `notification.created`              | `{ notification, unreadCount }`                           |
+| `notification.unread_count.updated` | `{ unreadCount }`                                         |
+
+Socket handshake verify JWT bằng Keycloak public key và check token blacklist trong Redis. Sau khi hợp lệ, socket join room `user:{sub}`. Emit realtime là best-effort; nếu emit lỗi thì notification vẫn đã được lưu và RabbitMQ không retry chỉ vì fan-out realtime lỗi.
+
+## Frontend Push Notification Integration
+
+Mobile/frontend không gửi notification trực tiếp. App chỉ lấy FCM registration token từ Firebase SDK rồi đăng ký token đó với notification-service.
+
+Backend cần `FCM_CREDENTIALS` trong root `.env`. Sau khi cập nhật `.env`, chạy lại:
+
+```bash
+npm run consul:seed:local
+```
+
+Sau đó restart `notification-service` để provider khởi tạo Firebase Admin SDK với credential mới.
+
+Luồng frontend:
+
+1. Cài Firebase SDK đúng platform và cấu hình app Firebase:
+   - Android: dùng `google-services.json` trong Android app.
+   - iOS: dùng `GoogleService-Info.plist` và bật APNs key/certificate trong Firebase Console.
+   - Flutter/React Native/Expo: dùng package Firebase Messaging tương ứng của stack frontend.
+2. Sau login hoặc khi app start, xin quyền notification từ hệ điều hành.
+3. Lấy FCM registration token từ Firebase Messaging SDK.
+4. Gửi token lên backend bằng JWT của user hiện tại:
+
+```http
+POST /notifications/devices
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "token": "<fcm_registration_token>",
+  "platform": "android"
+}
+```
+
+5. Khi Firebase báo token refresh, gọi lại `POST /notifications/devices` với token mới. Endpoint này upsert theo token nên gọi lặp lại là an toàn.
+6. Khi user logout hoặc tắt nhận push trên thiết bị, URL-encode token rồi gọi:
+
+```http
+DELETE /notifications/devices/<url_encoded_fcm_registration_token>
+Authorization: Bearer <access_token>
+```
+
+7. Foreground: app cần tự hiển thị local notification nếu muốn người dùng thấy banner ngay khi app đang mở. Background/quit: notification payload từ backend sẽ được OS/Firebase đưa vào system tray nếu app đã cấu hình đúng.
+
+Backend hiện gửi push cho các event `exam.session.passed`, `exam.session.failed`, `notification.academic-warning.queued`, và `course.updated`. Nếu user chưa có device token hoặc FCM chưa cấu hình, PUSH sẽ được skip có kiểm soát; in-app/email vẫn hoạt động theo kênh tương ứng.
 
 Ví dụ tạo academic warning:
 

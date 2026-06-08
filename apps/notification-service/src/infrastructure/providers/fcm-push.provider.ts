@@ -13,10 +13,14 @@ const INVALID_TOKEN_ERRORS = new Set([
   'messaging/invalid-argument',
 ]);
 
+const FCM_MULTICAST_BATCH_SIZE = 500;
+
 @Injectable()
 export class FcmPushProvider extends PushProvider implements OnModuleInit {
   private readonly logger = new Logger(FcmPushProvider.name);
   private app: admin.app.App | null = null;
+  private disabled = false;
+  private initError: Error | null = null;
 
   constructor(private readonly configService: ConfigService) {
     super();
@@ -27,9 +31,10 @@ export class FcmPushProvider extends PushProvider implements OnModuleInit {
       'push.fcmCredentials',
     );
     if (!credentialsRaw) {
+      this.disabled = true;
       this.logger.warn(
-        'push.fcmCredentials đang trống; push notification đã bị tắt. ' +
-          'Cung cấp JSON service account của FCM để bật lại.',
+        'push.fcmCredentials is empty; push notifications are disabled. ' +
+          'Provide an FCM service-account JSON value to enable real push delivery.',
       );
       return;
     }
@@ -39,10 +44,12 @@ export class FcmPushProvider extends PushProvider implements OnModuleInit {
       this.app = admin.apps.length
         ? admin.app()
         : admin.initializeApp({ credential: admin.credential.cert(parsed) });
-      this.logger.log('Firebase Admin đã khởi tạo cho việc gửi push FCM');
+      this.logger.log('Firebase Admin initialized for FCM push delivery');
     } catch (error) {
+      this.initError =
+        error instanceof Error ? error : new Error('Unknown FCM init error');
       this.logger.error(
-        `Khởi tạo Firebase Admin thất bại: ${(error as Error).message}`,
+        `Failed to initialize Firebase Admin: ${this.initError.message}`,
       );
       this.app = null;
     }
@@ -52,39 +59,76 @@ export class FcmPushProvider extends PushProvider implements OnModuleInit {
     tokens: string[],
     message: PushMessage,
   ): Promise<PushSendResult> {
-    if (!this.app) {
-      this.logger.warn(
-        `FCM chưa được cấu hình; bỏ qua push tới ${tokens.length} token`,
-      );
-      return { successCount: 0, failureCount: 0, invalidTokens: [] };
-    }
     if (tokens.length === 0) {
-      return { successCount: 0, failureCount: 0, invalidTokens: [] };
+      return this.emptyResult();
     }
 
-    const response = await admin.messaging(this.app).sendEachForMulticast({
-      tokens,
-      notification: { title: message.title, body: message.body },
-      data: message.data,
-    });
+    if (this.disabled) {
+      this.logger.warn(
+        `FCM is not configured; skipping push delivery to ${tokens.length} token(s)`,
+      );
+      return {
+        ...this.emptyResult(),
+        skippedCount: tokens.length,
+      };
+    }
 
-    const invalidTokens: string[] = [];
-    response.responses.forEach((resp, idx) => {
-      if (!resp.success) {
+    if (!this.app) {
+      throw new Error(
+        `FCM push provider is not initialized: ${
+          this.initError?.message ?? 'Firebase Admin app is missing'
+        }`,
+      );
+    }
+
+    const result = this.emptyResult();
+
+    for (
+      let start = 0;
+      start < tokens.length;
+      start += FCM_MULTICAST_BATCH_SIZE
+    ) {
+      const batchTokens = tokens.slice(start, start + FCM_MULTICAST_BATCH_SIZE);
+      const response = await admin.messaging(this.app).sendEachForMulticast({
+        tokens: batchTokens,
+        notification: { title: message.title, body: message.body },
+        data: message.data,
+      });
+
+      result.successCount += response.successCount;
+      result.failureCount += response.failureCount;
+
+      response.responses.forEach((resp, index) => {
+        if (resp.success) {
+          return;
+        }
+
         const code = resp.error?.code ?? '';
         this.logger.warn(
-          `Gửi push thất bại cho token index ${idx}: ${code} ${resp.error?.message ?? ''}`,
+          `Push failed for token index ${start + index}: ${code} ${
+            resp.error?.message ?? ''
+          }`,
         );
-        if (INVALID_TOKEN_ERRORS.has(code)) {
-          invalidTokens.push(tokens[idx]);
-        }
-      }
-    });
 
+        if (INVALID_TOKEN_ERRORS.has(code)) {
+          result.invalidTokens.push(batchTokens[index]);
+          return;
+        }
+
+        result.retryableFailureCount += 1;
+      });
+    }
+
+    return result;
+  }
+
+  private emptyResult(): PushSendResult {
     return {
-      successCount: response.successCount,
-      failureCount: response.failureCount,
-      invalidTokens,
+      successCount: 0,
+      failureCount: 0,
+      skippedCount: 0,
+      retryableFailureCount: 0,
+      invalidTokens: [],
     };
   }
 }

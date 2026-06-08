@@ -93,7 +93,8 @@
       "keycloak.realm": "${KEYCLOAK_REALM}",
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
-      "keycloak.timeoutMs": "10000"
+      "keycloak.timeoutMs": "10000",
+      "push.fcmCredentials": "${FCM_CREDENTIALS:-}"
     },
     "analytics-service": {
       "port": "3000",

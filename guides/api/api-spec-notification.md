@@ -2,12 +2,16 @@
 
 - **Base URL qua Kong:** `http://localhost:8000`
 - **Service paths:** `/notifications`, `/admin/academic-warnings`
+- **Realtime Socket.IO namespace:** `/notifications`
+- **Realtime Socket.IO path:** `/notifications/socket.io`
 - **Direct local:** `http://localhost:3006`
 - **Swagger UI:** `http://localhost:3006/docs`
 - **Swagger UI qua Kong:** `http://localhost:8000/notification-service/docs`
 - **OpenAPI JSON:** `http://localhost:3006/docs-json`
 - **OpenAPI JSON qua Kong:** `http://localhost:8000/notification-service/docs-json`
 - **Version:** `1.0.0`
+
+In-app notifications also support realtime delivery over Socket.IO. The client connects to namespace `/notifications` using Engine.IO path `/notifications/socket.io`. The same Keycloak access token is sent in `auth.token` or `Authorization: Bearer <access_token>` during the socket handshake.
 
 Notification-service lưu in-app notifications, gửi email qua SMTP, gửi push qua Firebase Cloud Messaging, và consume RabbitMQ events từ các service khác. Frontend gọi các API được bảo vệ bằng `Authorization: Bearer <access_token>`; current user id được đọc từ JWT `sub`.
 
@@ -24,6 +28,7 @@ SMTP dùng các biến `KEYCLOAK_SMTP_*` trong root `.env`. Push dùng `FCM_CRED
 | `PATCH /notifications/:id/read`        | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
 | `POST /notifications/devices`          | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
 | `DELETE /notifications/devices/:token` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
+| Socket.IO `/notifications`             | Valid Keycloak access token                         |
 
 ---
 
@@ -309,11 +314,98 @@ Trả về notifications của current user theo thứ tự mới nhất trướ
 
 ### DELETE `/notifications/devices/:token`
 
+Token trong path nên được URL-encode từ frontend vì FCM registration token có thể chứa ký tự đặc biệt. Backend chỉ xóa token thuộc current user đọc từ JWT `sub`.
+
 Xóa một device token registration.
 
 **Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
 
 **Response:** `204 No Content`
+
+---
+
+## Frontend Push Notification Integration
+
+Frontend/mobile không gửi push trực tiếp. App lấy FCM registration token từ Firebase Messaging SDK, sau đó đăng ký token với notification-service bằng JWT của user hiện tại.
+
+### Register token
+
+```http
+POST /notifications/devices
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "token": "<fcm_registration_token>",
+  "platform": "android"
+}
+```
+
+`platform` hiện chấp nhận `android` hoặc `ios`. Endpoint upsert theo token, nên frontend có thể gọi lại sau login, app start, hoặc khi Firebase refresh token.
+
+### Unregister token
+
+```http
+DELETE /notifications/devices/<url_encoded_fcm_registration_token>
+Authorization: Bearer <access_token>
+```
+
+Backend chỉ xóa token thuộc current user đọc từ JWT `sub`.
+
+### Frontend requirements
+
+- Cài Firebase SDK đúng platform.
+- Android app cần `google-services.json`; iOS app cần `GoogleService-Info.plist` và APNs key/certificate đã bật trong Firebase Console.
+- Xin quyền notification trước khi lấy token trên các platform yêu cầu runtime permission.
+- Gửi token lên backend sau login/app start và gửi lại khi token refresh.
+- Khi logout hoặc user tắt push, gọi DELETE với token đã URL-encode.
+- Khi app foreground, frontend nên tự hiển thị local notification nếu muốn user thấy banner ngay.
+- Khi app background/quit, notification payload từ backend sẽ được OS/Firebase đưa vào system tray nếu app đã cấu hình đúng.
+
+Nếu `FCM_CREDENTIALS` trống, notification-service skip PUSH có kiểm soát và không đưa message vào retry/DLQ chỉ vì local/dev chưa có Firebase credential. Nếu đã cấu hình credential nhưng Firebase Admin init/send lỗi retryable, RabbitMQ retry/DLQ xử lý như các lỗi delivery khác.
+
+---
+
+## Realtime In-App Notifications
+
+Socket.IO is used only for realtime fan-out. REST APIs remain the source for listing notifications and marking them as read.
+
+### Connect
+
+Direct local:
+
+```ts
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3006/notifications', {
+  path: '/notifications/socket.io',
+  auth: { token: accessToken },
+});
+```
+
+Through Kong:
+
+```ts
+const socket = io('http://localhost:8000/notifications', {
+  path: '/notifications/socket.io',
+  auth: { token: accessToken },
+});
+```
+
+The service verifies the JWT signature with the Keycloak realm public key and rejects revoked tokens from the shared Redis token blacklist. After authentication succeeds, the socket joins room `user:{sub}`.
+
+### Server Events
+
+| Event                               | Payload                                                                     | When emitted                                              |
+| ----------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `notification.connected`            | `{ "userId": "<keycloak-sub>" }`                                            | Socket authentication succeeds                            |
+| `notification.auth_failed`          | `{ "reason": "missing_token" \| "missing_subject" \| "invalid_token" }`     | Socket authentication fails before disconnect             |
+| `notification.created`              | `{ "notification": Notification, "unreadCount": number }`                   | A new `IN_APP` notification is delivered for current user |
+| `notification.unread_count.updated` | `{ "unreadCount": number }`                                                 | A new `IN_APP` notification is delivered or marked read   |
+
+Realtime events are best-effort. If Socket.IO emit fails, the notification remains persisted and RabbitMQ delivery is not retried only because realtime fan-out failed.
+
+Redis is required for the Socket.IO adapter in multi-instance deployments. Use `REDIS_URL` or Consul key `config/<env>/notification-service/redis.url`.
 
 ---
 

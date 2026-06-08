@@ -1,3 +1,6 @@
 export class UnregisterDeviceTokenCommand {
-  constructor(readonly token: string) {}
+  constructor(
+    readonly userId: string,
+    readonly token: string,
+  ) {}
 }

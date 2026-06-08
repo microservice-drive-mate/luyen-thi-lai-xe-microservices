@@ -10,6 +10,6 @@ export class UnregisterDeviceTokenUseCase
   constructor(private readonly repository: DeviceTokenRepository) {}
 
   async execute(command: UnregisterDeviceTokenCommand): Promise<void> {
-    await this.repository.deleteByToken(command.token);
+    await this.repository.deleteByUserAndToken(command.userId, command.token);
   }
 }

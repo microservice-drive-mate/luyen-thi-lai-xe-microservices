@@ -94,7 +94,8 @@
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
       "keycloak.clientSecret": "${KEYCLOAK_CLIENT_SECRET:-change-me}",
-      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-10000}"
+      "keycloak.timeoutMs": "${KEYCLOAK_TIMEOUT_MS:-10000}",
+      "push.fcmCredentials": "${FCM_CREDENTIALS:-}"
     },
     "analytics-service": {
       "port": "3007",

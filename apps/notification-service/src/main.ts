@@ -23,6 +23,7 @@ import {
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
+import { RedisSocketIoAdapter } from './infrastructure/websockets/redis-socket-io.adapter';
 
 const serviceName = 'notification-service';
 startOpenTelemetry({ serviceName });
@@ -34,6 +35,10 @@ async function bootstrap() {
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   const configService = app.get(ConfigService);
+  const redisSocketIoAdapter = new RedisSocketIoAdapter(app, configService);
+  await redisSocketIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisSocketIoAdapter);
+
   const rabbitmqUrl = getRabbitMqUrl(configService);
   const rabbitmqQueue = 'notification_service_events';
   const retryDelaysMs = createRetryDelays(configService);

@@ -19,4 +19,22 @@ export class DeviceTokenResponseDto {
   @ApiProperty() platform!: string;
   @ApiProperty() createdAt!: Date;
   @ApiProperty() updatedAt!: Date;
+
+  static fromRecord(record: DeviceTokenResponseDto): DeviceTokenResponseDto {
+    const dto = new DeviceTokenResponseDto();
+    dto.id = record.id;
+    dto.userId = record.userId;
+    dto.token = record.token;
+    dto.platform = record.platform;
+    dto.createdAt = record.createdAt;
+    dto.updatedAt = record.updatedAt;
+    return dto;
+  }
+}
+
+export class UnregisterDeviceTokenParamsDto {
+  @ApiProperty({ description: 'URL-encoded FCM registration token' })
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
 }

@@ -7,6 +7,8 @@ export interface PushMessage {
 export interface PushSendResult {
   successCount: number;
   failureCount: number;
+  skippedCount: number;
+  retryableFailureCount: number;
   invalidTokens: string[];
 }
 

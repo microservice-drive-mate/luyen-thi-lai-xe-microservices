@@ -20,6 +20,7 @@ out/
 *.env
 !.env.example
 !.env.vps.example
+*-firebase-adminsdk-*.json
 
 # Local Kubernetes/Helm secrets
 charts/**/values-*.local.yaml
