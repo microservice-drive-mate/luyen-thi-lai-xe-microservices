@@ -199,6 +199,7 @@ services:
   - name: notification-service
     image: luyen-thi-lai-xe-notification-service
     dbName: notification_db
+    usesRedis: true
     routes:
       - name: notification-route
         paths: ["/notifications"]

@@ -90,6 +90,7 @@
       "port": "3006",
       "database.url": "postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@localhost:5437/notification_db",
       "rabbitmq.url": "amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@localhost:5672",
+      "redis.url": "redis://localhost:6379",
       "keycloak.authServerUrl": "http://localhost:8080",
       "keycloak.realm": "luyen-thi-lai-xe-realm",
       "keycloak.clientId": "nestjs-backend",
