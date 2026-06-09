@@ -23,6 +23,7 @@ import {
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
 import { AppModule } from './app.module';
+import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 import { RedisSocketIoAdapter } from './infrastructure/websockets/redis-socket-io.adapter';
 
 const serviceName = 'notification-service';
@@ -64,7 +65,7 @@ async function bootstrap() {
     new ApiResponseInterceptor(app.get(Reflector)),
   );
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-  app.useGlobalFilters(new ApiExceptionFilter());
+  app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
 
   setupMicroserviceSwagger(app, {
     title: 'Notification Service API',

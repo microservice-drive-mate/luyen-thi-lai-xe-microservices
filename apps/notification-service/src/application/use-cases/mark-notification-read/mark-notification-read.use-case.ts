@@ -1,10 +1,11 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
 import {
   NOTIFICATION_WS_EVENTS,
   NotificationUnreadCountPayload,
   WsEmitterPort,
 } from '../../ports/ws-emitter.port';
+import { NotificationNotFoundException } from '../../../domain/exceptions/notification-not-found.exception';
 import {
   Notification,
   NotificationRecord,
@@ -30,7 +31,8 @@ export class MarkNotificationReadUseCase
       command.notificationId,
       command.userId,
     );
-    if (!record) throw new NotFoundException('Notification not found');
+    if (!record)
+      throw new NotificationNotFoundException(command.notificationId);
 
     const notification = Notification.reconstitute(record);
     notification.markRead();

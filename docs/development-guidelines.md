@@ -32,18 +32,18 @@ Không bắt đầu implement endpoint hoặc sửa behavior public khi chưa đ
 
 Ưu tiên nguồn sự thật như sau:
 
-| Nội dung | Nguồn chính |
-| --- | --- |
-| Cách chạy repo, port, script | `README.md` |
-| Endpoint, request, response, auth, error code, event contract public | `docs/api/api-spec-<service>.md` |
-| Gateway, frontend base URL, CORS, token flow | `docs/api/kong-frontend-integration.md` |
-| Luồng identity-user | `docs/api/identity-user-flow.md` |
-| Luồng media/upload/file lifecycle | `docs/api/media-service-flow.md` |
-| DDD/Clean Architecture, layer boundary | `docs/architecture/clean-ddd-conventions.md` |
-| Config Consul/env | `docs/devops/consul-workflow.md` |
-| Docker/Kong/Kubernetes/GCP/CI/CD/observability | `docs/devops/*.md` |
-| Test scenario, traceability, demo | `docs/testing/*.md` |
-| Requirement/SRS/ASR | `docs/requirements/*.md` |
+| Nội dung                                                             | Nguồn chính                                  |
+| -------------------------------------------------------------------- | -------------------------------------------- |
+| Cách chạy repo, port, script                                         | `README.md`                                  |
+| Endpoint, request, response, auth, error code, event contract public | `docs/api/api-spec-<service>.md`             |
+| Gateway, frontend base URL, CORS, token flow                         | `docs/api/kong-frontend-integration.md`      |
+| Luồng identity-user                                                  | `docs/api/identity-user-flow.md`             |
+| Luồng media/upload/file lifecycle                                    | `docs/api/media-service-flow.md`             |
+| DDD/Clean Architecture, layer boundary                               | `docs/architecture/clean-ddd-conventions.md` |
+| Config Consul/env                                                    | `docs/devops/consul-workflow.md`             |
+| Docker/Kong/Kubernetes/GCP/CI/CD/observability                       | `docs/devops/*.md`                           |
+| Test scenario, traceability, demo                                    | `docs/testing/*.md`                          |
+| Requirement/SRS/ASR                                                  | `docs/requirements/*.md`                     |
 
 `docs/api` là nơi chính để mô tả service API. Không tạo lại các file service summary ngắn riêng nếu nội dung đã có trong API spec.
 
@@ -262,7 +262,7 @@ profile.assignLicenseTier(tier, changedById);
 Tránh kiểu:
 
 ```ts
-profile.role = 'STUDENT';
+profile.role = "STUDENT";
 profile.studentDetail = {};
 ```
 
@@ -461,6 +461,15 @@ Lỗi nên có code ổn định:
 
 Không để frontend phụ thuộc vào message tiếng Việt/tiếng Anh. Frontend nên map theo `code`.
 
+Với lỗi nghiệp vụ/domain, tạo class riêng kế thừa `DomainException` trong `domain/exceptions` và map HTTP status trong `infrastructure/filters/domain-exception.filter.ts`. Use case/domain không throw trực tiếp `BadRequestException`, `NotFoundException`, `ConflictException`... của NestJS; các exception Nest chỉ nên dùng ở presentation/infrastructure cho lỗi framework, auth, hoặc transport-specific.
+
+Khi thêm/sửa domain exception:
+
+- Đặt `code` ổn định, viết hoa snake case, ví dụ `COURSE_NOT_FOUND`.
+- Register status tương ứng trong `DomainExceptionFilter`.
+- Cập nhật `docs/api/api-spec-<service>.md` phần `Error Codes` và `Common errors`.
+- Thêm/sửa test use case hoặc aggregate cho nhánh lỗi đó.
+
 Log không được chứa:
 
 - password
@@ -509,19 +518,19 @@ Không viết API spec theo trí nhớ. Luôn đọc code trước.
 
 Có, nếu thay đổi chạm vào vận hành. Bảng nhanh:
 
-| Thay đổi | Tài liệu cần cập nhật |
-| --- | --- |
-| Thêm/sửa config key | `docs/devops/consul-workflow.md` |
-| Đổi Docker Compose service/env/port/volume | `README.md`, tài liệu DevOps liên quan |
-| Đổi Kong route/plugin/CORS/rate limit | `docs/api/kong-frontend-integration.md` |
-| Đổi health/metrics | `docs/api/api-spec-health-metrics.md`, `docs/devops/observability-runbook.md` |
-| Đổi logging/ELK | `docs/devops/elk-logging-guide.md` |
-| Đổi tracing | `docs/devops/opentelemetry-jaeger-tracing.md` |
-| Đổi backup/restore | `docs/devops/backup-strategy.md` |
-| Đổi Helm/GCP | `docs/devops/kubernetes-gcp-deployment.md`, `docs/devops/gcp-setup.md` |
-| Đổi CI/CD/release | `docs/devops/github-actions-release-safety.md`, `docs/devops/jenkins-docker-compose.md` |
-| Đổi DORA/deployment event | `docs/devops/dora-metrics-guide.md`, `docs/devops/deployment-event-store.md` |
-| Đổi incident/runbook | `docs/devops/incident-management-process.md`, `docs/devops/observability-runbook.md` |
+| Thay đổi                                   | Tài liệu cần cập nhật                                                                   |
+| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| Thêm/sửa config key                        | `docs/devops/consul-workflow.md`                                                        |
+| Đổi Docker Compose service/env/port/volume | `README.md`, tài liệu DevOps liên quan                                                  |
+| Đổi Kong route/plugin/CORS/rate limit      | `docs/api/kong-frontend-integration.md`                                                 |
+| Đổi health/metrics                         | `docs/api/api-spec-health-metrics.md`, `docs/devops/observability-runbook.md`           |
+| Đổi logging/ELK                            | `docs/devops/elk-logging-guide.md`                                                      |
+| Đổi tracing                                | `docs/devops/opentelemetry-jaeger-tracing.md`                                           |
+| Đổi backup/restore                         | `docs/devops/backup-strategy.md`                                                        |
+| Đổi Helm/GCP                               | `docs/devops/kubernetes-gcp-deployment.md`, `docs/devops/gcp-setup.md`                  |
+| Đổi CI/CD/release                          | `docs/devops/github-actions-release-safety.md`, `docs/devops/jenkins-docker-compose.md` |
+| Đổi DORA/deployment event                  | `docs/devops/dora-metrics-guide.md`, `docs/devops/deployment-event-store.md`            |
+| Đổi incident/runbook                       | `docs/devops/incident-management-process.md`, `docs/devops/observability-runbook.md`    |
 
 DevOps docs phải ghi được cách verify, không chỉ mô tả ý tưởng.
 
@@ -563,13 +572,6 @@ Thay đổi observability/RabbitMQ:
 ```powershell
 pnpm run observability:smoke
 pnpm run rabbitmq:smoke
-```
-
-Thay đổi docs-only:
-
-```powershell
-rg -n "p[p]npm|g[u]ides/|D[E]VOPS-SUMMARY|O[B]SERVABILITY-ELK|P[H]ASE5|J[E]NKINS-DORA|D[O]RA-GRAFANA" README.md docs
-git diff --check
 ```
 
 ## 16. Checklist Trước Khi Kết Thúc Task

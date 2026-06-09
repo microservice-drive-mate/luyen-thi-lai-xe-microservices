@@ -2,9 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
 import crypto from 'node:crypto';
 import { NotificationEventPublisher } from '../../ports/event-publisher.port';
+import { AcademicWarningRecipientRequiredException } from '../../../domain/exceptions/academic-warning-recipient-required.exception';
+import { UnsupportedDeliveryChannelException } from '../../../domain/exceptions/unsupported-delivery-channel.exception';
 import {
   AcademicWarning,
   NotificationRepository,
+  NotificationType,
 } from '../../../domain/repositories/notification.repository';
 import { QueueAcademicWarningsCommand } from './queue-academic-warnings.command';
 
@@ -25,6 +28,17 @@ export class QueueAcademicWarningsUseCase
   async execute(
     command: QueueAcademicWarningsCommand,
   ): Promise<QueueAcademicWarningsResult> {
+    if (command.studentIds.length === 0) {
+      throw new AcademicWarningRecipientRequiredException();
+    }
+
+    const unsupportedChannels = command.deliveryChannels.filter(
+      (channel) => channel !== NotificationType.IN_APP,
+    );
+    if (unsupportedChannels.length > 0) {
+      throw new UnsupportedDeliveryChannelException();
+    }
+
     const warnings = await Promise.all(
       command.studentIds.map((studentId) =>
         this.repository.createAcademicWarning(

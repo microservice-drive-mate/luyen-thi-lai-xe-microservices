@@ -28,7 +28,7 @@ SMTP dùng các biến `KEYCLOAK_SMTP_*` trong root `.env`. Push dùng `FCM_CRED
 | `PATCH /notifications/:id/read`        | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
 | `POST /notifications/devices`          | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
 | `DELETE /notifications/devices/:token` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT` |
-| Socket.IO `/notifications`             | Valid Keycloak access token                         |
+| Socket.IO `/notifications`             | Valid Keycloak access token                        |
 
 ---
 
@@ -61,6 +61,20 @@ Error response:
 
 ---
 
+## Error Codes
+
+| HTTP | Code                                  | Cause                                                             |
+| ---: | ------------------------------------- | ----------------------------------------------------------------- |
+|  400 | `VALIDATION_ERROR`                    | Invalid body/query/path parameter                                 |
+|  400 | `ACADEMIC_WARNING_RECIPIENT_REQUIRED` | Academic warning request has neither `studentId` nor `studentIds` |
+|  400 | `UNSUPPORTED_DELIVERY_CHANNEL`        | Academic warning request includes a channel other than `IN_APP`   |
+|  401 | `UNAUTHORIZED`                        | Missing, invalid, expired, or revoked access token                |
+|  403 | `FORBIDDEN`                           | Token is valid but role is not allowed                            |
+|  404 | `NOTIFICATION_NOT_FOUND`              | Notification not found or does not belong to caller               |
+|  500 | `INTERNAL_ERROR`                      | Database, RabbitMQ, SMTP, FCM, or server error                    |
+
+---
+
 ## Enums
 
 `NotificationType`: `IN_APP` | `EMAIL` | `PUSH` | `SMS`
@@ -75,24 +89,24 @@ Academic warning delivery status values: `PENDING`, `QUEUED`, `PENDING_RETRY`, `
 
 ### `Notification`
 
-| Field          | Type                 | Description                              |
-| -------------- | -------------------- | ---------------------------------------- | ------------------------------------------ |
-| `id`           | `uuid`               | Notification id                          |
-| `userId`       | `uuid`               | Recipient user id                        |
-| `type`         | `NotificationType`   | Bản ghi theo kênh delivery               |
-| `eventType`    | `string              | null`                                    | Event nguồn, ví dụ `identity.user.created` |
-| `title`        | `string`             | Tiêu đề notification                     |
-| `body`         | `string`             | Nội dung notification                    |
-| `data`         | `object`             | Metadata bổ sung                         |
-| `status`       | `NotificationStatus` | Delivery status của bản ghi theo kênh    |
-| `retryCount`   | `number`             | Số lần retry từ RabbitMQ headers/payload |
-| `errorMessage` | `string              | null`                                    | Lỗi delivery gần nhất                      |
-| `isRead`       | `boolean`            | Recipient đã đọc hay chưa                |
-| `readAt`       | `string              | null`                                    | Thời điểm đọc                              |
-| `sentAt`       | `string              | null`                                    | Legacy/send timestamp field                |
-| `deliveredAt`  | `string              | null`                                    | Thời điểm delivery thành công              |
-| `createdAt`    | `string`             | Thời điểm tạo                            |
-| `updatedAt`    | `string`             | Thời điểm cập nhật cuối                  |
+| Field          | Type                 | Description                                |
+| -------------- | -------------------- | ------------------------------------------ |
+| `id`           | `uuid`               | Notification id                            |
+| `userId`       | `uuid`               | Recipient user id                          |
+| `type`         | `NotificationType`   | Bản ghi theo kênh delivery                 |
+| `eventType`    | `string` or `null`   | Event nguồn, ví dụ `identity.user.created` |
+| `title`        | `string`             | Tiêu đề notification                       |
+| `body`         | `string`             | Nội dung notification                      |
+| `data`         | `object`             | Metadata bổ sung                           |
+| `status`       | `NotificationStatus` | Delivery status của bản ghi theo kênh      |
+| `retryCount`   | `number`             | Số lần retry từ RabbitMQ headers/payload   |
+| `errorMessage` | `string` or `null`   | Lỗi delivery gần nhất                      |
+| `isRead`       | `boolean`            | Recipient đã đọc hay chưa                  |
+| `readAt`       | `string` or `null`   | Thời điểm đọc                              |
+| `sentAt`       | `string` or `null`   | Legacy/send timestamp field                |
+| `deliveredAt`  | `string` or `null`   | Thời điểm delivery thành công              |
+| `createdAt`    | `string`             | Thời điểm tạo                              |
+| `updatedAt`    | `string`             | Thời điểm cập nhật cuối                    |
 
 ### `ListNotificationsResponse`
 
@@ -181,7 +195,7 @@ HTTP API chỉ chấp nhận requested channel `IN_APP`. Email và push được
 }
 ```
 
-**Common errors:** `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
+**Common errors:** `VALIDATION_ERROR`, `ACADEMIC_WARNING_RECIPIENT_REQUIRED`, `UNSUPPORTED_DELIVERY_CHANNEL`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
 
 ---
 
@@ -266,7 +280,7 @@ Trả về notifications của current user theo thứ tự mới nhất trướ
 }
 ```
 
-**Common errors:** `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `INTERNAL_ERROR`.
+**Common errors:** `UNAUTHORIZED`, `FORBIDDEN`, `NOTIFICATION_NOT_FOUND`, `INTERNAL_ERROR`.
 
 ---
 
@@ -310,6 +324,8 @@ Trả về notifications của current user theo thứ tự mới nhất trướ
 }
 ```
 
+**Common errors:** `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
+
 ---
 
 ### DELETE `/notifications/devices/:token`
@@ -321,6 +337,8 @@ Xóa một device token registration.
 **Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
 
 **Response:** `204 No Content`
+
+**Common errors:** `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
 
 ---
 
@@ -375,10 +393,10 @@ Socket.IO is used only for realtime fan-out. REST APIs remain the source for lis
 Direct local:
 
 ```ts
-import { io } from 'socket.io-client';
+import { io } from "socket.io-client";
 
-const socket = io('http://localhost:3006/notifications', {
-  path: '/notifications/socket.io',
+const socket = io("http://localhost:3006/notifications", {
+  path: "/notifications/socket.io",
   auth: { token: accessToken },
 });
 ```
@@ -386,8 +404,8 @@ const socket = io('http://localhost:3006/notifications', {
 Through Kong:
 
 ```ts
-const socket = io('http://localhost:8000/notifications', {
-  path: '/notifications/socket.io',
+const socket = io("http://localhost:8000/notifications", {
+  path: "/notifications/socket.io",
   auth: { token: accessToken },
 });
 ```
@@ -396,12 +414,12 @@ The service verifies the JWT signature with the Keycloak realm public key and re
 
 ### Server Events
 
-| Event                               | Payload                                                                     | When emitted                                              |
-| ----------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `notification.connected`            | `{ "userId": "<keycloak-sub>" }`                                            | Socket authentication succeeds                            |
-| `notification.auth_failed`          | `{ "reason": "missing_token" \| "missing_subject" \| "invalid_token" }`     | Socket authentication fails before disconnect             |
-| `notification.created`              | `{ "notification": Notification, "unreadCount": number }`                   | A new `IN_APP` notification is delivered for current user |
-| `notification.unread_count.updated` | `{ "unreadCount": number }`                                                 | A new `IN_APP` notification is delivered or marked read   |
+| Event                               | Payload                                                                 | When emitted                                              |
+| ----------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------- |
+| `notification.connected`            | `{ "userId": "<keycloak-sub>" }`                                        | Socket authentication succeeds                            |
+| `notification.auth_failed`          | `{ "reason": "missing_token" \| "missing_subject" \| "invalid_token" }` | Socket authentication fails before disconnect             |
+| `notification.created`              | `{ "notification": Notification, "unreadCount": number }`               | A new `IN_APP` notification is delivered for current user |
+| `notification.unread_count.updated` | `{ "unreadCount": number }`                                             | A new `IN_APP` notification is delivered or marked read   |
 
 Realtime events are best-effort. If Socket.IO emit fails, the notification remains persisted and RabbitMQ delivery is not retried only because realtime fan-out failed.
 

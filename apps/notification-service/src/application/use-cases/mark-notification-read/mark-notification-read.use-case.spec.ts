@@ -1,8 +1,8 @@
-import { NotFoundException } from '@nestjs/common';
 import {
   NOTIFICATION_WS_EVENTS,
   WsEmitterPort,
 } from '../../ports/ws-emitter.port';
+import { NotificationNotFoundException } from '../../../domain/exceptions/notification-not-found.exception';
 import {
   Notification,
   NotificationRecord,
@@ -60,7 +60,7 @@ describe('MarkNotificationReadUseCase', () => {
 
     await expect(
       useCase.execute(new MarkNotificationReadCommand('missing', 'user-1')),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toBeInstanceOf(NotificationNotFoundException);
     expect(wsEmitter.emitToUser).not.toHaveBeenCalled();
   });
 });

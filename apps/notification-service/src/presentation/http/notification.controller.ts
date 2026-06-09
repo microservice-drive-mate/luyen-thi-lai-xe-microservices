@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -56,24 +55,10 @@ export class NotificationController {
       ...(dto.studentIds ?? []),
     ].filter((value, index, items) => items.indexOf(value) === index);
 
-    if (studentIds.length === 0) {
-      throw new BadRequestException(
-        'At least one student recipient is required',
-      );
-    }
-
-    const unsupportedChannels = (
-      dto.deliveryChannels ?? [NotificationType.IN_APP]
-    ).filter((channel) => channel !== NotificationType.IN_APP);
-    if (unsupportedChannels.length > 0) {
-      throw new BadRequestException(
-        'Only IN_APP delivery can be requested from this endpoint; EMAIL/PUSH are resolved by notification-service config and event payload.',
-      );
-    }
-
     const result = await this.queueAcademicWarningsUseCase.execute(
       new QueueAcademicWarningsCommand(
         studentIds,
+        dto.deliveryChannels ?? [NotificationType.IN_APP],
         dto.reason,
         dto.severity,
         dto.message,
