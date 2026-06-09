@@ -1,75 +1,130 @@
 # Luyện Thi Lái Xe Microservices
 
-Tài liệu này gom phần quan trọng nhất để team dev chạy local, verify code và nắm nhanh các luồng DevOps hiện có trong repo.
+Repo này là hệ thống backend dạng microservices cho nền tảng luyện thi lái xe. Monorepo dùng `pnpm workspace` và `Turbo`, các service chính viết bằng `NestJS`, dữ liệu quản lý bằng `Prisma`, cấu hình tập trung qua `Consul`, giao tiếp bất đồng bộ qua `RabbitMQ`, xác thực qua `Keycloak`, gateway qua `Kong`.
 
-Tổng kết DevOps hiện tại: [DEVOPS-SUMMARY.md](./DEVOPS-SUMMARY.md)
+Tài liệu chính nằm trong [docs](./docs/README.md). Nếu bạn mới vào repo, hãy đọc README này trước, sau đó đọc [Kong + Frontend Integration](./docs/api/kong-frontend-integration.md) nếu làm frontend hoặc [Development Guidelines](./docs/development-guidelines.md) nếu sửa backend.
 
-## 1. Tổng quan
+## Tổng Quan Kiến Trúc
 
-- Monorepo dùng `pnpm workspaces` + `turbo`
-- Backend chính là các NestJS services trong `apps/*`
-- Gateway:
-  - `kong/kong.dev.yaml` cho hybrid local
-  - `kong/kong.yaml` cho full Docker / deploy
-- Config tập trung qua Consul
-- Message broker qua RabbitMQ
-- Logging có thể đẩy sang ELK qua Logstash
+- `apps/*`: các NestJS microservice.
+- `packages/*`: package dùng chung, gồm `@repo/common`, cấu hình ESLint và TypeScript.
+- `docker-compose.infra.yml`: hạ tầng local cho chế độ hybrid.
+- `docker-compose.yaml`: full stack Docker.
+- `kong/kong.dev.yaml`: Kong cho hybrid local, route tới service chạy trên máy qua `host.docker.internal`.
+- `kong/kong.yaml`: Kong cho full Docker, route qua Docker DNS.
+- `charts/luyen-thi-lai-xe`: Helm chart cho Kubernetes/GCP.
+- `scripts/*`: script seed Consul, Prisma migration/seed, smoke test, backup và DevOps metrics.
 
-## 2. Services hiện có
+## Service Hiện Có
 
-- Production services (10):
-  - `identity-service`
-  - `user-service`
-  - `exam-service`
-  - `course-service`
-  - `question-service`
-  - `notification-service`
-  - `analytics-service`
-  - `simulation-service`
-  - `audit-service`
-  - `media-service`
-- Dev-only supporting service:
-  - `docs-service` dùng cho tài liệu / Swagger tổng hợp khi cần, không đưa vào Production
+Production scope hiện gồm 10 service:
 
-## 3. First Run Cho Dev/Frontend Clone Repo Lần Đầu
+| Service | Cổng local/hybrid | Trách nhiệm chính |
+| --- | ---: | --- |
+| `identity-service` | `3001` | Đăng nhập, đăng xuất, refresh token, quên mật khẩu, quản lý identity/Keycloak |
+| `user-service` | `3002` | Hồ sơ người dùng, thông tin học viên, hạng giấy phép |
+| `exam-service` | `3003` | Đề thi, phiên thi, lịch sử làm bài, câu sai |
+| `course-service` | `3004` | Khóa học, bài học, ghi danh, tiến độ học |
+| `question-service` | `3005` | Ngân hàng câu hỏi, chủ đề câu hỏi |
+| `notification-service` | `3006` | Thông báo và cảnh báo học tập |
+| `analytics-service` | `3007` | Tiến độ học tập, thống kê nghiệp vụ |
+| `simulation-service` | `3008` | Mô phỏng/practice 2D |
+| `media-service` | `3010` | Metadata file, media, tích hợp storage |
+| `audit-service` | `3011` | Nhật ký audit bảo mật |
 
-Khuyến nghị cho frontend/dev mới kéo repo: chạy backend ở hybrid mode. Infra chạy bằng Docker, service NestJS chạy local. Cách này dễ debug hơn full Docker và ít gặp lỗi build image.
+`docs-service` chạy cổng `3009` trong local/dev để tổng hợp tài liệu API. Service này không thuộc production scope chính.
 
-Yêu cầu:
+Trong full Docker, mỗi service listen cổng `3000` bên trong container và được publish ra host theo các cổng ở bảng trên.
 
-- Docker Desktop đang chạy
-- Node.js >= 18
-- pnpm qua Corepack (`corepack prepare pnpm@10.34.1 --activate`)
+## Yêu Cầu Môi Trường
 
-Từ root repo, chạy theo đúng thứ tự:
+- Docker Desktop đang chạy.
+- Node.js `>=18`.
+- Corepack bật sẵn `pnpm@10.34.1`:
+
+```powershell
+corepack enable
+corepack prepare pnpm@10.34.1 --activate
+```
+
+## Chạy Hybrid Local
+
+Chế độ khuyến nghị cho dev: Docker chạy hạ tầng, còn NestJS services chạy trực tiếp trên máy. Cách này dễ debug và khớp với `kong/kong.dev.yaml`.
 
 ```powershell
 pnpm install
 pnpm run infra:up
 pnpm run consul:seed:local
 pnpm run db:generate
-pnpm run db:deploy
+pnpm run db:migrate
 pnpm run db:seed
-pnpm dev
+pnpm run dev
 ```
 
-Sau khi chạy xong:
+URL quan trọng:
 
-- Kong/API Gateway: http://localhost:8000
-- Swagger tổng hợp: http://localhost:3009/docs
-- Keycloak: http://localhost:8080
-- Consul: http://localhost:8500
-- RabbitMQ UI: http://localhost:15672
-- Mailpit: http://localhost:8025
-- Kibana: http://localhost:5601
+| Thành phần | URL |
+| --- | --- |
+| Kong API Gateway | `http://localhost:8000` |
+| Docs service / Scalar | `http://localhost:3009/docs` |
+| Keycloak | `http://localhost:8080` |
+| Consul | `http://localhost:8500` |
+| RabbitMQ UI | `http://localhost:15672` |
+| Mailpit | `http://localhost:8025` |
+| Kibana | `http://localhost:5601` |
+| Prometheus | `http://localhost:9090` |
+| Grafana | `http://localhost:30000` |
 
-Demo accounts được seed vào Keycloak, password chung:
+Kiểm tra nhanh qua Kong:
+
+```powershell
+pnpm run smoke
+```
+
+Tắt hạ tầng hybrid:
+
+```powershell
+pnpm run infra:down
+```
+
+Reset sạch volume hạ tầng local khi cần:
+
+```powershell
+docker compose -f docker-compose.infra.yml down -v
+```
+
+## Chạy Full Docker
+
+Chế độ này build/chạy toàn bộ stack bằng Docker Compose.
+
+```powershell
+pnpm run docker:up
+pnpm run docker:migrate
+pnpm run db:seed
+```
+
+Tắt full Docker:
+
+```powershell
+pnpm run docker:down
+```
+
+Nếu cần build lại image:
+
+```powershell
+pnpm run docker:build
+pnpm run docker:up
+```
+
+## Tài Khoản Demo
+
+Seed data tạo các tài khoản demo trong Keycloak và service DB. Mật khẩu chung:
 
 ```text
 123456
 ```
 
-Ví dụ login frontend:
+Một số tài khoản thường dùng:
 
 - `admin@test.com`
 - `manager@test.com`
@@ -77,251 +132,242 @@ Ví dụ login frontend:
 - `student.b1@test.com`
 - `student.b2@test.com`
 
-Frontend chỉ gửi:
+Frontend chỉ cần gửi:
 
 ```http
 Authorization: Bearer <access_token>
 ```
 
-Không tự gửi `x-user-id`.
+Không tự gửi `x-user-id` hoặc `x-user-role` từ frontend. Các service đọc user từ JWT/Keycloak; các header debug chỉ dùng cho tình huống đặc biệt.
 
-Nếu muốn reset sạch môi trường local:
+## Gateway Và API
+
+Frontend nên gọi một base URL duy nhất:
+
+```text
+http://localhost:8000
+```
+
+Mapping chính qua Kong:
+
+| Service | Business path |
+| --- | --- |
+| `identity-service` | `/auth/*`, `/admin/*` |
+| `user-service` | `/users/*`, `/admin/users/*` |
+| `exam-service` | `/exams/*`, `/admin/exams/*` |
+| `course-service` | `/courses/*`, `/enrollments/*`, `/admin/courses/*` |
+| `question-service` | `/admin/questions/*` |
+| `notification-service` | `/notifications/*`, `/admin/academic-warnings/*` |
+| `analytics-service` | `/analytics/*` |
+| `simulation-service` | `/simulation/*` |
+| `media-service` | `/media/*`, `/admin/media/*` |
+| `audit-service` | `/admin/audit-logs/*` |
+
+Swagger của từng service qua Kong:
+
+```text
+http://localhost:8000/identity-service/docs
+http://localhost:8000/user-service/docs
+http://localhost:8000/exam-service/docs
+http://localhost:8000/course-service/docs
+http://localhost:8000/question-service/docs
+http://localhost:8000/notification-service/docs
+http://localhost:8000/analytics-service/docs
+http://localhost:8000/simulation-service/docs
+http://localhost:8000/media-service/docs
+http://localhost:8000/audit-service/docs
+```
+
+Tài liệu frontend chi tiết nằm ở [docs/api/kong-frontend-integration.md](./docs/api/kong-frontend-integration.md).
+
+## Script Hay Dùng
 
 ```powershell
-pnpm run infra:down
-docker compose -f docker-compose.infra.yml down -v
-```
-
-Sau đó chạy lại từ bước `infra:up`.
-
-## 4. Chạy full stack bằng Docker
-
-Yêu cầu:
-
-- Docker Desktop
-
-Khởi động:
-
-```bash
-pnpm run docker:up
-```
-
-Tắt:
-
-```bash
-pnpm run docker:down
-docker compose down
-```
-
-URL quan trọng:
-
-- Kong Proxy: http://localhost:8000
-- Kong Admin API: http://localhost:8001
-- RabbitMQ UI: http://localhost:15672
-- Consul UI: http://localhost:8500
-- Keycloak: http://localhost:8080
-- Kibana: http://localhost:5601
-
-## 5. Chạy local để code/debug
-
-Yêu cầu:
-
-- Node.js >= 18
-- pnpm qua Corepack (`corepack prepare pnpm@10.34.1 --activate`)
-- Docker Desktop
-
-Các bước cơ bản:
-
-```bash
-pnpm install
-pnpm run infra:up
-pnpm run consul:seed:local
-pnpm run dev
-```
-
-Nếu cần generate Prisma client trước khi build hoặc check:
-
-```bash
-pnpm run prisma:generate
-# hoặc
-pnpm run db:generate
-```
-
-Nếu cần apply migration + seed:
-
-```bash
-pnpm run db:deploy
-pnpm run db:seed
-```
-
-Smoke test health qua Kong:
-
-```bash
-pnpm run smoke
-```
-
-## 6. Root Scripts hữu ích
-
-```bash
+# Build, typecheck, lint/format
 pnpm run build
 pnpm run check-types
 pnpm run lint
+pnpm run check
 pnpm run format
+
+# Prisma
 pnpm run prisma:generate
 pnpm run db:generate
 pnpm run db:migrate
 pnpm run db:deploy
 pnpm run db:seed
+pnpm run db:seed:question
 pnpm run db:seed:question-images
-pnpm run db:backup:local
-pnpm run smoke
-```
 
-## 7. Consul Configuration Management
+# Hạ tầng và Docker
+pnpm run infra:up
+pnpm run infra:down
+pnpm run infra:logs
+pnpm run docker:up
+pnpm run docker:down
+pnpm run docker:build
+pnpm run docker:migrate
 
-Tất cả microservices sử dụng Consul để quản lý configuration tập trung. Repo vẫn hỗ trợ seed cấu hình local qua JSON, và trong Docker thì `consul-init` sẽ seed tự động khi stack lên.
-
-Các command hữu ích:
-
-```bash
+# Consul
 pnpm run consul:seed
 pnpm run consul:seed:local
 pnpm run consul:list
 pnpm run consul:get
+
+# Kiểm tra và vận hành
+pnpm run smoke
+pnpm run test
+pnpm run test:cov
+pnpm run test:integration
+pnpm run observability:smoke
+pnpm run rabbitmq:smoke
+pnpm run db:backup:local
+pnpm run db:backup:once
+pnpm run keycloak:backup:once
+pnpm run db:restore:test
+pnpm run dora:report
 ```
 
-Hướng dẫn chi tiết: [guides/consul/WORKFLOW.md](./guides/consul/WORKFLOW.md)
+## Cấu Hình Consul
 
-## 8. Gateway Routes
+Service đọc cấu hình theo thứ tự ưu tiên:
 
-- `/auth` -> `identity-service`
-- `/users` -> `user-service`
-- `/exams` -> `exam-service`
-- `/questions` -> `question-service`
-- `/courses` -> `course-service`
-- `/notifications` -> `notification-service`
-- `/analytics` -> `analytics-service`
-- `/simulation` -> `simulation-service`
-- `/media` -> `media-service`
-- `/admin/audit-logs` -> `audit-service`
+```text
+biến môi trường -> Consul -> giá trị mặc định
+```
 
-## 9. Seed demo data khi chạy bằng Docker
+Key Consul dùng format:
 
-```bash
-docker compose up -d consul consul-init keycloak redis rabbitmq \
-  db-identity db-user db-media db-question db-exam db-course \
-  db-notification db-analytics db-simulation db-audit
-pnpm run docker:migrate
+```text
+config/<environment>/<service-name>/<path>
+config/development-local/question-service/database.url
+config/development/media-service/storage.accountName
+```
+
+Môi trường chính:
+
+- `development-local`: service chạy trên máy, hạ tầng chạy trong Docker.
+- `development`: service và hạ tầng cùng chạy trong Docker network.
+- `staging` và `production`: dùng cho deploy.
+
+Xem thêm [Consul Workflow](./docs/devops/consul-workflow.md).
+
+## Database, Migration Và Seed
+
+Mỗi service có Prisma schema riêng trong `apps/<service>/prisma`. Các service không tạo foreign key chéo service; chỉ lưu UUID reference.
+
+Generate Prisma client:
+
+```powershell
+pnpm run db:generate
+```
+
+Tạo migration khi dev local:
+
+```powershell
+pnpm run db:migrate
+```
+
+Apply migration kiểu deploy:
+
+```powershell
+pnpm run db:deploy
+```
+
+Seed toàn bộ demo data:
+
+```powershell
 pnpm run db:seed
 ```
 
-Demo accounts được seed vào Keycloak và các service DB dùng chung password `123456`.
+## Health, Metrics Và Observability
 
-## 10. Ghi chú DevOps
+Các service dùng endpoint health chuẩn:
 
-- Trạng thái tổng quan:
-  - MVP/local/GCP đã khá đầy đủ: Docker, Kong, Consul, RabbitMQ, Keycloak, ELK, Prometheus/Grafana, backup, runbook.
-  - CI/CD đã có PR validation, main image release, Trivy scan và production release thủ công bằng immutable image tag.
-  - Production hardening còn thiếu: secret manager chính thức, load test, HPA và Terraform. SBOM/signing và rollback workflow đã có baseline trong GitHub Actions.
-- Production scope đã chốt: 10 services; `docs-service` chỉ dùng cho Dev.
-- CI/CD:
-  - Pull Request Validation: quality gate, build image, Trivy scan, không push image.
-  - Main Image Release: build đủ 10 production images, Trivy scan, push GHCR bằng tag `${git_sha}` và `latest`, rồi auto deploy GCP staging bằng Helm.
-  - Production Release: chạy thủ công bằng immutable image tag, gắn GitHub Environment `production`.
-  - Jenkins: pipeline tự host/legacy cho GHCR + Docker Compose deploy qua SSH/VM hoặc Compute Engine; GitHub Actions vẫn là đường chính cho GCP/GKE.
-  - DORA Metrics Report: đo Deployment Frequency, Lead Time for Changes, MTTR và Change Failure Rate theo `guides/devops/DORA-METRICS.md`.
-  - Incident/Postmortem: issue templates + auto labeler để chuẩn hóa dữ liệu MTTR/CFR theo `guides/devops/INCIDENT-POSTMORTEM-PROCESS.md`.
-  - Deployment Event Store: mỗi lần deploy ghi event JSON và upload artifact để DORA report đọc theo `guides/devops/DEPLOYMENT-EVENT-STORE.md`.
-  - Jenkins DORA Integration: Jenkinsfile ghi deployment event sau staging/production deploy và archive artifact theo `guides/devops/JENKINS-DORA-INTEGRATION.md`.
-  - DORA Grafana Dashboard: export DORA JSON sang Prometheus metrics và hiển thị dashboard theo `guides/devops/DORA-GRAFANA-DASHBOARD.md`.
-  - OpenTelemetry/Jaeger: trace end-to-end từ Kong đến NestJS services theo `guides/devops/OPENTELEMETRY-JAEGER-TRACING.md`.
-  - Business Metrics: đo user mới, lượt làm bài thi, pass/fail, hoàn tất bài học/khóa học, notification delivery và upload media theo `guides/devops/BUSINESS-METRICS.md`.
-  - GitHub Actions Release Safety: SBOM, Cosign signing và rollback workflow theo `guides/devops/GITHUB-ACTIONS-RELEASE-SAFETY.md`.
-- Deployment:
-  - Kubernetes baseline dùng Helm chart tại `charts/luyen-thi-lai-xe`.
-  - Target hiện tại là GCP/GKE, self-contained dependencies trong cluster cho giai đoạn MVP.
-  - GCP/GKE chỉ pull image từ GHCR theo tag được truyền vào Helm; không build source code trên GCP.
-  - K3s/VPS chỉ còn là hướng lab hoặc fallback legacy, không phải target production chính.
-  - Hướng dẫn setup nằm ở `guides/devops/PHASE5-KUBERNETES.md`.
-- Health endpoints chuẩn: `/health`, `/health/live`, `/health/ready` (Xem đặc tả tại [api-spec-health-metrics.md](./guides/api/api-spec-health-metrics.md))
-  - Hướng dẫn setup nằm ở `guides/devops/KUBERNETES-GCP-DEPLOYMENT.md`.
-  - Checklist GCP chi tiết nằm ở `guides/devops/GCP-SETUP.md`.
-  - Kịch bản demo DevOps nằm ở `guides/devops/DEVOPS-DEMO-SCRIPT.md`.
-- Health endpoints chuẩn:
-  - `/health`
-  - `/health/live`
-  - `/health/ready`
-- Smoke test cấp root ở [scripts/smoke.ts](./scripts/smoke.ts)
-- Bộ điều phối migration cấp root ở [scripts/prisma-migrate-all.ts](./scripts/prisma-migrate-all.ts)
-- Bộ điều phối seed cấp root ở [scripts/prisma-seed-all.ts](./scripts/prisma-seed-all.ts)
-- Script sao lưu DB local ở [scripts/db-backup-local.ts](./scripts/db-backup-local.ts)
-  - Backup đủ các DB local: `identity`, `user`, `exam`, `course`, `question`, `notification`, `analytics`, `simulation`, `media`, `audit`, `keycloak`
-- Scaffold Jenkins / GHCR / Docker Compose deploy ở:
-  - [Jenkinsfile](./Jenkinsfile)
-  - [docker-compose.deploy.yml](./docker-compose.deploy.yml)
-  - [guides/devops/JENKINS-DOCKER-COMPOSE.md](./guides/devops/JENKINS-DOCKER-COMPOSE.md)
-- Logging + ELK + Correlation ID + Metrics + Alerting ở [guides/devops/OBSERVABILITY-ELK.md](./guides/devops/OBSERVABILITY-ELK.md)
-- Runbook Observability ở [guides/devops/OBSERVABILITY-RUNBOOK.md](./guides/devops/OBSERVABILITY-RUNBOOK.md)
-- Tổng hợp trạng thái và gap DevOps ở [DEVOPS-SUMMARY.md](./DEVOPS-SUMMARY.md)
-- Đo lường DevOps theo DORA ở [guides/devops/DORA-METRICS.md](./guides/devops/DORA-METRICS.md)
-- Quy trình incident/postmortem cho DORA ở [guides/devops/INCIDENT-POSTMORTEM-PROCESS.md](./guides/devops/INCIDENT-POSTMORTEM-PROCESS.md)
-- Deployment event store cho DORA ở [guides/devops/DEPLOYMENT-EVENT-STORE.md](./guides/devops/DEPLOYMENT-EVENT-STORE.md)
-- Jenkins DORA integration ở [guides/devops/JENKINS-DORA-INTEGRATION.md](./guides/devops/JENKINS-DORA-INTEGRATION.md)
-- DORA Grafana dashboard ở [guides/devops/DORA-GRAFANA-DASHBOARD.md](./guides/devops/DORA-GRAFANA-DASHBOARD.md)
-- OpenTelemetry/Jaeger tracing ở [guides/devops/OPENTELEMETRY-JAEGER-TRACING.md](./guides/devops/OPENTELEMETRY-JAEGER-TRACING.md)
-- Business metrics ở [guides/devops/BUSINESS-METRICS.md](./guides/devops/BUSINESS-METRICS.md)
-- GitHub Actions release safety ở [guides/devops/GITHUB-ACTIONS-RELEASE-SAFETY.md](./guides/devops/GITHUB-ACTIONS-RELEASE-SAFETY.md)
-
-## 11. Quy trình làm việc
-
-1. Tạo branch từ `main`
-2. Code và commit theo từng scope nhỏ
-3. Chạy `pnpm run check-types` và `pnpm run build` trước khi push
-4. Nếu có thay đổi API hoặc infra, chạy thêm `pnpm run smoke`
-5. Mở PR và chỉ merge khi CI pass
-
-## 12. Chiến thuật Availability: Health Check + Restart
-
-Tactic đang áp dụng:
-
-- Phát hiện lỗi: Ping/Echo qua `/health/live`, sanity checking qua `/health/ready`, monitor nhanh bằng `pnpm run smoke`.
-- Khôi phục sau lỗi: Docker Compose dùng `restart: unless-stopped` để tự chạy lại service khi process/container chết.
-- Docker healthcheck đánh dấu service `healthy/unhealthy` trong `docker compose ps`; Docker Compose không tự restart container chỉ vì healthcheck bị `unhealthy` nếu process vẫn đang chạy.
+```text
+/health
+/health/live
+/health/ready
+/metrics
+```
 
 Kiểm tra health qua Kong:
 
 ```powershell
-docker compose up -d --build kong identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service audit-service
 pnpm run smoke
 ```
 
-`pnpm run smoke` mặc định chờ 300ms giữa mỗi request để không chạm rate-limit của Kong khi demo. Nếu cần chạy nhanh hơn trong môi trường đã tắt hoặc nâng rate-limit:
+Kiểm tra trực tiếp một service khi chạy hybrid:
 
 ```powershell
-$env:SMOKE_DELAY_MS=0
-pnpm run smoke
-```
-
-Kiểm tra trực tiếp service:
-
-```powershell
-curl http://localhost:3001/health/live
 curl http://localhost:3001/health/ready
-curl http://localhost:3010/health/ready
-```
-
-Demo lỗi dependency:
-
-```powershell
-docker compose stop db-user
 curl http://localhost:3002/health/ready
-docker compose start db-user
-curl http://localhost:3002/health/ready
+curl http://localhost:3011/health/ready
 ```
 
-Demo restart:
+Tài liệu liên quan:
 
-```powershell
-docker compose exec user-service sh -c "kill -9 1"
-docker compose ps user-service
-```
+- [Health & Metrics API](./docs/api/api-spec-health-metrics.md)
+- [ELK Logging Guide](./docs/devops/elk-logging-guide.md)
+- [Observability Runbook](./docs/devops/observability-runbook.md)
+- [OpenTelemetry và Jaeger](./docs/devops/opentelemetry-jaeger-tracing.md)
+- [Business Metrics](./docs/devops/business-metrics.md)
+
+## DevOps Và Deploy
+
+Repo đã có baseline cho:
+
+- Docker Compose local/full stack.
+- Kong gateway.
+- Consul config management.
+- RabbitMQ messaging.
+- Keycloak auth.
+- ELK, Prometheus, Grafana, Jaeger.
+- Backup PostgreSQL và Keycloak.
+- GitHub Actions release safety.
+- Jenkins + Docker Compose deployment flow.
+- Helm chart cho Kubernetes/GCP.
+- DORA metrics và deployment event store.
+
+Tài liệu chính:
+
+- [DevOps Status Report](./docs/devops/devops-status-report.md)
+- [Jenkins + Docker Compose](./docs/devops/jenkins-docker-compose.md)
+- [Kubernetes GCP Deployment](./docs/devops/kubernetes-gcp-deployment.md)
+- [GCP Setup](./docs/devops/gcp-setup.md)
+- [Backup Strategy](./docs/devops/backup-strategy.md)
+- [DORA Metrics Guide](./docs/devops/dora-metrics-guide.md)
+- [Release Safety](./docs/devops/github-actions-release-safety.md)
+
+## Tài Liệu API Theo Service
+
+`docs/api` là nơi chính để đọc contract của từng service: endpoint, auth/role, request, response, error code, event side effect và ghi chú frontend.
+
+- [analytics-service](./docs/api/api-spec-analytics.md)
+- [audit-service](./docs/api/api-spec-audit.md)
+- [course-service](./docs/api/api-spec-course.md)
+- [exam-service](./docs/api/api-spec-exam.md)
+- [identity-service](./docs/api/api-spec-identity.md)
+- [media-service](./docs/api/api-spec-media.md)
+- [notification-service](./docs/api/api-spec-notification.md)
+- [question-service](./docs/api/api-spec-question.md)
+- [simulation-service](./docs/api/api-spec-simulation.md)
+- [user-service](./docs/api/api-spec-user.md)
+
+## Quy Trình Làm Việc Đề Xuất
+
+1. Tạo branch từ `main`.
+2. Đọc tài liệu liên quan trong `docs/`.
+3. Sửa code đúng scope, giữ convention DDD/Clean Architecture.
+4. Nếu đổi API/config/workflow, cập nhật tài liệu tương ứng.
+5. Chạy check hẹp trước, ví dụ `pnpm --dir apps/<service> run check-types`.
+6. Chạy check rộng hơn khi thay đổi ảnh hưởng nhiều service: `pnpm run check-types`, `pnpm run build`, `pnpm run smoke`.
+7. Mở PR khi các check cần thiết đã pass.
+
+## Ghi Chú Quan Trọng
+
+- Không commit secret thật. Dùng `.env` local và `.env.example` cho placeholder.
+- Không import Prisma/NestJS/RabbitMQ/Keycloak vào `domain/`.
+- Không tạo quan hệ DB chéo service.
+- Frontend gọi API qua Kong, không gọi trực tiếp cổng service trong flow bình thường.
+- Khi gặp tài liệu legacy, hãy ưu tiên file tương ứng trong `docs/`.
