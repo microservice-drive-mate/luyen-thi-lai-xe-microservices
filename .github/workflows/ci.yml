@@ -547,6 +547,7 @@ jobs:
             global: {
               imageTag: env.IMAGE_TAG,
               imageRegistry: `ghcr.io/${{ github.repository_owner }}`,
+              nodeEnv: 'staging',
               storageClassName: 'local-path'
             },
             migration: { imageTag: env.IMAGE_TAG },

@@ -127,6 +127,7 @@ jobs:
             global: {
               imageTag: env.IMAGE_TAG,
               imageRegistry: `ghcr.io/${{ github.repository_owner }}`,
+              nodeEnv: 'production',
               storageClassName: env.STORAGE_CLASS_NAME || 'standard-rwo',
             },
             migration: { imageTag: env.IMAGE_TAG },
