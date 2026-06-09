@@ -6,7 +6,7 @@ Tổng kết DevOps hiện tại: [DEVOPS-SUMMARY.md](./DEVOPS-SUMMARY.md)
 
 ## 1. Tổng quan
 
-- Monorepo dùng `npm workspaces` + `turbo`
+- Monorepo dùng `pnpm workspaces` + `turbo`
 - Backend chính là các NestJS services trong `apps/*`
 - Gateway:
   - `kong/kong.dev.yaml` cho hybrid local
@@ -39,18 +39,18 @@ Yêu cầu:
 
 - Docker Desktop đang chạy
 - Node.js >= 18
-- npm. Trên Windows nếu PowerShell chặn `npm.ps1`, dùng `npm.cmd`
+- pnpm qua Corepack (`corepack prepare pnpm@10.34.1 --activate`)
 
 Từ root repo, chạy theo đúng thứ tự:
 
 ```powershell
-npm.cmd install
-npm.cmd run infra:up
-npm.cmd run consul:seed:local
-npm.cmd run db:generate
-npm.cmd run db:deploy
-npm.cmd run db:seed
-npm.cmd run dev
+pnpm install
+pnpm run infra:up
+pnpm run consul:seed:local
+pnpm run db:generate
+pnpm run db:deploy
+pnpm run db:seed
+pnpm dev
 ```
 
 Sau khi chạy xong:
@@ -88,7 +88,7 @@ Không tự gửi `x-user-id`.
 Nếu muốn reset sạch môi trường local:
 
 ```powershell
-npm.cmd run infra:down
+pnpm run infra:down
 docker compose -f docker-compose.infra.yml down -v
 ```
 
@@ -103,13 +103,13 @@ Yêu cầu:
 Khởi động:
 
 ```bash
-npm run docker:up
+pnpm run docker:up
 ```
 
 Tắt:
 
 ```bash
-npm run docker:down
+pnpm run docker:down
 docker compose down
 ```
 
@@ -127,54 +127,54 @@ URL quan trọng:
 Yêu cầu:
 
 - Node.js >= 18
-- npm
+- pnpm qua Corepack (`corepack prepare pnpm@10.34.1 --activate`)
 - Docker Desktop
 
 Các bước cơ bản:
 
 ```bash
-npm install
-npm run infra:up
-npm run consul:seed:local
-npm run dev
+pnpm install
+pnpm run infra:up
+pnpm run consul:seed:local
+pnpm run dev
 ```
 
 Nếu cần generate Prisma client trước khi build hoặc check:
 
 ```bash
-npm run prisma:generate
+pnpm run prisma:generate
 # hoặc
-npm run db:generate
+pnpm run db:generate
 ```
 
 Nếu cần apply migration + seed:
 
 ```bash
-npm run db:deploy
-npm run db:seed
+pnpm run db:deploy
+pnpm run db:seed
 ```
 
 Smoke test health qua Kong:
 
 ```bash
-npm run smoke
+pnpm run smoke
 ```
 
 ## 6. Root Scripts hữu ích
 
 ```bash
-npm run build
-npm run check-types
-npm run lint
-npm run format
-npm run prisma:generate
-npm run db:generate
-npm run db:migrate
-npm run db:deploy
-npm run db:seed
-npm run db:seed:question-images
-npm run db:backup:local
-npm run smoke
+pnpm run build
+pnpm run check-types
+pnpm run lint
+pnpm run format
+pnpm run prisma:generate
+pnpm run db:generate
+pnpm run db:migrate
+pnpm run db:deploy
+pnpm run db:seed
+pnpm run db:seed:question-images
+pnpm run db:backup:local
+pnpm run smoke
 ```
 
 ## 7. Consul Configuration Management
@@ -184,10 +184,10 @@ Tất cả microservices sử dụng Consul để quản lý configuration tập
 Các command hữu ích:
 
 ```bash
-npm run consul:seed
-npm run consul:seed:local
-npm run consul:list
-npm run consul:get
+pnpm run consul:seed
+pnpm run consul:seed:local
+pnpm run consul:list
+pnpm run consul:get
 ```
 
 Hướng dẫn chi tiết: [guides/consul/WORKFLOW.md](./guides/consul/WORKFLOW.md)
@@ -211,8 +211,8 @@ Hướng dẫn chi tiết: [guides/consul/WORKFLOW.md](./guides/consul/WORKFLOW.
 docker compose up -d consul consul-init keycloak redis rabbitmq \
   db-identity db-user db-media db-question db-exam db-course \
   db-notification db-analytics db-simulation db-audit
-docker compose run --rm identity-service npm run db:deploy -w identity-service
-docker compose run --rm identity-service npm run db:seed -w identity-service
+pnpm run docker:migrate
+pnpm run db:seed
 ```
 
 Demo accounts được seed vào Keycloak và các service DB dùng chung password `123456`.
@@ -276,15 +276,15 @@ Demo accounts được seed vào Keycloak và các service DB dùng chung passwo
 
 1. Tạo branch từ `main`
 2. Code và commit theo từng scope nhỏ
-3. Chạy `npm run check-types` và `npm run build` trước khi push
-4. Nếu có thay đổi API hoặc infra, chạy thêm `npm run smoke`
+3. Chạy `pnpm run check-types` và `pnpm run build` trước khi push
+4. Nếu có thay đổi API hoặc infra, chạy thêm `pnpm run smoke`
 5. Mở PR và chỉ merge khi CI pass
 
 ## 12. Chiến thuật Availability: Health Check + Restart
 
 Tactic đang áp dụng:
 
-- Phát hiện lỗi: Ping/Echo qua `/health/live`, sanity checking qua `/health/ready`, monitor nhanh bằng `npm run smoke`.
+- Phát hiện lỗi: Ping/Echo qua `/health/live`, sanity checking qua `/health/ready`, monitor nhanh bằng `pnpm run smoke`.
 - Khôi phục sau lỗi: Docker Compose dùng `restart: unless-stopped` để tự chạy lại service khi process/container chết.
 - Docker healthcheck đánh dấu service `healthy/unhealthy` trong `docker compose ps`; Docker Compose không tự restart container chỉ vì healthcheck bị `unhealthy` nếu process vẫn đang chạy.
 
@@ -292,14 +292,14 @@ Kiểm tra health qua Kong:
 
 ```powershell
 docker compose up -d --build kong identity-service user-service exam-service course-service question-service notification-service analytics-service simulation-service media-service audit-service
-npm.cmd run smoke
+pnpm run smoke
 ```
 
-`npm run smoke` mặc định chờ 300ms giữa mỗi request để không chạm rate-limit của Kong khi demo. Nếu cần chạy nhanh hơn trong môi trường đã tắt hoặc nâng rate-limit:
+`pnpm run smoke` mặc định chờ 300ms giữa mỗi request để không chạm rate-limit của Kong khi demo. Nếu cần chạy nhanh hơn trong môi trường đã tắt hoặc nâng rate-limit:
 
 ```powershell
 $env:SMOKE_DELAY_MS=0
-npm.cmd run smoke
+pnpm run smoke
 ```
 
 Kiểm tra trực tiếp service:

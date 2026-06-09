@@ -10,7 +10,7 @@ pipeline {
   }
 
   parameters {
-    string(name: 'GHCR_OWNER', defaultValue: 'replace-with-github-owner', description: 'GHCR owner/namespace chứa image của dự án')
+    string(name: 'GHCR_OWNER', defaultValue: 'bolac71', description: 'GHCR owner/namespace chứa image của dự án')
   }
 
   environment {
@@ -50,31 +50,35 @@ pipeline {
 
     stage('Install') {
       steps {
-        sh 'npm ci'
+        sh '''
+          corepack enable
+          corepack prepare pnpm@10.34.1 --activate
+          pnpm install --frozen-lockfile
+        '''
       }
     }
 
     stage('Lint') {
       steps {
-        sh 'npm run lint'
+        sh 'pnpm run lint'
       }
     }
 
     stage('Typecheck') {
       steps {
-        sh 'npm run check-types'
+        sh 'pnpm run check-types'
       }
     }
 
     stage('Unit Tests') {
       steps {
-        sh 'npx turbo run test --filter=./apps/*'
+        sh 'pnpm exec turbo run test --filter=./apps/*'
       }
     }
 
     stage('Build Workspace') {
       steps {
-        sh 'npm run build'
+        sh 'pnpm run build'
       }
     }
 
@@ -167,7 +171,7 @@ pipeline {
               "DEPLOYMENT_SMOKE_STATUS=${currentBuild.currentResult?.toLowerCase() ?: 'unknown'}",
               "DEPLOYMENT_BRANCH=${env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''}",
             ]) {
-              sh 'npm run deployment:record || true'
+              sh 'node scripts/devops-record-deployment.js || true'
             }
           }
           archiveArtifacts artifacts: 'reports/deployments/events/*.json', allowEmptyArchive: true
@@ -222,7 +226,7 @@ pipeline {
               "DEPLOYMENT_SMOKE_STATUS=${currentBuild.currentResult?.toLowerCase() ?: 'unknown'}",
               "DEPLOYMENT_BRANCH=${env.BRANCH_NAME ?: env.GIT_BRANCH ?: ''}",
             ]) {
-              sh 'npm run deployment:record || true'
+              sh 'node scripts/devops-record-deployment.js || true'
             }
           }
           archiveArtifacts artifacts: 'reports/deployments/events/*.json', allowEmptyArchive: true

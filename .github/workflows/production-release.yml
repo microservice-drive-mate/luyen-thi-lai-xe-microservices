@@ -235,7 +235,7 @@ jobs:
           DEPLOYMENT_GIT_SHA: ${{ inputs.image_tag }}
           DEPLOYMENT_STATUS: ${{ job.status }}
           DEPLOYMENT_SMOKE_STATUS: ${{ job.status }}
-        run: npm run deployment:record
+        run: node scripts/devops-record-deployment.js
 
       - name: Upload deployment event
         if: always()

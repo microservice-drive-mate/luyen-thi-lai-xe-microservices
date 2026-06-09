@@ -6,9 +6,9 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "prebuild": "npm run db:generate",
-    "precheck-types": "npm run db:generate",
-    "prelint": "npm run db:generate",
+    "prebuild": "pnpm run db:generate",
+    "precheck-types": "pnpm run db:generate",
+    "prelint": "pnpm run db:generate",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",

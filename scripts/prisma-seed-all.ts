@@ -97,11 +97,11 @@ function resolveRequestedServices(
 }
 
 function runSeed(service: SeedableService): void {
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 
   console.log(`\n[db:seed] ${service.serviceName}`);
 
-  const result = spawnSync(npmCommand, ['run', 'db:seed'], {
+  const result = spawnSync(pnpmCommand, ['run', 'db:seed'], {
     cwd: service.serviceDir,
     stdio: 'inherit',
     shell: process.platform === 'win32',

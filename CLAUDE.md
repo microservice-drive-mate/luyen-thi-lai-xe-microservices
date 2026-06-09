@@ -28,30 +28,30 @@ Hãy implement theo DDD + Clean Architecture, convention Consul config, Prisma c
 
 ```bash
 # Hybrid dev: Docker infra + local services
-npm run infra:up
-npm run dev
-npm run infra:down
+pnpm run infra:up
+pnpm run dev
+pnpm run infra:down
 
 # Full Docker
-npm run docker:build
-npm run docker:up
-npm run docker:migrate
-npm run docker:down
+pnpm run docker:build
+pnpm run docker:up
+pnpm run docker:migrate
+pnpm run docker:down
 
 # Consul
-npm run consul:seed
-npm run consul:seed:local
-npm run consul:list -- config/development-local/<service-name>
-npm run consul:get -- config/development-local/<service-name>/<key>
+pnpm run consul:seed
+pnpm run consul:seed:local
+pnpm run consul:list -- config/development-local/<service-name>
+pnpm run consul:get -- config/development-local/<service-name>/<key>
 
 # Prisma migrations for all Prisma services
-npm run db:migrate
-npm run db:deploy
+pnpm run db:migrate
+pnpm run db:deploy
 
 # Quality gates
-npm run build
-npm run check-types
-npm run check
+pnpm run build
+pnpm run check-types
+pnpm run check
 ```
 
 ## Services
@@ -137,8 +137,8 @@ Use `apps/user-service` as the first reference for DDD structure, module wiring,
 - Import from the generated package, not from `@prisma/client`, inside services and seed files.
 - Prisma v7 uses `@prisma/adapter-pg` and `PrismaPg`; do not use removed options such as `datasourceUrl`.
 - Migrations are run from root scripts:
-  - `npm run db:migrate` for local dev migration creation.
-  - `npm run db:deploy` or `npm run docker:migrate` for deploy-style migration.
+  - `pnpm run db:migrate` for local dev migration creation.
+  - `pnpm run db:deploy` or `pnpm run docker:migrate` for deploy-style migration.
 
 ## Consul Conventions
 
@@ -157,7 +157,7 @@ Environments:
 - `development-local`: services run on host, infra in Docker.
 - `development`: all services run inside Docker network.
 
-Root `npm run dev` forces `NODE_ENV=development-local` and `CONSUL_URL=http://127.0.0.1:8500`.
+Root `pnpm run dev` forces `NODE_ENV=development-local` and `CONSUL_URL=http://127.0.0.1:8500`.
 
 When adding config:
 
@@ -235,9 +235,9 @@ Do not commit real Keycloak client secrets in realm exports or guides.
 Run the narrowest checks that prove the change:
 
 ```bash
-npm --workspace=apps/<service> run check-types
-npm --workspace=apps/<service> run build
-npx turbo run check-types
+pnpm --dir apps/<service> run check-types
+pnpm --dir apps/<service> run build
+pnpm exec turbo run check-types
 docker compose config --quiet
 ```
 

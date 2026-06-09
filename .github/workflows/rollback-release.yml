@@ -181,7 +181,7 @@ jobs:
             --arg previousRevision "${CURRENT_REVISION:-unknown}" \
             --arg reason "${ROLLBACK_REASON:-}" \
             '{targetRevision: $targetRevision, previousRevision: $previousRevision, reason: $reason}')
-          npm run deployment:record
+          node scripts/devops-record-deployment.js
 
       - name: Upload rollback deployment event
         if: always()
@@ -295,7 +295,7 @@ jobs:
             --arg previousRevision "${CURRENT_REVISION:-unknown}" \
             --arg reason "${ROLLBACK_REASON:-}" \
             '{targetRevision: $targetRevision, previousRevision: $previousRevision, reason: $reason}')
-          npm run deployment:record
+          node scripts/devops-record-deployment.js
 
       - name: Upload rollback deployment event
         if: always()

@@ -202,7 +202,7 @@ for service in "${migration_services[@]}"; do
   "${compose_cmd[@]}" run --rm --no-deps \
     -e DATABASE_URL="${migration_database_urls[${service}]}" \
     migration-runner \
-    sh -lc "apk add --no-cache libc6-compat openssl >/dev/null && npm exec --yes --package prisma@${PRISMA_CLI_VERSION} -- prisma migrate deploy --schema './apps/${service}/prisma/schema.prisma'"
+    sh -lc "prisma migrate deploy --schema './apps/${service}/prisma/schema.prisma'"
 done
 
 "${compose_cmd[@]}" up -d --remove-orphans "${app_services[@]}"

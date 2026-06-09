@@ -78,11 +78,11 @@ Luồng production/staging hiện chốt **10 application services**:
 ### Database Lifecycle
 
 - Root scripts đã có:
-  - `npm run db:generate`
-  - `npm run db:deploy`
-  - `npm run db:seed`
-  - `npm run db:backup:local`
-  - `npm run db:restore:test`
+  - `pnpm run db:generate`
+  - `pnpm run db:deploy`
+  - `pnpm run db:seed`
+  - `pnpm run db:backup:local`
+  - `pnpm run db:restore:test`
 - CI có staging migration job trên branch `staging`.
 - Docker Compose deploy dùng `migration-runner` để chạy `prisma migrate deploy`.
 - Kubernetes baseline có Prisma migration Job riêng trong Helm chart.
@@ -200,7 +200,7 @@ Luồng production/staging hiện chốt **10 application services**:
   - idempotency memory TTL.
   - metrics cho success/retry/DLQ.
 - Smoke script:
-  - `npm run rabbitmq:smoke`.
+  - `pnpm run rabbitmq:smoke`.
 
 ### Backup, Restore & Runbooks
 
@@ -214,7 +214,7 @@ Luồng production/staging hiện chốt **10 application services**:
   - daily retention qua `BACKUP_RETENTION_DAYS`.
   - weekly snapshot qua `BACKUP_WEEKLY_RETENTION_WEEKS`.
 - Restore rehearsal:
-  - `npm run db:restore:test`.
+  - `pnpm run db:restore:test`.
 - Tài liệu:
   - `guides/devops/BACKUP-STRATEGY.md`
   - `guides/devops/INCIDENT-RUNBOOK.md`
@@ -320,31 +320,31 @@ Chưa có:
 
 ```bash
 # Local hybrid
-npm run infra:up
-npm run consul:seed:local
-npm run db:generate
-npm run db:deploy
-npm run db:seed
-npm run dev
+pnpm run infra:up
+pnpm run consul:seed:local
+pnpm run db:generate
+pnpm run db:deploy
+pnpm run db:seed
+pnpm run dev
 
 # Full Docker
-npm run docker:build
-npm run docker:up
+pnpm run docker:build
+pnpm run docker:up
 
 # Quality
-npm run lint
-npm run check-types
-npm run build
+pnpm run lint
+pnpm run check-types
+pnpm run build
 
 # DevOps smoke
-npm run smoke
-npm run observability:smoke
-npm run rabbitmq:smoke
-npm run db:restore:test
+pnpm run smoke
+pnpm run observability:smoke
+pnpm run rabbitmq:smoke
+pnpm run db:restore:test
 
 # Backup one-shot
-npm run db:backup:once
-npm run keycloak:backup:once
+pnpm run db:backup:once
+pnpm run keycloak:backup:once
 
 # Kubernetes baseline
 helm lint charts/luyen-thi-lai-xe

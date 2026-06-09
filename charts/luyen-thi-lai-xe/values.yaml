@@ -1,5 +1,5 @@
 global:
-  imageRegistry: ghcr.io/replace-with-github-owner
+  imageRegistry: ghcr.io/bolac71
   imageTag: latest
   imagePullPolicy: IfNotPresent
   nodeEnv: production
