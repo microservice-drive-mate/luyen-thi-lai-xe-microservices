@@ -161,6 +161,7 @@ jobs:
 
     strategy:
       fail-fast: false
+      max-parallel: 3
       matrix:
         service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
     steps:
@@ -239,12 +240,22 @@ jobs:
           retention-days: 90
 
       - name: Push Docker Image
+        id: push-image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
-          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:latest
+          IMAGE_REPO="ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}"
+          IMAGE_TAG="${IMAGE_REPO}:${{ github.sha }}"
+
+          docker push "$IMAGE_TAG"
+          docker push "${IMAGE_REPO}:latest"
+
+          DIGEST="$(docker buildx imagetools inspect "$IMAGE_TAG" --format '{{.Manifest.Digest}}')"
+          IMAGE_REF="${IMAGE_REPO}@${DIGEST}"
+
+          echo "image-ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
+          echo "Resolved immutable image reference: ${IMAGE_REF}"
 
       - name: Install Cosign
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -255,9 +266,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          IMAGE="ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}"
-          cosign sign --yes "$IMAGE"
-          cosign attest --yes --predicate "sbom-${{ matrix.service }}.spdx.json" --type spdxjson "$IMAGE"
+          IMAGE="${{ steps.push-image.outputs.image-ref }}"
+
+          retry() {
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              if "$@"; then
+                return 0
+              fi
+
+              if [[ "$attempt" == "5" ]]; then
+                echo "Command failed after 5 attempts: $*"
+                return 1
+              fi
+
+              sleep_seconds=$((attempt * 20))
+              echo "Command failed, retrying in ${sleep_seconds}s: $*"
+              sleep "$sleep_seconds"
+            done
+          }
+
+          retry cosign sign --yes "$IMAGE"
+          retry cosign attest --yes --predicate "sbom-${{ matrix.service }}.spdx.json" --type spdxjson "$IMAGE"
 
       - name: Verify image signature
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -267,7 +297,7 @@ jobs:
           cosign verify \
             --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/ci.yml@refs/heads/main" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-            "ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}"
+            "${{ steps.push-image.outputs.image-ref }}"
 
       - name: Get image size
         id: size
@@ -367,11 +397,21 @@ jobs:
           retention-days: 90
 
       - name: Push Migration Runner Image
+        id: push-migration-runner-image
         shell: bash
         run: |
           set -euo pipefail
-          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:latest
+          IMAGE_REPO="ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner"
+          IMAGE_TAG="${IMAGE_REPO}:${{ github.sha }}"
+
+          docker push "$IMAGE_TAG"
+          docker push "${IMAGE_REPO}:latest"
+
+          DIGEST="$(docker buildx imagetools inspect "$IMAGE_TAG" --format '{{.Manifest.Digest}}')"
+          IMAGE_REF="${IMAGE_REPO}@${DIGEST}"
+
+          echo "image-ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
+          echo "Resolved immutable image reference: ${IMAGE_REF}"
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
@@ -380,9 +420,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          IMAGE="ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}"
-          cosign sign --yes "$IMAGE"
-          cosign attest --yes --predicate "sbom-migration-runner.spdx.json" --type spdxjson "$IMAGE"
+          IMAGE="${{ steps.push-migration-runner-image.outputs.image-ref }}"
+
+          retry() {
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              if "$@"; then
+                return 0
+              fi
+
+              if [[ "$attempt" == "5" ]]; then
+                echo "Command failed after 5 attempts: $*"
+                return 1
+              fi
+
+              sleep_seconds=$((attempt * 20))
+              echo "Command failed, retrying in ${sleep_seconds}s: $*"
+              sleep "$sleep_seconds"
+            done
+          }
+
+          retry cosign sign --yes "$IMAGE"
+          retry cosign attest --yes --predicate "sbom-migration-runner.spdx.json" --type spdxjson "$IMAGE"
 
       - name: Verify migration runner image signature
         shell: bash
@@ -391,7 +450,7 @@ jobs:
           cosign verify \
             --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/ci.yml@refs/heads/main" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-            "ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}"
+            "${{ steps.push-migration-runner-image.outputs.image-ref }}"
 
       - name: Build Summary
         if: always()
