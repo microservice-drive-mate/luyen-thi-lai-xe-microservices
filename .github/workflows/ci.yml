@@ -9,6 +9,9 @@ permissions:
   id-token: write
   packages: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   quality-gate:
     name: Code Quality & Testing

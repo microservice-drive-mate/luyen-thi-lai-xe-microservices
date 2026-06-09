@@ -34,8 +34,8 @@ interface RawQuestion {
   options: RawQuestionOption[];
 }
 
-export class QuestionMapper {
-  static toDomain(raw: RawQuestion): Question {
+export const QuestionMapper = {
+  toDomain(raw: RawQuestion): Question {
     return Question.reconstitute({
       id: raw.id,
       content: raw.content,
@@ -62,5 +62,5 @@ export class QuestionMapper {
         displayOrder: option.displayOrder,
       })),
     });
-  }
-}
+  },
+};

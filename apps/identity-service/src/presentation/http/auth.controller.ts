@@ -33,7 +33,7 @@ import { LogoutRequestDto } from '../dtos/logout.request.dto';
 import { LogoutResponseDto } from '../dtos/logout.response.dto';
 import { RefreshTokenRequestDto } from '../dtos/refresh-token.request.dto';
 
-@ApiTags('auth')
+@ApiTags('Auth')
 @Controller()
 export class AuthController {
   constructor(

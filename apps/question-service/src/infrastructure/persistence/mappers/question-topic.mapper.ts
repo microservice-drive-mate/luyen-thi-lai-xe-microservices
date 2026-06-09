@@ -8,8 +8,8 @@ interface RawQuestionTopic {
   createdAt: Date;
 }
 
-export class QuestionTopicMapper {
-  static toDomain(raw: RawQuestionTopic): QuestionTopic {
+export const QuestionTopicMapper = {
+  toDomain(raw: RawQuestionTopic): QuestionTopic {
     return QuestionTopic.reconstitute({
       id: raw.id,
       name: raw.name,
@@ -17,5 +17,5 @@ export class QuestionTopicMapper {
       parentId: raw.parentId,
       createdAt: raw.createdAt,
     });
-  }
-}
+  },
+};

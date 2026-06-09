@@ -24,8 +24,8 @@ export interface RawExamTemplate {
   updatedAt: Date;
 }
 
-export class ExamTemplateMapper {
-  static toDomain(raw: RawExamTemplate): ExamTemplate {
+export const ExamTemplateMapper = {
+  toDomain(raw: RawExamTemplate): ExamTemplate {
     return ExamTemplate.reconstitute({
       id: raw.id,
       name: raw.name,
@@ -45,5 +45,5 @@ export class ExamTemplateMapper {
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
     });
-  }
-}
+  },
+};

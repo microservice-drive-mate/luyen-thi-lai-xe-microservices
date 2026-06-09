@@ -21,6 +21,10 @@ import {
   Practice2dFeedbackResult,
   Practice2dSessionResult,
 } from '../../application/use-cases/practice2d/practice2d.result';
+import {
+  FeedbackSeverity,
+  Practice2dSessionStatus,
+} from '../../domain/aggregates/practice2d/practice2d-session.types';
 
 export class LicenseCategoryQueryDto {
   @ApiProperty({ enum: LicenseCategory })
@@ -107,13 +111,44 @@ export class EndPractice2dSessionRequestDto {
   abandoned?: boolean;
 }
 
+class ManeuverCheckpointResponseDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() title!: string;
+  @ApiProperty() instruction!: string;
+  @ApiProperty({ nullable: true }) penalty!: string | null;
+  @ApiPropertyOptional({ nullable: true }) x?: number | null;
+  @ApiPropertyOptional({ nullable: true }) y?: number | null;
+  @ApiPropertyOptional({ nullable: true }) visualColor?: string | null;
+  @ApiProperty() displayOrder!: number;
+}
+
 export class ManeuverResponseDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() title!: string;
+  @ApiProperty() description!: string;
+  @ApiProperty({ enum: LicenseCategory }) licenseCategory!: LicenseCategory;
+  @ApiProperty() displayOrder!: number;
+  @ApiProperty({ type: [ManeuverCheckpointResponseDto] })
+  checkpoints!: ManeuverCheckpointResponseDto[];
+
   static fromRecord(record: ManeuverRecord): ManeuverResponseDto {
     return Object.assign(new ManeuverResponseDto(), record);
   }
 }
 
 export class ManeuverErrorResponseDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ enum: LicenseCategory }) licenseCategory!: LicenseCategory;
+  @ApiProperty() code!: string;
+  @ApiProperty() description!: string;
+  @ApiProperty() severity!: string;
+  @ApiProperty() pointsDeducted!: number;
+  @ApiProperty() isFatal!: boolean;
+  @ApiProperty() isGeneral!: boolean;
+  @ApiProperty() isActive!: boolean;
+  @ApiProperty({ nullable: true }) visualColor!: string | null;
+  @ApiProperty({ nullable: true }) icon!: string | null;
+
   static fromRecord(record: ManeuverErrorRecord): ManeuverErrorResponseDto {
     return Object.assign(new ManeuverErrorResponseDto(), record);
   }
@@ -140,6 +175,15 @@ export class SimulationSessionResponseDto {
 }
 
 export class Practice2dFeedbackResponseDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() telemetryType!: string;
+  @ApiProperty({ nullable: true }) errorCode!: string | null;
+  @ApiProperty({ enum: FeedbackSeverity }) severity!: FeedbackSeverity;
+  @ApiProperty() penalty!: number;
+  @ApiProperty() message!: string;
+  @ApiProperty({ nullable: true }) hint!: string | null;
+  @ApiProperty() occurredAt!: Date;
+
   static fromResult(
     result: Practice2dFeedbackResult,
   ): Practice2dFeedbackResponseDto {
@@ -148,6 +192,21 @@ export class Practice2dFeedbackResponseDto {
 }
 
 export class Practice2dSessionResponseDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() studentId!: string;
+  @ApiProperty({ enum: LicenseCategory }) licenseCategory!: string;
+  @ApiProperty({ enum: Practice2dSessionStatus })
+  status!: Practice2dSessionStatus | string;
+  @ApiProperty() totalEvents!: number;
+  @ApiProperty() errorCount!: number;
+  @ApiProperty() totalPenalty!: number;
+  @ApiProperty({ nullable: true }) score!: number | null;
+  @ApiProperty() summary!: unknown;
+  @ApiProperty() startedAt!: Date;
+  @ApiProperty({ nullable: true }) endedAt!: Date | null;
+  @ApiProperty({ type: [Practice2dFeedbackResponseDto] })
+  feedbackEvents!: Practice2dFeedbackResponseDto[];
+
   static fromResult(
     result: Practice2dSessionResult,
   ): Practice2dSessionResponseDto {

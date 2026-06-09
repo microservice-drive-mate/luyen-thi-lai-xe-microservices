@@ -175,7 +175,7 @@ Không tạo khóa ngoại (foreign keys) chéo giữa các service. Chỉ lưu 
 Chạy generation/typecheck cấp độ service sau khi thay đổi Prisma hoặc repository:
 
 ```bash
-npm --workspace=apps/<service> run check-types
+pnpm --dir apps/<service> run check-types
 ```
 
 ## Consul và Secrets
@@ -234,16 +234,16 @@ Các DTOs nên:
 Sử dụng cách check nhỏ nhất và nhanh nhất có ích trước:
 
 ```bash
-npm --workspace=apps/<service> run check-types
-npm --workspace=apps/<service> run build
+pnpm --dir apps/<service> run check-types
+pnpm --dir apps/<service> run build
 ```
 
 Sau đó mở rộng khi thay đổi ảnh hưởng đến các shared packages hoặc nhiều services:
 
 ```bash
-npm --workspace=packages/common run build
-npx turbo run check-types
-npx turbo run build
+pnpm --dir packages/common run build
+pnpm exec turbo run check-types
+pnpm exec turbo run build
 ```
 
 Chỉ sử dụng placeholder e2e specs khi suite test thực sự yêu cầu base hạ tầng tích hợp từ bên ngoài. Ưu tiên các tests smoke thực tế cho controllers có thể test với simulated (mocked) use cases.

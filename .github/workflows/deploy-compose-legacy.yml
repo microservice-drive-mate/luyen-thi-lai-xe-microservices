@@ -42,6 +42,9 @@ concurrency:
   group: deploy-compose-${{ github.event.inputs.deploy_env || 'production' }}
   cancel-in-progress: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   deploy:
     name: Deploy ${{ github.event.inputs.image_tag || github.event.workflow_run.head_sha || 'latest' }} to ${{ github.event.inputs.deploy_env || 'production' }}

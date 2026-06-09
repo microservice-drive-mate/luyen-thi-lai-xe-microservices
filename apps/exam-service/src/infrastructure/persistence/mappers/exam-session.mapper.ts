@@ -60,8 +60,8 @@ export interface RawExamSession {
   questions: RawSessionQuestion[];
 }
 
-export class ExamSessionMapper {
-  static toDomain(raw: RawExamSession): ExamSession {
+export const ExamSessionMapper = {
+  toDomain(raw: RawExamSession): ExamSession {
     return ExamSession.reconstitute({
       id: raw.id,
       studentId: raw.studentId,
@@ -110,5 +110,5 @@ export class ExamSessionMapper {
         answeredAt: question.answeredAt,
       })),
     });
-  }
-}
+  },
+};

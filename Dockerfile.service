@@ -6,7 +6,6 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@10.34.1 --activate
 
-# Copy only dependency manifests first so pnpm install is shared and cached across all services.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json .npmrc ./
 COPY packages/common/package.json ./packages/common/package.json
 COPY apps/analytics-service/package.json ./apps/analytics-service/package.json
@@ -34,8 +33,6 @@ COPY --from=deps /app/packages ./packages
 COPY . .
 RUN pnpm --dir apps/${SERVICE_NAME} run prisma:generate
 RUN pnpm exec turbo build --filter=${SERVICE_NAME}
-# Generate Prisma client BEFORE pnpm prune (prisma is a devDep and will be removed).
-# Back up the whole @prisma dir so pnpm prune cannot remove the generated client.
 RUN pnpm exec prisma generate --schema=apps/${SERVICE_NAME}/prisma/schema.prisma \
  && cp -r node_modules/@prisma /prisma-generated
 RUN CI=true pnpm prune --prod --ignore-scripts
@@ -44,7 +41,6 @@ FROM node:20-alpine AS runner
 ARG SERVICE_NAME
 ENV SERVICE_NAME=${SERVICE_NAME}
 RUN apk add --no-cache libc6-compat openssl
-# Runtime only needs node; package managers add unrelated CVE surface.
 RUN rm -rf \
     /usr/local/lib/node_modules/npm \
     /usr/local/bin/npm \
@@ -56,7 +52,6 @@ RUN rm -rf \
     /usr/local/bin/yarnpkg
 WORKDIR /app
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-# Restore Prisma generated client (removed by pnpm prune) from backup
 COPY --from=builder --chown=node:node /prisma-generated ./node_modules/@prisma/
 COPY --from=builder --chown=node:node /app/packages/common/dist ./packages/common/dist
 COPY --from=builder --chown=node:node /app/packages/common/package.json ./packages/common/package.json
