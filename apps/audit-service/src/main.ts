@@ -71,7 +71,7 @@ async function bootstrap() {
 
   setupMicroserviceSwagger(app, {
     title: 'Audit Service API',
-    description: 'Centralized immutable security audit trail',
+    description: 'Các API liên quan đến audit log và traceability',
   });
 
   await app.startAllMicroservices();

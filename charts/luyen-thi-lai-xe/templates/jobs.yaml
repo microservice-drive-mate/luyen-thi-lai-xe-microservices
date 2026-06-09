@@ -183,7 +183,7 @@ spec:
             - name: KEYCLOAK_CLIENT_ID
               value: {{ .Values.secrets.keycloakClientId | quote }}
             - name: NODE_ENV
-              value: "production"
+              value: {{ .Values.global.nodeEnv | quote }}
             - name: CHECKPOINT_DISABLE
               value: "1"
             - name: PRISMA_HIDE_UPDATE_MESSAGE

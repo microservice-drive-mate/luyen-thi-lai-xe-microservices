@@ -2,8 +2,8 @@ import { IdentityUser as PrismaIdentityUser } from '@prisma/identity-client';
 import { IdentityUser } from '../../../domain/aggregates/identity-user/identity-user.aggregate';
 import { UserRole } from '../../../domain/aggregates/identity-user/identity-user.types';
 
-export class IdentityUserMapper {
-  static toDomain(raw: PrismaIdentityUser): IdentityUser {
+export const IdentityUserMapper = {
+  toDomain(raw: PrismaIdentityUser): IdentityUser {
     return IdentityUser.reconstitute({
       id: raw.id,
       email: raw.email,
@@ -16,5 +16,5 @@ export class IdentityUserMapper {
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
     });
-  }
-}
+  },
+};

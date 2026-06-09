@@ -9,6 +9,9 @@ permissions:
   id-token: write
   packages: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   quality-gate:
     name: Code Quality & Testing
@@ -544,6 +547,7 @@ jobs:
             global: {
               imageTag: env.IMAGE_TAG,
               imageRegistry: `ghcr.io/${{ github.repository_owner }}`,
+              nodeEnv: 'staging',
               storageClassName: 'local-path'
             },
             migration: { imageTag: env.IMAGE_TAG },

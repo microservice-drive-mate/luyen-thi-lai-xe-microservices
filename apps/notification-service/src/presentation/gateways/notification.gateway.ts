@@ -4,7 +4,6 @@ import {
   OnGatewayDisconnect,
   OnGatewayInit,
   WebSocketGateway,
-  WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import {
@@ -24,9 +23,6 @@ import { SocketAuthPort } from '../../application/ports/socket-auth.port';
 export class NotificationGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  @WebSocketServer()
-  private readonly server!: Server;
-
   private readonly logger = new Logger(NotificationGateway.name);
 
   constructor(

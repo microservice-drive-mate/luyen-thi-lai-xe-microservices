@@ -12,10 +12,11 @@
     "sourceMap": true,
     "rootDir": ".",
     "outDir": "./dist",
-    "baseUrl": "./",
+    "types": ["node", "jest"],
     "paths": {
       "@/*": ["./src/*"]
     },
+    "strictPropertyInitialization": false,
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,

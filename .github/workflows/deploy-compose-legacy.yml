@@ -1,37 +1,45 @@
 name: Legacy SSH Compose Deploy
 
 on:
-  workflow_run:
-    workflows: ["Main Image Release"]
-    types: [completed]
   workflow_dispatch:
     inputs:
       deploy_env:
-        description: "Target environment. Remote env file must be <deploy_env>.env"
+        description: "Môi trường cần deploy. File env trên server phải có dạng <deploy_env>.env"
         type: choice
         required: true
-        default: production
+        default: staging
         options:
           - staging
           - production
-      deploy_host:
-        description: "Remote VM host or public IP, for example GCP Compute Engine"
+
+      confirm_production:
+        description: "Nhập true để xác nhận deploy production. Chỉ cần khi deploy_env=production"
         type: string
-        required: true
+        required: false
+        default: "false"
+
+      deploy_host:
+        description: "Host hoặc IP của VM deploy. Để trống để dùng secret DEPLOY_HOST/VPS_HOST"
+        type: string
+        required: false
+        default: ""
+
       deploy_path:
-        description: "Remote deployment directory"
+        description: "Thư mục chứa mã nguồn/cấu hình deploy trên server"
         type: string
         required: true
         default: "/opt/luyen-thi-lai-xe-microservices"
+
       image_tag:
-        description: "Docker image tag to deploy"
+        description: "Docker image tag cần deploy, ví dụ commit SHA hoặc latest"
         type: string
         required: true
         default: "latest"
+
       ghcr_owner:
-        description: "GHCR owner/namespace used by service images"
+        description: "Owner/namespace trên GHCR chứa image. Để trống để dùng owner của repository"
         type: string
-        required: true
+        required: false
         default: ""
 
 permissions:
@@ -39,30 +47,26 @@ permissions:
   packages: read
 
 concurrency:
-  group: deploy-compose-${{ github.event.inputs.deploy_env || 'production' }}
+  group: deploy-compose-${{ github.event.inputs.deploy_env || 'staging' }}
   cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   deploy:
-    name: Deploy ${{ github.event.inputs.image_tag || github.event.workflow_run.head_sha || 'latest' }} to ${{ github.event.inputs.deploy_env || 'production' }}
-    if: >-
-      ${{
-        github.event_name == 'workflow_dispatch' ||
-        (
-          github.event.workflow_run.conclusion == 'success' &&
-          github.event.workflow_run.head_branch == 'main'
-        )
-      }}
+    name: Deploy ${{ github.event.inputs.image_tag || 'latest' }} to ${{ github.event.inputs.deploy_env || 'staging' }}
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    environment: ${{ github.event.inputs.deploy_env || 'production' }}
+    environment: ${{ github.event.inputs.deploy_env || 'staging' }}
 
     env:
-      DEPLOY_ENV: ${{ github.event.inputs.deploy_env || 'production' }}
+      DEPLOY_ENV: ${{ github.event.inputs.deploy_env || 'staging' }}
       DEPLOY_HOST: ${{ github.event.inputs.deploy_host || secrets.DEPLOY_HOST || secrets.VPS_HOST }}
       DEPLOY_PATH: ${{ github.event.inputs.deploy_path || secrets.DEPLOY_PATH || secrets.VPS_DEPLOY_PATH || '/opt/luyen-thi-lai-xe-microservices' }}
       GHCR_OWNER: ${{ github.event.inputs.ghcr_owner || github.repository_owner }}
-      IMAGE_TAG: ${{ github.event.inputs.image_tag || github.event.workflow_run.head_sha || 'latest' }}
+      IMAGE_TAG: ${{ github.event.inputs.image_tag || 'latest' }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER || secrets.VPS_USER }}
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
@@ -71,20 +75,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Block unconfirmed production deploy
+        if: ${{ github.event.inputs.deploy_env == 'production' && github.event.inputs.confirm_production != 'true' }}
+        shell: bash
+        run: |
+          echo "::error::Deploy production cần confirm_production=true"
+          exit 1
+
       - name: Mark deployment start
         shell: bash
         run: echo "DEPLOYMENT_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
 
-      - name: Validate required secrets
+      - name: Validate required secrets and inputs
         shell: bash
         run: |
           missing=0
+
           for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY GHCR_USERNAME GHCR_TOKEN; do
             if [[ -z "${!name:-}" ]]; then
-              echo "::error::Missing required secret: ${name}"
+              echo "::error::Thiếu giá trị bắt buộc: ${name}"
               missing=1
             fi
           done
+
+          if [[ -z "${DEPLOY_ENV:-}" ]]; then
+            echo "::error::DEPLOY_ENV là bắt buộc"
+            missing=1
+          fi
+
+          if [[ "${DEPLOY_ENV}" != "staging" && "${DEPLOY_ENV}" != "production" ]]; then
+            echo "::error::DEPLOY_ENV phải là staging hoặc production"
+            missing=1
+          fi
+
+          if [[ -z "${DEPLOY_PATH:-}" ]]; then
+            echo "::error::DEPLOY_PATH là bắt buộc"
+            missing=1
+          fi
+
+          if [[ -z "${IMAGE_TAG:-}" ]]; then
+            echo "::error::IMAGE_TAG là bắt buộc"
+            missing=1
+          fi
 
           if [[ "$missing" -ne 0 ]]; then
             exit 1
@@ -112,11 +144,11 @@ jobs:
       - name: Record deployment event
         if: always()
         env:
-          DEPLOYMENT_ENVIRONMENT: ${{ github.event.inputs.deploy_env || 'production' }}
+          DEPLOYMENT_ENVIRONMENT: ${{ github.event.inputs.deploy_env || 'staging' }}
           DEPLOYMENT_TYPE: docker-compose
           DEPLOYMENT_TARGET: ssh-vm
-          DEPLOYMENT_IMAGE_TAG: ${{ github.event.inputs.image_tag || github.event.workflow_run.head_sha || 'latest' }}
-          DEPLOYMENT_GIT_SHA: ${{ github.event.inputs.image_tag || github.event.workflow_run.head_sha || github.sha }}
+          DEPLOYMENT_IMAGE_TAG: ${{ github.event.inputs.image_tag || 'latest' }}
+          DEPLOYMENT_GIT_SHA: ${{ github.event.inputs.image_tag || github.sha }}
           DEPLOYMENT_STATUS: ${{ job.status }}
           DEPLOYMENT_SMOKE_STATUS: ${{ job.status }}
         run: node scripts/devops-record-deployment.js
@@ -125,6 +157,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: deployment-event-compose-${{ github.event.inputs.deploy_env || 'production' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: deployment-event-compose-${{ github.event.inputs.deploy_env || 'staging' }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: reports/deployments/events/
           retention-days: 90
