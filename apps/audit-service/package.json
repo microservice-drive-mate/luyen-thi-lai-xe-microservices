@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "prebuild": "npm run prisma:generate",
-    "precheck-types": "npm run prisma:generate",
+    "prebuild": "pnpm run prisma:generate",
+    "precheck-types": "pnpm run prisma:generate",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "node --watch --watch-path=src --watch-preserve-output -r ts-node/register -r tsconfig-paths/register src/main.ts",

@@ -1,29 +1,32 @@
 # syntax=docker/dockerfile:1
 
 FROM node:20-alpine AS pruner
-RUN npm install -g turbo
+RUN corepack enable && corepack prepare pnpm@10.34.1 --activate
 WORKDIR /app
 COPY . .
-RUN turbo prune media-service --docker
+RUN pnpm dlx turbo@2.9.16 prune media-service --docker
 
 FROM node:20-alpine AS installer
 RUN apk add --no-cache libc6-compat openssl
+RUN corepack enable && corepack prepare pnpm@10.34.1 --activate
 WORKDIR /app
 COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/package-lock.json ./
-RUN --mount=type=cache,id=npm,target=/root/.npm,sharing=locked \
-    npm ci --legacy-peer-deps
+COPY --from=pruner /app/out/pnpm-lock.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile
 
 FROM node:20-alpine AS builder
 RUN apk add --no-cache libc6-compat openssl
+RUN corepack enable && corepack prepare pnpm@10.34.1 --activate
 WORKDIR /app
+COPY --from=installer /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=installer /app/node_modules ./node_modules
 COPY --from=installer /app/apps/media-service/node_modules ./apps/media-service/node_modules
 COPY --from=pruner /app/out/full/ .
-RUN npx prisma generate --schema=apps/media-service/prisma/schema.prisma --config=apps/media-service/prisma.config.ts
-RUN npx turbo build --filter=media-service
+RUN pnpm exec prisma generate --schema=apps/media-service/prisma/schema.prisma --config=apps/media-service/prisma.config.ts
+RUN pnpm exec turbo build --filter=media-service
 RUN mkdir -p /tmp/prisma-client && cp -R node_modules/@prisma/media-client /tmp/prisma-client/
-RUN npm prune --omit=dev --legacy-peer-deps && npm cache clean --force && mkdir -p apps/media-service/node_modules
+RUN CI=true pnpm prune --prod --ignore-scripts && mkdir -p apps/media-service/node_modules
 RUN mkdir -p node_modules/@prisma && cp -R /tmp/prisma-client/media-client node_modules/@prisma/
 
 FROM node:20-alpine AS runner

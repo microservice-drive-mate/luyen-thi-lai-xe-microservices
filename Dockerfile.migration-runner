@@ -9,14 +9,16 @@ RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /workspace
 
-RUN npm install --no-audit --no-fund --ignore-scripts \
+RUN corepack enable && corepack prepare pnpm@10.34.1 --activate
+
+RUN pnpm add --ignore-scripts \
     prisma@${PRISMA_CLI_VERSION} \
     @prisma/client@${PRISMA_CLI_VERSION} \
     @prisma/adapter-pg@${PRISMA_CLI_VERSION} \
     tsx@4.22.3 \
     axios@1.16.0 \
     pg@8.16.3 \
-  && npm cache clean --force
+  && pnpm store prune
 
 ENV PATH=/workspace/node_modules/.bin:$PATH
 

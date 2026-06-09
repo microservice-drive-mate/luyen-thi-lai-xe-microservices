@@ -1,8 +1,8 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-const turboCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const localEnv = loadLocalEnvFile();
 const devConcurrency =
   process.env.DEV_CONCURRENCY ?? localEnv.DEV_CONCURRENCY ?? '12';
@@ -71,9 +71,10 @@ function loadLocalEnvFile(): Record<string, string> {
   return values;
 }
 
-const result = spawnSync(
-  turboCommand,
+const child = spawn(
+  pnpmCommand,
   [
+    'exec',
     'turbo',
     'run',
     'start:dev',
@@ -88,8 +89,49 @@ const result = spawnSync(
   },
 );
 
-if (result.error) {
-  throw result.error;
+let isShuttingDown = false;
+
+function shutdown(signal: NodeJS.Signals): void {
+  if (isShuttingDown) {
+    return;
+  }
+
+  isShuttingDown = true;
+  console.log('\nShutting down dev services...');
+
+  stopChildProcess(signal);
+
+  setTimeout(() => {
+    process.exit(0);
+  }, 1000).unref();
 }
 
-process.exit(result.status ?? 1);
+function stopChildProcess(signal: NodeJS.Signals): void {
+  if (!child.pid || child.killed) {
+    return;
+  }
+
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/t', '/f'], {
+      stdio: 'ignore',
+    });
+    return;
+  }
+
+  child.kill(signal);
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+child.on('error', (error) => {
+  throw error;
+});
+
+child.on('exit', (code, signal) => {
+  if (isShuttingDown || signal === 'SIGINT' || signal === 'SIGTERM') {
+    process.exit(0);
+  }
+
+  process.exit(code ?? 1);
+});

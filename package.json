@@ -46,6 +46,13 @@
       "biome check --write --no-errors-on-unmatched"
     ]
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "esbuild",
+      "prisma"
+    ]
+  },
   "optionalDependencies": {
     "@biomejs/cli-linux-x64": "2.4.13",
     "@biomejs/cli-win32-x64": "2.4.13"
@@ -66,7 +73,7 @@
   "engines": {
     "node": ">=18"
   },
-  "packageManager": "npm@11.6.2",
+  "packageManager": "pnpm@10.34.1",
   "workspaces": [
     "apps/*",
     "packages/*"

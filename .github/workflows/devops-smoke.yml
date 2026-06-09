@@ -111,21 +111,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Observability smoke
         if: ${{ inputs.suite == 'all' || inputs.suite == 'observability' }}
-        run: npm run observability:smoke
+        run: pnpm run observability:smoke
 
       - name: RabbitMQ resilience smoke
         if: ${{ inputs.suite == 'all' || inputs.suite == 'rabbitmq' }}
-        run: npm run rabbitmq:smoke
+        run: pnpm run rabbitmq:smoke
 
       - name: Restore test smoke
         if: ${{ inputs.suite == 'all' || inputs.suite == 'restore' }}
@@ -142,4 +144,4 @@ jobs:
             exit 0
           }
 
-          npm run db:restore:test
+          pnpm run db:restore:test

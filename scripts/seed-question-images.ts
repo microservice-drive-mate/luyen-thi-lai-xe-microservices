@@ -422,7 +422,7 @@ async function uploadAndLinkImages(
 
     if (updateResult.count !== 1) {
       throw new Error(
-        `Question ${questionNumber} not found. Run npm run db:seed:question first.`,
+        `Question ${questionNumber} not found. Run pnpm run db:seed:question first.`,
       );
     }
 

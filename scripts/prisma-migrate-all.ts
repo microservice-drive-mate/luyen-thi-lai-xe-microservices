@@ -72,16 +72,26 @@ function runPrisma(
   databaseUrl: string,
 ) {
   const serviceDir = path.resolve(process.cwd(), 'apps', serviceName);
-  const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
   const prismaArgs =
     mode === 'dev'
-      ? ['prisma', 'migrate', 'dev', '--schema', './prisma/schema.prisma']
+      ? [
+          'exec',
+          'prisma',
+          'migrate',
+          'dev',
+          '--schema',
+          './prisma/schema.prisma',
+        ]
       : ['prisma', 'migrate', 'deploy', '--schema', './prisma/schema.prisma'];
+  if (mode !== 'dev') {
+    prismaArgs.unshift('exec');
+  }
 
   console.log(`\n[db:${mode}] ${serviceName}`);
   console.log(`[db:${mode}] ${databaseUrl.replace(/:\/\/.*@/, '://***@')}`);
 
-  const result = spawnSync(npxCommand, prismaArgs, {
+  const result = spawnSync(pnpmCommand, prismaArgs, {
     cwd: serviceDir,
     stdio: 'inherit',
     shell: process.platform === 'win32',

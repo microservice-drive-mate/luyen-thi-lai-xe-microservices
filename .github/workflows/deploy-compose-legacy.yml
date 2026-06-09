@@ -2,7 +2,7 @@ name: Legacy SSH Compose Deploy
 
 on:
   workflow_run:
-    workflows: ["CI/CD Pipeline for Microservices"]
+    workflows: ["Main Image Release"]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -119,7 +119,7 @@ jobs:
           DEPLOYMENT_GIT_SHA: ${{ github.event.inputs.image_tag || github.event.workflow_run.head_sha || github.sha }}
           DEPLOYMENT_STATUS: ${{ job.status }}
           DEPLOYMENT_SMOKE_STATUS: ${{ job.status }}
-        run: npm run deployment:record
+        run: node scripts/devops-record-deployment.js
 
       - name: Upload deployment event
         if: always()

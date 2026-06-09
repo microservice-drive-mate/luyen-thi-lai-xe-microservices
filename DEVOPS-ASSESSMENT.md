@@ -76,7 +76,7 @@ Working tree hiện đang định hướng Phase 4 như sau:
 
 - `.github/workflows/pr-validation.yml`
   - Trigger: pull request vào `main`.
-  - Chạy quality gate: `npm ci`, Prisma generate, Biome, typecheck, test.
+  - Chạy quality gate: `pnpm install --frozen-lockfile`, Prisma generate, Biome, typecheck, test.
   - Detect changed services.
   - Build Docker image và scan Trivy.
   - Không login GHCR, không push image.
