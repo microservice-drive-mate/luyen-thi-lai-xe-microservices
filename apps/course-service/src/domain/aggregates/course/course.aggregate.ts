@@ -17,7 +17,10 @@ import {
 import { CourseHasNoLessonException } from '../../exceptions/course-has-no-lesson.exception';
 import { InstructorAlreadyAssignedException } from '../../exceptions/instructor-already-assigned.exception';
 import { LessonNotFoundException } from '../../exceptions/lesson-not-found.exception';
+import { CourseArchivedEvent } from '../../events/course-archived.event';
+import { CourseCreatedEvent } from '../../events/course-created.event';
 import { CourseMaterialLinkedEvent } from '../../events/course-material-linked.event';
+import { CourseUpdatedEvent } from '../../events/course-updated.event';
 import { CourseVersionConflictException } from '../../exceptions/course-version-conflict.exception';
 
 export class Course extends AggregateRoot<string> {
@@ -100,7 +103,7 @@ export class Course extends AggregateRoot<string> {
       ? CourseRequirement.create(props.id, props.requirement)
       : null;
 
-    return new Course(
+    const course = new Course(
       props.id,
       props.courseCode ?? null,
       props.title,
@@ -123,6 +126,16 @@ export class Course extends AggregateRoot<string> {
       requirement,
       [],
     );
+    course.addDomainEvent(
+      new CourseCreatedEvent(
+        course.id,
+        course.title,
+        course.licenseCategory,
+        course.status,
+        course.isDeleted,
+      ),
+    );
+    return course;
   }
 
   static reconstitute(props: ReconstituteCourseProps): Course {
@@ -181,6 +194,15 @@ export class Course extends AggregateRoot<string> {
     if (props.capacity !== undefined) this._capacity = props.capacity;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+      ),
+    );
   }
 
   activate(): void {
@@ -205,6 +227,15 @@ export class Course extends AggregateRoot<string> {
     this._deletedBy = deletedBy ?? null;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseArchivedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+      ),
+    );
   }
 
   addLesson(props: CreateLessonProps): Lesson {

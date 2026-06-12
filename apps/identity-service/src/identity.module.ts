@@ -24,6 +24,7 @@ import { UpdateIdentityUserUseCase } from './application/use-cases/update-identi
 import { IdentityUserRepository } from './domain/repositories/identity-user.repository';
 import { KeycloakAdminService } from './infrastructure/keycloak-admin/keycloak-admin.service';
 import {
+  ANALYTICS_SERVICE_CLIENT,
   IdentityEventPublisher,
   NOTI_SERVICE_CLIENT,
   USER_SERVICE_CLIENT,
@@ -61,6 +62,15 @@ import { AuthController } from './presentation/http/auth.controller';
         inject: [ConfigService],
         useFactory: (configService: ConfigService) =>
           createRabbitMqClientOptions(configService, 'audit_service_events'),
+      },
+      {
+        name: ANALYTICS_SERVICE_CLIENT,
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) =>
+          createRabbitMqClientOptions(
+            configService,
+            'analytics_service_events',
+          ),
       },
     ]),
   ],

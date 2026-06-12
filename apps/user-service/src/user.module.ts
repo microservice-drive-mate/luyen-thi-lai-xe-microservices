@@ -14,6 +14,7 @@ import { UpdateUserProfileUseCase } from './application/use-cases/update-user-pr
 import { UserProfileRepository } from './domain/repositories/user-profile.repository';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 import {
+  ANALYTICS_SERVICE_CLIENT,
   COURSE_SERVICE_CLIENT,
   MEDIA_SERVICE_CLIENT,
   RABBITMQ_CLIENT,
@@ -55,6 +56,12 @@ import { MessagingController } from './presentation/messaging/messaging.controll
         inject: [ConfigService],
         useFactory: (config: ConfigService) =>
           createRabbitMqClientOptions(config, 'audit_service_events'),
+      },
+      {
+        name: ANALYTICS_SERVICE_CLIENT,
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) =>
+          createRabbitMqClientOptions(config, 'analytics_service_events'),
       },
     ]),
   ],

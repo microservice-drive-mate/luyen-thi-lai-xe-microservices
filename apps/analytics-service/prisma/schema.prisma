@@ -55,3 +55,77 @@ model QuestionAccuracyTracker {
   @@index([studentId, lastAttemptAt])
   @@map("question_accuracy_trackers")
 }
+
+model DashboardUserProjection {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  fullName    String?
+  email       String?
+  role        String
+  isActive    Boolean  @default(true)
+  licenseTier String?
+  createdAt   DateTime
+  updatedAt   DateTime
+
+  @@index([role, createdAt])
+  @@index([licenseTier, createdAt])
+  @@map("dashboard_user_projections")
+}
+
+model DashboardCourseProjection {
+  id              String   @id @default(uuid())
+  courseId        String   @unique
+  title           String?
+  licenseCategory String
+  status          String
+  isDeleted       Boolean  @default(false)
+  createdAt       DateTime
+  updatedAt       DateTime
+
+  @@index([status, createdAt])
+  @@index([licenseCategory, createdAt])
+  @@map("dashboard_course_projections")
+}
+
+model DashboardExamSessionProjection {
+  id              String   @id @default(uuid())
+  sessionId       String   @unique
+  studentId       String
+  licenseCategory String
+  score           Int?
+  isPassed        Boolean
+  completedAt     DateTime
+
+  @@index([completedAt])
+  @@index([licenseCategory, completedAt])
+  @@index([isPassed, completedAt])
+  @@map("dashboard_exam_session_projections")
+}
+
+model DashboardRecentActivityProjection {
+  id              String   @id @default(uuid())
+  eventId         String   @unique
+  type            String
+  title           String
+  description     String
+  actorId         String?
+  actorName       String?
+  resourceType    String?
+  resourceId      String?
+  licenseCategory String?
+  occurredAt      DateTime
+
+  @@index([occurredAt])
+  @@index([type, occurredAt])
+  @@map("dashboard_recent_activity_projections")
+}
+
+model DashboardProcessedEvent {
+  id          String   @id @default(uuid())
+  eventId     String   @unique
+  eventName   String
+  processedAt DateTime @default(now())
+
+  @@index([eventId])
+  @@map("dashboard_processed_events")
+}
