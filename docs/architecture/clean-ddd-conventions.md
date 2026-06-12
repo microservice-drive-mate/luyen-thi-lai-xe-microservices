@@ -1,99 +1,99 @@
 ﻿
 <!-- Merged from docs/architecture/clean-ddd-conventions.md -->
-# DDD + Clean Architecture â€” Conventions & Templates
+# DDD + Clean Architecture — Conventions & Templates
 
-> TÃ i liá»‡u nÃ y lÃ  **nguá»“n tham chiáº¿u duy nháº¥t** khi implement cÃ¡c service má»›i trong monorepo nÃ y.
-> `user-service` lÃ  **reference implementation** â€” má»i service khÃ¡c pháº£i follow cÃ¹ng pattern.
+> Tài liệu này là **nguồn tham chiếu duy nhất** khi implement các service mới trong monorepo này.
+> `user-service` là **reference implementation** — mọi service khác phải follow cùng pattern.
 
 ---
 
-## Má»¥c lá»¥c
+## Mục lục
 
-1. [Cáº¥u trÃºc thÆ° má»¥c chuáº©n](#1-cáº¥u-trÃºc-thÆ°-má»¥c-chuáº©n)
-2. [Quy táº¯c Ä‘áº·t tÃªn](#2-quy-táº¯c-Ä‘áº·t-tÃªn)
-3. [Layer rules â€” Ai phá»¥ thuá»™c vÃ o ai](#3-layer-rules--ai-phá»¥-thuá»™c-vÃ o-ai)
+1. [Cấu trúc thư mục chuẩn](#1-cấu-trúc-thư-mục-chuẩn)
+2. [Quy tắc đặt tên](#2-quy-tắc-đặt-tên)
+3. [Layer rules — Ai phụ thuộc vào ai](#3-layer-rules--ai-phụ-thuộc-vào-ai)
 4. [Template: Domain Layer](#4-template-domain-layer)
 5. [Template: Application Layer](#5-template-application-layer)
 6. [Template: Infrastructure Layer](#6-template-infrastructure-layer)
 7. [Template: Presentation Layer](#7-template-presentation-layer)
 8. [Template: Module & Bootstrap](#8-template-module--bootstrap)
 9. [Template: Prisma Schema](#9-template-prisma-schema)
-10. [Checklist khi thÃªm use case má»›i](#10-checklist-khi-thÃªm-use-case-má»›i)
-11. [Checklist khi táº¡o service má»›i tá»« Ä‘áº§u](#11-checklist-khi-táº¡o-service-má»›i-tá»«-Ä‘áº§u)
-12. [Nhá»¯ng gÃ¬ KHÃ”NG Ä‘Æ°á»£c lÃ m](#12-nhá»¯ng-gÃ¬-khÃ´ng-Ä‘Æ°á»£c-lÃ m)
+10. [Checklist khi thêm use case mới](#10-checklist-khi-thêm-use-case-mới)
+11. [Checklist khi tạo service mới từ đầu](#11-checklist-khi-tạo-service-mới-từ-đầu)
+12. [Những gì KHÔNG được làm](#12-những-gì-không-được-làm)
 
 ---
 
-## 1. Cáº¥u trÃºc thÆ° má»¥c chuáº©n
+## 1. Cấu trúc thư mục chuẩn
 
 ```
 apps/<service-name>/
-â”œâ”€â”€ prisma/
-â”‚   â”œâ”€â”€ schema.prisma           # Prisma schema (models cá»§a service nÃ y)
-â”‚   â””â”€â”€ migrations/             # Auto-generated migrations
-â”‚
-â”œâ”€â”€ src/
-â”‚   â”œâ”€â”€ domain/                 # â† Layer trong cÃ¹ng. ZERO dependencies ngoÃ i @repo/common
-â”‚   â”‚   â”œâ”€â”€ aggregates/
-â”‚   â”‚   â”‚   â””â”€â”€ <root-name>/
-â”‚   â”‚   â”‚       â”œâ”€â”€ <root-name>.aggregate.ts       # extends AggregateRoot<string>
-â”‚   â”‚   â”‚       â”œâ”€â”€ <root-name>.types.ts           # Enums, interfaces Props
-â”‚   â”‚   â”‚       â””â”€â”€ <child-entity>.entity.ts       # extends Entity<string> (náº¿u cÃ³)
-â”‚   â”‚   â”œâ”€â”€ value-objects/
-â”‚   â”‚   â”‚   â””â”€â”€ <name>.vo.ts                       # extends ValueObject<{...}>
-â”‚   â”‚   â”œâ”€â”€ events/
-â”‚   â”‚   â”‚   â””â”€â”€ <name>.event.ts                    # extends DomainEvent
-â”‚   â”‚   â”œâ”€â”€ exceptions/
-â”‚   â”‚   â”‚   â””â”€â”€ <name>.exception.ts                # extends DomainException
-â”‚   â”‚   â””â”€â”€ repositories/
-â”‚   â”‚       â””â”€â”€ <root-name>.repository.ts          # abstract class (interface contract)
-â”‚   â”‚
-â”‚   â”œâ”€â”€ application/            # â† Orchestration. Depends on domain only
-â”‚   â”‚   â”œâ”€â”€ ports/
-â”‚   â”‚   â”‚   â””â”€â”€ event-publisher.port.ts            # abstract class cho external services
-â”‚   â”‚   â””â”€â”€ use-cases/
-â”‚   â”‚       â””â”€â”€ <use-case-name>/
-â”‚   â”‚           â”œâ”€â”€ <use-case-name>.command.ts     # hoáº·c .query.ts
-â”‚   â”‚           â”œâ”€â”€ <use-case-name>.result.ts      # (tÃ¡ch riÃªng náº¿u phá»©c táº¡p)
-â”‚   â”‚           â””â”€â”€ <use-case-name>.use-case.ts    # implements IUseCase<TInput, TOutput>
-â”‚   â”‚
-â”‚   â”œâ”€â”€ infrastructure/         # â† Details. Implements application ports
-â”‚   â”‚   â”œâ”€â”€ persistence/
-â”‚   â”‚   â”‚   â”œâ”€â”€ prisma/
-â”‚   â”‚   â”‚   â”‚   â”œâ”€â”€ prisma.service.ts
-â”‚   â”‚   â”‚   â”‚   â””â”€â”€ prisma-<root-name>.repository.ts  # extends abstract repo
-â”‚   â”‚   â”‚   â””â”€â”€ mappers/
-â”‚   â”‚   â”‚       â””â”€â”€ <root-name>.mapper.ts          # Prisma raw â†’ Domain aggregate
-â”‚   â”‚   â”œâ”€â”€ messaging/
-â”‚   â”‚   â”‚   â””â”€â”€ rabbitmq-event-publisher.service.ts
-â”‚   â”‚   â””â”€â”€ filters/
-â”‚   â”‚       â””â”€â”€ domain-exception.filter.ts
-â”‚   â”‚
-â”‚   â”œâ”€â”€ presentation/           # â† Interface adapters
-â”‚   â”‚   â”œâ”€â”€ http/
-â”‚   â”‚   â”‚   â””â”€â”€ <root-name>.controller.ts
-â”‚   â”‚   â”œâ”€â”€ messaging/
-â”‚   â”‚   â”‚   â””â”€â”€ messaging.controller.ts            # @EventPattern handlers
-â”‚   â”‚   â””â”€â”€ dtos/
-â”‚   â”‚       â”œâ”€â”€ create-<root-name>.request.dto.ts
-â”‚   â”‚       â”œâ”€â”€ update-<root-name>.request.dto.ts
-â”‚   â”‚       â””â”€â”€ <root-name>.response.dto.ts
-â”‚   â”‚
-â”‚   â”œâ”€â”€ <service-name>.module.ts    # Feature module (providers, controllers)
-â”‚   â”œâ”€â”€ app.module.ts               # Root module (ConfigModule only)
-â”‚   â””â”€â”€ main.ts                     # Bootstrap
-â”‚
-â”œâ”€â”€ Dockerfile
-â””â”€â”€ package.json
+├── prisma/
+│   ├── schema.prisma           # Prisma schema (models của service này)
+│   └── migrations/             # Auto-generated migrations
+│
+├── src/
+│   ├── domain/                 # ← Layer trong cùng. ZERO dependencies ngoài @repo/common
+│   │   ├── aggregates/
+│   │   │   └── <root-name>/
+│   │   │       ├── <root-name>.aggregate.ts       # extends AggregateRoot<string>
+│   │   │       ├── <root-name>.types.ts           # Enums, interfaces Props
+│   │   │       └── <child-entity>.entity.ts       # extends Entity<string> (nếu có)
+│   │   ├── value-objects/
+│   │   │   └── <name>.vo.ts                       # extends ValueObject<{...}>
+│   │   ├── events/
+│   │   │   └── <name>.event.ts                    # extends DomainEvent
+│   │   ├── exceptions/
+│   │   │   └── <name>.exception.ts                # extends DomainException
+│   │   └── repositories/
+│   │       └── <root-name>.repository.ts          # abstract class (interface contract)
+│   │
+│   ├── application/            # ← Orchestration. Depends on domain only
+│   │   ├── ports/
+│   │   │   └── event-publisher.port.ts            # abstract class cho external services
+│   │   └── use-cases/
+│   │       └── <use-case-name>/
+│   │           ├── <use-case-name>.command.ts     # hoặc .query.ts
+│   │           ├── <use-case-name>.result.ts      # (tách riêng nếu phức tạp)
+│   │           └── <use-case-name>.use-case.ts    # implements IUseCase<TInput, TOutput>
+│   │
+│   ├── infrastructure/         # ← Details. Implements application ports
+│   │   ├── persistence/
+│   │   │   ├── prisma/
+│   │   │   │   ├── prisma.service.ts
+│   │   │   │   └── prisma-<root-name>.repository.ts  # extends abstract repo
+│   │   │   └── mappers/
+│   │   │       └── <root-name>.mapper.ts          # Prisma raw → Domain aggregate
+│   │   ├── messaging/
+│   │   │   └── rabbitmq-event-publisher.service.ts
+│   │   └── filters/
+│   │       └── domain-exception.filter.ts
+│   │
+│   ├── presentation/           # ← Interface adapters
+│   │   ├── http/
+│   │   │   └── <root-name>.controller.ts
+│   │   ├── messaging/
+│   │   │   └── messaging.controller.ts            # @EventPattern handlers
+│   │   └── dtos/
+│   │       ├── create-<root-name>.request.dto.ts
+│   │       ├── update-<root-name>.request.dto.ts
+│   │       └── <root-name>.response.dto.ts
+│   │
+│   ├── <service-name>.module.ts    # Feature module (providers, controllers)
+│   ├── app.module.ts               # Root module (ConfigModule only)
+│   └── main.ts                     # Bootstrap
+│
+├── Dockerfile
+└── package.json
 ```
 
 ---
 
-## 2. Quy táº¯c Ä‘áº·t tÃªn
+## 2. Quy tắc đặt tên
 
 ### Files
 
-| Loáº¡i                         | Suffix             | VÃ­ dá»¥                          |
+| Loại                         | Suffix             | Ví dụ                          |
 | ---------------------------- | ------------------ | ------------------------------ |
 | Aggregate root               | `.aggregate.ts`    | `exam-session.aggregate.ts`    |
 | Child entity                 | `.entity.ts`       | `exam-answer.entity.ts`        |
@@ -104,7 +104,7 @@ apps/<service-name>/
 | Abstract Port                | `.port.ts`         | `notification.port.ts`         |
 | Command                      | `.command.ts`      | `submit-exam.command.ts`       |
 | Query                        | `.query.ts`        | `get-exam-result.query.ts`     |
-| Result (output cá»§a use case) | `.result.ts`       | `get-exam-result.result.ts`    |
+| Result (output của use case) | `.result.ts`       | `get-exam-result.result.ts`    |
 | Use Case                     | `.use-case.ts`     | `submit-exam.use-case.ts`      |
 | Mapper                       | `.mapper.ts`       | `exam-session.mapper.ts`       |
 | Request DTO                  | `.request.dto.ts`  | `create-exam.request.dto.ts`   |
@@ -112,7 +112,7 @@ apps/<service-name>/
 
 ### Classes
 
-| Loáº¡i         | Suffix        | VÃ­ dá»¥                                                                    |
+| Loại         | Suffix        | Ví dụ                                                                    |
 | ------------ | ------------- | ------------------------------------------------------------------------ |
 | Aggregate    | `[none]`      | `ExamSession`                                                            |
 | Entity       | `[none]`      | `ExamAnswer`                                                             |
@@ -142,7 +142,7 @@ notification.sent
 
 ### Exception codes
 
-Format: `SCREAMING_SNAKE_CASE`, mÃ´ táº£ ngáº¯n gá»n tráº¡ng thÃ¡i sai.
+Format: `SCREAMING_SNAKE_CASE`, mô tả ngắn gọn trạng thái sai.
 
 ```
 EXAM_SESSION_NOT_FOUND
@@ -154,26 +154,26 @@ QUESTION_NOT_FOUND
 
 ---
 
-## 3. Layer rules â€” Ai phá»¥ thuá»™c vÃ o ai
+## 3. Layer rules — Ai phụ thuộc vào ai
 
 ```
-domain       â† khÃ´ng import tá»« Ä‘Ã¢u (ngoÃ i @repo/common)
-application  â† import tá»« domain
-infrastructure â† import tá»« domain + application
-presentation â† import tá»« application (use cases, commands, queries, results)
-              â† KHÃ”NG import trá»±c tiáº¿p tá»« infrastructure hoáº·c domain aggregate
+domain       ← không import từ đâu (ngoài @repo/common)
+application  ← import từ domain
+infrastructure ← import từ domain + application
+presentation ← import từ application (use cases, commands, queries, results)
+              ← KHÔNG import trực tiếp từ infrastructure hoặc domain aggregate
 ```
 
-### Kiá»ƒm tra vi pháº¡m nhanh
+### Kiểm tra vi phạm nhanh
 
 ```bash
-# Náº¿u domain import NestJS â†’ SAI
+# Nếu domain import NestJS → SAI
 grep -r "from '@nestjs" apps/<service>/src/domain/
 
-# Náº¿u domain import prisma â†’ SAI
+# Nếu domain import prisma → SAI
 grep -r "from '@prisma" apps/<service>/src/domain/
 
-# Náº¿u presentation import repository impl â†’ SAI
+# Nếu presentation import repository impl → SAI
 grep -r "PrismaExam" apps/<service>/src/presentation/
 ```
 
@@ -202,20 +202,20 @@ export class ExamSession extends AggregateRoot<string> {
     this._answers = answers;
   }
 
-  // Factory: táº¡o má»›i tá»« Ä‘áº§u (business rules)
+  // Factory: tạo mới từ đầu (business rules)
   static create(props: CreateExamSessionProps): ExamSession {
-    // Validate invariants táº¡i Ä‘Ã¢y, throw DomainException náº¿u vi pháº¡m
+    // Validate invariants tại đây, throw DomainException nếu vi phạm
     return new ExamSession(props.id, ExamStatus.IN_PROGRESS, []);
   }
 
-  // Factory: tÃ¡i táº¡o tá»« persistence (khÃ´ng validate láº¡i)
+  // Factory: tái tạo từ persistence (không validate lại)
   static reconstitute(props: ReconstituteExamSessionProps): ExamSession {
     const session = new ExamSession(props.id, props.status, []);
     // restore children...
     return session;
   }
 
-  // Domain methods â€” mang business logic
+  // Domain methods — mang business logic
   submit(answers: SubmitAnswerProps[]): void {
     if (this._status !== ExamStatus.IN_PROGRESS) {
       throw new ExamAlreadySubmittedException(this._id);
@@ -225,7 +225,7 @@ export class ExamSession extends AggregateRoot<string> {
     this.addDomainEvent(new ExamCompletedEvent(this._id, score));
   }
 
-  // Getters â€” readonly access
+  // Getters — readonly access
   get status(): ExamStatus {
     return this._status;
   }
@@ -420,7 +420,7 @@ export abstract class ExamSessionRepository {
 export class SubmitExamCommand {
   constructor(
     readonly sessionId: string,
-    readonly studentId: string, // tá»« JWT.sub qua @AuthenticatedUser()
+    readonly studentId: string, // từ JWT.sub qua @AuthenticatedUser()
     readonly answers: Array<{
       questionId: string;
       selectedOptionId: string;
@@ -436,7 +436,7 @@ export class SubmitExamCommand {
 export class GetExamResultQuery {
   constructor(
     readonly sessionId: string,
-    readonly requesterId: string, // tá»« JWT.sub qua @AuthenticatedUser() Ä‘á»ƒ check ownership
+    readonly requesterId: string, // từ JWT.sub qua @AuthenticatedUser() để check ownership
   ) {}
 }
 ```
@@ -461,7 +461,7 @@ export class GetExamResultResult {
 }
 ```
 
-### 5.4 Use Case â€” Command
+### 5.4 Use Case — Command
 
 ```typescript
 // src/application/use-cases/submit-exam/submit-exam.use-case.ts
@@ -493,12 +493,12 @@ export class SubmitExamUseCase implements IUseCase<SubmitExamCommand, void> {
 
     const events = session.getDomainEvents();
     session.clearDomainEvents();
-    await this.eventPublisher.publishAll(events); // publish sau khi save thÃ nh cÃ´ng
+    await this.eventPublisher.publishAll(events); // publish sau khi save thành công
   }
 }
 ```
 
-### 5.5 Use Case â€” Query
+### 5.5 Use Case — Query
 
 ```typescript
 // src/application/use-cases/get-exam-result/get-exam-result.use-case.ts
@@ -667,7 +667,7 @@ export class PrismaExamSessionRepository extends ExamSessionRepository {
         },
       });
 
-      // Upsert children trong cÃ¹ng transaction
+      // Upsert children trong cùng transaction
       for (const answer of session.answers) {
         await tx.examAnswer.upsert({
           where: { id: answer.id },
@@ -764,12 +764,12 @@ export class DomainExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    // Map exception codes â†’ HTTP status
+    // Map exception codes → HTTP status
     const statusMap: Record<string, number> = {
       EXAM_SESSION_NOT_FOUND: HttpStatus.NOT_FOUND,
       EXAM_ALREADY_SUBMITTED: HttpStatus.CONFLICT,
       EXAM_NOT_AVAILABLE: HttpStatus.UNPROCESSABLE_ENTITY,
-      // ThÃªm táº¥t cáº£ exception codes cá»§a service vÃ o Ä‘Ã¢y
+      // Thêm tất cả exception codes của service vào đây
     };
 
     const status = statusMap[exception.code] ?? HttpStatus.BAD_REQUEST;
@@ -1076,7 +1076,7 @@ async function bootstrap() {
     transport: Transport.RMQ,
     options: {
       urls: [rabbitmqUrl],
-      queue: "<service>_service_events", // Queue nÃ y service CONSUME
+      queue: "<service>_service_events", // Queue này service CONSUME
       queueOptions: { durable: true },
       noAck: false,
     },
@@ -1085,7 +1085,7 @@ async function bootstrap() {
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalInterceptors(new ApiResponseInterceptor());
-  // DomainExceptionFilter PHáº¢I Ä‘á»©ng sau ApiExceptionFilter
+  // DomainExceptionFilter PHẢI đứng sau ApiExceptionFilter
   app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
 
   setupMicroserviceSwagger(app, {
@@ -1096,7 +1096,7 @@ async function bootstrap() {
   const port = configService.get<number>("port") ?? 3000;
   await app.startAllMicroservices();
   await app.listen(port);
-  console.log(`âœ“ <Service> Service listening on port ${port}`);
+  console.log(`✓ <Service> Service listening on port ${port}`);
 }
 void bootstrap();
 ```
@@ -1109,7 +1109,7 @@ void bootstrap();
 // prisma/schema.prisma
 generator client {
   provider      = "prisma-client-js"
-  output        = "../../../node_modules/@prisma/<service>-client"  // QUAN TRá»ŒNG: output riÃªng
+  output        = "../../../node_modules/@prisma/<service>-client"  // QUAN TRỌNG: output riêng
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -1118,7 +1118,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Khai bÃ¡o enums trÆ°á»›c models
+// Khai báo enums trước models
 enum ExamStatus {
   IN_PROGRESS
   SUBMITTED
@@ -1139,8 +1139,8 @@ enum LicenseCategory {
 // Aggregate Root table
 model ExamSession {
   id          String     @id
-  studentId   String                // Reference UUID tá»« user-service (KHÃ”NG cÃ³ FK cross-service)
-  examId      String                // Reference UUID tá»« exam config
+  studentId   String                // Reference UUID từ user-service (KHÔNG có FK cross-service)
+  examId      String                // Reference UUID từ exam config
   status      ExamStatus @default(IN_PROGRESS)
   score       Int?
   isPassed    Boolean?
@@ -1149,7 +1149,7 @@ model ExamSession {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  answers ExamAnswer[]  // Owned entity â€” FK trong service nÃ y
+  answers ExamAnswer[]  // Owned entity — FK trong service này
 
   @@map("exam_sessions")
 }
@@ -1158,7 +1158,7 @@ model ExamSession {
 model ExamAnswer {
   id               String   @id @default(uuid())
   sessionId        String
-  questionId       String   // Reference UUID tá»« question-service (KHÃ”NG cÃ³ FK cross-service)
+  questionId       String   // Reference UUID từ question-service (KHÔNG có FK cross-service)
   selectedOptionId String
   isCorrect        Boolean?
 
@@ -1168,415 +1168,415 @@ model ExamAnswer {
 }
 ```
 
-**Quy táº¯c Prisma:**
+**Quy tắc Prisma:**
 
-- `output` pháº£i lÃ  `@prisma/<service>-client` â€” má»—i service cÃ³ Prisma client riÃªng
-- KhÃ´ng dÃ¹ng FK cross-service â€” chá»‰ store UUID
-- DÃ¹ng `onDelete: Cascade` cho owned entities
-- Table names dÃ¹ng `@@map("snake_case")`, column names dÃ¹ng camelCase trong model nhÆ°ng Prisma tá»± map
-
----
-
-## 10. Checklist khi thÃªm use case má»›i
-
-Khi thÃªm má»™t use case má»›i (vÃ­ dá»¥: `grade-exam`):
-
-```
-â–¡ 1. Domain
-      â–¡ ThÃªm domain method vÃ o aggregate náº¿u cáº§n (GradeExam lÃ  business logic â†’ vÃ o aggregate)
-      â–¡ ThÃªm domain exception má»›i náº¿u cáº§n
-      â–¡ ThÃªm domain event má»›i náº¿u cáº§n
-
-â–¡ 2. Application
-      â–¡ Táº¡o command/query: src/application/use-cases/grade-exam/grade-exam.command.ts
-      â–¡ Táº¡o result (náº¿u phá»©c táº¡p): src/application/use-cases/grade-exam/grade-exam.result.ts
-      â–¡ Táº¡o use case: src/application/use-cases/grade-exam/grade-exam.use-case.ts
-        â–¡ implements IUseCase<GradeExamCommand, void>
-        â–¡ inject repository + eventPublisher (náº¿u emit event)
-        â–¡ Publish events SAU KHI save thÃ nh cÃ´ng
-
-â–¡ 3. Infrastructure
-      â–¡ ThÃªm vÃ o DomainExceptionFilter.statusMap náº¿u cÃ³ exception má»›i
-
-â–¡ 4. Presentation
-      â–¡ ThÃªm endpoint vÃ o controller (HTTP hoáº·c @EventPattern)
-      â–¡ ThÃªm/cáº­p nháº­t request DTO
-      â–¡ ThÃªm/cáº­p nháº­t response DTO (cÃ³ static fromResult())
-      â–¡ ThÃªm @ApiBearerAuth() cho endpoint protected; actor id láº¥y tá»« JWT.sub qua @AuthenticatedUser()
-
-â–¡ 5. Module
-      â–¡ Register use case trong providers[]
-
-â–¡ 6. API Spec
-      â–¡ Cáº­p nháº­t docs/api/api-spec-<service>.md
-```
+- `output` phải là `@prisma/<service>-client` — mỗi service có Prisma client riêng
+- Không dùng FK cross-service — chỉ store UUID
+- Dùng `onDelete: Cascade` cho owned entities
+- Table names dùng `@@map("snake_case")`, column names dùng camelCase trong model nhưng Prisma tự map
 
 ---
 
-## 11. Checklist khi táº¡o service má»›i tá»« Ä‘áº§u
+## 10. Checklist khi thêm use case mới
+
+Khi thêm một use case mới (ví dụ: `grade-exam`):
 
 ```
-â–¡ 1. Scaffold cáº¥u trÃºc thÆ° má»¥c (copy tá»« user-service)
-â–¡ 2. Cáº­p nháº­t package.json (name, scripts)
-â–¡ 3. Táº¡o Prisma schema (output = @prisma/<service>-client)
-â–¡ 4. Cháº¡y prisma generate
-â–¡ 5. Implement domain layer (aggregate, entities, VOs, events, exceptions, repository interface)
-â–¡ 6. Implement application layer (ports, use cases)
-â–¡ 7. Implement infrastructure layer (PrismaService, Mapper, Repository impl, EventPublisher)
-â–¡ 8. Implement presentation layer (DTOs, HTTP controller, Messaging controller)
-â–¡ 9. Wire up module (feature module + app module)
-â–¡ 10. Bootstrap (main.ts â€” copy vÃ  thay service name)
-â–¡ 11. Dockerfile (copy tá»« user-service, thay tÃªn)
-â–¡ 12. Cáº­p nháº­t consul-seed-development-local.json (thÃªm port, database.url)
-â–¡ 13. Cáº­p nháº­t docker-compose.yaml (thÃªm service + db)
-â–¡ 14. Cáº­p nháº­t kong/kong.yaml (thÃªm route vá»›i JWT plugin)
-â–¡ 15. Viáº¿t API spec táº¡i docs/api/api-spec-<service>.md
-â–¡ 16. Viáº¿t test guide táº¡i docs/testing/services-test-guide.md
+□ 1. Domain
+      □ Thêm domain method vào aggregate nếu cần (GradeExam là business logic → vào aggregate)
+      □ Thêm domain exception mới nếu cần
+      □ Thêm domain event mới nếu cần
+
+□ 2. Application
+      □ Tạo command/query: src/application/use-cases/grade-exam/grade-exam.command.ts
+      □ Tạo result (nếu phức tạp): src/application/use-cases/grade-exam/grade-exam.result.ts
+      □ Tạo use case: src/application/use-cases/grade-exam/grade-exam.use-case.ts
+        □ implements IUseCase<GradeExamCommand, void>
+        □ inject repository + eventPublisher (nếu emit event)
+        □ Publish events SAU KHI save thành công
+
+□ 3. Infrastructure
+      □ Thêm vào DomainExceptionFilter.statusMap nếu có exception mới
+
+□ 4. Presentation
+      □ Thêm endpoint vào controller (HTTP hoặc @EventPattern)
+      □ Thêm/cập nhật request DTO
+      □ Thêm/cập nhật response DTO (có static fromResult())
+      □ Thêm @ApiBearerAuth() cho endpoint protected; actor id lấy từ JWT.sub qua @AuthenticatedUser()
+
+□ 5. Module
+      □ Register use case trong providers[]
+
+□ 6. API Spec
+      □ Cập nhật docs/api/api-spec-<service>.md
 ```
 
 ---
 
-## 12. Nhá»¯ng gÃ¬ KHÃ”NG Ä‘Æ°á»£c lÃ m
+## 11. Checklist khi tạo service mới từ đầu
+
+```
+□ 1. Scaffold cấu trúc thư mục (copy từ user-service)
+□ 2. Cập nhật package.json (name, scripts)
+□ 3. Tạo Prisma schema (output = @prisma/<service>-client)
+□ 4. Chạy prisma generate
+□ 5. Implement domain layer (aggregate, entities, VOs, events, exceptions, repository interface)
+□ 6. Implement application layer (ports, use cases)
+□ 7. Implement infrastructure layer (PrismaService, Mapper, Repository impl, EventPublisher)
+□ 8. Implement presentation layer (DTOs, HTTP controller, Messaging controller)
+□ 9. Wire up module (feature module + app module)
+□ 10. Bootstrap (main.ts — copy và thay service name)
+□ 11. Dockerfile (copy từ user-service, thay tên)
+□ 12. Cập nhật consul-seed-development-local.json (thêm port, database.url)
+□ 13. Cập nhật docker-compose.yaml (thêm service + db)
+□ 14. Cập nhật kong/kong.yaml (thêm route với JWT plugin)
+□ 15. Viết API spec tại docs/api/api-spec-<service>.md
+□ 16. Viết test guide tại docs/testing/services-test-guide.md
+```
+
+---
+
+## 12. Những gì KHÔNG được làm
 
 ### Domain layer
 
-- âŒ Import `@nestjs/*` vÃ o domain â€” domain pháº£i framework-agnostic
-- âŒ Import `@prisma/*` vÃ o domain â€” domain khÃ´ng biáº¿t vá» persistence
-- âŒ Gá»i repository trá»±c tiáº¿p tá»« domain method â€” domain chá»‰ call `addDomainEvent()`
-- âŒ `public` constructor cho aggregate â€” pháº£i dÃ¹ng `private constructor` + factory methods
-- âŒ Tráº£ vá» mutable internal array â€” pháº£i return `[...this._array]` (copy)
+- ❌ Import `@nestjs/*` vào domain — domain phải framework-agnostic
+- ❌ Import `@prisma/*` vào domain — domain không biết về persistence
+- ❌ Gọi repository trực tiếp từ domain method — domain chỉ call `addDomainEvent()`
+- ❌ `public` constructor cho aggregate — phải dùng `private constructor` + factory methods
+- ❌ Trả về mutable internal array — phải return `[...this._array]` (copy)
 
 ### Application layer
 
-- âŒ Gá»i `prisma.xxx` trá»±c tiáº¿p tá»« use case â€” pháº£i qua repository interface
-- âŒ Import Prisma type vÃ o use case
-- âŒ Publish events TRÆ¯á»šC KHI save â€” luÃ´n save trÆ°á»›c, publish sau
-- âŒ KhÃ´ng clear domain events sau khi publish (`profile.clearDomainEvents()` báº¯t buá»™c)
+- ❌ Gọi `prisma.xxx` trực tiếp từ use case — phải qua repository interface
+- ❌ Import Prisma type vào use case
+- ❌ Publish events TRƯỚC KHI save — luôn save trước, publish sau
+- ❌ Không clear domain events sau khi publish (`profile.clearDomainEvents()` bắt buộc)
 
 ### Infrastructure layer
 
-- âŒ Business logic trong repository â€” chá»‰ persistence/query
-- âŒ Business logic trong mapper â€” chá»‰ type conversion
+- ❌ Business logic trong repository — chỉ persistence/query
+- ❌ Business logic trong mapper — chỉ type conversion
 
 ### Presentation layer
 
-- âŒ `@ApiHeader` á»Ÿ class level cho táº¥t cáº£ endpoints â€” chá»‰ Ä‘áº·t á»Ÿ method cá»¥ thá»ƒ cáº§n header Ä‘Ã³
-- âŒ Import aggregate trá»±c tiáº¿p vÃ o controller â€” pháº£i qua use case result â†’ DTO
-- âŒ Gá»i 2 use case liÃªn tiáº¿p Ä‘á»ƒ workaround (double query) â€” use case nÃªn tráº£ káº¿t quáº£ Ä‘áº§y Ä‘á»§
-- âŒ Business logic trong controller â€” controller chá»‰ parse request â†’ command â†’ use case â†’ DTO
+- ❌ `@ApiHeader` ở class level cho tất cả endpoints — chỉ đặt ở method cụ thể cần header đó
+- ❌ Import aggregate trực tiếp vào controller — phải qua use case result → DTO
+- ❌ Gọi 2 use case liên tiếp để workaround (double query) — use case nên trả kết quả đầy đủ
+- ❌ Business logic trong controller — controller chỉ parse request → command → use case → DTO
 
 ### Response format
 
-- âŒ Response format khÃ´ng nháº¥t quÃ¡n giá»¯a `DomainExceptionFilter` vÃ  `ApiExceptionFilter`
-- âŒ Anonymous return type trong controller method â€” pháº£i dÃ¹ng DTO class cá»¥ thá»ƒ
+- ❌ Response format không nhất quán giữa `DomainExceptionFilter` và `ApiExceptionFilter`
+- ❌ Anonymous return type trong controller method — phải dùng DTO class cụ thể
 
 
 
 <!-- Merged from docs/architecture/clean-ddd-conventions.md -->
-# Database Design â€” Luyá»‡n Thi LÃ¡i Xe Microservices
+# Database Design — Luyện Thi Lái Xe Microservices
 
-## NguyÃªn táº¯c cá»‘t lÃµi
+## Nguyên tắc cốt lõi
 
-- **Database per Service** â€” má»—i service cÃ³ PostgreSQL database riÃªng, khÃ´ng share schema
-- **KhÃ´ng foreign key cross-service** â€” chá»‰ reference báº±ng UUID
-- **Má»—i Aggregate Root cÃ³ 1 Repository** â€” transaction boundary lÃ  aggregate
-- **Domain Events** cho eventual consistency giá»¯a services
-- **Denormalize khi cáº§n** â€” lÆ°u display data á»Ÿ nhiá»u service lÃ  bÃ¬nh thÆ°á»ng trong microservices
+- **Database per Service** — mỗi service có PostgreSQL database riêng, không share schema
+- **Không foreign key cross-service** — chỉ reference bằng UUID
+- **Mỗi Aggregate Root có 1 Repository** — transaction boundary là aggregate
+- **Domain Events** cho eventual consistency giữa services
+- **Denormalize khi cần** — lưu display data ở nhiều service là bình thường trong microservices
 
-## Háº¡ng báº±ng lÃ¡i Ä‘Æ°á»£c há»— trá»£
+## Hạng bằng lái được hỗ trợ
 
 ```
 A1 | A2 | B1 | B2 | C | D | E | F
 ```
 
-TrÆ°á»ng `licenseCategory` (enum) xuáº¥t hiá»‡n á»Ÿ question-service, exam-service, course-service, simulation-service.
+Trường `licenseCategory` (enum) xuất hiện ở question-service, exam-service, course-service, simulation-service.
 
 ---
 
-## Service 1: identity-service â†’ Keycloak âœ… (dÃ¹ng Keycloak, khÃ´ng tá»± implement)
+## Service 1: identity-service → Keycloak ✅ (dùng Keycloak, không tự implement)
 
 **Bounded Context:** Authentication & Authorization
 
-> Há»‡ thá»‘ng sá»­ dá»¥ng **Keycloak** lÃ m Identity Provider. KhÃ´ng cÃ³ `identity_db` riÃªng dÃ¹ng cho business logic.
-> Keycloak quáº£n lÃ½: credentials, login/logout, forgot password, JWT issuance, brute-force lock.
-> CÃ¡c service khÃ¡c verify JWT do Keycloak cáº¥p (via JWKS endpoint).
+> Hệ thống sử dụng **Keycloak** làm Identity Provider. Không có `identity_db` riêng dùng cho business logic.
+> Keycloak quản lý: credentials, login/logout, forgot password, JWT issuance, brute-force lock.
+> Các service khác verify JWT do Keycloak cấp (via JWKS endpoint).
 >
-> **LÆ°u Ã½:** `apps/identity-service/prisma/schema.prisma` hiá»‡n cÃ³ model placeholder `IdentityUser` (id, email, name) â€” Ä‘Ã¢y lÃ  artifact tooling, **khÃ´ng dÃ¹ng** cho business logic. Keycloak váº«n lÃ  nguá»“n dá»¯ liá»‡u tháº­t.
+> **Lưu ý:** `apps/identity-service/prisma/schema.prisma` hiện có model placeholder `IdentityUser` (id, email, name) — đây là artifact tooling, **không dùng** cho business logic. Keycloak vẫn là nguồn dữ liệu thật.
 
-**Roles Ä‘Æ°á»£c cáº¥u hÃ¬nh trong Keycloak:**
+**Roles được cấu hình trong Keycloak:**
 
 ```
 ADMIN | CENTER_MANAGER | INSTRUCTOR | STUDENT
 ```
 
-### Domain Events phÃ¡t ra (Keycloak Event Listener / Webhook)
+### Domain Events phát ra (Keycloak Event Listener / Webhook)
 
 | Event                        | Trigger                                | Payload                       |
 | ---------------------------- | -------------------------------------- | ----------------------------- |
-| `identity.user.created`      | Admin/Center Manager táº¡o tÃ i khoáº£n má»›i | userId, email, fullName, role |
+| `identity.user.created`      | Admin/Center Manager tạo tài khoản mới | userId, email, fullName, role |
 | `identity.user.locked`       | Brute-force lock                       | userId                        |
-| `identity.user.role-changed` | Admin Ä‘á»•i role                         | userId, oldRole, newRole      |
+| `identity.user.role-changed` | Admin đổi role                         | userId, oldRole, newRole      |
 
-> Events Ä‘Æ°á»£c publish tá»« Keycloak Event Listener â†’ RabbitMQ khi cÃ³ thay Ä‘á»•i tÃ i khoáº£n.
+> Events được publish từ Keycloak Event Listener → RabbitMQ khi có thay đổi tài khoản.
 
 ---
 
-## Service 2: user-service â†’ `user_db`
+## Service 2: user-service → `user_db`
 
 **Bounded Context:** User Profile Management
 
-> Há»‡ thá»‘ng quáº£n lÃ½ **1 trung tÃ¢m duy nháº¥t** â€” khÃ´ng cÃ³ khÃ¡i niá»‡m Ä‘a trung tÃ¢m.
-> Keycloak (identity) biáº¿t "ai Ä‘ang Ä‘Äƒng nháº­p". user-service biáº¿t "ngÆ°á»i dÃ¹ng lÃ  ai" (profile, háº¡ng báº±ng Ä‘Æ°á»£c giao).
-> 4 role: ADMIN, CENTER_MANAGER, INSTRUCTOR, STUDENT â€” táº¥t cáº£ Ä‘á»u cÃ³ profile á»Ÿ Ä‘Ã¢y.
+> Hệ thống quản lý **1 trung tâm duy nhất** — không có khái niệm đa trung tâm.
+> Keycloak (identity) biết "ai đang đăng nhập". user-service biết "người dùng là ai" (profile, hạng bằng được giao).
+> 4 role: ADMIN, CENTER_MANAGER, INSTRUCTOR, STUDENT — tất cả đều có profile ở đây.
 
 ### Aggregate Root: `UserProfile`
 
-> Profile cÆ¡ báº£n cho táº¥t cáº£ cÃ¡c role. `id` báº±ng vá»›i `userId` tá»« Keycloak â€” nháº­n qua event khi táº¡o tÃ i khoáº£n.
+> Profile cơ bản cho tất cả các role. `id` bằng với `userId` từ Keycloak — nhận qua event khi tạo tài khoản.
 
 ```
 user_profiles
-â”œâ”€â”€ id              UUID PK          â† = Keycloak userId
-â”œâ”€â”€ fullName        TEXT NOT NULL
-â”œâ”€â”€ email           TEXT NOT NULL    â† denormalized Ä‘á»ƒ search/display, khÃ´ng dÃ¹ng lÃ m auth
-â”œâ”€â”€ phoneNumber     TEXT UNIQUE NULLABLE
-â”œâ”€â”€ dateOfBirth     DATE NULLABLE
-â”œâ”€â”€ avatarUrl       TEXT NULLABLE
-â”œâ”€â”€ mediaFileId     UUID NULLABLE    â† ref â†’ media-service FileObject (UUID only, khÃ´ng cÃ³ FK)
-â”œâ”€â”€ gender          ENUM(MALE, FEMALE, OTHER) NULLABLE
-â”œâ”€â”€ address         TEXT NULLABLE
-â”œâ”€â”€ role            ENUM(ADMIN, CENTER_MANAGER, INSTRUCTOR, STUDENT) NOT NULL  â† sync tá»« Keycloak
-â”œâ”€â”€ isActive        BOOLEAN DEFAULT true   â† admin cÃ³ thá»ƒ deactivate Ä‘á»™c láº­p vá»›i lock
-â”œâ”€â”€ createdAt       TIMESTAMPTZ
-â””â”€â”€ updatedAt       TIMESTAMPTZ
+├── id              UUID PK          ← = Keycloak userId
+├── fullName        TEXT NOT NULL
+├── email           TEXT NOT NULL    ← denormalized để search/display, không dùng làm auth
+├── phoneNumber     TEXT UNIQUE NULLABLE
+├── dateOfBirth     DATE NULLABLE
+├── avatarUrl       TEXT NULLABLE
+├── mediaFileId     UUID NULLABLE    ← ref → media-service FileObject (UUID only, không có FK)
+├── gender          ENUM(MALE, FEMALE, OTHER) NULLABLE
+├── address         TEXT NULLABLE
+├── role            ENUM(ADMIN, CENTER_MANAGER, INSTRUCTOR, STUDENT) NOT NULL  ← sync từ Keycloak
+├── isActive        BOOLEAN DEFAULT true   ← admin có thể deactivate độc lập với lock
+├── createdAt       TIMESTAMPTZ
+└── updatedAt       TIMESTAMPTZ
 ```
 
-### Entity (thuá»™c UserProfile aggregate): `StudentDetail`
+### Entity (thuộc UserProfile aggregate): `StudentDetail`
 
-> Chá»‰ tá»“n táº¡i khi `role = STUDENT`. LÆ°u háº¡ng báº±ng Ä‘Æ°á»£c giao vÃ  cÃ¡c thÃ´ng tin há»c viÃªn.
+> Chỉ tồn tại khi `role = STUDENT`. Lưu hạng bằng được giao và các thông tin học viên.
 
 ```
 student_details
-â”œâ”€â”€ id              UUID PK
-â”œâ”€â”€ studentId       UUID NOT NULL UNIQUE FK â†’ user_profiles.id
-â”œâ”€â”€ licenseTier     ENUM(A1, A2, B1, B2, C, D, E, F) NULLABLE  â† háº¡ng báº±ng Ä‘ang há»c
-â”œâ”€â”€ enrolledAt      TIMESTAMPTZ NULLABLE   â† ngÃ y báº¯t Ä‘áº§u há»c táº¡i trung tÃ¢m
-â””â”€â”€ notes           TEXT NULLABLE          â† ghi chÃº cá»§a center manager / instructor
+├── id              UUID PK
+├── studentId       UUID NOT NULL UNIQUE FK → user_profiles.id
+├── licenseTier     ENUM(A1, A2, B1, B2, C, D, E, F) NULLABLE  ← hạng bằng đang học
+├── enrolledAt      TIMESTAMPTZ NULLABLE   ← ngày bắt đầu học tại trung tâm
+└── notes           TEXT NULLABLE          ← ghi chú của center manager / instructor
 ```
 
-### Entity (thuá»™c UserProfile aggregate): `LicenseAssignmentAudit`
+### Entity (thuộc UserProfile aggregate): `LicenseAssignmentAudit`
 
-> Audit trail báº¯t buá»™c theo UC06 â€” má»—i láº§n Ä‘á»•i háº¡ng báº±ng Ä‘á»u ghi láº¡i.
+> Audit trail bắt buộc theo UC06 — mỗi lần đổi hạng bằng đều ghi lại.
 
 ```
 license_assignment_audits
-â”œâ”€â”€ id              UUID PK
-â”œâ”€â”€ studentId       UUID NOT NULL FK â†’ user_profiles.id
-â”œâ”€â”€ oldLicenseTier  ENUM(A1, A2, B1, B2, C, D, E, F) NULLABLE  â† null náº¿u lÃ  láº§n gÃ¡n Ä‘áº§u tiÃªn
-â”œâ”€â”€ newLicenseTier  ENUM(A1, A2, B1, B2, C, D, E, F) NOT NULL
-â”œâ”€â”€ changedById     UUID NOT NULL  â† ref â†’ Keycloak userId (ADMIN hoáº·c CENTER_MANAGER)
-â””â”€â”€ changedAt       TIMESTAMPTZ NOT NULL
+├── id              UUID PK
+├── studentId       UUID NOT NULL FK → user_profiles.id
+├── oldLicenseTier  ENUM(A1, A2, B1, B2, C, D, E, F) NULLABLE  ← null nếu là lần gán đầu tiên
+├── newLicenseTier  ENUM(A1, A2, B1, B2, C, D, E, F) NOT NULL
+├── changedById     UUID NOT NULL  ← ref → Keycloak userId (ADMIN hoặc CENTER_MANAGER)
+└── changedAt       TIMESTAMPTZ NOT NULL
 ```
 
 ### Value Objects (domain layer)
 
-- `PhoneNumber` â€” validate Ä‘á»‹nh dáº¡ng 10-11 sá»‘ VN
-- `DateOfBirth` â€” validate tuá»•i â‰¥ 18
-- `LicenseTier` â€” validate thuá»™c táº­p há»£p há»£p lá»‡ (A1..F)
+- `PhoneNumber` — validate định dạng 10-11 số VN
+- `DateOfBirth` — validate tuổi ≥ 18
+- `LicenseTier` — validate thuộc tập hợp hợp lệ (A1..F)
 
 ### Domain Events
 
 | Direction | Event                           | Trigger                  | Payload                                            |
 | --------- | ------------------------------- | ------------------------ | -------------------------------------------------- |
-| Subscribe | `identity.user.created`         | Keycloak táº¡o tÃ i khoáº£n   | Táº¡o UserProfile + StudentDetail (náº¿u role=STUDENT) |
-| Subscribe | `identity.user.role-changed`    | Admin Ä‘á»•i role           | Sync láº¡i `role` trÃªn UserProfile                   |
-| Publish   | `user.student.license-assigned` | GÃ¡n/Ä‘á»•i háº¡ng báº±ng (UC06) | studentId, oldTier, newTier, changedById           |
+| Subscribe | `identity.user.created`         | Keycloak tạo tài khoản   | Tạo UserProfile + StudentDetail (nếu role=STUDENT) |
+| Subscribe | `identity.user.role-changed`    | Admin đổi role           | Sync lại `role` trên UserProfile                   |
+| Publish   | `user.student.license-assigned` | Gán/đổi hạng bằng (UC06) | studentId, oldTier, newTier, changedById           |
 
 ---
 
-## Service 2.5: media-service â†’ `media_db`
+## Service 2.5: media-service → `media_db`
 
 **Bounded Context:** File Storage & Media Management
 
-> Service lÆ°u trá»¯ metadata file sau khi upload lÃªn Azure Blob Storage. CÃ¡c service khÃ¡c (user, course) tham chiáº¿u `mediaFileId` Ä‘á»ƒ hiá»ƒn thá»‹ file mÃ  khÃ´ng gá»i cross-service.
+> Service lưu trữ metadata file sau khi upload lên Azure Blob Storage. Các service khác (user, course) tham chiếu `mediaFileId` để hiển thị file mà không gọi cross-service.
 
 ### Aggregate Root: `FileObject`
 
 ```
 file_objects
-â”œâ”€â”€ id            UUID PK
-â”œâ”€â”€ storage_key   TEXT NOT NULL UNIQUE  â† Ä‘Æ°á»ng dáº«n trong Azure Blob (e.g. uploads/2026/05/file.jpg)
-â”œâ”€â”€ original_name TEXT NOT NULL
-â”œâ”€â”€ mime_type     TEXT NOT NULL
-â”œâ”€â”€ file_size     INT NOT NULL          â† bytes
-â”œâ”€â”€ bucket_name   TEXT NOT NULL
-â”œâ”€â”€ uploaded_by_id UUID NOT NULL        â† ref â†’ Keycloak userId (UUID only, khÃ´ng cÃ³ FK)
-â”œâ”€â”€ is_public     BOOLEAN DEFAULT false
-â”œâ”€â”€ status        ENUM(UNLINKED, LINKED) DEFAULT UNLINKED
-â”œâ”€â”€ created_at    TIMESTAMPTZ
-â””â”€â”€ updated_at    TIMESTAMPTZ
+├── id            UUID PK
+├── storage_key   TEXT NOT NULL UNIQUE  ← đường dẫn trong Azure Blob (e.g. uploads/2026/05/file.jpg)
+├── original_name TEXT NOT NULL
+├── mime_type     TEXT NOT NULL
+├── file_size     INT NOT NULL          ← bytes
+├── bucket_name   TEXT NOT NULL
+├── uploaded_by_id UUID NOT NULL        ← ref → Keycloak userId (UUID only, không có FK)
+├── is_public     BOOLEAN DEFAULT false
+├── status        ENUM(UNLINKED, LINKED) DEFAULT UNLINKED
+├── created_at    TIMESTAMPTZ
+└── updated_at    TIMESTAMPTZ
 ```
 
-> **`status`**: `UNLINKED` â€” file vá»«a upload, chÆ°a Ä‘Æ°á»£c gáº¯n vÃ o entity nÃ o. `LINKED` â€” Ä‘Ã£ Ä‘Æ°á»£c user/course xÃ¡c nháº­n dÃ¹ng (qua event `user.avatar.linked` hoáº·c `course.material.linked`).
+> **`status`**: `UNLINKED` — file vừa upload, chưa được gắn vào entity nào. `LINKED` — đã được user/course xác nhận dùng (qua event `user.avatar.linked` hoặc `course.material.linked`).
 
 ### Domain Events
 
 | Direction | Event | Trigger | Payload |
 | --------- | --- | --- | --- |
-| Publish | `media.file.uploaded` | Upload file thÃ nh cÃ´ng | fileId, storageKey, originalName, mimeType, fileSize, uploadedById |
-| Publish | `media.file.deleted` | XÃ³a file | fileId, storageKey, deletedById |
-| Subscribe | `user.avatar.linked` | User gáº¯n avatar | mediaFileId â†’ mark LINKED |
-| Subscribe | `course.material.linked` | Course gáº¯n tÃ i liá»‡u | mediaFileId â†’ mark LINKED |
+| Publish | `media.file.uploaded` | Upload file thành công | fileId, storageKey, originalName, mimeType, fileSize, uploadedById |
+| Publish | `media.file.deleted` | Xóa file | fileId, storageKey, deletedById |
+| Subscribe | `user.avatar.linked` | User gắn avatar | mediaFileId → mark LINKED |
+| Subscribe | `course.material.linked` | Course gắn tài liệu | mediaFileId → mark LINKED |
 
 ---
 
-## Service 3: question-service â†’ `question_db` âœ… (implemented)
+## Service 3: question-service → `question_db` ✅ (implemented)
 
 **Bounded Context:** Question Bank Management
 
 ### Aggregate Root: `QuestionTopic`
 
-> PhÃ¢n loáº¡i cÃ¢u há»i theo chá»§ Ä‘á» (Luáº­t giao thÃ´ng, Biá»ƒn bÃ¡o, Ká»¹ thuáº­t lÃ¡i, Äáº¡o Ä‘á»©c ngÆ°á»i lÃ¡i...)
+> Phân loại câu hỏi theo chủ đề (Luật giao thông, Biển báo, Kỹ thuật lái, Đạo đức người lái...)
 
 ```
 question_topics
-â”œâ”€â”€ id          UUID PK
-â”œâ”€â”€ name        TEXT NOT NULL
-â”œâ”€â”€ description TEXT
-â”œâ”€â”€ parentId    UUID NULLABLE FK â†’ question_topics.id  â† phÃ¢n cáº¥p
-â””â”€â”€ createdAt   TIMESTAMPTZ
+├── id          UUID PK
+├── name        TEXT NOT NULL
+├── description TEXT
+├── parentId    UUID NULLABLE FK → question_topics.id  ← phân cấp
+└── createdAt   TIMESTAMPTZ
 ```
 
 ### Aggregate Root: `Question`
 
 ```
 questions
-â”œâ”€â”€ id               UUID PK
-â”œâ”€â”€ content          TEXT NOT NULL          â† max 2000 kÃ½ tá»±
-â”œâ”€â”€ type             ENUM(THEORY, TRAFFIC_SIGN, SCENARIO_RELATED)
-â”œâ”€â”€ licenseCategory  TEXT[]                 â† array enum A1..F, 1 cÃ¢u dÃ¹ng Ä‘Æ°á»£c nhiá»u háº¡ng
-â”œâ”€â”€ difficulty       ENUM(EASY, MEDIUM, HARD)
-â”œâ”€â”€ explanation      TEXT                   â† giáº£i thÃ­ch Ä‘Ã¡p Ã¡n Ä‘Ãºng
-â”œâ”€â”€ imageUrl         TEXT NULLABLE          â† biá»ƒn bÃ¡o hoáº·c tÃ¬nh huá»‘ng
-â”œâ”€â”€ isCritical       BOOLEAN DEFAULT false  â† cÃ¢u Ä‘iá»ƒm liá»‡t: sai = tá»± Ä‘á»™ng trÆ°á»£t
-â”œâ”€â”€ isActive         BOOLEAN DEFAULT true
-â”œâ”€â”€ topicId          UUID NOT NULL FK â†’ question_topics.id
-â”œâ”€â”€ createdById      UUID NOT NULL  â† ref â†’ identity_users.id
-â”œâ”€â”€ createdAt        TIMESTAMPTZ
-â””â”€â”€ updatedAt        TIMESTAMPTZ
+├── id               UUID PK
+├── content          TEXT NOT NULL          ← max 2000 ký tự
+├── type             ENUM(THEORY, TRAFFIC_SIGN, SCENARIO_RELATED)
+├── licenseCategory  TEXT[]                 ← array enum A1..F, 1 câu dùng được nhiều hạng
+├── difficulty       ENUM(EASY, MEDIUM, HARD)
+├── explanation      TEXT                   ← giải thích đáp án đúng
+├── imageUrl         TEXT NULLABLE          ← biển báo hoặc tình huống
+├── isCritical       BOOLEAN DEFAULT false  ← câu điểm liệt: sai = tự động trượt
+├── isActive         BOOLEAN DEFAULT true
+├── topicId          UUID NOT NULL FK → question_topics.id
+├── createdById      UUID NOT NULL  ← ref → identity_users.id
+├── createdAt        TIMESTAMPTZ
+└── updatedAt        TIMESTAMPTZ
 ```
 
-> **`isCritical`**: CÃ¢u há»i vá» ná»“ng Ä‘á»™ cá»“n, tá»‘c Ä‘á»™ tá»‘i Ä‘a â€” sai 1 cÃ¢u lÃ  trÆ°á»£t dÃ¹ tá»•ng Ä‘iá»ƒm Ä‘á»§.
+> **`isCritical`**: Câu hỏi về nồng độ cồn, tốc độ tối đa — sai 1 câu là trượt dù tổng điểm đủ.
 
-### Entity (thuá»™c Question): `QuestionOption`
+### Entity (thuộc Question): `QuestionOption`
 
 ```
 question_options
-â”œâ”€â”€ id            UUID PK
-â”œâ”€â”€ questionId    UUID NOT NULL FK â†’ questions.id
-â”œâ”€â”€ content       TEXT NOT NULL  â† max 500 kÃ½ tá»±
-â”œâ”€â”€ isCorrect     BOOLEAN NOT NULL
-â””â”€â”€ displayOrder  INT NOT NULL
+├── id            UUID PK
+├── questionId    UUID NOT NULL FK → questions.id
+├── content       TEXT NOT NULL  ← max 500 ký tự
+├── isCorrect     BOOLEAN NOT NULL
+└── displayOrder  INT NOT NULL
 ```
 
-### Domain Events phÃ¡t ra
+### Domain Events phát ra
 
 | Event                  | Trigger          | Payload                                   |
 | ---------------------- | ---------------- | ----------------------------------------- |
-| `question.created`     | ThÃªm cÃ¢u há»i má»›i | questionId, licenseCategory[], isCritical |
-| `question.deactivated` | Táº¯t cÃ¢u há»i      | questionId                                |
+| `question.created`     | Thêm câu hỏi mới | questionId, licenseCategory[], isCritical |
+| `question.deactivated` | Tắt câu hỏi      | questionId                                |
 
 ---
 
-## Service 4: exam-service â†’ `exam_db` âœ… (implemented)
+## Service 4: exam-service → `exam_db` ✅ (implemented)
 
 **Bounded Context:** Exam Scheduling & Session Management
 
 ### Aggregate Root: `ExamTemplate`
 
-> Blueprint cá»§a má»™t Ä‘á» thi â€” cáº¥u hÃ¬nh sá»‘ cÃ¢u, thá»i gian, Ä‘iá»ƒm Ä‘áº­u theo háº¡ng báº±ng.
+> Blueprint của một đề thi — cấu hình số câu, thời gian, điểm đậu theo hạng bằng.
 
 ```
 exam_templates
-â”œâ”€â”€ id                UUID PK
-â”œâ”€â”€ name              TEXT NOT NULL
-â”œâ”€â”€ licenseCategory   ENUM(A1, A2, B1, B2, C, D, E, F)
-â”œâ”€â”€ totalQuestions    INT NOT NULL
-â”œâ”€â”€ passingScore      INT NOT NULL     â† Ä‘iá»ƒm tá»‘i thiá»ƒu Ä‘á»ƒ Ä‘áº­u
-â”œâ”€â”€ durationMinutes   INT NOT NULL
-â”œâ”€â”€ isActive          BOOLEAN DEFAULT true
-â”œâ”€â”€ createdById       UUID NOT NULL
-â””â”€â”€ createdAt         TIMESTAMPTZ
+├── id                UUID PK
+├── name              TEXT NOT NULL
+├── licenseCategory   ENUM(A1, A2, B1, B2, C, D, E, F)
+├── totalQuestions    INT NOT NULL
+├── passingScore      INT NOT NULL     ← điểm tối thiểu để đậu
+├── durationMinutes   INT NOT NULL
+├── isActive          BOOLEAN DEFAULT true
+├── createdById       UUID NOT NULL
+└── createdAt         TIMESTAMPTZ
 ```
 
 ### Aggregate Root: `ExamSession`
 
-> Má»™t láº§n thi cá»§a student. Quáº£n lÃ½ toÃ n bá»™ tráº¡ng thÃ¡i phiÃªn thi.
+> Một lần thi của student. Quản lý toàn bộ trạng thái phiên thi.
 
 ```
 exam_sessions
-â”œâ”€â”€ id                UUID PK
-â”œâ”€â”€ studentId         UUID NOT NULL  â† ref â†’ identity_users.id
-â”œâ”€â”€ templateId        UUID NOT NULL FK â†’ exam_templates.id
-â”œâ”€â”€ status            ENUM(PENDING, IN_PROGRESS, COMPLETED, TIMED_OUT, CANCELLED)
-â”œâ”€â”€ score             INT NULLABLE          â† null khi chÆ°a hoÃ n thÃ nh
-â”œâ”€â”€ isPassed          BOOLEAN NULLABLE
-â”œâ”€â”€ failedByCritical  BOOLEAN DEFAULT false â† trÆ°á»£t do cÃ¢u Ä‘iá»ƒm liá»‡t
-â”œâ”€â”€ startedAt         TIMESTAMPTZ NULLABLE
-â”œâ”€â”€ finishedAt        TIMESTAMPTZ NULLABLE
-â”œâ”€â”€ expiresAt         TIMESTAMPTZ NOT NULL  â† startedAt + durationMinutes
-â””â”€â”€ createdAt         TIMESTAMPTZ
+├── id                UUID PK
+├── studentId         UUID NOT NULL  ← ref → identity_users.id
+├── templateId        UUID NOT NULL FK → exam_templates.id
+├── status            ENUM(PENDING, IN_PROGRESS, COMPLETED, TIMED_OUT, CANCELLED)
+├── score             INT NULLABLE          ← null khi chưa hoàn thành
+├── isPassed          BOOLEAN NULLABLE
+├── failedByCritical  BOOLEAN DEFAULT false ← trượt do câu điểm liệt
+├── startedAt         TIMESTAMPTZ NULLABLE
+├── finishedAt        TIMESTAMPTZ NULLABLE
+├── expiresAt         TIMESTAMPTZ NOT NULL  ← startedAt + durationMinutes
+└── createdAt         TIMESTAMPTZ
 ```
 
-### Entity (thuá»™c ExamSession): `ExamSessionQuestion`
+### Entity (thuộc ExamSession): `ExamSessionQuestion`
 
-> Snapshot cÃ¢u há»i táº¡i thá»i Ä‘iá»ƒm thi â€” trÃ¡nh bá»‹ áº£nh hÆ°á»Ÿng khi question-service cáº­p nháº­t sau.
+> Snapshot câu hỏi tại thời điểm thi — tránh bị ảnh hưởng khi question-service cập nhật sau.
 
 ```
 exam_session_questions
-â”œâ”€â”€ id               UUID PK
-â”œâ”€â”€ sessionId        UUID NOT NULL FK â†’ exam_sessions.id
-â”œâ”€â”€ questionId       UUID NOT NULL        â† ref â†’ question_db (UUID only, NO FK)
-â”œâ”€â”€ questionContent  TEXT NOT NULL        â† snapshot ná»™i dung cÃ¢u há»i
-â”œâ”€â”€ optionsSnapshot  JSONB NOT NULL       â† snapshot toÃ n bá»™ options
-â”œâ”€â”€ isCritical       BOOLEAN NOT NULL
-â”œâ”€â”€ displayOrder     INT NOT NULL
-â”œâ”€â”€ selectedOptionId UUID NULLABLE        â† null = chÆ°a tráº£ lá»i
-â”œâ”€â”€ isCorrect        BOOLEAN NULLABLE
-â””â”€â”€ answeredAt       TIMESTAMPTZ NULLABLE
+├── id               UUID PK
+├── sessionId        UUID NOT NULL FK → exam_sessions.id
+├── questionId       UUID NOT NULL        ← ref → question_db (UUID only, NO FK)
+├── questionContent  TEXT NOT NULL        ← snapshot nội dung câu hỏi
+├── optionsSnapshot  JSONB NOT NULL       ← snapshot toàn bộ options
+├── isCritical       BOOLEAN NOT NULL
+├── displayOrder     INT NOT NULL
+├── selectedOptionId UUID NULLABLE        ← null = chưa trả lời
+├── isCorrect        BOOLEAN NULLABLE
+└── answeredAt       TIMESTAMPTZ NULLABLE
 ```
 
 ### Aggregate Root: `ExamSchedule`
 
-> Lá»‹ch thi Ä‘Æ°á»£c táº¡o bá»Ÿi CENTER_MANAGER hoáº·c ADMIN.
+> Lịch thi được tạo bởi CENTER_MANAGER hoặc ADMIN.
 
 ```
 exam_schedules
-â”œâ”€â”€ id               UUID PK
-â”œâ”€â”€ templateId       UUID NOT NULL FK â†’ exam_templates.id
-â”œâ”€â”€ centerId         UUID NULLABLE  â† ref â†’ user-service (UUID only)
-â”œâ”€â”€ scheduledAt      TIMESTAMPTZ NOT NULL
-â”œâ”€â”€ location         TEXT
-â”œâ”€â”€ maxParticipants  INT
-â”œâ”€â”€ createdById      UUID NOT NULL
-â””â”€â”€ createdAt        TIMESTAMPTZ
+├── id               UUID PK
+├── templateId       UUID NOT NULL FK → exam_templates.id
+├── centerId         UUID NULLABLE  ← ref → user-service (UUID only)
+├── scheduledAt      TIMESTAMPTZ NOT NULL
+├── location         TEXT
+├── maxParticipants  INT
+├── createdById      UUID NOT NULL
+└── createdAt        TIMESTAMPTZ
 ```
 
 ### Value Objects
 
-- `Score` â€” 0 â‰¤ value â‰¤ totalQuestions
-- `ExamDuration` â€” > 0, â‰¤ 180 phÃºt
+- `Score` — 0 ≤ value ≤ totalQuestions
+- `ExamDuration` — > 0, ≤ 180 phút
 
-### Domain Events phÃ¡t ra
+### Domain Events phát ra
 
 | Event                    | Trigger                  | Payload                                                |
 | ------------------------ | ------------------------ | ------------------------------------------------------ |
-| `exam.session.completed` | Thi xong (ká»ƒ cáº£ timeout) | sessionId, studentId, score, isPassed, licenseCategory |
-| `exam.session.passed`    | Thi Ä‘áº­u                  | sessionId, studentId, licenseCategory                  |
-| `exam.session.failed`    | Thi rá»›t                  | sessionId, studentId, failedByCritical                 |
+| `exam.session.completed` | Thi xong (kể cả timeout) | sessionId, studentId, score, isPassed, licenseCategory |
+| `exam.session.passed`    | Thi đậu                  | sessionId, studentId, licenseCategory                  |
+| `exam.session.failed`    | Thi rớt                  | sessionId, studentId, failedByCritical                 |
 
 ---
 
-## Service 5: course-service â†’ `course_db`
+## Service 5: course-service → `course_db`
 
 **Bounded Context:** Learning Content & Enrollment
 
@@ -1584,191 +1584,191 @@ exam_schedules
 
 ```
 courses
-â”œâ”€â”€ id               UUID PK
-â”œâ”€â”€ title            TEXT NOT NULL
-â”œâ”€â”€ description      TEXT NULLABLE
-â”œâ”€â”€ licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
-â”œâ”€â”€ totalLessons     INT DEFAULT 0
-â”œâ”€â”€ duration         TEXT NULLABLE    â† e.g. "3 thÃ¡ng"
-â”œâ”€â”€ tuitionFee       DECIMAL(12,2) DEFAULT 0
-â”œâ”€â”€ capacity         INT NULLABLE
-â”œâ”€â”€ status           ENUM(DRAFT, ACTIVE) DEFAULT DRAFT
-â”œâ”€â”€ createdById      UUID NOT NULL    â† ref â†’ Keycloak userId (INSTRUCTOR/ADMIN)
-â”œâ”€â”€ createdAt        TIMESTAMPTZ
-â””â”€â”€ updatedAt        TIMESTAMPTZ
+├── id               UUID PK
+├── title            TEXT NOT NULL
+├── description      TEXT NULLABLE
+├── licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
+├── totalLessons     INT DEFAULT 0
+├── duration         TEXT NULLABLE    ← e.g. "3 tháng"
+├── tuitionFee       DECIMAL(12,2) DEFAULT 0
+├── capacity         INT NULLABLE
+├── status           ENUM(DRAFT, ACTIVE) DEFAULT DRAFT
+├── createdById      UUID NOT NULL    ← ref → Keycloak userId (INSTRUCTOR/ADMIN)
+├── createdAt        TIMESTAMPTZ
+└── updatedAt        TIMESTAMPTZ
 ```
 
-> **Scope simplification:** KhÃ´ng cÃ³ thumbnailUrl, khÃ´ng cÃ³ video â€” khÃ³a há»c chá»‰ cáº§n text content. `ARCHIVED` khÃ´ng cÃ³ trong enum hiá»‡n táº¡i.
+> **Scope simplification:** Không có thumbnailUrl, không có video — khóa học chỉ cần text content. `ARCHIVED` không có trong enum hiện tại.
 
-### Entity (thuá»™c Course): `Lesson`
+### Entity (thuộc Course): `Lesson`
 
 ```
 lessons
-â”œâ”€â”€ id        UUID PK
-â”œâ”€â”€ courseId  UUID NOT NULL FK â†’ courses.id (onDelete: Cascade)
-â”œâ”€â”€ title     TEXT NOT NULL
-â”œâ”€â”€ content   TEXT NULLABLE  â† markdown text
-â”œâ”€â”€ order     INT NOT NULL
-â””â”€â”€ createdAt TIMESTAMPTZ
+├── id        UUID PK
+├── courseId  UUID NOT NULL FK → courses.id (onDelete: Cascade)
+├── title     TEXT NOT NULL
+├── content   TEXT NULLABLE  ← markdown text
+├── order     INT NOT NULL
+└── createdAt TIMESTAMPTZ
 ```
 
-> Lesson gáº¯n trá»±c tiáº¿p vÃ o Course (khÃ´ng qua CourseModule). KhÃ´ng cÃ³ `videoUrl` hay `durationMinutes`.
+> Lesson gắn trực tiếp vào Course (không qua CourseModule). Không có `videoUrl` hay `durationMinutes`.
 
-### Entity (thuá»™c Course): `CourseInstructor`
+### Entity (thuộc Course): `CourseInstructor`
 
-> Junction table cho quan há»‡ many-to-many giá»¯a Course vÃ  Instructor.
+> Junction table cho quan hệ many-to-many giữa Course và Instructor.
 
 ```
 course_instructors
-â”œâ”€â”€ id           UUID PK
-â”œâ”€â”€ courseId     UUID NOT NULL FK â†’ courses.id (onDelete: Cascade)
-â””â”€â”€ instructorId UUID NOT NULL    â† ref â†’ Keycloak userId
+├── id           UUID PK
+├── courseId     UUID NOT NULL FK → courses.id (onDelete: Cascade)
+└── instructorId UUID NOT NULL    ← ref → Keycloak userId
     UNIQUE(courseId, instructorId)
 ```
 
-### Entity (thuá»™c Course): `CourseRequirement`
+### Entity (thuộc Course): `CourseRequirement`
 
-> Äiá»u kiá»‡n tham gia khÃ³a há»c â€” quan há»‡ 1-1 vá»›i Course.
+> Điều kiện tham gia khóa học — quan hệ 1-1 với Course.
 
 ```
 course_requirements
-â”œâ”€â”€ id             UUID PK
-â”œâ”€â”€ courseId       UUID NOT NULL UNIQUE FK â†’ courses.id (onDelete: Cascade)
-â”œâ”€â”€ minAge         INT NULLABLE
-â”œâ”€â”€ prerequisites  TEXT NULLABLE
-â”œâ”€â”€ attendanceRate INT DEFAULT 80
-â”œâ”€â”€ minPassScore   INT DEFAULT 80
-â””â”€â”€ requiredExams  INT DEFAULT 0
+├── id             UUID PK
+├── courseId       UUID NOT NULL UNIQUE FK → courses.id (onDelete: Cascade)
+├── minAge         INT NULLABLE
+├── prerequisites  TEXT NULLABLE
+├── attendanceRate INT DEFAULT 80
+├── minPassScore   INT DEFAULT 80
+└── requiredExams  INT DEFAULT 0
 ```
 
-### Entity (thuá»™c Course): `CourseMaterial`
+### Entity (thuộc Course): `CourseMaterial`
 
-> TÃ i liá»‡u Ä‘Ã­nh kÃ¨m khÃ³a há»c (PDF, video, link...).
+> Tài liệu đính kèm khóa học (PDF, video, link...).
 
 ```
 course_materials
-â”œâ”€â”€ id          UUID PK
-â”œâ”€â”€ courseId    UUID NOT NULL FK â†’ courses.id (onDelete: Cascade)
-â”œâ”€â”€ title       TEXT NOT NULL
-â”œâ”€â”€ fileUrl     TEXT NULLABLE    â† URL trá»±c tiáº¿p (náº¿u khÃ´ng dÃ¹ng media-service)
-â”œâ”€â”€ mediaFileId UUID NULLABLE    â† ref â†’ media-service FileObject (UUID only, khÃ´ng cÃ³ FK)
-â”œâ”€â”€ type        TEXT NULLABLE    â† e.g. "PDF", "VIDEO", "LINK"
-â””â”€â”€ createdAt   TIMESTAMPTZ
+├── id          UUID PK
+├── courseId    UUID NOT NULL FK → courses.id (onDelete: Cascade)
+├── title       TEXT NOT NULL
+├── fileUrl     TEXT NULLABLE    ← URL trực tiếp (nếu không dùng media-service)
+├── mediaFileId UUID NULLABLE    ← ref → media-service FileObject (UUID only, không có FK)
+├── type        TEXT NULLABLE    ← e.g. "PDF", "VIDEO", "LINK"
+└── createdAt   TIMESTAMPTZ
 ```
 
 ### Aggregate Root: `CourseEnrollment`
 
-> Quáº£n lÃ½ tiáº¿n trÃ¬nh há»c cá»§a 1 student trong 1 khÃ³a há»c.
+> Quản lý tiến trình học của 1 student trong 1 khóa học.
 
 ```
 course_enrollments
-â”œâ”€â”€ id          UUID PK
-â”œâ”€â”€ courseId    UUID NOT NULL FK â†’ courses.id (onDelete: Cascade)
-â”œâ”€â”€ studentId   UUID NOT NULL  â† ref â†’ Keycloak userId
-â”œâ”€â”€ status      ENUM(ACTIVE, COMPLETED, DROPPED) DEFAULT ACTIVE
-â”œâ”€â”€ progress    INT DEFAULT 0  â† 0-100%, tá»± tÃ­nh khi completeLesson
-â”œâ”€â”€ enrolledAt  TIMESTAMPTZ
-â””â”€â”€ completedAt TIMESTAMPTZ NULLABLE
+├── id          UUID PK
+├── courseId    UUID NOT NULL FK → courses.id (onDelete: Cascade)
+├── studentId   UUID NOT NULL  ← ref → Keycloak userId
+├── status      ENUM(ACTIVE, COMPLETED, DROPPED) DEFAULT ACTIVE
+├── progress    INT DEFAULT 0  ← 0-100%, tự tính khi completeLesson
+├── enrolledAt  TIMESTAMPTZ
+└── completedAt TIMESTAMPTZ NULLABLE
     UNIQUE(courseId, studentId)
 ```
 
-> **KhÃ´ng cÃ³ `lesson_progress` table.** Má»—i láº§n `completeLesson` gá»i, progress tÄƒng `100/totalLessons`. KhÃ´ng track per-lesson tráº¡ng thÃ¡i Ä‘Ã£ hoÃ n thÃ nh.
+> **Không có `lesson_progress` table.** Mỗi lần `completeLesson` gọi, progress tăng `100/totalLessons`. Không track per-lesson trạng thái đã hoàn thành.
 
-### Domain Events phÃ¡t ra
+### Domain Events phát ra
 
 | Event                         | Trigger                  | Payload                           |
 | ----------------------------- | ------------------------ | --------------------------------- |
-| `course.enrollment.created`   | Student Ä‘Äƒng kÃ½ khÃ³a há»c | enrollmentId, studentId, courseId |
-| `course.enrollment.completed` | HoÃ n thÃ nh khÃ³a há»c      | enrollmentId, studentId, courseId |
-| `course.lesson.completed`     | HoÃ n thÃ nh 1 bÃ i há»c     | lessonId, studentId, courseId     |
+| `course.enrollment.created`   | Student đăng ký khóa học | enrollmentId, studentId, courseId |
+| `course.enrollment.completed` | Hoàn thành khóa học      | enrollmentId, studentId, courseId |
+| `course.lesson.completed`     | Hoàn thành 1 bài học     | lessonId, studentId, courseId     |
 
 ---
 
-## Service 6: simulation-service â†’ `simulation_db` âœ… (MVP implemented)
+## Service 6: simulation-service → `simulation_db` ✅ (MVP implemented)
 
-**Bounded Context:** Driving Scenario Simulation (Sa hÃ¬nh)
+**Bounded Context:** Driving Scenario Simulation (Sa hình)
 
-> Sa hÃ¬nh: student xem video/áº£nh tÃ¬nh huá»‘ng thá»±c táº¿ vÃ  chá»n hÃ nh Ä‘á»™ng Ä‘Ãºng. CÃ³ 120 tÃ¬nh huá»‘ng theo quy Ä‘á»‹nh.
+> Sa hình: student xem video/ảnh tình huống thực tế và chọn hành động đúng. Có 120 tình huống theo quy định.
 
 ### Aggregate Root: `Maneuver`
 
-> Content tÄ©nh, do ADMIN/INSTRUCTOR táº¡o.
+> Content tĩnh, do ADMIN/INSTRUCTOR tạo.
 
 ```
 maneuvers
-â”œâ”€â”€ id               UUID PK
-â”œâ”€â”€ title            TEXT NOT NULL
-â”œâ”€â”€ description      TEXT NOT NULL
-â”œâ”€â”€ licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
-â”œâ”€â”€ displayOrder     INT NOT NULL
-â”œâ”€â”€ isActive         BOOLEAN DEFAULT true
-â”œâ”€â”€ createdAt        TIMESTAMPTZ
-â””â”€â”€ updatedAt        TIMESTAMPTZ
+├── id               UUID PK
+├── title            TEXT NOT NULL
+├── description      TEXT NOT NULL
+├── licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
+├── displayOrder     INT NOT NULL
+├── isActive         BOOLEAN DEFAULT true
+├── createdAt        TIMESTAMPTZ
+└── updatedAt        TIMESTAMPTZ
 ```
 
-### Entity (thuá»™c Maneuver): `ManeuverCheckpoint`
+### Entity (thuộc Maneuver): `ManeuverCheckpoint`
 
 ```
 maneuver_checkpoints
-â”œâ”€â”€ id            UUID PK
-â”œâ”€â”€ maneuverId    UUID NOT NULL FK â†’ maneuvers.id
-â”œâ”€â”€ title         TEXT NOT NULL
-â”œâ”€â”€ instruction   TEXT NOT NULL
-â”œâ”€â”€ penalty       TEXT NULLABLE
-â””â”€â”€ displayOrder  INT NOT NULL
+├── id            UUID PK
+├── maneuverId    UUID NOT NULL FK → maneuvers.id
+├── title         TEXT NOT NULL
+├── instruction   TEXT NOT NULL
+├── penalty       TEXT NULLABLE
+└── displayOrder  INT NOT NULL
 ```
 
 ### Entity: `ManeuverError`
 
 ```
 maneuver_errors
-â”œâ”€â”€ id               UUID PK
-â”œâ”€â”€ licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
-â”œâ”€â”€ code             TEXT NOT NULL
-â”œâ”€â”€ description      TEXT NOT NULL
-â”œâ”€â”€ severity         TEXT NOT NULL
-â””â”€â”€ createdAt        TIMESTAMPTZ
+├── id               UUID PK
+├── licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
+├── code             TEXT NOT NULL
+├── description      TEXT NOT NULL
+├── severity         TEXT NOT NULL
+└── createdAt        TIMESTAMPTZ
 ```
 
 ### Aggregate Root: `SimulationSession`
 
-> Má»™t láº§n luyá»‡n táº­p sa hÃ¬nh cá»§a student.
+> Một lần luyện tập sa hình của student.
 
 ```
 simulation_sessions
-â”œâ”€â”€ id               UUID PK
-â”œâ”€â”€ studentId        UUID NOT NULL  â† ref â†’ identity_users.id
-â”œâ”€â”€ licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
-â”œâ”€â”€ status           ENUM(IN_PROGRESS, COMPLETED, ABANDONED)
-â”œâ”€â”€ totalScenarios   INT NOT NULL
-â”œâ”€â”€ correctCount     INT DEFAULT 0
-â”œâ”€â”€ score            INT NULLABLE   â† 0-100
-â”œâ”€â”€ isPassed         BOOLEAN NULLABLE
-â”œâ”€â”€ startedAt        TIMESTAMPTZ NOT NULL
-â””â”€â”€ completedAt      TIMESTAMPTZ NULLABLE
+├── id               UUID PK
+├── studentId        UUID NOT NULL  ← ref → identity_users.id
+├── licenseCategory  ENUM(A1, A2, B1, B2, C, D, E, F)
+├── status           ENUM(IN_PROGRESS, COMPLETED, ABANDONED)
+├── totalScenarios   INT NOT NULL
+├── correctCount     INT DEFAULT 0
+├── score            INT NULLABLE   ← 0-100
+├── isPassed         BOOLEAN NULLABLE
+├── startedAt        TIMESTAMPTZ NOT NULL
+└── completedAt      TIMESTAMPTZ NULLABLE
 ```
 
-### Entity (thuá»™c SimulationSession): `SimulationAnswer`
+### Entity (thuộc SimulationSession): `SimulationAnswer`
 
 ```
 simulation_answers
-â”œâ”€â”€ id                UUID PK
-â”œâ”€â”€ sessionId         UUID NOT NULL FK â†’ simulation_sessions.id
-â”œâ”€â”€ scenarioId        UUID NOT NULL FK â†’ scenarios.id
-â”œâ”€â”€ selectedOptionId  UUID NULLABLE   â† null = bá» qua
-â”œâ”€â”€ isCorrect         BOOLEAN NULLABLE
-â””â”€â”€ answeredAt        TIMESTAMPTZ
+├── id                UUID PK
+├── sessionId         UUID NOT NULL FK → simulation_sessions.id
+├── scenarioId        UUID NOT NULL FK → scenarios.id
+├── selectedOptionId  UUID NULLABLE   ← null = bỏ qua
+├── isCorrect         BOOLEAN NULLABLE
+└── answeredAt        TIMESTAMPTZ
 ```
 
-### Domain Events phÃ¡t ra
+### Domain Events phát ra
 
 | Event                          | Trigger            | Payload                                                |
 | ------------------------------ | ------------------ | ------------------------------------------------------ |
-| `simulation.session.completed` | HoÃ n thÃ nh sa hÃ¬nh | sessionId, studentId, score, isPassed, licenseCategory |
+| `simulation.session.completed` | Hoàn thành sa hình | sessionId, studentId, score, isPassed, licenseCategory |
 
 ---
 
-## Service 7: notification-service â†’ `notification_db` âœ… (MVP implemented)
+## Service 7: notification-service → `notification_db` ✅ (MVP implemented)
 
 **Bounded Context:** Notification Delivery
 
@@ -1780,135 +1780,135 @@ Notification-service persists in-app notifications and academic warning audit re
 
 ```
 academic_warnings
-â”œâ”€â”€ id          UUID PK
-â”œâ”€â”€ studentId   UUID NOT NULL
-â”œâ”€â”€ reason      TEXT NOT NULL
-â”œâ”€â”€ severity    TEXT NOT NULL
-â”œâ”€â”€ message     TEXT NOT NULL
-â”œâ”€â”€ createdById UUID NOT NULL
-â””â”€â”€ createdAt   TIMESTAMPTZ
+├── id          UUID PK
+├── studentId   UUID NOT NULL
+├── reason      TEXT NOT NULL
+├── severity    TEXT NOT NULL
+├── message     TEXT NOT NULL
+├── createdById UUID NOT NULL
+└── createdAt   TIMESTAMPTZ
 ```
 
 ### Aggregate Root: `Notification`
 
 ```
 notifications
-â”œâ”€â”€ id        UUID PK
-â”œâ”€â”€ userId    UUID NOT NULL  â† ref â†’ identity_users.id
-â”œâ”€â”€ type      ENUM(IN_APP, EMAIL, PUSH, SMS)
-â”œâ”€â”€ title     TEXT NOT NULL
-â”œâ”€â”€ body      TEXT NOT NULL
-â”œâ”€â”€ data      JSONB DEFAULT '{}'  â† metadata tÃ¹y loáº¡i thÃ´ng bÃ¡o
-â”œâ”€â”€ isRead    BOOLEAN DEFAULT false
-â”œâ”€â”€ readAt    TIMESTAMPTZ NULLABLE
-â”œâ”€â”€ sentAt    TIMESTAMPTZ NULLABLE
-â””â”€â”€ createdAt TIMESTAMPTZ
+├── id        UUID PK
+├── userId    UUID NOT NULL  ← ref → identity_users.id
+├── type      ENUM(IN_APP, EMAIL, PUSH, SMS)
+├── title     TEXT NOT NULL
+├── body      TEXT NOT NULL
+├── data      JSONB DEFAULT '{}'  ← metadata tùy loại thông báo
+├── isRead    BOOLEAN DEFAULT false
+├── readAt    TIMESTAMPTZ NULLABLE
+├── sentAt    TIMESTAMPTZ NULLABLE
+└── createdAt TIMESTAMPTZ
 ```
 
 ### Future extension: `NotificationPreference`
 
 ```
 notification_preferences
-â”œâ”€â”€ id           UUID PK
-â”œâ”€â”€ userId       UUID NOT NULL UNIQUE  â† ref â†’ identity_users.id
-â”œâ”€â”€ emailEnabled BOOLEAN DEFAULT true
-â”œâ”€â”€ pushEnabled  BOOLEAN DEFAULT true
-â”œâ”€â”€ smsEnabled   BOOLEAN DEFAULT false
-â”œâ”€â”€ inAppEnabled BOOLEAN DEFAULT true
-â””â”€â”€ updatedAt    TIMESTAMPTZ
+├── id           UUID PK
+├── userId       UUID NOT NULL UNIQUE  ← ref → identity_users.id
+├── emailEnabled BOOLEAN DEFAULT true
+├── pushEnabled  BOOLEAN DEFAULT true
+├── smsEnabled   BOOLEAN DEFAULT false
+├── inAppEnabled BOOLEAN DEFAULT true
+└── updatedAt    TIMESTAMPTZ
 ```
 
 ### Domain Events subscribe
 
-| Event                          | HÃ nh Ä‘á»™ng                                             |
+| Event                          | Hành động                                             |
 | ------------------------------ | ----------------------------------------------------- |
-| `identity.user.created`        | Gá»­i welcome notification + táº¡o NotificationPreference |
-| `identity.user.locked`         | Cáº£nh bÃ¡o tÃ i khoáº£n bá»‹ khÃ³a                            |
-| `exam.session.passed`          | ThÃ´ng bÃ¡o Ä‘áº­u thi                                     |
-| `exam.session.failed`          | ThÃ´ng bÃ¡o rá»›t thi, gá»£i Ã½ Ã´n thÃªm                      |
-| `course.enrollment.completed`  | ChÃºc má»«ng hoÃ n thÃ nh khÃ³a há»c                         |
-| `simulation.session.completed` | ThÃ´ng bÃ¡o káº¿t quáº£ sa hÃ¬nh                             |
+| `identity.user.created`        | Gửi welcome notification + tạo NotificationPreference |
+| `identity.user.locked`         | Cảnh báo tài khoản bị khóa                            |
+| `exam.session.passed`          | Thông báo đậu thi                                     |
+| `exam.session.failed`          | Thông báo rớt thi, gợi ý ôn thêm                      |
+| `course.enrollment.completed`  | Chúc mừng hoàn thành khóa học                         |
+| `simulation.session.completed` | Thông báo kết quả sa hình                             |
 
 ---
 
-## Service 8: analytics-service â†’ `analytics_db` âœ… (MVP implemented)
+## Service 8: analytics-service → `analytics_db` ✅ (MVP implemented)
 
 **Bounded Context:** Learning Analytics & Progress Tracking
 
-> Analytics service lÃ  **CQRS read model** â€” nghe events tá»« cÃ¡c service khÃ¡c, tá»•ng há»£p view Ä‘á»ƒ query nhanh.
+> Analytics service là **CQRS read model** — nghe events từ các service khác, tổng hợp view để query nhanh.
 
 ### Aggregate Root: `StudentLearningProfile`
 
-> Thá»‘ng kÃª tá»•ng há»£p há»c táº­p cá»§a student â€” cáº­p nháº­t dáº§n theo events.
+> Thống kê tổng hợp học tập của student — cập nhật dần theo events.
 
 ```
 student_learning_profiles
-â”œâ”€â”€ id                UUID PK  â† báº±ng studentId
-â”œâ”€â”€ studentId         UUID NOT NULL UNIQUE
-â”œâ”€â”€ totalStudyMinutes INT DEFAULT 0
-â”œâ”€â”€ totalExamAttempts INT DEFAULT 0
-â”œâ”€â”€ passedExams       INT DEFAULT 0
-â”œâ”€â”€ avgExamScore      FLOAT DEFAULT 0
-â”œâ”€â”€ coursesEnrolled   INT DEFAULT 0
-â”œâ”€â”€ coursesCompleted  INT DEFAULT 0
-â”œâ”€â”€ lastActivityAt    TIMESTAMPTZ
-â”œâ”€â”€ resetAt           TIMESTAMPTZ NULLABLE
-â”œâ”€â”€ createdAt         TIMESTAMPTZ
-â””â”€â”€ updatedAt         TIMESTAMPTZ
+├── id                UUID PK  ← bằng studentId
+├── studentId         UUID NOT NULL UNIQUE
+├── totalStudyMinutes INT DEFAULT 0
+├── totalExamAttempts INT DEFAULT 0
+├── passedExams       INT DEFAULT 0
+├── avgExamScore      FLOAT DEFAULT 0
+├── coursesEnrolled   INT DEFAULT 0
+├── coursesCompleted  INT DEFAULT 0
+├── lastActivityAt    TIMESTAMPTZ
+├── resetAt           TIMESTAMPTZ NULLABLE
+├── createdAt         TIMESTAMPTZ
+└── updatedAt         TIMESTAMPTZ
 ```
 
-### Entity (thuá»™c StudentLearningProfile): `DailyActivity`
+### Entity (thuộc StudentLearningProfile): `DailyActivity`
 
 ```
 daily_activities
-â”œâ”€â”€ id                UUID PK
-â”œâ”€â”€ studentId         UUID NOT NULL
-â”œâ”€â”€ date              DATE NOT NULL
-â”œâ”€â”€ studyMinutes      INT DEFAULT 0
-â”œâ”€â”€ questionsAnswered INT DEFAULT 0
-â”œâ”€â”€ correctAnswers    INT DEFAULT 0
-â”œâ”€â”€ examsAttempted    INT DEFAULT 0
-â”œâ”€â”€ simSessions       INT DEFAULT 0
-â””â”€â”€ UNIQUE(studentId, date)
+├── id                UUID PK
+├── studentId         UUID NOT NULL
+├── date              DATE NOT NULL
+├── studyMinutes      INT DEFAULT 0
+├── questionsAnswered INT DEFAULT 0
+├── correctAnswers    INT DEFAULT 0
+├── examsAttempted    INT DEFAULT 0
+├── simSessions       INT DEFAULT 0
+└── UNIQUE(studentId, date)
 ```
 
 ### Aggregate Root: `QuestionAccuracyTracker`
 
-> Track tá»· lá»‡ Ä‘Ãºng/sai theo tá»«ng cÃ¢u há»i â€” dÃ¹ng Ä‘á»ƒ gá»£i Ã½ Ã´n cÃ¢u yáº¿u.
+> Track tỷ lệ đúng/sai theo từng câu hỏi — dùng để gợi ý ôn câu yếu.
 
 ```
 question_accuracy_trackers
-â”œâ”€â”€ id              UUID PK
-â”œâ”€â”€ studentId       UUID NOT NULL
-â”œâ”€â”€ questionId      UUID NOT NULL  â† ref â†’ question_db (UUID only)
-â”œâ”€â”€ totalAttempts   INT DEFAULT 0
-â”œâ”€â”€ correctAttempts INT DEFAULT 0
-â”œâ”€â”€ lastAttemptAt   TIMESTAMPTZ
-â””â”€â”€ UNIQUE(studentId, questionId)
+├── id              UUID PK
+├── studentId       UUID NOT NULL
+├── questionId      UUID NOT NULL  ← ref → question_db (UUID only)
+├── totalAttempts   INT DEFAULT 0
+├── correctAttempts INT DEFAULT 0
+├── lastAttemptAt   TIMESTAMPTZ
+└── UNIQUE(studentId, questionId)
 ```
 
 ### Aggregate Root: `WeakAreaReport`
 
-> Chá»§ Ä‘á» yáº¿u cá»§a student â€” computed tá»« QuestionAccuracy, grouped by topic.
+> Chủ đề yếu của student — computed từ QuestionAccuracy, grouped by topic.
 
 ```
 weak_area_reports
-â”œâ”€â”€ id            UUID PK
-â”œâ”€â”€ studentId     UUID NOT NULL
-â”œâ”€â”€ topicId       UUID NOT NULL  â† ref â†’ question_db.question_topics (UUID only)
-â”œâ”€â”€ topicName     TEXT NOT NULL  â† denormalized Ä‘á»ƒ trÃ¡nh cross-service call
-â”œâ”€â”€ accuracyRate  FLOAT NOT NULL â† 0.0 - 1.0
-â”œâ”€â”€ questionCount INT NOT NULL
-â”œâ”€â”€ needsReview   BOOLEAN DEFAULT false
-â”œâ”€â”€ updatedAt     TIMESTAMPTZ
-â””â”€â”€ UNIQUE(studentId, topicId)
+├── id            UUID PK
+├── studentId     UUID NOT NULL
+├── topicId       UUID NOT NULL  ← ref → question_db.question_topics (UUID only)
+├── topicName     TEXT NOT NULL  ← denormalized để tránh cross-service call
+├── accuracyRate  FLOAT NOT NULL ← 0.0 - 1.0
+├── questionCount INT NOT NULL
+├── needsReview   BOOLEAN DEFAULT false
+├── updatedAt     TIMESTAMPTZ
+└── UNIQUE(studentId, topicId)
 ```
 
 ### Domain Events subscribe
 
-| Event                          | HÃ nh Ä‘á»™ng                                                 |
+| Event                          | Hành động                                                 |
 | ------------------------------ | --------------------------------------------------------- |
-| `identity.user.created`        | Táº¡o StudentLearningProfile                                |
+| `identity.user.created`        | Tạo StudentLearningProfile                                |
 | `exam.session.completed`       | Update LearningProfile + DailyActivity + QuestionAccuracy |
 | `simulation.session.completed` | Update LearningProfile + DailyActivity                    |
 | `course.lesson.completed`      | Update studyMinutes trong DailyActivity                   |
@@ -1919,79 +1919,79 @@ weak_area_reports
 ## Cross-Service Event Flow
 
 ```
-[Keycloak â†’ RabbitMQ via Event Listener]
-    â”œâ”€â”€ identity.user.created â”€â”€â–º user-service        (táº¡o UserProfile + StudentDetail)
-    â”‚                         â”€â”€â–º analytics-service   (táº¡o StudentLearningProfile)
-    â”‚                         â”€â”€â–º notification-service (gá»­i welcome notification)
-    â””â”€â”€ identity.user.locked  â”€â”€â–º notification-service (cáº£nh bÃ¡o tÃ i khoáº£n bá»‹ khÃ³a)
+[Keycloak → RabbitMQ via Event Listener]
+    ├── identity.user.created ──► user-service        (tạo UserProfile + StudentDetail)
+    │                         ──► analytics-service   (tạo StudentLearningProfile)
+    │                         ──► notification-service (gửi welcome notification)
+    └── identity.user.locked  ──► notification-service (cảnh báo tài khoản bị khóa)
 
 [user-service]
-    â””â”€â”€ user.student.license-assigned â”€â”€â–º analytics-service   (reset scope theo háº¡ng báº±ng má»›i)
-                                      â”€â”€â–º notification-service (thÃ´ng bÃ¡o Ä‘á»•i háº¡ng báº±ng)
+    └── user.student.license-assigned ──► analytics-service   (reset scope theo hạng bằng mới)
+                                      ──► notification-service (thông báo đổi hạng bằng)
 
 [exam-service]
-    â”œâ”€â”€ exam.session.completed â”€â”€â–º analytics-service   (cáº­p nháº­t stats + question accuracy)
-    â”œâ”€â”€ exam.session.passed    â”€â”€â–º notification-service (thÃ´ng bÃ¡o Ä‘áº­u)
-    â””â”€â”€ exam.session.failed    â”€â”€â–º notification-service (thÃ´ng bÃ¡o rá»›t)
+    ├── exam.session.completed ──► analytics-service   (cập nhật stats + question accuracy)
+    ├── exam.session.passed    ──► notification-service (thông báo đậu)
+    └── exam.session.failed    ──► notification-service (thông báo rớt)
 
 [simulation-service]
-    â””â”€â”€ simulation.session.completed â”€â”€â–º analytics-service   (cáº­p nháº­t sim stats)
-                                     â”€â”€â–º notification-service (thÃ´ng bÃ¡o káº¿t quáº£)
+    └── simulation.session.completed ──► analytics-service   (cập nhật sim stats)
+                                     ──► notification-service (thông báo kết quả)
 
 [course-service]
-    â”œâ”€â”€ course.lesson.completed     â”€â”€â–º analytics-service   (cáº­p nháº­t study time)
-    â””â”€â”€ course.enrollment.completed â”€â”€â–º notification-service (chÃºc má»«ng hoÃ n thÃ nh)
-                                    â”€â”€â–º analytics-service   (increment coursesCompleted)
+    ├── course.lesson.completed     ──► analytics-service   (cập nhật study time)
+    └── course.enrollment.completed ──► notification-service (chúc mừng hoàn thành)
+                                    ──► analytics-service   (increment coursesCompleted)
 ```
 
 ---
 
-## TÃ³m táº¯t
+## Tóm tắt
 
-| Service | Database | Aggregate Roots | Ghi chÃº |
+| Service | Database | Aggregate Roots | Ghi chú |
 | --- | --- | --- | --- |
-| identity-service | identity_db + **Keycloak** | IdentityUser | Keycloak lÃ  source of truth auth; identity_db giá»¯ audit/read model demo |
-| user-service | user_db | UserProfile | âœ… CÃ³ StudentDetail + LicenseAssignmentAudit |
-| media-service | media_db | FileObject | âœ… Azure Blob metadata, UNLINKED/LINKED status |
-| question-service | question_db | Question, QuestionTopic, QuestionVersion | âœ… CÃ³ soft delete/versioning |
-| exam-service | exam_db | ExamTemplate, ExamSession, ExamSchedule | âœ… CÃ³ immutable snapshot cÃ¢u há»i/template |
-| course-service | course_db | Course, CourseEnrollment | âœ… CÃ³ CourseInstructor, CourseRequirement, CourseMaterial |
-| simulation-service | simulation_db | Maneuver, SimulationSession | âœ… Maneuver/checkpoint/error + state machine MVP |
-| notification-service | notification_db | Notification, AcademicWarning | âœ… In-app notification + academic warning |
-| analytics-service | analytics_db | StudentLearningProfile, DailyActivity, QuestionAccuracyTracker | âœ… CQRS read model + Redis cache |
+| identity-service | identity_db + **Keycloak** | IdentityUser | Keycloak là source of truth auth; identity_db giữ audit/read model demo |
+| user-service | user_db | UserProfile | ✅ Có StudentDetail + LicenseAssignmentAudit |
+| media-service | media_db | FileObject | ✅ Azure Blob metadata, UNLINKED/LINKED status |
+| question-service | question_db | Question, QuestionTopic, QuestionVersion | ✅ Có soft delete/versioning |
+| exam-service | exam_db | ExamTemplate, ExamSession, ExamSchedule | ✅ Có immutable snapshot câu hỏi/template |
+| course-service | course_db | Course, CourseEnrollment | ✅ Có CourseInstructor, CourseRequirement, CourseMaterial |
+| simulation-service | simulation_db | Maneuver, SimulationSession | ✅ Maneuver/checkpoint/error + state machine MVP |
+| notification-service | notification_db | Notification, AcademicWarning | ✅ In-app notification + academic warning |
+| analytics-service | analytics_db | StudentLearningProfile, DailyActivity, QuestionAccuracyTracker | ✅ CQRS read model + Redis cache |
 
 ---
 
 ## Event Contracts (packages/common)
 
-NÃªn táº¡o shared event types Ä‘á»ƒ táº¥t cáº£ services dÃ¹ng chung, trÃ¡nh drift:
+Nên tạo shared event types để tất cả services dùng chung, tránh drift:
 
 ```
 packages/common/src/events/
-â”œâ”€â”€ identity/
-â”‚   â”œâ”€â”€ user-created.event.ts
-â”‚   â””â”€â”€ user-locked.event.ts
-â”œâ”€â”€ exam/
-â”‚   â”œâ”€â”€ session-completed.event.ts
-â”‚   â””â”€â”€ session-passed.event.ts
-â”œâ”€â”€ course/
-â”‚   â”œâ”€â”€ enrollment-completed.event.ts
-â”‚   â””â”€â”€ lesson-completed.event.ts
-â””â”€â”€ simulation/
-    â””â”€â”€ session-completed.event.ts
+├── identity/
+│   ├── user-created.event.ts
+│   └── user-locked.event.ts
+├── exam/
+│   ├── session-completed.event.ts
+│   └── session-passed.event.ts
+├── course/
+│   ├── enrollment-completed.event.ts
+│   └── lesson-completed.event.ts
+└── simulation/
+    └── session-completed.event.ts
 ```
 
 ---
 
-## Thá»© tá»± implement Ä‘á» xuáº¥t
+## Thứ tự implement đề xuất
 
-1. **question-service** â€” foundation, cÃ¡c service khÃ¡c tham chiáº¿u questionId
-2. **exam-service** â€” call question-service (sync HTTP) Ä‘á»ƒ láº¥y cÃ¢u há»i khi táº¡o session
-3. **course-service** â€” Ä‘á»™c láº­p, cÃ³ thá»ƒ implement song song vá»›i exam
-4. **simulation-service** â€” Ä‘á»™c láº­p
-5. **user-service** â€” subscribe `identity.user.created`
-6. **analytics-service** â€” subscribe nhiá»u events nháº¥t, nÃªn implement sau
-7. **notification-service** â€” implement sau khi cÃ³ Ä‘á»§ events Ä‘á»ƒ test
+1. **question-service** — foundation, các service khác tham chiếu questionId
+2. **exam-service** — call question-service (sync HTTP) để lấy câu hỏi khi tạo session
+3. **course-service** — độc lập, có thể implement song song với exam
+4. **simulation-service** — độc lập
+5. **user-service** — subscribe `identity.user.created`
+6. **analytics-service** — subscribe nhiều events nhất, nên implement sau
+7. **notification-service** — implement sau khi có đủ events để test
 
 
 
@@ -2004,45 +2004,45 @@ packages/common/src/events/
 
 ## 1. Entities
 
-- CÃ³ thá»ƒ gá»i lÃ  **domain layer**, thuá»™c vá» **core business logic**
-- LÃ  cÃ¡c object (model) chá»©a cÃ¡c business logic
-- Trong Clean Architecture, 1 entity cÃ³ thá»ƒ lÃ  1 object hoáº·c 1 cá»¥m object.
-- Mapping qua DDD, entities cÃ³ thá»ƒ bao gá»“m aggregate, entity, value object
+- Có thể gọi là **domain layer**, thuộc về **core business logic**
+- Là các object (model) chứa các business logic
+- Trong Clean Architecture, 1 entity có thể là 1 object hoặc 1 cụm object.
+- Mapping qua DDD, entities có thể bao gồm aggregate, entity, value object
 
 ## 2. Use case
 
-- CÃ³ thá»ƒ gá»i lÃ  **application layer**, chá»©a application business logic, thuá»™c vá» core business logic
-- Logic bao gá»“m: flow chÆ°Æ¡ng trÃ¬nh, tÆ°Æ¡ng tÃ¡c vá»›i entities (layer trong) nhÆ° load entities, save entities, â€¦ â‡’ nhÆ° 1 `orchestrator` Ä‘iá»u phá»‘i request
-- Entities (domain layer) vÃ  use case (application layer) lÃ  2 thÃ nh pháº§n quan trá»ng vÃ  Ä‘Æ°á»£c cÃ´ láº­p á»Ÿ **core business logic â‡’** khÃ´ng phá»¥ thuá»™c cÃ¡c thÃ nh pháº§n ngoÃ i: framework, UI, database, â€¦
+- Có thể gọi là **application layer**, chứa application business logic, thuộc về core business logic
+- Logic bao gồm: flow chương trình, tương tác với entities (layer trong) như load entities, save entities, … ⇒ như 1 `orchestrator` điều phối request
+- Entities (domain layer) và use case (application layer) là 2 thành phần quan trọng và được cô lập ở **core business logic ⇒** không phụ thuộc các thành phần ngoài: framework, UI, database, …
 
 ## 3. Interface Adapters
 
-- CÃ³ thá»ƒ gá»i lÃ  Presentation
-- Chá»©a cÃ¡c adapter Ä‘á»ƒ convert data tá»« bÃªn ngoÃ i (web, database) vÃ o bÃªn trong (application, domain) vÃ  ngÆ°á»£c láº¡i.
+- Có thể gọi là Presentation
+- Chứa các adapter để convert data từ bên ngoài (web, database) vào bên trong (application, domain) và ngược lại.
 
 ## 4. Frameworks and Drivers
 
-- CÃ³ thá»ƒ gá»i lÃ  **infrastructure layer**
-- Chá»©a cÃ¡c detail implement cá»§a database, external service hay cÃ¡c driver, framework
+- Có thể gọi là **infrastructure layer**
+- Chứa các detail implement của database, external service hay các driver, framework
 
-VÃ­ dá»¥: á»ž use case chá»‰ thao tÃ¡c vá»›i cÃ¡c interface cá»§a database thÃ´ng qua repository pattern thÃ´i, hoáº·c muá»‘n giao tiáº¿p vá»›i external service cÅ©ng pháº£i thÃ´ng qua interface. á»ž layer Ä‘Ã³ hoÃ n toÃ n khÃ´ng tháº¥y Ä‘Æ°á»£c implement chi tiáº¿t cá»§a chÃºng. VÃ  nhá»¯ng implement chi tiáº¿t Ä‘Ã³ sáº½ náº±m á»Ÿ infrastructure layer nÃ y.
+Ví dụ: Ở use case chỉ thao tác với các interface của database thông qua repository pattern thôi, hoặc muốn giao tiếp với external service cũng phải thông qua interface. Ở layer đó hoàn toàn không thấy được implement chi tiết của chúng. Và những implement chi tiết đó sẽ nằm ở infrastructure layer này.
 
 ## 5. Dependency rule
 
-- Chiá»u cá»§a dependency tá»« ngoÃ i vÃ o trong, hÆ°á»›ng dáº«n cÃ¡c thÃ nh pháº§n tÆ°Æ¡ng tÃ¡c, phá»¥ thuá»™c láº«n nhau.
-- CÃ¡c thÃ nh pháº§n bÃªn trong khÃ´ng Ä‘Æ°á»£c phÃ©p **phá»¥ thuá»™c trá»±c tiáº¿p** vÃ o cÃ¡c thÃ nh pháº§n á»Ÿ lá»›p bÃªn ngoÃ i.
-- Sá»± tÆ°Æ¡ng tÃ¡c diá»…n ra thÃ´ng qua cÃ¡c abstraction vÃ  dependency inversion
+- Chiều của dependency từ ngoài vào trong, hướng dẫn các thành phần tương tác, phụ thuộc lẫn nhau.
+- Các thành phần bên trong không được phép **phụ thuộc trực tiếp** vào các thành phần ở lớp bên ngoài.
+- Sự tương tác diễn ra thông qua các abstraction và dependency inversion
 
-VÃ­ dá»¥: Trong cÃ¡c use case, khÃ´ng Ä‘Æ°á»£c import cÃ¡c dependency á»Ÿ ngoÃ i nhÆ° database (thuá»™c layer ngoÃ i cÃ¹ng).
+Ví dụ: Trong các use case, không được import các dependency ở ngoài như database (thuộc layer ngoài cùng).
 
 ```java
 
-// VÃ­ dá»¥ á»Ÿ Ä‘Ã¢y lÃ  má»™t file Use case.
-// CÃ¡c implementation cá»§a cÃ¡c repositories trong nÃ y thuá»™c vá» infra layer.
-// NhÆ°ng á»Ÿ Ä‘Ã¢y náº¿u import trá»±c tiáº¿p implementation chi tiáº¿t cá»§a cÃ¡c repo
-// thÃ¬ sáº½ vi pháº¡m dependency rule.
-// Cho nÃªn á»Ÿ Ä‘Ã¢y UserRepository pháº£i lÃ  má»™t interface
-// (abstraction vá»›i layer bÃªn ngoÃ i) má»›i thá»a mÃ£n dependency rule
+// Ví dụ ở đây là một file Use case.
+// Các implementation của các repositories trong này thuộc về infra layer.
+// Nhưng ở đây nếu import trực tiếp implementation chi tiết của các repo
+// thì sẽ vi phạm dependency rule.
+// Cho nên ở đây UserRepository phải là một interface
+// (abstraction với layer bên ngoài) mới thỏa mãn dependency rule
 public class CreateUserUseCaseImpl implements CreateUserUseCase {
     private UserRepository userRepository;
     private RoleRepository roleRepository;
@@ -2052,63 +2052,63 @@ public class CreateUserUseCaseImpl implements CreateUserUseCase {
 
 ```
 
-LÆ°u Ã½:
+Lưu ý:
 
-- Dependency rule khÃ´ng cáº¥m hoÃ n toÃ n sá»± phá»¥ thuá»™c giá»¯a cÃ¡c thÃ nh pháº§n.
-- Má»¥c tiÃªu lÃ  giáº£m thiá»ƒu phá»¥ thuá»™c trá»±c tiáº¿p vÃ  khuyáº¿n khÃ­ch sá»­ dá»¥ng abstraction.
+- Dependency rule không cấm hoàn toàn sự phụ thuộc giữa các thành phần.
+- Mục tiêu là giảm thiểu phụ thuộc trực tiếp và khuyến khích sử dụng abstraction.
 
-## 6. Usecase thá»±c táº¿
+## 6. Usecase thực tế
 
-- **Use case**: use case sáº½ lÃ  táº¡o má»™t author user. author user chÃ­nh lÃ  ngÆ°á»i cÃ³ thá»ƒ táº¡o vÃ  quáº£n lÃ½ bÃ i post cá»§a há». Sau khi táº¡o user xong, sáº½ cÃ³ má»™t event UserCreatedEvent báº¯n vÃ  sync user qua má»™t Redis server khÃ¡c. Event nÃ y sáº½ Ä‘Æ°á»£c báº¯n lÃªn Kafka cluster
+- **Use case**: use case sẽ là tạo một author user. author user chính là người có thể tạo và quản lý bài post của họ. Sau khi tạo user xong, sẽ có một event UserCreatedEvent bắn và sync user qua một Redis server khác. Event này sẽ được bắn lên Kafka cluster
 - Folder structure
-  - `domain folder`: lÃ  domain layer, application chÃ­nh lÃ  application layer. Hai Ã´ng nÃ y chÃ­nh lÃ  core cá»§a software
-  - `controller folder`: thuá»™c vá» presentation layer
-  - `infra layer`: thuá»™c vá» infrastructure layer
-  - `dto folder` â‡’ cÃ³ 2 cÃ¡ch Ä‘áº·t
-    - gom háº¿t vÃ o folder dto
-    - `dto`Â phá»¥c vá»¥ cho layer nÃ o thÃ¬ Ä‘áº·t táº¡i layer Ä‘Ã³.
+  - `domain folder`: là domain layer, application chính là application layer. Hai ông này chính là core của software
+  - `controller folder`: thuộc về presentation layer
+  - `infra layer`: thuộc về infrastructure layer
+  - `dto folder` ⇒ có 2 cách đặt
+    - gom hết vào folder dto
+    - `dto` phục vụ cho layer nào thì đặt tại layer đó.
 
 ```
 application/
-â”œâ”€â”€ eventpublisher/
-â”œâ”€â”€ exception/
-â”œâ”€â”€ service/
-â”œâ”€â”€ repository/
-â”‚   â”œâ”€â”€ UserRepository.java
-â”‚   â””â”€â”€ ...
-â””â”€â”€ usecase/
+├── eventpublisher/
+├── exception/
+├── service/
+├── repository/
+│   ├── UserRepository.java
+│   └── ...
+└── usecase/
 domain/
-â”œâ”€â”€ exception/
-â”‚   â”œâ”€â”€ UserNotFoundExeption.java
-â”‚   â””â”€â”€ ...
-â”œâ”€â”€ valueobject/
-â”‚   â”œâ”€â”€ UserName.java
-â”‚   â””â”€â”€ ...
-â”œâ”€â”€ entity/
-â”‚   â”œâ”€â”€ User.java
-â”‚   â””â”€â”€ ...
-â””â”€â”€ service/
+├── exception/
+│   ├── UserNotFoundExeption.java
+│   └── ...
+├── valueobject/
+│   ├── UserName.java
+│   └── ...
+├── entity/
+│   ├── User.java
+│   └── ...
+└── service/
 dto/
 infra/
-â”œâ”€â”€ persistence/
-â”‚   â”œâ”€â”€ UserRepositoryImpl.java
-â”‚   â””â”€â”€ ...
-â””â”€â”€ messaging/
+├── persistence/
+│   ├── UserRepositoryImpl.java
+│   └── ...
+└── messaging/
 controller/
-â”œâ”€â”€ UserController.java
-â””â”€â”€ ...
+├── UserController.java
+└── ...
 ```
 
-Flow cá»§a request
+Flow của request
 
-- Request Ä‘i tá»›i controllerÂ `UserController`Â - interface adapters layer hay presentation layer â‡’ data sáº½ Ä‘Æ°á»£c transform sang dáº¡ng thÃ­ch há»£p nháº¥t vá»›i cÃ¡c layer á»Ÿ trong - domain layer vÃ  application layer â‡’ dÃ¹ngÂ `UserDto`Â Ä‘á»ƒ chá»©a dá»¯ liá»‡u tá»« request nha.
-- Request Ä‘i tiáº¿p vÃ o application layer thÃ´ng qua use caseÂ `CreateUserUseCase`Â interface, chá»‹u trÃ¡ch nhiá»‡m
-  - Äiá»u phá»‘i flow cá»§a chÆ°Æ¡ng trÃ¬nh - business flow nhÆ° thao tÃ¡c vá»›iÂ `UserRepository`Â Ä‘á»ƒ kiá»ƒm tra xem email cÃ³ tá»“n táº¡i chÆ°a. Thao tÃ¡c vá»›iÂ `RoleRepository`Â Ä‘á»ƒ kiá»ƒm tra role cÃ³ tá»“n táº¡i hay khÃ´ng.
-  - Sau Ä‘Ã³ sáº½ tÆ°Æ¡ng tÃ¡c vá»›i domain layer Ä‘á»ƒ táº¡oÂ `User`Â entity (hayÂ `User`Â aggregate).
-  - Sau Ä‘Ã³ sáº½ dÃ¹ng Repository Ä‘á»ƒ saveÂ `User`Â xuá»‘ng database vÃ  báº¯n event lÃªn Kafka.
-- Khi use case thao tÃ¡c vá»›i domain layer thÃ¬ cÃ¡c business logics cá»§a use case nÃ y sáº½ Ä‘Æ°á»£c Ä‘áº£m báº£o trong domain layer (trong cÃ¡c model vÃ  service).
-- VÃ  khi thao tÃ¡c vá»›i cÃ¡c thÃ nh pháº§n nhÆ° repository, event publisher (nhá»¯ng thÃ nh pháº§n bÃªn ngoÃ i) thÃ¬ use case chá»‰ thao tÃ¡c vá»›i interface (khÃ´ng bao giá» use case nhÃ¬n tháº¥y Ä‘Æ°á»£c implement chi tiáº¿t cá»§a infra).
-- VÃ  cuá»‘i cÃ¹ng cÃ¡c implement chi tiáº¿t cá»§a database hay event publisher sáº½ náº±m á»Ÿ infrastructure layer.
+- Request đi tới controller `UserController` - interface adapters layer hay presentation layer ⇒ data sẽ được transform sang dạng thích hợp nhất với các layer ở trong - domain layer và application layer ⇒ dùng `UserDto` để chứa dữ liệu từ request nha.
+- Request đi tiếp vào application layer thông qua use case `CreateUserUseCase` interface, chịu trách nhiệm
+  - Điều phối flow của chương trình - business flow như thao tác với `UserRepository` để kiểm tra xem email có tồn tại chưa. Thao tác với `RoleRepository` để kiểm tra role có tồn tại hay không.
+  - Sau đó sẽ tương tác với domain layer để tạo `User` entity (hay `User` aggregate).
+  - Sau đó sẽ dùng Repository để save `User` xuống database và bắn event lên Kafka.
+- Khi use case thao tác với domain layer thì các business logics của use case này sẽ được đảm bảo trong domain layer (trong các model và service).
+- Và khi thao tác với các thành phần như repository, event publisher (những thành phần bên ngoài) thì use case chỉ thao tác với interface (không bao giờ use case nhìn thấy được implement chi tiết của infra).
+- Và cuối cùng các implement chi tiết của database hay event publisher sẽ nằm ở infrastructure layer.
 
 ### 6.1. Layer Domain
 
@@ -2178,7 +2178,7 @@ public class User extends AggregateRoot<Id> {
 }
 ```
 
-`User` entity â‡’ entity chÃ­nh, trong DDD Ä‘Æ°á»£c xem lÃ  `aggregate root` cá»§a `User aggregate`
+`User` entity ⇒ entity chính, trong DDD được xem là `aggregate root` của `User aggregate`
 
 ```java
 
@@ -2247,14 +2247,14 @@ public class User extends AggregateRoot<Id> {
 
 ```
 
-- `User` entity chá»©a cÃ¡c public method Ä‘á»ƒ thao tÃ¡c + cÃ¡c business logic
-- CÃ¡c business logic cÃ³ thá»ƒ ká»ƒ Ä‘áº¿n:
-  - XÃ³a user (markAsDeleted)
+- `User` entity chứa các public method để thao tác + các business logic
+- Các business logic có thể kể đến:
+  - Xóa user (markAsDeleted)
   - Active hay deactive user
-  - Grant má»™t role nÃ o Ä‘Ã³ vÃ o user
-  - â€¦
+  - Grant một role nào đó vào user
+  - …
 
-`UserName` lÃ  value object
+`UserName` là value object
 
 ```java
 
@@ -2281,7 +2281,7 @@ public class UserName {
 
 ```
 
-Äá»ƒ Ä‘Äƒng kÃ½ UserCreatedEvent trong domain layer â‡’ táº¡o má»™t domain service Ä‘á»ƒ táº¡o User entity, handle business logic vÃ  register domain event
+Để đăng ký UserCreatedEvent trong domain layer ⇒ tạo một domain service để tạo User entity, handle business logic và register domain event
 
 ```java
 
@@ -2308,7 +2308,7 @@ public class UserDomainServiceImpl implements UserDomainService {
 }
 ```
 
-NgoÃ i ra, cÃ³ thá»ƒ dÃ¹ng factory method bÃªn trong domain object
+Ngoài ra, có thể dùng factory method bên trong domain object
 
 ```java
 
@@ -2318,7 +2318,7 @@ NgoÃ i ra, cÃ³ thá»ƒ dÃ¹ng factory method bÃªn trong domain object
 public class User extends AggregateRoot<Id> {
     // ...
 
-    // CÃ³ thá»ƒ dÃ¹ng Factory method á»Ÿ Ä‘Ã¢y Ä‘á»ƒ táº¡o User instance
+    // Có thể dùng Factory method ở đây để tạo User instance
     public static User createUser() {
          User user = User.builder()
                 .name(new UserName(userDto.getName()))
@@ -2330,10 +2330,10 @@ public class User extends AggregateRoot<Id> {
 }
 ```
 
-**LÆ°u Ã½:**
+**Lưu ý:**
 
-- Äáº£m báº£o business logics: nghiá»‡p vá»¥ cáº§n design cáº©n tháº­n, táº­p trung táº¡i layer domain (vÃ  layer application)
-- Nghiá»‡p vá»¥ liÃªn quan Ä‘áº¿n model nÃ o thÃ¬ nÃªn náº±m trÃªn model áº¥y. Nghiá»‡p vá»¥ káº¿t há»£p nhiá»u model (entity) thÃ¬ nÃªn táº¡o domain service, khÃ´ng thÃ¬ chuyá»ƒn vá» cÃ¡c service á»Ÿ layer application
+- Đảm bảo business logics: nghiệp vụ cần design cẩn thận, tập trung tại layer domain (và layer application)
+- Nghiệp vụ liên quan đến model nào thì nên nằm trên model ấy. Nghiệp vụ kết hợp nhiều model (entity) thì nên tạo domain service, không thì chuyển về các service ở layer application
 
 ### 6.2. Application
 
@@ -2351,7 +2351,7 @@ public class CreateUserUseCaseImpl implements CreateUserUseCase {
     private PasswordEncoder passwordEncoder;
     private UserEventPublisher publisher;
 
-    // ÄÃ¢y lÃ  flow chÃ­nh cá»§a request.
+    // Đây là flow chính của request.
     public void execute(UserDto userDto) {
         rolesExistOrError(userDto.getRoleIds());
         userDoesNotExistOrError(userDto);
@@ -2382,16 +2382,16 @@ public class CreateUserUseCaseImpl implements CreateUserUseCase {
 }
 ```
 
-- Use case Ä‘iá»u khiá»ƒn flow cá»§a chÆ°Æ¡ng trÃ¬nh
-- Use case dÃ¹ng cÃ¡c libs bÃªn ngoÃ i Ä‘á»ƒ tÆ°Æ¡ng tÃ¡c domain objects nhÆ°: database, 3rd services, message brokers, â€¦ â‡’ tuÃ¢n thá»§ dependency rule
-- Äá»ƒ thao tÃ¡c database, náº¿u gá»i tháº³ng MySqlUserRepository â‡’ vi pháº¡m
+- Use case điều khiển flow của chương trình
+- Use case dùng các libs bên ngoài để tương tác domain objects như: database, 3rd services, message brokers, … ⇒ tuân thủ dependency rule
+- Để thao tác database, nếu gọi thẳng MySqlUserRepository ⇒ vi phạm
 
-â‡’ Sá»­ dá»¥ng **Dependency inversion principle,** thay vÃ¬ layer application phá»¥ thuá»™c layer ngoÃ i thÃ¬ cÃ¡c layer ngoÃ i pháº£i **phá»¥ thuá»™c qui Ä‘á»‹nh** á»Ÿ layer application
+⇒ Sử dụng **Dependency inversion principle,** thay vì layer application phụ thuộc layer ngoài thì các layer ngoài phải **phụ thuộc qui định** ở layer application
 
 ```java
 
-// Táº§ng application sáº½ quy Ä‘á»‹nh nhá»¯ng interface trong UserRepositry
-// Nhá»¯ng layer á»Ÿ ngoÃ i pháº£i implement interface nÃ y
+// Tầng application sẽ quy định những interface trong UserRepositry
+// Những layer ở ngoài phải implement interface này
 public interface UserRepository {
     void save(User user);
     Optional<User> findById(String id);
@@ -2422,7 +2422,7 @@ public class UserController {
 
 ### 6.4. Infrastructure
 
-Táº§ng nÃ y chÃ­nh lÃ  táº§ng bÃªn ngoÃ i, sáº½ lÃ  cÃ¡c implement chi tiáº¿t mÃ  cÃ¡c táº§ng bÃªn trong quy Ä‘á»‹nh báº±ng interface.
+Tầng này chính là tầng bên ngoài, sẽ là các implement chi tiết mà các tầng bên trong quy định bằng interface.
 
 ```java
 @Component
@@ -2472,123 +2472,123 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, String> {
 <!-- Merged from docs/architecture/clean-ddd-conventions.md -->
 # Domain Driven Design
 
-## 1. KhÃ¡i niá»‡m
+## 1. Khái niệm
 
-**- Domain-Driven Design (DDD)** lÃ  phÆ°Æ¡ng phÃ¡p thiáº¿t káº¿ pháº§n má»m táº­p trung vÃ o:
+**- Domain-Driven Design (DDD)** là phương pháp thiết kế phần mềm tập trung vào:
 
-> Hiá»ƒu nghiá»‡p vá»¥ tháº­t sÃ¢u â†’ rá»“i má»›i thiáº¿t káº¿ code theo nghiá»‡p vá»¥ Ä‘Ã³.
+> Hiểu nghiệp vụ thật sâu → rồi mới thiết kế code theo nghiệp vụ đó.
 
-- DDD giÃºp trÃ¡nh tÃ¬nh tráº¡ng: Code **cháº¡y Ä‘Æ°á»£c** nhÆ°ng khÃ´ng pháº£n Ã¡nh **nghiá»‡p vá»¥**
-- DDD hÆ°á»›ng tá»›i: **Code** == **nghiá»‡p vá»¥**
+- DDD giúp tránh tình trạng: Code **chạy được** nhưng không phản ánh **nghiệp vụ**
+- DDD hướng tới: **Code** == **nghiệp vụ**
 
-- DDD cÃ³ 2 thÃ nh pháº§n chÃ­nh:
+- DDD có 2 thành phần chính:
 
 - **Strategic Design**
-  - TÃ¬m hiá»ƒu, phÃ¢n tÃ­ch, design `high level - view` cá»§a domain doanh nghiá»‡p
-  - KhÃ´ng cÃ³ dÃ²ng code nÃ o
-  - Dá»±a trÃªn cÃ¡c cÃ´ng cá»¥, thuáº­t ngá»¯: `subdomain`, `bounded context`, `event storming`, `context map`
+  - Tìm hiểu, phân tích, design `high level - view` của domain doanh nghiệp
+  - Không có dòng code nào
+  - Dựa trên các công cụ, thuật ngữ: `subdomain`, `bounded context`, `event storming`, `context map`
 - **Tactical Design**
-  - Dá»±a trÃªn káº¿t quáº£ cá»§a Strategic Design â‡’ design cÃ¡c thá»© `low-level`
-  - Design ra cÃ¡c `business logics`, `building blocks` nhÆ°: `Value object`, `Entity`, `Aggregate`, `Service`, â€¦
+  - Dựa trên kết quả của Strategic Design ⇒ design các thứ `low-level`
+  - Design ra các `business logics`, `building blocks` như: `Value object`, `Entity`, `Aggregate`, `Service`, …
 
 ## 2. Domain
 
-- Domain = lÄ©nh vá»±c nghiá»‡p vá»¥ há»‡ thá»‘ng giáº£i quyáº¿t
+- Domain = lĩnh vực nghiệp vụ hệ thống giải quyết
 
 | System          | Domain             |
 | --------------- | ------------------ |
-| Shopee          | thÆ°Æ¡ng máº¡i Ä‘iá»‡n tá»­ |
-| Galaxy Cinema   | Ä‘áº·t vÃ©             |
-| Restaurant app  | Ä‘áº·t mÃ³n            |
-| Hospital system | y táº¿               |
+| Shopee          | thương mại điện tử |
+| Galaxy Cinema   | đặt vé             |
+| Restaurant app  | đặt món            |
+| Hospital system | y tế               |
 
-- Má»™t domain lá»›n â‡’ cÃ³ thá»ƒ thÃ nh cÃ¡c subdomain
-- Subdomain cÃ³ thá»ƒ chia lÃ m 3 loáº¡i:
+- Một domain lớn ⇒ có thể thành các subdomain
+- Subdomain có thể chia làm 3 loại:
   - Core subdomains
   - Generic subdomains
   - Supporting subdomains
 
 ## 3. Business logic
 
-VÃ­ dá»¥!
+Ví dụ!
 
-Team báº¡n nháº­n má»™t dá»± Ã¡n tá»« khÃ¡ch hÃ ng (má»™t cÃ´ng ty truyá»n thÃ´ng á»Ÿ ÄÃ´ng LÃ o).
+Team bạn nhận một dự án từ khách hàng (một công ty truyền thông ở Đông Lào).
 
-VÃ  yÃªu cáº§u cá»§a há» lÃ  táº¡oÂ `má»™t trang bÃ¡o Ä‘iá»‡n tá»­`Â (giá»‘ng 24h hay vnexpress áº¥y cÃ¡c báº¡n). VÃ  khi khÃ¡ch hÃ ng truyá»n táº£iÂ `requirement`Â vá» cho cÃ¡c báº¡n. Há» sáº½ cÃ³ má»™t sá»‘ lá»i nÃ³i khÃ¡ quen thuá»™c nhÆ° sau (mÃ¬nh nÃ³i vá» context User):
+Và yêu cầu của họ là tạo `một trang báo điện tử` (giống 24h hay vnexpress ấy các bạn). Và khi khách hàng truyền tải `requirement` về cho các bạn. Họ sẽ có một số lời nói khá quen thuộc như sau (mình nói về context User):
 
-- Má»—i user chá»‰ cÃ³ 1 email duy nháº¥t vÃ  khÃ´ng trÃ¹ng vá»›i user khÃ¡c
-- Khi táº¡o user thÃ¬ máº·c Ä‘á»‹nh sáº½ cÃ³ role lÃ  Subscriber.
-- CÃ³ 3 system roles: Admin, Author, Subscriber.
-- User admin cÃ³ thá»ƒ táº¡o Ä‘Æ°á»£c Role.
-- User admin cÃ³ quyá»n táº¡o thÃªm roles.
-- Role thÃ¬ khÃ´ng Ä‘Æ°á»£c trÃ¹ng tÃªn (unique) vá»›i nhau.
-- KhÃ´ng Ä‘Æ°á»£c chá»‰nh sá»­a system role.
-- Role name chá»‰ Ä‘Æ°á»£c chá»©a kÃ½ tá»± a-z, A-Z, 0-9 vÃ  \_.
-- Role name chá»‰ cÃ³ Ä‘á»™ dÃ i tá»‘i thiá»ƒu lÃ  3 kÃ½ tá»±, tá»‘i Ä‘a 100 kÃ½ tá»±.
-- â€¦
+- Mỗi user chỉ có 1 email duy nhất và không trùng với user khác
+- Khi tạo user thì mặc định sẽ có role là Subscriber.
+- Có 3 system roles: Admin, Author, Subscriber.
+- User admin có thể tạo được Role.
+- User admin có quyền tạo thêm roles.
+- Role thì không được trùng tên (unique) với nhau.
+- Không được chỉnh sửa system role.
+- Role name chỉ được chứa ký tự a-z, A-Z, 0-9 và \_.
+- Role name chỉ có độ dài tối thiểu là 3 ký tự, tối đa 100 ký tự.
+- …
 
-Hoáº·c trong má»™t á»©ng dá»¥ngÂ `Food Ordering`:
+Hoặc trong một ứng dụng `Food Ordering`:
 
-- Khi má»›i táº¡o má»™t Ä‘Æ¡n hÃ ng (order) thÃ¬ tráº¡ng thÃ¡i (status) cá»§a nÃ³ sáº½ lÃ Â `pending`.
-- Total price cá»§a má»™t Ä‘Æ¡n hÃ ng khÃ´ng Ä‘Æ°á»£c nhá» hÆ¡n 0.
-- Khi payment (thanh toÃ¡n) tháº¥t báº¡i, tráº¡ng thÃ¡i cuá»‘i cÃ¹ng cá»§a Ä‘Æ¡n hÃ ng sáº½ lÃ Â `canceled`.
-- Khi payment thÃ nh cÃ´ng vÃ  hÃ ng trong kho cÃ²n Ä‘á»§ sá»‘ lÆ°á»£ng cho Ä‘Æ¡n hÃ ng thÃ¬ tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng sáº½ lÃ Â `approved`.
+- Khi mới tạo một đơn hàng (order) thì trạng thái (status) của nó sẽ là `pending`.
+- Total price của một đơn hàng không được nhỏ hơn 0.
+- Khi payment (thanh toán) thất bại, trạng thái cuối cùng của đơn hàng sẽ là `canceled`.
+- Khi payment thành công và hàng trong kho còn đủ số lượng cho đơn hàng thì trạng thái đơn hàng sẽ là `approved`.
 
-Äáº¥y, táº¥t cáº£ cÃ¡c gáº¡ch Ä‘áº§u dÃ²ng trÃªn, lÃ Â `business logics`! Dá»… hiá»ƒu pháº£i khÃ´ng cÃ¡c báº¡n.
+Đấy, tất cả các gạch đầu dòng trên, là `business logics`! Dễ hiểu phải không các bạn.
 
-VÃ  cÃ³ má»™t Ä‘iá»u cÃ¡c báº¡n pháº£i lÆ°u Ã½:
+Và có một điều các bạn phải lưu ý:
 
-- Business logics lÃ  cÃ¡i thá»­ ráº¥tÂ `dá»… thay Ä‘á»•i vÃ  má»Ÿ rá»™ng`. VÃ¬ sáº£n pháº©m cá»§a cÃ¡c báº¡n pháº£i Ä‘Ã¡p á»©ng Ä‘Æ°á»£c nhu cáº§u cá»§a khÃ¡ch hÃ ng (khÃ¡ch hÃ ng lÃ  thÆ°á»£ng Ä‘áº¿ láº¡i cÃ²n khÃ³ tÃ­nh). CÃ ng phÃ¡t triá»ƒn thÃ¬ nhu cáº§u cá»§a khÃ¡ch hÃ ng cÃ ng thay Ä‘á»•i vÃ  má»Ÿ rá»™ng nhiá»u hÆ¡n.
+- Business logics là cái thử rất `dễ thay đổi và mở rộng`. Vì sản phẩm của các bạn phải đáp ứng được nhu cầu của khách hàng (khách hàng là thượng đế lại còn khó tính). Càng phát triển thì nhu cầu của khách hàng càng thay đổi và mở rộng nhiều hơn.
 
-â‡’ **Trong DDD, cÃ¡c business logic sáº½ Ä‘Æ°á»£c Ä‘áº·t trongÂ `core domain layer`. Cá»¥ thá»ƒ lÃ  trong cÃ¡c value object, entity, aggregate, domain service**.
+⇒ **Trong DDD, các business logic sẽ được đặt trong `core domain layer`. Cụ thể là trong các value object, entity, aggregate, domain service**.
 
-- Táº¥t cáº£ business logic Ä‘á»u táº­p trung vÃ o core domain cá»§a nÃ³. Hiá»ƒu Ä‘Æ¡n giáº£n lÃ  cÃ³ má»™t layer lÃ  domain, táº¥t cáº£ logic nghiá»‡p vá»¥ sáº½ Ä‘Æ°á»£c viáº¿t trong layer nÃ y. Khi káº¿t há»£p vá»›i hexagonal, onion hay clean architecture, nÃ³ thÆ°á»ng náº±m á»Ÿ layerÂ `domain`. TÃ¡ch biá»‡t hoÃ n toÃ n so vá»›i cÃ¡c layer khÃ¡c vÃ  khÃ´ng phá»¥ thuá»™c vÃ o báº¥t cá»© layer hay cÃ´ng nghá»‡ nÃ o vÃ­ dá»¥ database, message queue, UI, API, ... MÃ  cÃ¡c layer khÃ¡c pháº£iÂ `implement`Â layerÂ `domain`Â nÃ y. ÄÃ¢y lÃ  Ä‘áº£o ngÆ°á»£c sá»± phá»¥ thuá»™c.
+- Tất cả business logic đều tập trung vào core domain của nó. Hiểu đơn giản là có một layer là domain, tất cả logic nghiệp vụ sẽ được viết trong layer này. Khi kết hợp với hexagonal, onion hay clean architecture, nó thường nằm ở layer `domain`. Tách biệt hoàn toàn so với các layer khác và không phụ thuộc vào bất cứ layer hay công nghệ nào ví dụ database, message queue, UI, API, ... Mà các layer khác phải `implement` layer `domain` này. Đây là đảo ngược sự phụ thuộc.
 
 ## 4. Ubiquitous Language
 
-- NgÃ´n ngá»¯ chung giá»¯a **domain expert team**, **devs team** vÃ  cÃ¡c team liÃªn quan
+- Ngôn ngữ chung giữa **domain expert team**, **devs team** và các team liên quan
 
-VÃ­ dá»¥:
+Ví dụ:
 
-KhÃ´ng dÃ¹ng:
+Không dùng:
 
 `createOrder()`
 
-DÃ¹ng:
+Dùng:
 
 `placeOrder()`
 
 ## 5. Bounded Context
 
-PhÃ¢n chia cÃ¡c domain logics, ubiquitous language thÃ nh cÃ¡c `context` nhá» hÆ¡n
+Phân chia các domain logics, ubiquitous language thành các `context` nhỏ hơn
 
-VÃ­ dá»¥: Trang bÃ¡o Ä‘iá»‡n tá»­
+Ví dụ: Trang báo điện tử
 
-- `User bounded context`: NÆ¡i chá»©a logic nghiá»‡p vá»¥ liÃªn quan tá»›i users, cÃ¡c tá»« ngá»¯ liÃªn quan tá»›i users, roles.
-- `Post bounded context`: Chá»©a logic nghiá»‡p vá»¥ liÃªn quan tá»›i cÃ¡c bÃ i post, â€¦
-- Sá»‘ lÆ°á»£ngÂ `user`Â xem bÃ i post abc nÃ y trong má»™t thÃ¡ng 100 users. ThÃ¬ Ã½ nghÄ©a cá»§aÂ `user trong post context`Â sáº½ khÃ¡c vá»›iÂ `user trong user context`. RÃµ rÃ ng user trong user context thÃ¬ nÃ³ Ä‘ang Ä‘á» cáº­p tá»›i, user admin, author, subscriber, hay cÃ³ role lÃ  gÃ¬, ... CÃ²n user trong post context Ä‘Æ¡n giáº£n lÃ  user Ä‘Ã£ xem bÃ i post á»Ÿ ngoÃ i thÃ´i.
+- `User bounded context`: Nơi chứa logic nghiệp vụ liên quan tới users, các từ ngữ liên quan tới users, roles.
+- `Post bounded context`: Chứa logic nghiệp vụ liên quan tới các bài post, …
+- Số lượng `user` xem bài post abc này trong một tháng 100 users. Thì ý nghĩa của `user trong post context` sẽ khác với `user trong user context`. Rõ ràng user trong user context thì nó đang đề cập tới, user admin, author, subscriber, hay có role là gì, ... Còn user trong post context đơn giản là user đã xem bài post ở ngoài thôi.
 
-â‡’ ÄÃ³ chÃ­nh lÃ  **`bounded context`**
+⇒ Đó chính là **`bounded context`**
 
 ![image.png](image.png)
 
 ## 6. Layer architecture
 
-- SÆ¡ khai: 1 Ä‘á»‘ng code vÃ o 1 hoáº·c 1 vÃ i file (1 file lÃ m táº¥t cáº£ tá»« controller, business logic, persist data, view, â€¦) â‡’ Ã”ng cha phÃ¡t minh ra layer architecture báº±ng cÃ¡ch chia nhá» nhiá»u layer nhá» hÆ¡n. Má»—i layer lÃ m má»™t viá»‡c duy nháº¥t nhÆ°: UI layer, application layer, domain layer, infrastructure layer, â€¦
+- Sơ khai: 1 đống code vào 1 hoặc 1 vài file (1 file làm tất cả từ controller, business logic, persist data, view, …) ⇒ Ông cha phát minh ra layer architecture bằng cách chia nhỏ nhiều layer nhỏ hơn. Mỗi layer làm một việc duy nhất như: UI layer, application layer, domain layer, infrastructure layer, …
 
-â‡’ Sá»± ra Ä‘á»i cá»§a cÃ¡c architecture: hexagonal, onion hay clean architecture
+⇒ Sự ra đời của các architecture: hexagonal, onion hay clean architecture
 
-- DDD táº­p trung háº¿t core business logic vÃ o 1 â€œnÆ¡iâ€ duy nháº¥t â‡’ DDD sáº½ káº¿t há»£p vá»›i cÃ¡c layer architecture Ä‘á»ƒ triá»ƒn khai
+- DDD tập trung hết core business logic vào 1 “nơi” duy nhất ⇒ DDD sẽ kết hợp với các layer architecture để triển khai
 
 ## 7. Event sourcing
 
 ## 8. Modeling skill
 
-**Modeling skill = kháº£ nÄƒng biáº¿n nghiá»‡p vá»¥ ngoÃ i Ä‘á»i thÃ nh object trong code Ä‘Ãºng cÃ¡ch.**
+**Modeling skill = khả năng biến nghiệp vụ ngoài đời thành object trong code đúng cách.**
 
-VÃ­ dá»¥:
+Ví dụ:
 
-âŒ Primitive style
+❌ Primitive style
 
 ```
 String email
@@ -2596,7 +2596,7 @@ String phone
 int money
 ```
 
-âœ… DDD style
+✅ DDD style
 
 ```
 Email
@@ -2604,21 +2604,21 @@ PhoneNumber
 Money
 ```
 
-Model Ä‘Ãºng giÃºp:
+Model đúng giúp:
 
-- code dá»… Ä‘á»c
-- logic rÃµ rÃ ng
-- validation náº±m Ä‘Ãºng chá»—
-- domain express rÃµ business meaning
+- code dễ đọc
+- logic rõ ràng
+- validation nằm đúng chỗ
+- domain express rõ business meaning
 
 ## 9. Data transfer object (DTO)
 
-- Object dÃ¹ng Ä‘á»ƒ chuyá»ƒn data Ä‘i qua cÃ¡c layer trong vÃ²ng Ä‘á»i cá»§a 1 business flow
+- Object dùng để chuyển data đi qua các layer trong vòng đời của 1 business flow
 
 ```java
 
 // UserDto.java
-// Object Ä‘Æ¡n giáº£n thÃ´i chá»© thá»±c táº¿ nhiá»u fields hÆ¡n nha.
+// Object đơn giản thôi chứ thực tế nhiều fields hơn nha.
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
@@ -2632,11 +2632,11 @@ public class UserDto {
 
 ## 10. Value Object
 
-- **`Value object`** lÃ  1 object, dÃ¹ng Ä‘á»ƒ chá»©a dá»¯ liá»‡u
-- **`Immutable` -** báº¥t biáº¿n â‡’ khá»Ÿi táº¡o value obj thÃ¬ khÃ´ng thá»ƒ thay Ä‘á»•i data bÃªn trong â‡’ dá»¯ liá»‡u toÃ n váº¹n - khÃ´ng thay Ä‘á»•i trong vÃ²ng Ä‘á»i 1 business flow
-- KhÃ´ng cÃ³ cÃ¡c public **setter**, cÃ¡c **properties** lÃ  read-only
-- 2 value obj cÃ³ dá»¯ liá»‡u giá»‘ng nhau â‡’ báº±ng nhau
-- CÃ¡c business logic liÃªn quan â‡’ Ä‘áº·t bÃªn trong cÃ¡c value obj
+- **`Value object`** là 1 object, dùng để chứa dữ liệu
+- **`Immutable` -** bất biến ⇒ khởi tạo value obj thì không thể thay đổi data bên trong ⇒ dữ liệu toàn vẹn - không thay đổi trong vòng đời 1 business flow
+- Không có các public **setter**, các **properties** là read-only
+- 2 value obj có dữ liệu giống nhau ⇒ bằng nhau
+- Các business logic liên quan ⇒ đặt bên trong các value obj
 
 ```java
 
@@ -2657,8 +2657,8 @@ public class UserName {
             throw new InvalidUserNameException();
         }
 
-        // NgoÃ i ra cÃ²n cÃ¡c business logic khÃ¡c nhÆ°:
-        // username khÃ´ng Ä‘Æ°á»£c chá»©a cÃ¡c kÃ½ tá»± Ä‘áº·c biá»‡t
+        // Ngoài ra còn các business logic khác như:
+        // username không được chứa các ký tự đặc biệt
         // ...
 
         this.value = value;
@@ -2666,30 +2666,30 @@ public class UserName {
 }
 ```
 
-Khi muá»‘n dÃ¹ng value obj UserName
+Khi muốn dùng value obj UserName
 
 ```java
 
-// Khá»Ÿi táº¡o má»™t value object
+// Khởi tạo một value object
 UserName userName = new UserName("lenhatthanh20");
 
-// Báº¡n khÃ´ng thá»ƒ thay Ä‘á»•i data bÃªn trong nÃ³ ná»¯a
-userName.setValue("admin"); // Äiá»u nÃ y khÃ´ng cho phÃ©p
+// Bạn không thể thay đổi data bên trong nó nữa
+userName.setValue("admin"); // Điều này không cho phép
 ```
 
-â‡’ Khi 1 value obj Ä‘Æ°á»£c táº¡o thÃ nh cÃ´ng â‡’ táº¥t cáº£ business logic liÃªn quan tá»›i obj Ä‘Ã³ Ä‘Ã£ Ä‘Æ°á»£c thá»a mÃ£n â‡’ dá»¯ liá»‡u trong value obj khÃ´ng Ä‘Æ°á»£c thay Ä‘á»•i Ä‘Æ°á»£c ná»¯a â‡’ **`data consistency`**
+⇒ Khi 1 value obj được tạo thành công ⇒ tất cả business logic liên quan tới obj đó đã được thỏa mãn ⇒ dữ liệu trong value obj không được thay đổi được nữa ⇒ **`data consistency`**
 
 ## 11. Entity
 
-- CÅ©ng lÃ  object y nhÆ° value object
-- CÃ³ **Ä‘á»‹nh danh** (ID)
-- CÃ³ setter
-- ThÆ°á»ng dÃ¹ng Ä‘á»ƒ chá»©a dá»¯ liá»‡u vÃ  lÆ°u xuá»‘ng DB
-- Business logic liÃªn quan â‡’ Ä‘áº·t bÃªn trong entity
+- Cũng là object y như value object
+- Có **định danh** (ID)
+- Có setter
+- Thường dùng để chứa dữ liệu và lưu xuống DB
+- Business logic liên quan ⇒ đặt bên trong entity
 
 ```java
 
-// MÃ¬nh cÃ³ má»™t file Entity.java Ä‘á»ƒ dÃ¹ng chung cho táº¥t cáº£ cÃ¡c entity
+// Mình có một file Entity.java để dùng chung cho tất cả các entity
 // Base class Entity.java
 @Getter
 @AllArgsConstructor
@@ -2697,7 +2697,7 @@ public class Entity<Type> {
     private Type id;
 }
 
-// VÃ  Ä‘Ã¢y lÃ  má»™t entity trong DDD
+// Và đây là một entity trong DDD
 // Role.java
 @Getter
 public class Role extends Entity<Id> {
@@ -2715,12 +2715,12 @@ public class Role extends Entity<Id> {
     }
 
     public void updateRoleName(RoleName name) {
-        // Má»™t sá»‘ business logic cÃ³ thá»ƒ náº±m á»Ÿ Ä‘Ã¢y
+        // Một số business logic có thể nằm ở đây
         this.name = name;
     }
 
     public void updateRoleDescription(RoleDescription name) {
-        // Má»™t sá»‘ business logic cÃ³ thá»ƒ náº±m á»Ÿ Ä‘Ã¢y
+        // Một số business logic có thể nằm ở đây
         this.description = description;
     }
 
@@ -2729,7 +2729,7 @@ public class Role extends Entity<Id> {
             RoleName name,
             RoleDescription description
     ) {
-        // Má»™t sá»‘ business logic cÃ³ thá»ƒ náº±m á»Ÿ Ä‘Ã¢y
+        // Một số business logic có thể nằm ở đây
         Role role = new Role(id, name, description);
 
         return role;
@@ -2737,15 +2737,15 @@ public class Role extends Entity<Id> {
 }
 ```
 
-- Khi táº¡o thÃ nh cÃ´ng 1 entity â‡’ táº¥t cáº£ **business logic** liÃªn quan Ä‘Æ°á»£c thá»a máº¡n â‡’ **`data consistency`**
+- Khi tạo thành công 1 entity ⇒ tất cả **business logic** liên quan được thỏa mạn ⇒ **`data consistency`**
 
 ## 12. Domain service
 
-- CÃ¡c business logic táº­p trung vÃ o `domain layer` , cá»¥ thá»ƒ: `value object`, `entity`, `aggregate`, `domain service`
-- Trong layer architecture, má»—i layer sáº½ cÃ³ cÃ¡c service cá»§a layer Ä‘Ã³ â‡’ `domain service` chá»©a cÃ¡c logic phá»¥c vá»¥ `layer domain` â‡’ **Logic á»Ÿ Ä‘Ã¢y lÃ  business logic**
-- Khi cÃ¡c business logic khÃ´ng biáº¿t Ä‘áº·t á»Ÿ Ä‘Ã¢u (value object, entity, aggregate) â‡’ Ä‘áº·t á»Ÿ domain service
+- Các business logic tập trung vào `domain layer` , cụ thể: `value object`, `entity`, `aggregate`, `domain service`
+- Trong layer architecture, mỗi layer sẽ có các service của layer đó ⇒ `domain service` chứa các logic phục vụ `layer domain` ⇒ **Logic ở đây là business logic**
+- Khi các business logic không biết đặt ở đâu (value object, entity, aggregate) ⇒ đặt ở domain service
 
-VÃ­ dá»¥: Use case táº¡o má»™t role cÃ³ 1 business logic sau: Khi táº¡o má»›i má»™t role, tÃªn cá»§a role má»›i nÃ y báº¯t buá»™c khÃ´ng Ä‘Æ°á»£c trÃ¹ng tÃªn vá»›i báº¥t kÃ¬ role nÃ o trong há»‡ thá»‘ng.
+Ví dụ: Use case tạo một role có 1 business logic sau: Khi tạo mới một role, tên của role mới này bắt buộc không được trùng tên với bất kì role nào trong hệ thống.
 
 ```java
 
@@ -2767,8 +2767,8 @@ public class CreateRoleService implements CreateRoleServiceInterface{
         roleRepository.save(role);
     }
 
-    // ÄÃ¢y lÃ  business logic mÃ¬nh vá»«a Ä‘á» cáº­p
-    // VÃ  mÃ¬nh Ä‘áº·t logic nÃ y trong domain service.
+    // Đây là business logic mình vừa đề cập
+    // Và mình đặt logic này trong domain service.
     private void roleNameDoesNotExistOrError(String name) {
         Optional<Role> role = roleRepository.findByName(name);
         if (role.isPresent()) {
@@ -2780,77 +2780,77 @@ public class CreateRoleService implements CreateRoleServiceInterface{
 
 ## 13. Aggregate
 
-XÃ©t usecase: **Táº¡o comment cá»§a 1 bÃ i bÃ¡o (post)**
+Xét usecase: **Tạo comment của 1 bài báo (post)**
 
-Má»™t sá»‘ business logic:
+Một số business logic:
 
-- Khi táº¡o comment, náº¿u user khÃ´ng tá»“n táº¡i thÃ¬ sáº½ bÃ¡o lá»—i cho ngÆ°á»i dÃ¹ng.
-- Khi xÃ³a bÃ i bÃ¡o thÃ¬ táº¥t cáº£ comment sáº½ bá»‹ xÃ³a theo.
-- Tá»•ng sá»‘ lÆ°á»£ng comment trong 1 bÃ i bÃ¡o lÃ  100 (lÆ°u Ã½ Ä‘Ã¢y chá»‰ lÃ  logic vÃ­ dá»¥ - khÃ´ng pháº£i logic trong production application). Náº¿u quÃ¡ 100 thÃ¬ sáº½ bÃ¡o lá»—i cho ngÆ°á»i dÃ¹ng
+- Khi tạo comment, nếu user không tồn tại thì sẽ báo lỗi cho người dùng.
+- Khi xóa bài báo thì tất cả comment sẽ bị xóa theo.
+- Tổng số lượng comment trong 1 bài báo là 100 (lưu ý đây chỉ là logic ví dụ - không phải logic trong production application). Nếu quá 100 thì sẽ báo lỗi cho người dùng
 
 ```java
 
-// CHÆ¯A ÃP Dá»¤NG DDD
-// á»ž TRONG Má»˜T FILE SERVICE NÃ€O ÄÃ“ Cá»¦A Báº N
+// CHƯA ÁP DỤNG DDD
+// Ở TRONG MỘT FILE SERVICE NÀO ĐÓ CỦA BẠN
 // commentDto: userId, postId, content
 
-// DÆ°á»›i Ä‘Ã¢y sáº½ lÃ  cÃ¡c step cÃ¡c báº¡n hay lÃ m:
+// Dưới đây sẽ là các step các bạn hay làm:
 
-// STEP 1. Kiá»ƒm tra xem user cÃ³ táº¡i hay khÃ´ng.
+// STEP 1. Kiểm tra xem user có tại hay không.
 this.checkingUserExistOrError(userId);
 
-// CÃ²n nhiá»u business logic khÃ¡c á»Ÿ Ä‘Ã¢y: quyá»n, ...
+// Còn nhiều business logic khác ở đây: quyền, ...
 
-// STEP 2. Kiá»ƒm tra POST cÃ³ tá»“n táº¡i hay khÃ´ng.
+// STEP 2. Kiểm tra POST có tồn tại hay không.
 Post post = getPostOrError(postId);
 
-// STEP 3. Kiá»ƒm tra sá»‘ lÆ°á»£ng comments cá»§a POST
-// Hoáº·c á»Ÿ Ä‘Ã¢y báº¡n hay Ä‘áº¿m sá»‘ lÆ°á»£ng comments tá»« database
+// STEP 3. Kiểm tra số lượng comments của POST
+// Hoặc ở đây bạn hay đếm số lượng comments từ database
 if (post.getComments().size() >= 100) {
     throw new PostCommentLimitException();
 }
-// Check má»™t sá»‘ business logic khÃ¡c ná»¯a.
+// Check một số business logic khác nữa.
 
-// STEP 4. Save comment xuá»‘ng:
+// STEP 4. Save comment xuống:
 Comment comment = new CommentEntity(...);
-commentRepository.save(comment); // LÆ°u xuá»‘ng DB
+commentRepository.save(comment); // Lưu xuống DB
 ```
 
-Khi cÃ³ 1 usecase khÃ¡c `add comment` khÃ¡c usecase á»Ÿ trÃªn â‡’ dev thao tÃ¡c vá»›i `Post model` vÃ  quÃªn logic á»Ÿ step 3 (lÃ m sai), `add comment` trá»±c tiáº¿p, lÆ°u láº¡i á»Ÿ step 5 â‡’ vi pháº¡m business logic 101 comment â‡’ **`data inconsistency`**
+Khi có 1 usecase khác `add comment` khác usecase ở trên ⇒ dev thao tác với `Post model` và quên logic ở step 3 (làm sai), `add comment` trực tiếp, lưu lại ở step 5 ⇒ vi phạm business logic 101 comment ⇒ **`data inconsistency`**
 
-- Aggregate giÃºp cho data nháº¥t quÃ¡n. Khi 1 aggregate táº¡o thÃ nh cÃ´ng â‡’ thá»a mÃ£n táº¥t cáº£ business logic liÃªn quan tá»›i nÃ³ â‡’ consistency
-- Aggregate ra Ä‘á»i â‡’ handle inconsistency data trong business flow cá»§a app
+- Aggregate giúp cho data nhất quán. Khi 1 aggregate tạo thành công ⇒ thỏa mãn tất cả business logic liên quan tới nó ⇒ consistency
+- Aggregate ra đời ⇒ handle inconsistency data trong business flow của app
 
 ```java
 // Post.java
-// `Post` chÃ­nh lÃ  aggregate root.
-// Äá»ƒ thao tÃ¡c vá»›i cÃ¡c thÃ nh pháº§n bÃªn trong nhÆ° entity `Comment`
-// thÃ¬ táº¥t cáº£ pháº£i thÃ´ng qua aggregate root.
-// VÃ­ dá»¥ thao tÃ¡c `add comment`
+// `Post` chính là aggregate root.
+// Để thao tác với các thành phần bên trong như entity `Comment`
+// thì tất cả phải thông qua aggregate root.
+// Ví dụ thao tác `add comment`
 public class Post extends AggregateRoot<Id> {
 
-    // ÄÃ¢y lÃ  property `comments` Ä‘á»ƒ chá»©a comment trong aggregate.
-    // NÃ³ thá»ƒ hiá»‡n má»‘i quan há»‡ - object relationship.
-    // Má»—i post sáº½ cÃ³ nhiá»u comments á»Ÿ bÃªn trong nÃ³.
-    // VÃ  `Comment` chÃ­nh lÃ  má»™t entity
+    // Đây là property `comments` để chứa comment trong aggregate.
+    // Nó thể hiện mối quan hệ - object relationship.
+    // Mỗi post sẽ có nhiều comments ở bên trong nó.
+    // Và `Comment` chính là một entity
     private List<Comment> comments = new ArrayList<>();
 
-    // Method nÃ y náº±m bÃªn trong aggregate root
+    // Method này nằm bên trong aggregate root
     public void addComment(String content, String userId) {
-        // True invariants here (Ä‘Ã¢y lÃ  logic buá»™c pháº£i thÃµa mÃ£n)
-        // Táº¥t cáº£ comment pháº£i nhá» hÆ¡n hoáº·c báº±ng 100.
+        // True invariants here (đây là logic buộc phải thõa mãn)
+        // Tất cả comment phải nhỏ hơn hoặc bằng 100.
         if (this.comments.size() > MAX_COMMENT) {
             throw new CommentLimitExceededException();
         }
 
-        // VÃ­ dá»¥ cÃ²n má»™t sá»‘ business logic khÃ¡c pháº£i thá»a nhÆ°:
-        // Khi bÃ i post á»Ÿ tráº¡ng thÃ¡i DRAFT, khÃ´ng thá»ƒ add comment
-        // VÃ­ dá»¥:
+        // Ví dụ còn một số business logic khác phải thỏa như:
+        // Khi bài post ở trạng thái DRAFT, không thể add comment
+        // Ví dụ:
         if (this.status != 'DRAFT') {
             throw new CommentPermissionException();
         }
 
-        // ... vÃ  nhiá»u logic á»Ÿ Ä‘Ã¢y ná»¯a
+        // ... và nhiều logic ở đây nữa
 
         Comment comment = new Comment(
             newId(UniqueIdGenerator.create()),
@@ -2860,43 +2860,43 @@ public class Post extends AggregateRoot<Id> {
         this.comments.add(comment);
 }
 
-// Domain service AddCommentService.java (hoáº·c application service)
-// VÃ  á»Ÿ ngoÃ i domain service chÃºng ta sáº½ lÃ m nhÆ° sau:
-// 1. Kiá»ƒm tra xem user cÃ³ táº¡i hay khÃ´ng.
+// Domain service AddCommentService.java (hoặc application service)
+// Và ở ngoài domain service chúng ta sẽ làm như sau:
+// 1. Kiểm tra xem user có tại hay không.
 this.checkingUserExistOrError(userId);
 
-// 2. Kiá»ƒm tra post cÃ³ tá»“n táº¡i hay khÃ´ng.
+// 2. Kiểm tra post có tồn tại hay không.
 Post post = getPostOrError(postId); // Load aggregate
 
-// 3. ThÃªm comment vÃ o post:
+// 3. Thêm comment vào post:
 post.addComment(
     commentDto.getContent(),
     user.get().getId().toString()
 );
 
-// Sau khi trÃ£i qua step 3, toÃ n bá»™ business logic sáº½ Ä‘Æ°á»£c thá»a mÃ£n.
+// Sau khi trãi qua step 3, toàn bộ business logic sẽ được thỏa mãn.
 
-// 4. LÆ°u post:
-postRepository.save(post); // LÆ°u xuá»‘ng DB
+// 4. Lưu post:
+postRepository.save(post); // Lưu xuống DB
 ```
 
-CÃ¡c **tÃ­nh cháº¥t** vÃ  **rule** cá»§a Aggregate:
+Các **tính chất** và **rule** của Aggregate:
 
-- Aggregate lÃ  táº­p há»£p nhiá»u entity, value object cÃ³ liÃªn quan tá»›i nhau.
-- Trong aggregate sáº½ cÃ³ má»™tÂ `aggregate root`. (Aggregate root cÅ©ng lÃ  má»™t entity).
-- Aggregate sáº½ cÃ³ má»™t ID (gá»i lÃ Â `global ID`).
-- CÃ¡c aggregate giao tiáº¿p vá»›i bÃªn ngoÃ i chá»‰ thÃ´ng qua global ID.
-- CÃ¡c object bÃªn trong aggregate tuyá»‡t Ä‘Æ°á»£c khÃ´ng Ä‘Æ°á»£c giao tiáº¿p vá»›i bÃªn ngoÃ i. Táº¥t cáº£ pháº£i thÃ´ng qua aggregate root.
-- **Dá»¯ liá»‡u bÃªn trong aggregate sáº½ Ä‘Æ°á»£c toÃ n váº¹n vÃ  nháº¥t quÃ¡n (consistency)**.
-- Khi save Aggregate pháº£i theo cÆ¡ cháº¿ Atomic: Táº¥t cáº£ thÃ´ng tin trong aggregate pháº£i Ä‘Æ°á»£c save xuá»‘ng thÃ nh cÃ´ng táº¥t cáº£ hoáº·c táº¥t cáº£ tháº¥t báº¡i. VÃ  khi cÃ³ cÃ¡c request Ä‘á»“ng thá»i, pháº£i xá»­ lÃ½ cho chuáº©n -Â `concurrency requests`. Chá»• nÃ y liÃªn quan tá»›i xá»­ lÃ½Â `concurrency requests`Â theo cÃ¡c cÆ¡ cháº¿ nhÆ°Â `optimistic locks`Â hayÂ `pessimist lock`Â vÃ Â `transaction`
-- Khi lÃ m viá»‡c vá»›i aggregate, Ä‘á»«ng nghÄ© tá»›i database relationship. MÃ  hÃ£y nghÄ© tá»›i object relationship.
+- Aggregate là tập hợp nhiều entity, value object có liên quan tới nhau.
+- Trong aggregate sẽ có một `aggregate root`. (Aggregate root cũng là một entity).
+- Aggregate sẽ có một ID (gọi là `global ID`).
+- Các aggregate giao tiếp với bên ngoài chỉ thông qua global ID.
+- Các object bên trong aggregate tuyệt được không được giao tiếp với bên ngoài. Tất cả phải thông qua aggregate root.
+- **Dữ liệu bên trong aggregate sẽ được toàn vẹn và nhất quán (consistency)**.
+- Khi save Aggregate phải theo cơ chế Atomic: Tất cả thông tin trong aggregate phải được save xuống thành công tất cả hoặc tất cả thất bại. Và khi có các request đồng thời, phải xử lý cho chuẩn - `concurrency requests`. Chổ này liên quan tới xử lý `concurrency requests` theo các cơ chế như `optimistic locks` hay `pessimist lock` và `transaction`
+- Khi làm việc với aggregate, đừng nghĩ tới database relationship. Mà hãy nghĩ tới object relationship.
 
 ![image.png](image%201.png)
 
 ```java
 
 // Post.java
-// ÄÃ¢y lÃ  Aggregate root
+// Đây là Aggregate root
 @Getter
 @Setter
 public class Post extends AggregateRoot<Id> {
@@ -2906,7 +2906,7 @@ public class Post extends AggregateRoot<Id> {
     private Summary summary;
     private Slug slug;
     private List<Comment> comments = new ArrayList<>();
-    // Tháº­t ra cÃ²n nhiá»u properties khÃ¡c á»Ÿ Ä‘Ã¢y ná»¯a
+    // Thật ra còn nhiều properties khác ở đây nữa
 
     public Post(
             Id id,
@@ -2971,27 +2971,27 @@ public class Post extends AggregateRoot<Id> {
 
 **Rule design aggregate:**
 
-- Rule 1: Dá»±a trÃªn cÃ¡c business logic luÃ´n Ä‘Ãºng - `True Invariants`
-- Rule 2: Aggregate nÃªn nhá» nháº¥t cÃ³ thá»ƒ
-- Rule 3: Giao tiáº¿p vá»›i Aggregate khÃ¡c báº±ng global ID
+- Rule 1: Dựa trên các business logic luôn đúng - `True Invariants`
+- Rule 2: Aggregate nên nhỏ nhất có thể
+- Rule 3: Giao tiếp với Aggregate khác bằng global ID
 
 ![image.png](image%202.png)
 
-- Rule 4: NÃªn dÃ¹ng `Eventual consistency`
+- Rule 4: Nên dùng `Eventual consistency`
 
 ## 14. Domain event
 
-- LÃ  sá»± thá»ƒ hiá»‡n cá»§a má»™t viá»‡c **Ä‘Ã£ xáº£y ra** trong Domain Layer (VÃ­ dá»¥: táº¡o User thÃ nh cÃ´ng sinh ra event `UserCreatedEvent`)
-- **CÆ¡ cháº¿ hoáº¡t Ä‘á»™ng:** Báº¯n event ra vÃ  khÃ´ng cáº§n quan tÃ¢m ai xá»­ lÃ½. Má»™t Aggregate hoáº·c Bounded Context khÃ¡c sáº½ Ä‘Ã³ng vai trÃ² "há»©ng" (Subscribe/Listen) event Ä‘Ã³ Ä‘á»ƒ xá»­ lÃ½ nghiá»‡p vá»¥ tiáº¿p theo.
-- Eventual Consistency: sá»± Ä‘Ã¡nh Ä‘á»•i khi dÃ¹ng xá»­ lÃ½ báº¥t Ä‘á»“ng bá»™ (async), thÆ°á»ng thÃ´ng qua **Message Queue** (nhÆ° Kafka). Dá»¯ liá»‡u khÃ´ng nháº¥t quÃ¡n ngay láº­p tá»©c mÃ  sáº½ "nháº¥t quÃ¡n sau má»™t lÃºc ná»¯aâ€
-  - **VÃ­ dá»¥ 1 (XÃ³a BÃ i):** Nháº¥n xÃ³a `Post` -> Tráº£ response thÃ nh cÃ´ng ngay láº­p tá»©c -> Báº¯n `PostDeletedEvent` -> `Comment` aggregate há»©ng event vÃ  tiáº¿n hÃ nh xÃ³a comment ngáº§m á»Ÿ background.
-  - **VÃ­ dá»¥ 2 (Microservices):** `Order Service` táº¡o Ä‘Æ¡n thÃ nh cÃ´ng -> Báº¯n `OrderCreatedEvent` -> `Payment Service` (vÃ  cÃ¡c service khÃ¡c) há»©ng event Ä‘á»ƒ tiáº¿p tá»¥c quy trÃ¬nh.
-- Domain Event thÆ°á»ng Ä‘Æ°á»£c Ä‘Äƒng kÃ½ (register) ngay bÃªn trong **Aggregate Root**.
-- TÃ¹y thuá»™c vÃ o thiáº¿t káº¿ cá»¥ thá»ƒ, cÅ©ng cÃ³ thá»ƒ Ä‘Äƒng kÃ½ bÃªn trong **Domain Service** miá»…n sao há»£p lÃ½ vá»›i luá»“ng nghiá»‡p vá»¥.
+- Là sự thể hiện của một việc **đã xảy ra** trong Domain Layer (Ví dụ: tạo User thành công sinh ra event `UserCreatedEvent`)
+- **Cơ chế hoạt động:** Bắn event ra và không cần quan tâm ai xử lý. Một Aggregate hoặc Bounded Context khác sẽ đóng vai trò "hứng" (Subscribe/Listen) event đó để xử lý nghiệp vụ tiếp theo.
+- Eventual Consistency: sự đánh đổi khi dùng xử lý bất đồng bộ (async), thường thông qua **Message Queue** (như Kafka). Dữ liệu không nhất quán ngay lập tức mà sẽ "nhất quán sau một lúc nữa”
+  - **Ví dụ 1 (Xóa Bài):** Nhấn xóa `Post` -> Trả response thành công ngay lập tức -> Bắn `PostDeletedEvent` -> `Comment` aggregate hứng event và tiến hành xóa comment ngầm ở background.
+  - **Ví dụ 2 (Microservices):** `Order Service` tạo đơn thành công -> Bắn `OrderCreatedEvent` -> `Payment Service` (và các service khác) hứng event để tiếp tục quy trình.
+- Domain Event thường được đăng ký (register) ngay bên trong **Aggregate Root**.
+- Tùy thuộc vào thiết kế cụ thể, cũng có thể đăng ký bên trong **Domain Service** miễn sao hợp lý với luồng nghiệp vụ.
 
 ```java
 
-// HÃ m nÃ y bÃªn trong Post.java (aggregate root)
+// Hàm này bên trong Post.java (aggregate root)
 public static Post create(
         Id id,
         Title title,
@@ -3012,21 +3012,21 @@ public static Post create(
         slug
     );
 
-    // Khi táº¡o post thÃ¬ sáº½ Ä‘Äƒng kÃ½ má»™t event
+    // Khi tạo post thì sẽ đăng ký một event
     post.registerEvent(new PostCreatedEvent(post));
 
     return post;
 }
 
-// VÃ  á»Ÿ Ä‘Ã¢u Ä‘Ã³ trong layer repository
-// Khi persist DB xong event sáº½ Ä‘Æ°á»£c tá»± Ä‘á»™ng báº¯n Ä‘i
-// Hoáº·c báº¡n cÃ³ thá»ƒ báº¯n event trong Domain service (tÃ¹y báº¡n)
-// NÃ¢ng cao hÆ¡n thÃ¬ viá»‡c commit DB
-//     + publish event nÃ³ cÃ²n dÃ­nh tá»›i transaction.
-// Báº¡n tá»± tÃ¬m hiá»ƒu thÃªm nha
-// MÃ¬nh vÃ­ dá»¥ náº¿u save DB khÃ´ng thÃ nh cÃ´ng thÃ¬ khÃ´ng Ä‘Æ°á»£c báº¯n event Ä‘i nha.
-// Khi báº¯n event Ä‘i tháº¥t báº¡i thÃ¬ pháº£i xá»­ lÃ½ nhÆ° tháº¿ nÃ o?
-// vÃ¢n vÃ¢n mÃ¢y mÃ¢y
+// Và ở đâu đó trong layer repository
+// Khi persist DB xong event sẽ được tự động bắn đi
+// Hoặc bạn có thể bắn event trong Domain service (tùy bạn)
+// Nâng cao hơn thì việc commit DB
+//     + publish event nó còn dính tới transaction.
+// Bạn tự tìm hiểu thêm nha
+// Mình ví dụ nếu save DB không thành công thì không được bắn event đi nha.
+// Khi bắn event đi thất bại thì phải xử lý như thế nào?
+// vân vân mây mây
 public class PostRepository implements PostRepositoryInterface {
     private PostJpaRepository postJpaRepository;
     ...
@@ -3041,10 +3041,10 @@ public class PostRepository implements PostRepositoryInterface {
     }
 }
 
-// VÃ  Ä‘Ã¢y lÃ  nÆ¡i nháº­n Ä‘Æ°á»£c event.
-// MÃ¬nh báº¯n event vÃ o Kafka Ä‘á»ƒ sync data qua redis
-// á»ž Ä‘Ã¢y sáº½ lÃ  ngoÃ i pháº¡m vi cá»§a domain layer nha.
-// Domain layer chá»‰ cÃ³ nhiá»‡m vá»¥ báº¯n domain event Ä‘i thÃ´i.
+// Và đây là nơi nhận được event.
+// Mình bắn event vào Kafka để sync data qua redis
+// Ở đây sẽ là ngoài phạm vi của domain layer nha.
+// Domain layer chỉ có nhiệm vụ bắn domain event đi thôi.
 @Service
 @AllArgsConstructor
 public class PostEventHandler {
@@ -3064,9 +3064,9 @@ public class PostEventHandler {
 }
 ```
 
-- Khi lÃ m viá»‡c vá»›i DDD thÃ´ng thÆ°á»ng sáº½ káº¿t há»£p vá»›i cÃ¡c layer architected.
-- Business logic sáº½ táº­p trung á»Ÿ duy nháº¥t má»™t nÆ¡i gá»i lÃ Â `core domain layer`.
-- Unit test riÃªng biá»‡t cho domain layer luÃ´n Ä‘á»ƒ verify cÃ¡c business logic vÃ¬ domain layer khÃ´ng phá»¥ thuá»™c vÃ o cÃ¡c layer khÃ¡c.
-- VÃ  cÃ¡c layer khÃ¡c pháº£i dá»±a trÃªn domain layer Ä‘á»ƒ mÃ  implement. VÃ­ dá»¥ trong hexagonal architecture, báº¡n sáº½ thiáº¿t káº¿ cÃ¡c input ports vÃ  output ports. Cá»¥ thá»ƒ nÃ³ cÃ³ thá»ƒ lÃ  cÃ¡c interface cá»§a domain layer. VÃ  cÃ¡c layer khÃ¡c muá»‘n giao tiáº¿p vá»›i domain layers sáº½ pháº£i implement cÃ¡c interfaces nÃ y. ÄÃ¢y lÃ  Ä‘áº£o ngÆ°á»£c sá»± phá»¥ thuá»™c (Inversion of control).
+- Khi làm việc với DDD thông thường sẽ kết hợp với các layer architected.
+- Business logic sẽ tập trung ở duy nhất một nơi gọi là `core domain layer`.
+- Unit test riêng biệt cho domain layer luôn để verify các business logic vì domain layer không phụ thuộc vào các layer khác.
+- Và các layer khác phải dựa trên domain layer để mà implement. Ví dụ trong hexagonal architecture, bạn sẽ thiết kế các input ports và output ports. Cụ thể nó có thể là các interface của domain layer. Và các layer khác muốn giao tiếp với domain layers sẽ phải implement các interfaces này. Đây là đảo ngược sự phụ thuộc (Inversion of control).
 
 

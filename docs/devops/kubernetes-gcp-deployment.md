@@ -1,39 +1,39 @@
-﻿# Triá»ƒn Khai Kubernetes
+﻿# Triển Khai Kubernetes
 
-TÃ i liá»‡u nÃ y triá»ƒn khai pháº¡m vi production lÃªn má»™t Kubernetes runtime tháº­t. Target chÃ­nh hiá»‡n táº¡i lÃ  **GCP/GKE**. K3s/VPS chá»‰ cÃ²n lÃ  hÆ°á»›ng lab ná»™i bá»™ hoáº·c fallback legacy.
+Tài liệu này triển khai phạm vi production lên một Kubernetes runtime thật. Target chính hiện tại là **GCP/GKE**. K3s/VPS chỉ còn là hướng lab nội bộ hoặc fallback legacy.
 
-Checklist GCP Ä‘áº§y Ä‘á»§, bao gá»“m sizing cluster, DNS, static IP, TLS vÃ  GitHub secrets, náº±m á»Ÿ `docs/devops/gcp-setup.md`.
+Checklist GCP đầy đủ, bao gồm sizing cluster, DNS, static IP, TLS và GitHub secrets, nằm ở `docs/devops/gcp-setup.md`.
 
-## Pháº¡m vi
+## Phạm vi
 
-Bao gá»“m:
+Bao gồm:
 
 - 10 production services: identity, user, exam, course, question, notification, analytics, simulation, media, audit.
 - Kong DB-less gateway expose qua Ingress.
-- Keycloak expose qua Ingress host riÃªng.
-- Postgres, RabbitMQ, Redis, Consul vÃ  Keycloak cháº¡y trong cluster cho giai Ä‘oáº¡n MVP.
-- Consul seed Job cho runtime config khÃ´ng pháº£i secret.
-- Prisma migration Job dÃ¹ng image `luyen-thi-lai-xe-migration-runner`.
-- App Pods Ä‘á»£i Consul seed vÃ  Prisma migration Jobs hoÃ n táº¥t trÆ°á»›c khi cháº¡y main containers.
-- Liveness/readiness probes vÃ  `resources.requests`/`resources.limits`.
+- Keycloak expose qua Ingress host riêng.
+- Postgres, RabbitMQ, Redis, Consul và Keycloak chạy trong cluster cho giai đoạn MVP.
+- Consul seed Job cho runtime config không phải secret.
+- Prisma migration Job dùng image `luyen-thi-lai-xe-migration-runner`.
+- App Pods đợi Consul seed và Prisma migration Jobs hoàn tất trước khi chạy main containers.
+- Liveness/readiness probes và `resources.requests`/`resources.limits`.
 - Helm rollback.
 
-KhÃ´ng náº±m trong pháº¡m vi Kubernetes baseline:
+Không nằm trong phạm vi Kubernetes baseline:
 
-- Terraform, HPA vÃ  load testing. CÃ¡c pháº§n nÃ y thuá»™c production hardening sau MVP.
-- Chuyá»ƒn toÃ n bá»™ ELK/Prometheus/Grafana sang Kubernetes.
-- Vault hoáº·c External Secrets integration.
+- Terraform, HPA và load testing. Các phần này thuộc production hardening sau MVP.
+- Chuyển toàn bộ ELK/Prometheus/Grafana sang Kubernetes.
+- Vault hoặc External Secrets integration.
 
-## Thiáº¿t láº­p GCP/GKE Cluster
+## Thiết lập GCP/GKE Cluster
 
-Táº¡o hoáº·c chá»n GCP project, rá»“i báº­t cÃ¡c API cáº§n thiáº¿t:
+Tạo hoặc chọn GCP project, rồi bật các API cần thiết:
 
 ```bash
 gcloud config set project <gcp-project-id>
 gcloud services enable container.googleapis.com compute.googleapis.com
 ```
 
-Táº¡o staging cluster nhá». CÃ³ thá»ƒ Ä‘iá»u chá»‰nh region, node count vÃ  machine type theo ngÃ¢n sÃ¡ch/táº£i thá»±c táº¿:
+Tạo staging cluster nhỏ. Có thể điều chỉnh region, node count và machine type theo ngân sách/tải thực tế:
 
 ```bash
 gcloud container clusters create luyen-thi-lai-xe-staging \
@@ -57,7 +57,7 @@ kubectl config view --raw --minify > kubeconfig-gke-staging.yaml
 base64 -w0 kubeconfig-gke-staging.yaml
 ```
 
-DÃ¹ng DNS records tháº­t cho staging/production:
+Dùng DNS records thật cho staging/production:
 
 ```text
 api.staging.example.com
@@ -66,14 +66,14 @@ api.example.com
 auth.example.com
 ```
 
-Chart Ä‘ang máº·c Ä‘á»‹nh theo hÆ°á»›ng phÃ¹ há»£p vá»›i GKE:
+Chart đang mặc định theo hướng phù hợp với GKE:
 
 - `global.storageClassName: standard-rwo`
 - `ingress.className: gce`
 
-Náº¿u cÃ i Traefik hoáº·c NGINX Ingress trÃªn GKE thay vÃ¬ dÃ¹ng GKE Ingress, override `ingress.className` trong values file cá»§a mÃ´i trÆ°á»ng Ä‘Ã³.
+Nếu cài Traefik hoặc NGINX Ingress trên GKE thay vì dùng GKE Ingress, override `ingress.className` trong values file của môi trường đó.
 
-## GitHub Variables VÃ  Secrets
+## GitHub Variables Và Secrets
 
 Repository variable optional:
 
@@ -81,7 +81,7 @@ Repository variable optional:
 GCP_AUTO_DEPLOY_ENABLED=false
 ```
 
-Máº·c Ä‘á»‹nh `.github/workflows/ci.yml` sáº½ deploy GCP staging sau má»—i láº§n push vÃ o `main` thÃ nh cÃ´ng. Chá»‰ set `GCP_AUTO_DEPLOY_ENABLED=false` khi cáº§n táº¡m dá»«ng auto deploy.
+Mặc định `.github/workflows/ci.yml` sẽ deploy GCP staging sau mỗi lần push vào `main` thành công. Chỉ set `GCP_AUTO_DEPLOY_ENABLED=false` khi cần tạm dừng auto deploy.
 
 Staging variables:
 
@@ -134,22 +134,22 @@ PRODUCTION_STORAGE_ACCOUNT_NAME
 PRODUCTION_STORAGE_ACCOUNT_KEY
 ```
 
-`GHCR_PULL_TOKEN` nÃªn lÃ  GitHub token cÃ³ quyá»n pull packages tá»« GHCR sau khi workflow build image xong.
+`GHCR_PULL_TOKEN` nên là GitHub token có quyền pull packages từ GHCR sau khi workflow build image xong.
 
-## Pull Image Tá»« GHCR
+## Pull Image Từ GHCR
 
-GCP/GKE khÃ´ng build source code. Cluster chá»‰ pull image Ä‘Ã£ cÃ³ trÃªn GHCR theo tag Ä‘Æ°á»£c truyá»n vÃ o Helm.
+GCP/GKE không build source code. Cluster chỉ pull image đã có trên GHCR theo tag được truyền vào Helm.
 
-Pattern image hiá»‡n táº¡i:
+Pattern image hiện tại:
 
 ```text
 ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-<service>:<tag>
 ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:<tag>
 ```
 
-`${{ github.repository_owner }}` chá»‰ Ä‘Æ°á»£c GitHub Actions tá»± Ä‘á»™ng thay khi workflow cháº¡y. Náº¿u deploy thá»§ cÃ´ng báº±ng Helm, dÃ¹ng `ghcr.io/<github-owner>` qua `--set global.imageRegistry=...`.
+`${{ github.repository_owner }}` chỉ được GitHub Actions tự động thay khi workflow chạy. Nếu deploy thủ công bằng Helm, dùng `ghcr.io/<github-owner>` qua `--set global.imageRegistry=...`.
 
-Vá»›i deploy thá»§ cÃ´ng, cÃ³ thá»ƒ dÃ¹ng má»™t Git SHA tag Ä‘Ã£ tá»“n táº¡i trÃªn GHCR:
+Với deploy thủ công, có thể dùng một Git SHA tag đã tồn tại trên GHCR:
 
 ```bash
 helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
@@ -163,9 +163,9 @@ helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
   --set migration.imageTag=<existing-ghcr-tag>
 ```
 
-Náº¿u dÃ¹ng cÃ¹ng má»™t `global.imageTag`, tag Ä‘Ã³ cáº§n tá»“n táº¡i cho Ä‘á»§ 10 production service images. Náº¿u GHCR package lÃ  private, cáº§n cáº¥u hÃ¬nh `GHCR_PULL_USERNAME` vÃ  `GHCR_PULL_TOKEN`.
+Nếu dùng cùng một `global.imageTag`, tag đó cần tồn tại cho đủ 10 production service images. Nếu GHCR package là private, cần cấu hình `GHCR_PULL_USERNAME` và `GHCR_PULL_TOKEN`.
 
-## Kiá»ƒm tra Helm trÃªn local
+## Kiểm tra Helm trên local
 
 ```bash
 helm lint charts/luyen-thi-lai-xe
@@ -173,7 +173,7 @@ helm template luyen-thi-lai-xe charts/luyen-thi-lai-xe \
   -f charts/luyen-thi-lai-xe/values-staging.example.yaml
 ```
 
-## Deploy thá»§ cÃ´ng
+## Deploy thủ công
 
 ```bash
 helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
@@ -192,7 +192,7 @@ helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
 SMOKE_BASE_URL=https://api.staging.example.com bash scripts/k8s-smoke.sh
 ```
 
-Smoke script kiá»ƒm tra `/health/live` vÃ  `/health/ready` cá»§a toÃ n bá»™ 10 production services thÃ´ng qua Kong.
+Smoke script kiểm tra `/health/live` và `/health/ready` của toàn bộ 10 production services thông qua Kong.
 
 ## Rollback
 
@@ -202,13 +202,13 @@ helm rollback luyen-thi-lai-xe <revision> -n production
 SMOKE_BASE_URL=https://api.example.com bash scripts/k8s-smoke.sh
 ```
 
-Rollback sáº½ Ä‘Æ°a Kubernetes release vá» revision cÅ©, bao gá»“m app image tags vÃ  rendered config. Database migrations khÃ´ng tá»± reverse; náº¿u migration khÃ´ng backward compatible thÃ¬ cáº§n táº¡o migration tiáº¿p theo thay vÃ¬ ká»³ vá»ng rollback DB tá»± xá»­ lÃ½.
+Rollback sẽ đưa Kubernetes release về revision cũ, bao gồm app image tags và rendered config. Database migrations không tự reverse; nếu migration không backward compatible thì cần tạo migration tiếp theo thay vì kỳ vọng rollback DB tự xử lý.
 
-Hiá»‡n táº¡i rollback cÃ³ thá»ƒ cháº¡y báº±ng GitHub Actions workflow `Rollback Release`. Workflow nÃ y nháº­n `target_environment`, `helm_revision`, `confirm_rollback`, tÃ¹y chá»n cháº¡y smoke test sau rollback vÃ  ghi deployment event Ä‘á»ƒ DORA report tÃ­nh Ä‘Æ°á»£c rollback/change failure.
+Hiện tại rollback có thể chạy bằng GitHub Actions workflow `Rollback Release`. Workflow này nhận `target_environment`, `helm_revision`, `confirm_rollback`, tùy chọn chạy smoke test sau rollback và ghi deployment event để DORA report tính được rollback/change failure.
 
 ## K3s Legacy Lab
 
-Chá»‰ dÃ¹ng pháº§n nÃ y khi cáº§n rehearsal giÃ¡ ráº» trÃªn local/VM ngoÃ i GCP:
+Chỉ dùng phần này khi cần rehearsal giá rẻ trên local/VM ngoài GCP:
 
 ```bash
 curl -sfL https://get.k3s.io | sh -
@@ -216,7 +216,7 @@ sudo kubectl get nodes
 sudo kubectl get storageclass
 ```
 
-Vá»›i K3s, override chart values nhÆ° sau:
+Với K3s, override chart values như sau:
 
 ```yaml
 global:

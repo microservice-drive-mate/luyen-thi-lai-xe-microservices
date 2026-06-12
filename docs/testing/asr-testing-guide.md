@@ -1,46 +1,46 @@
 ﻿# ASR V1 Testing And Demo Guide
 
-Guide nÃ y dÃ¹ng Ä‘á»ƒ chuáº©n bá»‹ mÃ´i trÆ°á»ng, táº¡o dá»¯ liá»‡u, kiá»ƒm thá»­ vÃ  demo cÃ¡c Architecturally Significant Requirements trong ASR V1 má»™t cÃ¡ch máº¡ch láº¡c. Má»¥c tiÃªu lÃ  khi demo, mÃ¬nh cÃ³ thá»ƒ nÃ³i rÃµ:
+Guide này dùng để chuẩn bị môi trường, tạo dữ liệu, kiểm thử và demo các Architecturally Significant Requirements trong ASR V1 một cách mạch lạc. Mục tiêu là khi demo, mình có thể nói rõ:
 
-1. ASR nÃ o Ä‘ang Ä‘Æ°á»£c chá»©ng minh.
-2. VÃ¬ sao bÆ°á»›c test nÃ y chá»©ng minh ASR Ä‘Ã³.
-3. Expected output lÃ  gÃ¬.
-4. Náº¿u lá»—i thÃ¬ kiá»ƒm tra á»Ÿ Ä‘Ã¢u.
+1. ASR nào đang được chứng minh.
+2. Vì sao bước test này chứng minh ASR đó.
+3. Expected output là gì.
+4. Nếu lỗi thì kiểm tra ở đâu.
 
 ## 0. Demo Storyline
 
-Thá»© tá»± demo khuyáº¿n nghá»‹ trong 15-20 phÃºt:
+Thứ tự demo khuyến nghị trong 15-20 phút:
 
-| Thá»© tá»± | Chá»§ Ä‘á» | ASR | Báº±ng chá»©ng nhanh |
+| Thứ tự | Chủ đề | ASR | Bằng chứng nhanh |
 | ---: | --- | --- | --- |
-| 1 | Health, config, migration | Ná»n táº£ng demo | Docker/Consul/DB/service Ä‘á»u cháº¡y |
+| 1 | Health, config, migration | Nền tảng demo | Docker/Consul/DB/service đều chạy |
 | 2 | Quality gates | Maintainability/Reliability | `check-types`, unit test pass |
-| 3 | Exam active payload khÃ´ng lá»™ Ä‘Ã¡p Ã¡n | `ASR-SEC-05` | JSON khÃ´ng cÃ³ `correctOptionId`, `isCorrect`, `isCritical`, `explanation` |
-| 4 | Autosave idempotent | `ASR-REL-03` | Gá»­i cÃ¹ng answer nhiá»u láº§n, state khÃ´ng duplicate/khÃ´ng máº¥t cÃ¢u khÃ¡c |
-| 5 | Submit retry-safe vÃ  server-side grading | `ASR-REL-04`, `ASR-REL-07`, `ASR-DI-01` | Submit láº§n 2 tráº£ cÃ¹ng result, khÃ´ng grade láº¡i |
-| 6 | Server-authoritative timer | `ASR-REL-02`, `ASR-REL-06` | Session háº¿t háº¡n lazy finalize thÃ nh `TIMED_OUT` qua `submit`, `result`, hoáº·c `answers` |
-| 7 | Kill-question logic | `ASR-DI-02` | Sai cÃ¢u critical thÃ¬ `failedByCritical=true` |
-| 8 | Bounded pagination/index | `ASR-PERF-02`, `ASR-PERF-03`, `ASR-PERF-10`, `ASR-PERF-11` | `size=1000` bá»‹ reject, list cÃ³ page/size |
-| 9 | Redis cache-aside | `ASR-PERF-05` | CÃ³ Redis key, TTL, invalidate, fallback DB khi Redis down |
-| 10 | Learning analytics dashboard | `ASR-PERF-04`, `ASR-PERF-07` | `analytics-service` projection tráº£ progress tá»« cache/read model |
-| 11 | Admin exam history and missed review | `ASR-PERF-09`, `ASR-PERF-10` | Filter history theo student/date/result; missed review khÃ´ng lá»™ Ä‘Ã¡p Ã¡n |
-| 12 | Progress reset and academic warning | `ASR-REL-05`, `ASR-PERF-08` | Reset giá»¯ lá»‹ch sá»­; warning táº¡o notification async |
-| 13 | Maneuver simulation backend rules | `ASR-SEC-07`, `ASR-UX-02` | Backend reject state transition sai vÃ  cache maneuver errors |
+| 3 | Exam active payload không lộ đáp án | `ASR-SEC-05` | JSON không có `correctOptionId`, `isCorrect`, `isCritical`, `explanation` |
+| 4 | Autosave idempotent | `ASR-REL-03` | Gửi cùng answer nhiều lần, state không duplicate/không mất câu khác |
+| 5 | Submit retry-safe và server-side grading | `ASR-REL-04`, `ASR-REL-07`, `ASR-DI-01` | Submit lần 2 trả cùng result, không grade lại |
+| 6 | Server-authoritative timer | `ASR-REL-02`, `ASR-REL-06` | Session hết hạn lazy finalize thành `TIMED_OUT` qua `submit`, `result`, hoặc `answers` |
+| 7 | Kill-question logic | `ASR-DI-02` | Sai câu critical thì `failedByCritical=true` |
+| 8 | Bounded pagination/index | `ASR-PERF-02`, `ASR-PERF-03`, `ASR-PERF-10`, `ASR-PERF-11` | `size=1000` bị reject, list có page/size |
+| 9 | Redis cache-aside | `ASR-PERF-05` | Có Redis key, TTL, invalidate, fallback DB khi Redis down |
+| 10 | Learning analytics dashboard | `ASR-PERF-04`, `ASR-PERF-07` | `analytics-service` projection trả progress từ cache/read model |
+| 11 | Admin exam history and missed review | `ASR-PERF-09`, `ASR-PERF-10` | Filter history theo student/date/result; missed review không lộ đáp án |
+| 12 | Progress reset and academic warning | `ASR-REL-05`, `ASR-PERF-08` | Reset giữ lịch sử; warning tạo notification async |
+| 13 | Maneuver simulation backend rules | `ASR-SEC-07`, `ASR-UX-02` | Backend reject state transition sai và cache maneuver errors |
 
-Náº¿u thá»i gian demo ngáº¯n, Æ°u tiÃªn cÃ¡c má»¥c 1, 3, 4, 5, 8, 9.
+Nếu thời gian demo ngắn, ưu tiên các mục 1, 3, 4, 5, 8, 9.
 
 ## 1. ASR Mapping
 
-| Quality Attribute | ASR | CÃ¡ch chá»©ng minh |
+| Quality Attribute | ASR | Cách chứng minh |
 | --- | --- | --- |
-| Security | `ASR-SEC-05` | Active exam response khÃ´ng expose Ä‘Ã¡p Ã¡n, critical flag, explanation. |
-| Reliability | `ASR-REL-02`, `ASR-REL-06` | Server dÃ¹ng `startedAt/expiresAt`; session quÃ¡ háº¡n Ä‘Æ°á»£c lazy finalize thÃ nh `TIMED_OUT` khi gá»i `submit`, `result`, `questions`, hoáº·c `answers`. |
-| Reliability | `ASR-REL-03` | Autosave cÃ¹ng answer/bookmark nhiá»u láº§n khÃ´ng táº¡o duplicate vÃ  khÃ´ng máº¥t state cÃ¢u khÃ¡c. |
-| Reliability | `ASR-REL-04`, `ASR-REL-07` | Submit ghi result atomically; retry submit tráº£ existing result. |
-| Data Integrity | `ASR-DI-01`, `ASR-DI-02` | Grading vÃ  kill-question logic cháº¡y server-side. |
-| Data Integrity | `ASR-DI-08`, `ASR-DI-09` | Exam session lÆ°u snapshot cÃ¢u há»i/options vÃ  táº¡o Ä‘Ãºng sá»‘ cÃ¢u theo template. |
-| Performance | `ASR-PERF-02`, `ASR-PERF-03`, `ASR-PERF-10`, `ASR-PERF-11` | List/search cÃ³ pagination bounded `size <= 100` vÃ  DB index. |
-| Performance | `ASR-PERF-05` | Course list/detail dÃ¹ng Redis cache-aside TTL 600s, invalidate khi mutation, fallback DB khi Redis lá»—i. |
+| Security | `ASR-SEC-05` | Active exam response không expose đáp án, critical flag, explanation. |
+| Reliability | `ASR-REL-02`, `ASR-REL-06` | Server dùng `startedAt/expiresAt`; session quá hạn được lazy finalize thành `TIMED_OUT` khi gọi `submit`, `result`, `questions`, hoặc `answers`. |
+| Reliability | `ASR-REL-03` | Autosave cùng answer/bookmark nhiều lần không tạo duplicate và không mất state câu khác. |
+| Reliability | `ASR-REL-04`, `ASR-REL-07` | Submit ghi result atomically; retry submit trả existing result. |
+| Data Integrity | `ASR-DI-01`, `ASR-DI-02` | Grading và kill-question logic chạy server-side. |
+| Data Integrity | `ASR-DI-08`, `ASR-DI-09` | Exam session lưu snapshot câu hỏi/options và tạo đúng số câu theo template. |
+| Performance | `ASR-PERF-02`, `ASR-PERF-03`, `ASR-PERF-10`, `ASR-PERF-11` | List/search có pagination bounded `size <= 100` và DB index. |
+| Performance | `ASR-PERF-05` | Course list/detail dùng Redis cache-aside TTL 600s, invalidate khi mutation, fallback DB khi Redis lỗi. |
 
 > Availability tactic duoc tach rieng o section 2 de sau nay bo sung them Modifiability, Interoperability, Security, Reliability tactics theo cung format.
 
@@ -197,15 +197,15 @@ Chi tiet API va test:
 
 ## 3. Prerequisites
 
-Cáº§n chuáº©n bá»‹:
+Cần chuẩn bị:
 
-- Docker Desktop Ä‘ang cháº¡y.
-- Node/npm Ä‘Ãºng version cá»§a repo.
-- `jq` Ä‘á»ƒ Ä‘á»c JSON curl output.
-- PowerShell hoáº·c Git Bash.
-- Root `.env` Ä‘Ã£ cÃ³ cÃ¡c biáº¿n local cáº§n thiáº¿t theo README.
+- Docker Desktop đang chạy.
+- Node/npm đúng version của repo.
+- `jq` để đọc JSON curl output.
+- PowerShell hoặc Git Bash.
+- Root `.env` đã có các biến local cần thiết theo README.
 
-Náº¿u PowerShell cháº·n `npm.ps1`, dÃ¹ng `npm.cmd` thay cho `npm`.
+Nếu PowerShell chặn `npm.ps1`, dùng `npm.cmd` thay cho `npm`.
 
 ```powershell
 npm.cmd --version
@@ -215,31 +215,31 @@ docker compose version
 
 ## 4. Demo Mode
 
-CÃ³ 2 cÃ¡ch demo:
+Có 2 cách demo:
 
-| Mode | Khi dÃ¹ng | Base URL |
+| Mode | Khi dùng | Base URL |
 | --- | --- | --- |
-| Qua Kong | Demo giá»‘ng production hÆ¡n, cÃ³ JWT tháº­t | `http://localhost:8000` |
-| Direct service | Debug nhanh tá»«ng service báº±ng JWT tháº­t trÃªn port local | `http://localhost:3001` Ä‘áº¿n `3008` |
+| Qua Kong | Demo giống production hơn, có JWT thật | `http://localhost:8000` |
+| Direct service | Debug nhanh từng service bằng JWT thật trên port local | `http://localhost:3001` đến `3008` |
 
-Khuyáº¿n nghá»‹ demo vá»›i tháº§y: **qua Kong** cho cÃ¡c API cáº§n auth. Frontend vÃ  demo chuáº©n chá»‰ gá»­i `Authorization: Bearer <access_token>`; khÃ´ng tá»± gá»­i `x-user-id`. Má»™t sá»‘ guide cÅ© cÃ³ thá»ƒ nháº¯c fallback header cho debug legacy, nhÆ°ng khÃ´ng dÃ¹ng nÃ³ lÃ m flow chÃ­nh.
+Khuyến nghị demo với thầy: **qua Kong** cho các API cần auth. Frontend và demo chuẩn chỉ gửi `Authorization: Bearer <access_token>`; không tự gửi `x-user-id`. Một số guide cũ có thể nhắc fallback header cho debug legacy, nhưng không dùng nó làm flow chính.
 
 ## 5. Start Infrastructure
 
-Tá»« root repo:
+Từ root repo:
 
 ```powershell
 npm.cmd run infra:up
 npm.cmd run consul:seed:local
 ```
 
-Kiá»ƒm tra container quan trá»ng:
+Kiểm tra container quan trọng:
 
 ```powershell
 docker compose -f docker-compose.infra.yml ps
 ```
 
-CÃ¡c container nÃªn tháº¥y `running` hoáº·c `healthy`:
+Các container nên thấy `running` hoặc `healthy`:
 
 - `consul`
 - `rabbitmq`
@@ -248,9 +248,9 @@ CÃ¡c container nÃªn tháº¥y `running` hoáº·c `healthy`:
 - `db-question`
 - `db-course`
 - `db-user`
-- `keycloak` náº¿u demo auth/JWT
+- `keycloak` nếu demo auth/JWT
 
-Kiá»ƒm tra Consul:
+Kiểm tra Consul:
 
 ```powershell
 curl http://localhost:8500/v1/status/leader
@@ -266,17 +266,17 @@ Expected Redis config:
 redis://localhost:6379
 ```
 
-Kiá»ƒm tra Docker Compose config:
+Kiểm tra Docker Compose config:
 
 ```powershell
 docker compose config --quiet
 ```
 
-Expected: command exit code `0`. Náº¿u Docker in warning vá» `%USERPROFILE%\.docker\config.json` nhÆ°ng exit code váº«n `0`, compose config váº«n há»£p lá»‡.
+Expected: command exit code `0`. Nếu Docker in warning về `%USERPROFILE%\.docker\config.json` nhưng exit code vẫn `0`, compose config vẫn hợp lệ.
 
 ## 6. Generate Prisma Client And Apply Migrations
 
-Cháº¡y generate/deploy cho cÃ¡c service thuá»™c ASR:
+Chạy generate/deploy cho các service thuộc ASR:
 
 ```powershell
 npm.cmd --workspace=apps/exam-service run db:generate
@@ -292,35 +292,35 @@ npm.cmd --workspace=apps/course-service run db:generate
 npm.cmd --workspace=apps/course-service run db:deploy
 ```
 
-Migrations ASR V1 cáº§n cÃ³:
+Migrations ASR V1 cần có:
 
 - `apps/exam-service/prisma/migrations/20260519170000_add_asr_query_indexes`
 - `apps/question-service/prisma/migrations/20260519170000_add_asr_query_indexes`
 - `apps/course-service/prisma/migrations/20260519170000_add_asr_query_indexes`
 
-Náº¿u course-service cÃ³ thÃªm read model license tier, cÅ©ng apply migration:
+Nếu course-service có thêm read model license tier, cũng apply migration:
 
 - `apps/course-service/prisma/migrations/20260521090000_add_student_license_profile_read_model`
 
 ## 7. Seed Data
 
-Khuyáº¿n nghá»‹ hiá»‡n táº¡i cho demo Ä‘áº§y Ä‘á»§ lÃ  cháº¡y root seed má»™t láº§n sau migration:
+Khuyến nghị hiện tại cho demo đầy đủ là chạy root seed một lần sau migration:
 
 ```powershell
 npm.cmd run db:seed
 ```
 
-Lá»‡nh nÃ y seed theo thá»© tá»± phá»¥ thuá»™c: identity, user, question, exam, course, analytics, notification, simulation. Dataset gá»“m demo users/license, 600 cÃ¢u há»i, exam templates, courses/enrollments, analytics read model, notifications vÃ  simulation maneuvers/checkpoints/errors. Chi tiáº¿t náº±m á»Ÿ `docs/testing/demo-seed-plan.md`.
+Lệnh này seed theo thứ tự phụ thuộc: identity, user, question, exam, course, analytics, notification, simulation. Dataset gồm demo users/license, 600 câu hỏi, exam templates, courses/enrollments, analytics read model, notifications và simulation maneuvers/checkpoints/errors. Chi tiết nằm ở `docs/testing/demo-seed-plan.md`.
 
 ### 7.1 Seed Question Topics/Question Bank
 
-Náº¿u question-service cÃ³ seed script:
+Nếu question-service có seed script:
 
 ```powershell
 npm.cmd --workspace=apps/question-service run db:seed
 ```
 
-Kiá»ƒm tra nhanh:
+Kiểm tra nhanh:
 
 ```bash
 curl -s "http://localhost:3005/admin/questions?page=1&size=5" \
@@ -330,27 +330,27 @@ curl -s "http://localhost:3005/admin/questions?page=1&size=5" \
 
 Expected: `total > 0`.
 
-Seed hiá»‡n táº¡i dÃ¹ng topic IDs deterministic UUID v5. Khi táº¡o exam template, dÃ¹ng cÃ¡c IDs nÃ y thay vÃ¬ cÃ¡c UUID placeholder cÅ©:
+Seed hiện tại dùng topic IDs deterministic UUID v5. Khi tạo exam template, dùng các IDs này thay vì các UUID placeholder cũ:
 
 | Topic | ID |
 | --- | --- |
-| KhÃ¡i niá»‡m vÃ  quy táº¯c giao thÃ´ng Ä‘Æ°á»ng bá»™ | `9f49045f-156e-5252-8486-babb36dc74fd` |
-| Nghiá»‡p vá»¥ váº­n táº£i | `6d568ff3-458d-5764-bb15-ae3258b75a40` |
-| VÄƒn hÃ³a giao thÃ´ng vÃ  Ä‘áº¡o Ä‘á»©c ngÆ°á»i lÃ¡i xe | `a81d3294-cc8b-579e-9567-8bbc39f96b60` |
-| Ká»¹ thuáº­t lÃ¡i xe | `6d38e12b-adec-5c2c-b029-e01ae1fdabd2` |
-| Cáº¥u táº¡o vÃ  sá»­a chá»¯a xe | `d7a509c3-153f-5c03-9398-6a5626aa70d0` |
-| Há»‡ thá»‘ng biá»ƒn bÃ¡o hiá»‡u Ä‘Æ°á»ng bá»™ | `0694bef4-6534-56d3-bc68-a3a0fb8f4f43` |
+| Khái niệm và quy tắc giao thông đường bộ | `9f49045f-156e-5252-8486-babb36dc74fd` |
+| Nghiệp vụ vận tải | `6d568ff3-458d-5764-bb15-ae3258b75a40` |
+| Văn hóa giao thông và đạo đức người lái xe | `a81d3294-cc8b-579e-9567-8bbc39f96b60` |
+| Kỹ thuật lái xe | `6d38e12b-adec-5c2c-b029-e01ae1fdabd2` |
+| Cấu tạo và sửa chữa xe | `d7a509c3-153f-5c03-9398-6a5626aa70d0` |
+| Hệ thống biển báo hiệu đường bộ | `0694bef4-6534-56d3-bc68-a3a0fb8f4f43` |
 
-### 7.2 Chuáº©n Bá»‹ User VÃ  License
+### 7.2 Chuẩn Bị User Và License
 
-Flow chuáº©n:
+Flow chuẩn:
 
-1. Táº¡o account á»Ÿ identity-service.
-2. User-service nháº­n event `identity.user.created` vÃ  táº¡o profile.
-3. Assign license tier á»Ÿ user-service.
-4. Course-service nháº­n event `user.student.license-assigned` vÃ  sync `student_license_profiles`.
+1. Tạo account ở identity-service.
+2. User-service nhận event `identity.user.created` và tạo profile.
+3. Assign license tier ở user-service.
+4. Course-service nhận event `user.student.license-assigned` và sync `student_license_profiles`.
 
-Kiá»ƒm tra user profile:
+Kiểm tra user profile:
 
 ```bash
 curl -s "http://localhost:3002/admin/users/<student-id>" \
@@ -374,7 +374,7 @@ Expected:
 "B2"
 ```
 
-Kiá»ƒm tra course-service read model:
+Kiểm tra course-service read model:
 
 ```sql
 SELECT "studentId", "licenseTier", "syncedAt", "updatedAt"
@@ -382,20 +382,20 @@ FROM student_license_profiles
 WHERE "studentId" = '<student-id>';
 ```
 
-Náº¿u chÆ°a cÃ³ row, restart user-service/course-service rá»“i assign láº¡i license Ä‘á»ƒ re-emit event.
+Nếu chưa có row, restart user-service/course-service rồi assign lại license để re-emit event.
 
-### 7.3 Chuáº©n Bá»‹ Exam Template
+### 7.3 Chuẩn Bị Exam Template
 
-Cáº§n cÃ³:
+Cần có:
 
 - Template active.
-- `durationMinutes` phÃ¹ há»£p demo.
-- `licenseCategory` khá»›p license cá»§a student.
-- Question bank Ä‘á»§ cÃ¢u theo `topicDistribution`.
+- `durationMinutes` phù hợp demo.
+- `licenseCategory` khớp license của student.
+- Question bank đủ câu theo `topicDistribution`.
 
-Khi demo timer, nÃªn táº¡o template riÃªng vá»›i `durationMinutes = 1`.
+Khi demo timer, nên tạo template riêng với `durationMinutes = 1`.
 
-VÃ­ dá»¥ template demo nhá», dá»… Ä‘á»§ pool sau khi seed:
+Ví dụ template demo nhỏ, dễ đủ pool sau khi seed:
 
 ```bash
 TIMER_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
@@ -422,13 +422,13 @@ TIMER_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
 
 ## 8. Start Services
 
-CÃ¡ch nhanh:
+Cách nhanh:
 
 ```powershell
 npm.cmd run dev
 ```
 
-Hoáº·c má»Ÿ má»—i service má»™t terminal Ä‘á»ƒ log rÃµ hÆ¡n:
+Hoặc mở mỗi service một terminal để log rõ hơn:
 
 ```powershell
 npm.cmd --workspace=apps/identity-service run start:dev
@@ -477,7 +477,7 @@ TEMPLATE_ID="<exam-template-id>"
 COURSE_ID="<course-id>"
 ```
 
-Náº¿u gá»i qua Kong, cÃ³ thá»ƒ Ä‘á»•i:
+Nếu gọi qua Kong, có thể đổi:
 
 ```bash
 EXAM_BASE="$KONG_BASE"
@@ -487,7 +487,7 @@ QUESTION_BASE="$KONG_BASE"
 
 ## 10. Automated Quality Gates
 
-Cháº¡y trÆ°á»›c khi demo:
+Chạy trước khi demo:
 
 ```powershell
 npm.cmd --workspace=apps/exam-service run check-types
@@ -505,17 +505,17 @@ docker compose config --quiet
 Expected:
 
 - `check-types` pass.
-- Test pass cho exam-service vÃ  course-service.
-- User-service compile pass Ä‘á»ƒ Ä‘áº£m báº£o API assign license tier vÃ  event publish váº«n há»£p lá»‡.
+- Test pass cho exam-service và course-service.
+- User-service compile pass để đảm bảo API assign license tier và event publish vẫn hợp lệ.
 - Compose config exit code `0`.
 
 Demo phrase:
 
-> "TrÆ°á»›c khi test thá»§ cÃ´ng, em cháº¡y quality gate Ä‘á»ƒ Ä‘áº£m báº£o cÃ¡c service compile vÃ  unit tests cá»§a cÃ¡c behavior quan trá»ng váº«n pass."
+> "Trước khi test thủ công, em chạy quality gate để đảm bảo các service compile và unit tests của các behavior quan trọng vẫn pass."
 
 ## 11. Security: Active Exam Does Not Leak Answer Data
 
-Má»¥c tiÃªu: chá»©ng minh `ASR-SEC-05`.
+Mục tiêu: chứng minh `ASR-SEC-05`.
 
 ### 11.1 Start Exam Session
 
@@ -571,13 +571,13 @@ Expected: no output.
 
 Demo phrase:
 
-> "Frontend chá»‰ nháº­n dá»¯ liá»‡u Ä‘á»§ Ä‘á»ƒ hiá»ƒn thá»‹ Ä‘á» vÃ  lÆ°u Ä‘Ã¡p Ã¡n. ÄÃ¡p Ã¡n Ä‘Ãºng, giáº£i thÃ­ch vÃ  cá» cÃ¢u Ä‘iá»ƒm liá»‡t khÃ´ng xuáº¥t hiá»‡n á»Ÿ active payload."
+> "Frontend chỉ nhận dữ liệu đủ để hiển thị đề và lưu đáp án. Đáp án đúng, giải thích và cờ câu điểm liệt không xuất hiện ở active payload."
 
 ## 12. Reliability: Autosave Is Idempotent
 
-Má»¥c tiÃªu: chá»©ng minh `ASR-REL-03`.
+Mục tiêu: chứng minh `ASR-REL-03`.
 
-Láº¥y question/option ids:
+Lấy question/option ids:
 
 ```bash
 QUESTIONS_JSON=$(curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -589,7 +589,7 @@ QUESTION_2_ID=$(echo "$QUESTIONS_JSON" | jq -r '.data.items[1].questionId')
 OPTION_2_ID=$(echo "$QUESTIONS_JSON" | jq -r '.data.items[1].options[0].id')
 ```
 
-Autosave cÃ¹ng cÃ¢u nhiá»u láº§n:
+Autosave cùng câu nhiều lần:
 
 ```bash
 for i in 1 2 3; do
@@ -604,7 +604,7 @@ for i in 1 2 3; do
 done
 ```
 
-Autosave cÃ¢u khÃ¡c:
+Autosave câu khác:
 
 ```bash
 curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
@@ -633,9 +633,9 @@ Check `exam_session_questions`: one row per session-question, no duplicate.
 
 ## 13. Reliability/Data Integrity: Submit Is Retry-Safe
 
-Má»¥c tiÃªu: chá»©ng minh `ASR-REL-04`, `ASR-REL-07`, `ASR-DI-01`.
+Mục tiêu: chứng minh `ASR-REL-04`, `ASR-REL-07`, `ASR-DI-01`.
 
-Submit láº§n Ä‘áº§u:
+Submit lần đầu:
 
 ```bash
 FIRST_SUBMIT=$(curl -s -X POST "$EXAM_BASE/exams/sessions/$SESSION_ID/submit" \
@@ -644,7 +644,7 @@ FIRST_SUBMIT=$(curl -s -X POST "$EXAM_BASE/exams/sessions/$SESSION_ID/submit" \
 echo "$FIRST_SUBMIT" | jq '.data | {id,status,score,isPassed,failedByCritical,criticalMistakes,finishedAt}'
 ```
 
-Submit láº¡i:
+Submit lại:
 
 ```bash
 SECOND_SUBMIT=$(curl -s -X POST "$EXAM_BASE/exams/sessions/$SESSION_ID/submit" \
@@ -662,10 +662,10 @@ echo "$SECOND_SUBMIT" | jq -r '.data.id, .data.status, .data.score, .data.finish
 
 Expected:
 
-- Cáº£ hai request HTTP `200`.
-- Result giá»‘ng nhau.
-- KhÃ´ng lá»—i `EXAM_SESSION_ALREADY_FINISHED`.
-- KhÃ´ng grade láº¡i.
+- Cả hai request HTTP `200`.
+- Result giống nhau.
+- Không lỗi `EXAM_SESSION_ALREADY_FINISHED`.
+- Không grade lại.
 
 Result endpoint:
 
@@ -677,18 +677,18 @@ curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/result" \
 
 Expected:
 
-- Result cÃ³ `questions[].isCorrect`.
-- Result khÃ´ng expose `correctOptionId`, `options[].isCorrect`, hoáº·c `questions[].isCritical`.
+- Result có `questions[].isCorrect`.
+- Result không expose `correctOptionId`, `options[].isCorrect`, hoặc `questions[].isCritical`.
 
 Demo phrase:
 
-> "Submit lÃ  retry-safe. Náº¿u client máº¥t máº¡ng rá»“i báº¥m gá»­i láº¡i, server tráº£ láº¡i result Ä‘Ã£ ghi, khÃ´ng cháº¥m láº¡i vÃ  khÃ´ng táº¡o tráº¡ng thÃ¡i lá»‡ch."
+> "Submit là retry-safe. Nếu client mất mạng rồi bấm gửi lại, server trả lại result đã ghi, không chấm lại và không tạo trạng thái lệch."
 
 ## 14. Timer: Server-Authoritative Timeout And Lazy Finalization
 
-Má»¥c tiÃªu: chá»©ng minh `ASR-REL-02`, `ASR-REL-06`.
+Mục tiêu: chứng minh `ASR-REL-02`, `ASR-REL-06`.
 
-Chuáº©n bá»‹ template `durationMinutes = 1` á»Ÿ má»¥c 6.3, start session má»›i:
+Chuẩn bị template `durationMinutes = 1` ở mục 6.3, start session mới:
 
 ```bash
 TIMEOUT_SESSION_ID=$(curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -698,22 +698,22 @@ TIMEOUT_SESSION_ID=$(curl -s -X POST "$EXAM_BASE/exams/sessions" \
   | jq -r '.data.id')
 ```
 
-CÃ³ 2 cÃ¡ch Ä‘Æ°a session vÃ o tráº¡ng thÃ¡i quÃ¡ háº¡n.
+Có 2 cách đưa session vào trạng thái quá hạn.
 
-CÃ¡ch demo tháº­t:
+Cách demo thật:
 
 ```powershell
 Start-Sleep -Seconds 70
 ```
 
-CÃ¡ch demo nhanh báº±ng DB local:
+Cách demo nhanh bằng DB local:
 
 ```bash
 docker exec -i luyen-thi-lai-xe-microservices-db-exam-1 psql -U user -d exam_db \
   -c "update exam_sessions set \"expiresAt\" = now() - interval '1 minute' where id = '$TIMEOUT_SESSION_ID';"
 ```
 
-Gá»i result trÆ°á»›c khi submit:
+Gọi result trước khi submit:
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$TIMEOUT_SESSION_ID/result" \
@@ -725,10 +725,10 @@ Expected:
 
 - HTTP `200`.
 - `status = "TIMED_OUT"`.
-- `finishedAt` khÃ¡c `null` vÃ  sau `expiresAt`.
-- Result váº«n available dÃ¹ client chÆ°a báº¥m submit.
+- `finishedAt` khác `null` và sau `expiresAt`.
+- Result vẫn available dù client chưa bấm submit.
 
-Äá»ƒ chá»©ng minh autosave cÅ©ng lazy-finalize, táº¡o má»™t session timeout khÃ¡c chÆ°a gá»i `result`:
+Để chứng minh autosave cũng lazy-finalize, tạo một session timeout khác chưa gọi `result`:
 
 ```bash
 TIMEOUT_AUTOSAVE_SESSION_ID=$(curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -747,7 +747,7 @@ docker exec -i luyen-thi-lai-xe-microservices-db-exam-1 psql -U user -d exam_db 
   -c "update exam_sessions set \"expiresAt\" = now() - interval '1 minute' where id = '$TIMEOUT_AUTOSAVE_SESSION_ID';"
 ```
 
-Gá»i autosave sau khi háº¿t háº¡n:
+Gọi autosave sau khi hết hạn:
 
 ```bash
 curl -s -X PATCH "$EXAM_BASE/exams/sessions/$TIMEOUT_AUTOSAVE_SESSION_ID/answers" \
@@ -762,12 +762,12 @@ curl -s -X PATCH "$EXAM_BASE/exams/sessions/$TIMEOUT_AUTOSAVE_SESSION_ID/answers
 Expected:
 
 - `status = "TIMED_OUT"`.
-- Answer má»›i khÃ´ng Ä‘Æ°á»£c apply sau khi session Ä‘Ã£ háº¿t háº¡n.
-- KhÃ´ng cÃ²n lá»—i `EXAM_SESSION_EXPIRED` lÃ m session bá»‹ káº¹t `IN_PROGRESS`.
+- Answer mới không được apply sau khi session đã hết hạn.
+- Không còn lỗi `EXAM_SESSION_EXPIRED` làm session bị kẹt `IN_PROGRESS`.
 
-Náº¿u Ä‘Ã£ gá»i `result` trÆ°á»›c Ä‘Ã³ vÃ  session Ä‘Ã£ finalized, autosave tiáº¿p theo cÃ³ thá»ƒ tráº£ `EXAM_SESSION_ALREADY_FINISHED`; Ä‘Ã³ lÃ  Ä‘Ãºng vÃ¬ session lÃºc nÃ y khÃ´ng cÃ²n `IN_PROGRESS`.
+Nếu đã gọi `result` trước đó và session đã finalized, autosave tiếp theo có thể trả `EXAM_SESSION_ALREADY_FINISHED`; đó là đúng vì session lúc này không còn `IN_PROGRESS`.
 
-Submit sau khi session Ä‘Ã£ finalize:
+Submit sau khi session đã finalize:
 
 ```bash
 curl -s -X POST "$EXAM_BASE/exams/sessions/$TIMEOUT_SESSION_ID/submit" \
@@ -777,19 +777,19 @@ curl -s -X POST "$EXAM_BASE/exams/sessions/$TIMEOUT_SESSION_ID/submit" \
 
 Expected:
 
-- Váº«n HTTP `200`.
-- Tráº£ láº¡i existing result `TIMED_OUT`.
-- KhÃ´ng grade láº¡i, khÃ´ng publish duplicate event.
+- Vẫn HTTP `200`.
+- Trả lại existing result `TIMED_OUT`.
+- Không grade lại, không publish duplicate event.
 
 Demo phrase:
 
-> "Timer khÃ´ng phá»¥ thuá»™c Ä‘á»“ng há»“ frontend. Server quyáº¿t Ä‘á»‹nh dá»±a trÃªn `startedAt` vÃ  `expiresAt`; náº¿u client khÃ´ng submit Ä‘Ãºng lÃºc, request káº¿ tiáº¿p nhÆ° result hoáº·c autosave sáº½ Ä‘Ã³ng phiÃªn thÃ nh TIMED_OUT má»™t cÃ¡ch nháº¥t quÃ¡n."
+> "Timer không phụ thuộc đồng hồ frontend. Server quyết định dựa trên `startedAt` và `expiresAt`; nếu client không submit đúng lúc, request kế tiếp như result hoặc autosave sẽ đóng phiên thành TIMED_OUT một cách nhất quán."
 
 ## 15. Data Integrity: Kill-Question Logic
 
-Má»¥c tiÃªu: chá»©ng minh `ASR-DI-02`.
+Mục tiêu: chứng minh `ASR-DI-02`.
 
-Template cáº§n cÃ³:
+Template cần có:
 
 ```json
 {
@@ -798,7 +798,7 @@ Template cáº§n cÃ³:
 }
 ```
 
-Trong active session, bá» trá»‘ng hoáº·c chá»n sai má»™t cÃ¢u critical rá»“i submit.
+Trong active session, bỏ trống hoặc chọn sai một câu critical rồi submit.
 
 Expected result:
 
@@ -812,17 +812,17 @@ Expected result:
 
 Important:
 
-- Active payload khÃ´ng cho frontend biáº¿t cÃ¢u nÃ o critical.
-- Server tá»± grade báº±ng snapshot DB vÃ  `correctOptionId`.
-- Client chá»‰ hiá»ƒn thá»‹ result server tráº£ vá».
+- Active payload không cho frontend biết câu nào critical.
+- Server tự grade bằng snapshot DB và `correctOptionId`.
+- Client chỉ hiển thị result server trả về.
 
 Demo phrase:
 
-> "Quy táº¯c cÃ¢u Ä‘iá»ƒm liá»‡t lÃ  rule phÃ­a server. Frontend khÃ´ng thá»ƒ nÃ© rule báº±ng cÃ¡ch sá»­a payload."
+> "Quy tắc câu điểm liệt là rule phía server. Frontend không thể né rule bằng cách sửa payload."
 
 ## 16. Performance: Bounded Pagination
 
-Má»¥c tiÃªu: chá»©ng minh `ASR-PERF-02`, `ASR-PERF-03`, `ASR-PERF-10`, `ASR-PERF-11`.
+Mục tiêu: chứng minh `ASR-PERF-02`, `ASR-PERF-03`, `ASR-PERF-10`, `ASR-PERF-11`.
 
 ### 16.1 Valid Pagination
 
@@ -843,8 +843,8 @@ curl -s "$COURSE_BASE/courses?page=1&size=20" \
 Expected:
 
 - HTTP `200`.
-- Response cÃ³ `total`, `page`, `size`.
-- KhÃ´ng tráº£ unbounded full table.
+- Response có `total`, `page`, `size`.
+- Không trả unbounded full table.
 
 ### 16.2 Invalid Pagination
 
@@ -862,11 +862,11 @@ curl -s "$COURSE_BASE/courses?page=1&size=1000" \
 Expected:
 
 - Validation error.
-- `size` max lÃ  `100`.
+- `size` max là `100`.
 
 ### 16.3 DB Index Evidence
 
-Má»Ÿ migration:
+Mở migration:
 
 - `apps/exam-service/prisma/migrations/20260519170000_add_asr_query_indexes/migration.sql`
 - `apps/question-service/prisma/migrations/20260519170000_add_asr_query_indexes/migration.sql`
@@ -874,11 +874,11 @@ Má»Ÿ migration:
 
 Demo phrase:
 
-> "Pagination giá»›i háº¡n táº£i tráº£ vá», cÃ²n index há»— trá»£ query filter/search Ä‘á»ƒ khÃ´ng scan báº£ng lá»›n khi dá»¯ liá»‡u tÄƒng."
+> "Pagination giới hạn tải trả về, còn index hỗ trợ query filter/search để không scan bảng lớn khi dữ liệu tăng."
 
 ## 17. Course Cache-Aside With Redis
 
-Má»¥c tiÃªu: chá»©ng minh `ASR-PERF-05`.
+Mục tiêu: chứng minh `ASR-PERF-05`.
 
 ### 17.1 Confirm Redis
 
@@ -901,19 +901,19 @@ PONG
 
 ### 17.2 Clear Old Keys
 
-Xem key cÅ©:
+Xem key cũ:
 
 ```powershell
 docker exec -it <redis-container-name> redis-cli KEYS "course:*"
 ```
 
-Náº¿u muá»‘n lÃ m sáº¡ch cache trÆ°á»›c demo, xÃ³a tá»«ng key course hiá»ƒn thá»‹ á»Ÿ lá»‡nh trÃªn:
+Nếu muốn làm sạch cache trước demo, xóa từng key course hiển thị ở lệnh trên:
 
 ```powershell
 docker exec -it <redis-container-name> redis-cli DEL "<course-cache-key>"
 ```
 
-CÃ³ thá»ƒ bá» qua bÆ°á»›c xÃ³a cache náº¿u chá»‰ cáº§n chá»©ng minh sau khi gá»i API cÃ³ key vÃ  TTL.
+Có thể bỏ qua bước xóa cache nếu chỉ cần chứng minh sau khi gọi API có key và TTL.
 
 ### 17.3 Cache Miss Then Populate
 
@@ -933,7 +933,7 @@ docker exec -it <redis-container-name> redis-cli KEYS "course:*"
 
 Expected:
 
-- CÃ³ key dáº¡ng `course:list:*`.
+- Có key dạng `course:list:*`.
 
 Call course detail:
 
@@ -951,7 +951,7 @@ docker exec -it <redis-container-name> redis-cli KEYS "course:*"
 
 Expected:
 
-- CÃ³ thÃªm key dáº¡ng `course:detail:<course-id>`.
+- Có thêm key dạng `course:detail:<course-id>`.
 
 ### 17.4 Cache Hit And TTL
 
@@ -982,7 +982,7 @@ Expected:
 
 ### 17.5 Invalidation
 
-Thá»±c hiá»‡n má»™t mutation lÃ m Ä‘á»•i course public data:
+Thực hiện một mutation làm đổi course public data:
 
 ```bash
 curl -s -X PATCH "$COURSE_BASE/admin/courses/$COURSE_ID" \
@@ -1000,8 +1000,8 @@ docker exec -it <redis-container-name> redis-cli KEYS "course:*"
 
 Expected:
 
-- List cache bá»‹ xÃ³a.
-- Detail cache cá»§a course bá»‹ xÃ³a hoáº·c sáº½ Ä‘Æ°á»£c refresh á»Ÿ request káº¿ tiáº¿p.
+- List cache bị xóa.
+- Detail cache của course bị xóa hoặc sẽ được refresh ở request kế tiếp.
 
 ### 17.6 Redis Failure Fallback
 
@@ -1033,86 +1033,86 @@ docker compose -f docker-compose.infra.yml start redis
 
 Demo phrase:
 
-> "Redis lÃ  cache-aside, khÃ´ng pháº£i nguá»“n dá»¯ liá»‡u chÃ­nh. Khi Redis lá»—i, service fallback vá» PostgreSQL vÃ  giá»¯ nguyÃªn response shape."
+> "Redis là cache-aside, không phải nguồn dữ liệu chính. Khi Redis lỗi, service fallback về PostgreSQL và giữ nguyên response shape."
 
 ## 18. Evidence Checklist
 
-TrÆ°á»›c demo, nÃªn chuáº©n bá»‹ screenshot hoáº·c terminal output cho:
+Trước demo, nên chuẩn bị screenshot hoặc terminal output cho:
 
 - `docker compose -f docker-compose.infra.yml ps`.
 - Consul key `course-service/redis.url`.
-- `check-types` vÃ  test pass.
-- Active exam payload khÃ´ng cÃ³ Ä‘Ã¡p Ã¡n.
-- Autosave láº·p láº¡i khÃ´ng Ä‘á»•i state sai.
-- Submit láº§n 1 vÃ  retry submit cÃ³ cÃ¹ng result.
-- Timeout session cÃ³ `TIMED_OUT` khi gá»i result/autosave/submit.
-- Kill-question result cÃ³ `failedByCritical=true`.
-- Pagination `size=1000` bá»‹ validation error.
+- `check-types` và test pass.
+- Active exam payload không có đáp án.
+- Autosave lặp lại không đổi state sai.
+- Submit lần 1 và retry submit có cùng result.
+- Timeout session có `TIMED_OUT` khi gọi result/autosave/submit.
+- Kill-question result có `failedByCritical=true`.
+- Pagination `size=1000` bị validation error.
 - Redis keys sau cache populate.
 - Redis TTL key course.
-- Redis keys sau mutation bá»‹ clear.
-- Course list váº«n `success=true` khi Redis stop.
+- Redis keys sau mutation bị clear.
+- Course list vẫn `success=true` khi Redis stop.
 
-## 19. Demo Script Ngáº¯n
+## 19. Demo Script Ngắn
 
-CÃ³ thá»ƒ nÃ³i theo flow nÃ y:
+Có thể nói theo flow này:
 
-1. "Em demo ASR V1 gá»“m security, reliability, data integrity vÃ  performance."
-2. "Äáº§u tiÃªn lÃ  health/config: Docker, Consul, DB vÃ  service Ä‘á»u cháº¡y."
-3. "Tiáº¿p theo lÃ  quality gate: typecheck vÃ  test pass."
-4. "Vá»›i security, active exam payload khÃ´ng tráº£ Ä‘Ã¡p Ã¡n Ä‘Ãºng, khÃ´ng tráº£ isCritical, khÃ´ng tráº£ explanation."
-5. "Vá»›i reliability, autosave lÃ  idempotent: gá»­i láº·p khÃ´ng duplicate vÃ  khÃ´ng máº¥t answer cÃ¢u khÃ¡c."
-6. "Submit lÃ  retry-safe: client gá»­i láº¡i request váº«n nháº­n cÃ¹ng result."
-7. "Timer lÃ  server-authoritative: quÃ¡ expiresAt thÃ¬ request káº¿ tiáº¿p lazy finalize session thÃ nh TIMED_OUT."
-8. "Data integrity: cháº¥m Ä‘iá»ƒm vÃ  cÃ¢u Ä‘iá»ƒm liá»‡t cháº¡y server-side."
-9. "Performance: cÃ¡c list endpoint cÃ³ bounded pagination vÃ  index."
-10. "Course-service dÃ¹ng Redis cache-aside: cÃ³ cache key/TTL, mutation invalidate, Redis down váº«n fallback DB."
+1. "Em demo ASR V1 gồm security, reliability, data integrity và performance."
+2. "Đầu tiên là health/config: Docker, Consul, DB và service đều chạy."
+3. "Tiếp theo là quality gate: typecheck và test pass."
+4. "Với security, active exam payload không trả đáp án đúng, không trả isCritical, không trả explanation."
+5. "Với reliability, autosave là idempotent: gửi lặp không duplicate và không mất answer câu khác."
+6. "Submit là retry-safe: client gửi lại request vẫn nhận cùng result."
+7. "Timer là server-authoritative: quá expiresAt thì request kế tiếp lazy finalize session thành TIMED_OUT."
+8. "Data integrity: chấm điểm và câu điểm liệt chạy server-side."
+9. "Performance: các list endpoint có bounded pagination và index."
+10. "Course-service dùng Redis cache-aside: có cache key/TTL, mutation invalidate, Redis down vẫn fallback DB."
 
 ## 20. Troubleshooting
 
-### Consul KhÃ´ng CÃ³ Config
+### Consul Không Có Config
 
 ```powershell
 npm.cmd run consul:seed:local
 npm.cmd run consul:get -- config/development-local/course-service/redis.url
 ```
 
-### Prisma Client KhÃ´ng Tháº¥y Schema Má»›i
+### Prisma Client Không Thấy Schema Mới
 
 ```powershell
 npm.cmd --workspace=apps/<service> run db:generate
 npm.cmd --workspace=apps/<service> run db:deploy
 ```
 
-### Service KhÃ´ng Connect DB
+### Service Không Connect DB
 
-Kiá»ƒm tra DB container:
+Kiểm tra DB container:
 
 ```powershell
 docker compose -f docker-compose.infra.yml ps db-exam db-question db-course
 ```
 
-Kiá»ƒm tra Consul DB URL:
+Kiểm tra Consul DB URL:
 
 ```powershell
 npm.cmd run consul:get -- config/development-local/exam-service/database.url
 ```
 
-### KhÃ´ng CÃ³ Token
+### Không Có Token
 
 Xem:
 
 - `docs/testing/services-test-guide.md`
 - `docs/api/identity-user-flow.md`
 
-Náº¿u debug direct service, váº«n Æ°u tiÃªn dÃ¹ng JWT tháº­t vÃ¬ cÃ¡c service má»›i Ä‘á»c actor tá»« `JWT.sub`. Chá»‰ dÃ¹ng fallback header khi má»™t endpoint cÅ© ghi rÃµ há»— trá»£ debug legacy.
+Nếu debug direct service, vẫn ưu tiên dùng JWT thật vì các service mới đọc actor từ `JWT.sub`. Chỉ dùng fallback header khi một endpoint cũ ghi rõ hỗ trợ debug legacy.
 
-### Course Enroll BÃ¡o `STUDENT_LICENSE_NOT_ASSIGNED`
+### Course Enroll Báo `STUDENT_LICENSE_NOT_ASSIGNED`
 
-Course-service chÆ°a cÃ³ read model license tier cá»§a student.
+Course-service chưa có read model license tier của student.
 
-1. Restart user-service vÃ  course-service.
-2. Assign láº¡i license tier trong user-service.
+1. Restart user-service và course-service.
+2. Assign lại license tier trong user-service.
 3. Check course DB:
 
 ```sql
@@ -1121,25 +1121,25 @@ FROM student_license_profiles
 WHERE "studentId" = '<student-id>';
 ```
 
-### Redis Container Name KhÃ¡c
+### Redis Container Name Khác
 
 ```powershell
 docker ps --format "table {{.Names}}\t{{.Image}}" | Select-String redis
 ```
 
-Sau Ä‘Ã³ thay `<redis-container-name>` trong cÃ¡c lá»‡nh Redis.
+Sau đó thay `<redis-container-name>` trong các lệnh Redis.
 
-### PowerShell Cháº·n `npm.ps1`
+### PowerShell Chặn `npm.ps1`
 
-DÃ¹ng `npm.cmd`:
+Dùng `npm.cmd`:
 
 ```powershell
 npm.cmd --workspace=apps/exam-service run check-types
 ```
 
-### Git BÃ¡o Dubious Ownership Trong Sandbox
+### Git Báo Dubious Ownership Trong Sandbox
 
-Khi chá»‰ cáº§n xem status/diff:
+Khi chỉ cần xem status/diff:
 
 ```powershell
 git -c safe.directory="C:/Users/Ngo Minh Tri/workspace/uit/microservices/luyen-thi-lai-xe-microservices" status --short

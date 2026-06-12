@@ -51,28 +51,28 @@ After `POST /enrollments/{id}/reset-progress`, the student's analytics key shoul
 <!-- Merged from docs/testing/services-test-guide.md -->
 # Audit Service Testing Guide
 
-Guide nÃ y dÃ¹ng Ä‘á»ƒ test vÃ  demo Security tactic: **Access Logging + Centralized Audit Trail + Transactional Outbox**.
+Guide này dùng để test và demo Security tactic: **Access Logging + Centralized Audit Trail + Transactional Outbox**.
 
-Má»¥c tiÃªu demo:
+Mục tiêu demo:
 
-1. Má»i HTTP request cÃ³ access log vÃ  `x-correlation-id`.
-2. Mutation nháº¡y cáº£m táº¡o audit event qua transactional outbox.
-3. `audit-service` lÆ°u audit trail táº­p trung, append-only, idempotent.
-4. Khi RabbitMQ lá»—i, business action váº«n commit vÃ  audit event khÃ´ng máº¥t.
+1. Mọi HTTP request có access log và `x-correlation-id`.
+2. Mutation nhạy cảm tạo audit event qua transactional outbox.
+3. `audit-service` lưu audit trail tập trung, append-only, idempotent.
+4. Khi RabbitMQ lỗi, business action vẫn commit và audit event không mất.
 
 ---
 
-## 1. Scope ÄÃ£ Triá»ƒn Khai
+## 1. Scope Đã Triển Khai
 
-| Capability | Service/File liÃªn quan | CÃ¡ch verify |
+| Capability | Service/File liên quan | Cách verify |
 | --- | --- | --- |
-| Correlation id + access log | `@repo/common`, má»i service | Response cÃ³ `x-correlation-id`; log cÃ³ `logType=access`. |
+| Correlation id + access log | `@repo/common`, mọi service | Response có `x-correlation-id`; log có `logType=access`. |
 | Audit producer outbox | `user-service`, `course-service`, `exam-service` | Check `outbox_messages` trong DB producer. |
-| Audit consumer | `audit-service` | Query `audit_db.audit_logs` hoáº·c `GET /admin/audit-logs`. |
-| Idempotent audit record | `audit-service` | Publish cÃ¹ng `eventId` 2 láº§n, chá»‰ cÃ³ 1 row. |
-| Outbox retry | Producer relay services | Stop RabbitMQ, gá»i mutation, start láº¡i RabbitMQ, event publish sau. |
+| Audit consumer | `audit-service` | Query `audit_db.audit_logs` hoặc `GET /admin/audit-logs`. |
+| Idempotent audit record | `audit-service` | Publish cùng `eventId` 2 lần, chỉ có 1 row. |
+| Outbox retry | Producer relay services | Stop RabbitMQ, gọi mutation, start lại RabbitMQ, event publish sau. |
 
-Audited actions phase hiá»‡n táº¡i:
+Audited actions phase hiện tại:
 
 | Service | Action |
 | --- | --- |
@@ -94,7 +94,7 @@ pnpm run db:deploy
 pnpm run dev
 ```
 
-Sau khi service start, kiá»ƒm tra health:
+Sau khi service start, kiểm tra health:
 
 ```powershell
 curl http://localhost:3011/health/ready
@@ -103,7 +103,7 @@ curl http://localhost:3004/health/ready
 curl http://localhost:3003/health/ready
 ```
 
-Expected: táº¥t cáº£ tráº£ `200`.
+Expected: tất cả trả `200`.
 
 ### 2.2 Full Docker mode
 
@@ -113,7 +113,7 @@ pnpm run docker:migrate
 pnpm run db:seed
 ```
 
-Kiá»ƒm tra container:
+Kiểm tra container:
 
 ```powershell
 docker compose ps audit-service user-service course-service exam-service rabbitmq elasticsearch logstash kibana
@@ -128,18 +128,18 @@ Expected:
 
 ---
 
-## 3. Chuáº©n Bá»‹ Token Demo
+## 3. Chuẩn Bị Token Demo
 
-Demo chuáº©n Ä‘i qua Kong vÃ  dÃ¹ng JWT tháº­t:
+Demo chuẩn đi qua Kong và dùng JWT thật:
 
 ```powershell
 $TOKEN_ADMIN = "<admin_access_token>"
 $TOKEN_STUDENT = "<student_access_token>"
 ```
 
-Náº¿u dÃ¹ng seed demo, login báº±ng identity-service hoáº·c Keycloak token endpoint theo guide identity. Frontend/client khÃ´ng tá»± gá»­i `x-user-id`; actor láº¥y tá»« `Authorization: Bearer ...`.
+Nếu dùng seed demo, login bằng identity-service hoặc Keycloak token endpoint theo guide identity. Frontend/client không tự gửi `x-user-id`; actor lấy từ `Authorization: Bearer ...`.
 
-DB connection nhanh tá»« mÃ¡y host, khÃ´ng cáº§n `docker compose exec`:
+DB connection nhanh từ máy host, không cần `docker compose exec`:
 
 ```powershell
 psql "postgresql://user:password@localhost:5433/user_db"
@@ -152,7 +152,7 @@ psql "postgresql://user:password@localhost:5441/audit_db"
 
 ## 4. Test Access Logging
 
-### 4.1 Gá»i request thÃ nh cÃ´ng
+### 4.1 Gọi request thành công
 
 ```powershell
 curl -i http://localhost:8000/user-service/health/ready
@@ -161,19 +161,19 @@ curl -i http://localhost:8000/user-service/health/ready
 Expected:
 
 - HTTP `200`.
-- Response header cÃ³ `x-correlation-id`.
-- Service log cÃ³ access log metadata:
+- Response header có `x-correlation-id`.
+- Service log có access log metadata:
   - `correlationId`
   - `serviceName`
   - `method`
   - `path`
   - `statusCode`
   - `latencyMs`
-  - `actorId` náº¿u request cÃ³ JWT
+  - `actorId` nếu request có JWT
   - `ipAddress`
   - `userAgent`
 
-### 4.2 Gá»i request lá»—i
+### 4.2 Gọi request lỗi
 
 ```powershell
 curl -i http://localhost:8000/admin/audit-logs `
@@ -182,10 +182,10 @@ curl -i http://localhost:8000/admin/audit-logs `
 
 Expected:
 
-- HTTP `401` hoáº·c `403`.
-- Váº«n cÃ³ `x-correlation-id`.
-- Access log váº«n ghi request lá»—i.
-- Log khÃ´ng chá»©a raw token hoáº·c Authorization header.
+- HTTP `401` hoặc `403`.
+- Vẫn có `x-correlation-id`.
+- Access log vẫn ghi request lỗi.
+- Log không chứa raw token hoặc Authorization header.
 
 ### 4.3 Verify trong ELK
 
@@ -197,7 +197,7 @@ Search theo correlation id:
 correlationId : "<x-correlation-id>"
 ```
 
-Hoáº·c query Elasticsearch trá»±c tiáº¿p:
+Hoặc query Elasticsearch trực tiếp:
 
 ```powershell
 curl "http://localhost:9200/microservices-logs-*/_search?q=correlationId:<x-correlation-id>"
@@ -205,8 +205,8 @@ curl "http://localhost:9200/microservices-logs-*/_search?q=correlationId:<x-corr
 
 Expected:
 
-- CÃ³ document access log.
-- KhÃ´ng cÃ³ field/password/token/Authorization/clientSecret/storage key dáº¡ng plaintext.
+- Có document access log.
+- Không có field/password/token/Authorization/clientSecret/storage key dạng plaintext.
 
 ---
 
@@ -214,7 +214,7 @@ Expected:
 
 ### 5.1 Role guard
 
-Student khÃ´ng Ä‘Æ°á»£c xem audit logs:
+Student không được xem audit logs:
 
 ```powershell
 curl -i "http://localhost:8000/admin/audit-logs" `
@@ -232,7 +232,7 @@ Expected:
 }
 ```
 
-Admin xem Ä‘Æ°á»£c:
+Admin xem được:
 
 ```powershell
 curl -s "http://localhost:8000/admin/audit-logs?page=1&size=20" `
@@ -242,7 +242,7 @@ curl -s "http://localhost:8000/admin/audit-logs?page=1&size=20" `
 Expected:
 
 - HTTP `200`.
-- `data.items` lÃ  array.
+- `data.items` là array.
 - `data.page = 1`.
 - `data.size = 20`.
 
@@ -259,7 +259,7 @@ Expected: HTTP `400`, `VALIDATION_ERROR`.
 
 ## 6. Demo User-Service Audit: Assign License
 
-### 6.1 Gá»i audited action
+### 6.1 Gọi audited action
 
 ```powershell
 $STUDENT_ID = "<student-user-id>"
@@ -284,10 +284,10 @@ docker compose exec db-user psql -U user -d user_db -c "SELECT id, \"eventName\"
 
 Expected:
 
-- CÃ³ row `eventName = security.audit.recorded`.
+- Có row `eventName = security.audit.recorded`.
 - `action = USER_LICENSE_ASSIGNED`.
-- BÃ¬nh thÆ°á»ng sau vÃ i giÃ¢y `status = PUBLISHED`.
-- `publishedAt` khÃ¡c null.
+- Bình thường sau vài giây `status = PUBLISHED`.
+- `publishedAt` khác null.
 
 ### 6.3 Verify centralized audit API
 
@@ -317,13 +317,13 @@ Expected:
 }
 ```
 
-### 6.4 Verify audit DB trá»±c tiáº¿p
+### 6.4 Verify audit DB trực tiếp
 
 ```powershell
 docker compose exec db-audit psql -U user -d audit_db -c "SELECT \"serviceName\", action, \"resourceType\", \"resourceId\", outcome, metadata FROM audit_logs WHERE action = 'USER_LICENSE_ASSIGNED' ORDER BY \"occurredAt\" DESC LIMIT 5;"
 ```
 
-Expected: cÃ³ row tÆ°Æ¡ng á»©ng.
+Expected: có row tương ứng.
 
 ---
 
@@ -336,10 +336,10 @@ curl -i -X POST "http://localhost:8000/admin/courses" `
   -H "Authorization: Bearer $TOKEN_ADMIN" `
   -H "Content-Type: application/json" `
   -d "{
-    \"title\": \"KhÃ³a há»c B1 Audit Demo\",
+    \"title\": \"Khóa học B1 Audit Demo\",
     \"licenseCategory\": \"B1\",
     \"description\": \"Course created to verify audit trail\",
-    \"duration\": \"3 thÃ¡ng\",
+    \"duration\": \"3 tháng\",
     \"tuitionFee\": 5000000,
     \"capacity\": 30,
     \"instructorIds\": [],
@@ -352,7 +352,7 @@ curl -i -X POST "http://localhost:8000/admin/courses" `
   }"
 ```
 
-LÆ°u `data.id` thÃ nh `$COURSE_ID`.
+Lưu `data.id` thành `$COURSE_ID`.
 
 Expected audit:
 
@@ -365,7 +365,7 @@ Expected fields:
 
 - `serviceName = course-service`
 - `resourceType = COURSE`
-- `metadata.title = "KhÃ³a há»c B1 Audit Demo"`
+- `metadata.title = "Khóa học B1 Audit Demo"`
 - `metadata.licenseCategory = "B1"`
 
 ### 7.2 Add lesson
@@ -374,7 +374,7 @@ Expected fields:
 curl -i -X POST "http://localhost:8000/admin/courses/$COURSE_ID/lessons" `
   -H "Authorization: Bearer $TOKEN_ADMIN" `
   -H "Content-Type: application/json" `
-  -d "{ \"title\": \"BÃ i 1\", \"content\": \"Ná»™i dung\", \"order\": 1 }"
+  -d "{ \"title\": \"Bài 1\", \"content\": \"Nội dung\", \"order\": 1 }"
 ```
 
 Expected audit action: `COURSE_LESSON_ADDED`.
@@ -405,7 +405,7 @@ curl -i -X POST "http://localhost:8000/admin/exams/templates" `
   -H "Authorization: Bearer $TOKEN_ADMIN" `
   -H "Content-Type: application/json" `
   -d "{
-    \"name\": \"Äá» thi B1 Audit Demo\",
+    \"name\": \"Đề thi B1 Audit Demo\",
     \"description\": \"Template created to verify audit trail\",
     \"licenseCategory\": \"B1\",
     \"totalQuestions\": 1,
@@ -423,7 +423,7 @@ curl -i -X POST "http://localhost:8000/admin/exams/templates" `
   }"
 ```
 
-LÆ°u `data.id` thÃ nh `$TEMPLATE_ID`.
+Lưu `data.id` thành `$TEMPLATE_ID`.
 
 Expected audit action: `EXAM_TEMPLATE_CREATED`.
 
@@ -433,7 +433,7 @@ Expected audit action: `EXAM_TEMPLATE_CREATED`.
 curl -i -X PATCH "http://localhost:8000/admin/exams/templates/$TEMPLATE_ID" `
   -H "Authorization: Bearer $TOKEN_ADMIN" `
   -H "Content-Type: application/json" `
-  -d "{ \"name\": \"Äá» thi B1 Audit Demo Updated\", \"version\": 1 }"
+  -d "{ \"name\": \"Đề thi B1 Audit Demo Updated\", \"version\": 1 }"
 ```
 
 Expected audit action: `EXAM_TEMPLATE_UPDATED`.
@@ -445,13 +445,13 @@ curl -s "http://localhost:8000/admin/audit-logs?serviceName=exam-service&resourc
   -H "Authorization: Bearer $TOKEN_ADMIN" | jq '.data.items | map({action, resourceId, metadata})'
 ```
 
-Expected: tháº¥y `EXAM_TEMPLATE_CREATED` vÃ  `EXAM_TEMPLATE_UPDATED`.
+Expected: thấy `EXAM_TEMPLATE_CREATED` và `EXAM_TEMPLATE_UPDATED`.
 
 ---
 
 ## 9. Test Transactional Outbox Retry
 
-Má»¥c tiÃªu: chá»©ng minh RabbitMQ lá»—i khÃ´ng lÃ m máº¥t audit event vÃ  khÃ´ng rollback business action Ä‘Ã£ thÃ nh cÃ´ng.
+Mục tiêu: chứng minh RabbitMQ lỗi không làm mất audit event và không rollback business action đã thành công.
 
 ### 9.1 Stop RabbitMQ
 
@@ -459,9 +459,9 @@ Má»¥c tiÃªu: chá»©ng minh RabbitMQ lá»—i khÃ´ng lÃ m máº¥t au
 docker compose stop rabbitmq
 ```
 
-### 9.2 Gá»i audited action
+### 9.2 Gọi audited action
 
-VÃ­ dá»¥ archive má»™t course:
+Ví dụ archive một course:
 
 ```powershell
 curl -i -X DELETE "http://localhost:8000/admin/courses/$COURSE_ID" `
@@ -470,10 +470,10 @@ curl -i -X DELETE "http://localhost:8000/admin/courses/$COURSE_ID" `
 
 Expected:
 
-- Náº¿u HTTP service váº«n Ä‘ang cháº¡y vÃ  khÃ´ng cáº§n RabbitMQ cho request path nÃ y, business response váº«n success.
-- Course Ä‘Ã£ Ä‘á»•i tráº¡ng thÃ¡i/archive trong `course_db`.
-- Audit event náº±m trong `course_db.outbox_messages`.
-- Audit log chÆ°a xuáº¥t hiá»‡n ngay trong `audit_db.audit_logs`.
+- Nếu HTTP service vẫn đang chạy và không cần RabbitMQ cho request path này, business response vẫn success.
+- Course đã đổi trạng thái/archive trong `course_db`.
+- Audit event nằm trong `course_db.outbox_messages`.
+- Audit log chưa xuất hiện ngay trong `audit_db.audit_logs`.
 
 ### 9.3 Check pending/failed outbox
 
@@ -483,17 +483,17 @@ docker compose exec db-course psql -U user -d course_db -c "SELECT id, \"eventNa
 
 Expected:
 
-- `status = PENDING` trong cÃ¡c láº§n retry Ä‘áº§u.
-- Sau nhiá»u láº§n fail cÃ³ thá»ƒ thÃ nh `FAILED` khi `attempts >= 10`.
-- `lastError` cÃ³ lá»—i connection RabbitMQ.
+- `status = PENDING` trong các lần retry đầu.
+- Sau nhiều lần fail có thể thành `FAILED` khi `attempts >= 10`.
+- `lastError` có lỗi connection RabbitMQ.
 
-### 9.4 Start RabbitMQ láº¡i
+### 9.4 Start RabbitMQ lại
 
 ```powershell
 docker compose start rabbitmq
 ```
 
-Chá» khoáº£ng 5-10 giÃ¢y rá»“i kiá»ƒm tra:
+Chờ khoảng 5-10 giây rồi kiểm tra:
 
 ```powershell
 docker compose exec db-course psql -U user -d course_db -c "SELECT status, attempts, \"publishedAt\", \"lastError\", payload->>'action' AS action FROM outbox_messages ORDER BY \"createdAt\" DESC LIMIT 10;"
@@ -501,8 +501,8 @@ docker compose exec db-course psql -U user -d course_db -c "SELECT status, attem
 
 Expected:
 
-- Message quay vá» `PUBLISHED` náº¿u váº«n Ä‘ang `PENDING` vÃ  relay publish thÃ nh cÃ´ng.
-- Náº¿u message Ä‘Ã£ thÃ nh `FAILED`, phase hiá»‡n táº¡i chÆ°a cÃ³ manual requeue API; cÃ³ thá»ƒ update DB thá»§ cÃ´ng trong demo dev Ä‘á»ƒ retry:
+- Message quay về `PUBLISHED` nếu vẫn đang `PENDING` và relay publish thành công.
+- Nếu message đã thành `FAILED`, phase hiện tại chưa có manual requeue API; có thể update DB thủ công trong demo dev để retry:
 
 ```sql
 UPDATE outbox_messages
@@ -510,7 +510,7 @@ SET status = 'PENDING', "nextAttemptAt" = now(), "lastError" = null
 WHERE status = 'FAILED';
 ```
 
-Sau Ä‘Ã³ audit log xuáº¥t hiá»‡n:
+Sau đó audit log xuất hiện:
 
 ```powershell
 curl -s "http://localhost:8000/admin/audit-logs?action=COURSE_ARCHIVED&resourceId=$COURSE_ID" `
@@ -521,9 +521,9 @@ curl -s "http://localhost:8000/admin/audit-logs?action=COURSE_ARCHIVED&resourceI
 
 ## 10. Test Idempotency
 
-Má»¥c tiÃªu: cÃ¹ng `eventId` chá»‰ táº¡o 1 audit row.
+Mục tiêu: cùng `eventId` chỉ tạo 1 audit row.
 
-### 10.1 Láº¥y má»™t `eventId` Ä‘Ã£ publish
+### 10.1 Lấy một `eventId` đã publish
 
 ```powershell
 docker compose exec db-user psql -U user -d user_db -c "SELECT payload->>'eventId' AS event_id, payload->>'action' AS action, status FROM outbox_messages WHERE \"eventName\" = 'security.audit.recorded' ORDER BY \"createdAt\" DESC LIMIT 1;"
@@ -531,25 +531,25 @@ docker compose exec db-user psql -U user -d user_db -c "SELECT payload->>'eventI
 
 Copy `event_id`.
 
-### 10.2 Táº¡o duplicate outbox message cÃ¹ng payload
+### 10.2 Tạo duplicate outbox message cùng payload
 
-Thay `<new-outbox-id>` báº±ng má»™t UUID má»›i báº¥t ká»³ vÃ  `<event-id>` báº±ng giÃ¡ trá»‹ vá»«a copy. CÃ¡ch nÃ y buá»™c producer relay publish láº¡i cÃ¹ng audit `eventId`, Ä‘Ãºng vá»›i path tháº­t cá»§a há»‡ thá»‘ng hÆ¡n lÃ  publish raw message thá»§ cÃ´ng qua RabbitMQ UI.
+Thay `<new-outbox-id>` bằng một UUID mới bất kỳ và `<event-id>` bằng giá trị vừa copy. Cách này buộc producer relay publish lại cùng audit `eventId`, đúng với path thật của hệ thống hơn là publish raw message thủ công qua RabbitMQ UI.
 
 ```powershell
 docker compose exec db-user psql -U user -d user_db -c "INSERT INTO outbox_messages (id, \"eventName\", payload, status, attempts, \"nextAttemptAt\", \"createdAt\", \"updatedAt\") SELECT '<new-outbox-id>', \"eventName\", payload, 'PENDING', 0, now(), now(), now() FROM outbox_messages WHERE payload->>'eventId' = '<event-id>' LIMIT 1;"
 ```
 
-Chá» khoáº£ng 5-10 giÃ¢y Ä‘á»ƒ relay publish.
+Chờ khoảng 5-10 giây để relay publish.
 
-### 10.3 Verify chá»‰ cÃ³ má»™t row
+### 10.3 Verify chỉ có một row
 
 ```powershell
 docker compose exec db-audit psql -U user -d audit_db -c "SELECT \"eventId\", count(*) FROM audit_logs GROUP BY \"eventId\" HAVING count(*) > 1;"
 ```
 
-Expected: khÃ´ng cÃ³ row nÃ o.
+Expected: không có row nào.
 
-Náº¿u cÃ¢u insert duplicate tráº£ `INSERT 0 0`, nghÄ©a lÃ  pháº§n `SELECT ... WHERE payload->>'eventId' = '<event-id>'` khÃ´ng tÃ¬m tháº¥y source row. Cháº¡y query nÃ y trÆ°á»›c Ä‘á»ƒ copy Ä‘Ãºng `event_id`:
+Nếu câu insert duplicate trả `INSERT 0 0`, nghĩa là phần `SELECT ... WHERE payload->>'eventId' = '<event-id>'` không tìm thấy source row. Chạy query này trước để copy đúng `event_id`:
 
 ```sql
 SELECT id, payload->>'eventId' AS event_id, payload->>'action' AS action, status
@@ -558,7 +558,7 @@ ORDER BY "createdAt" DESC
 LIMIT 10;
 ```
 
-Náº¿u row duplicate Ä‘Ã£ insert nhÆ°ng chÆ°a chuyá»ƒn `PUBLISHED`, kiá»ƒm tra `nextAttemptAt`. Relay chá»‰ láº¥y row `PENDING` khi `nextAttemptAt <= now()`, nÃªn sau broker failure cÃ³ thá»ƒ pháº£i chá» theo backoff:
+Nếu row duplicate đã insert nhưng chưa chuyển `PUBLISHED`, kiểm tra `nextAttemptAt`. Relay chỉ lấy row `PENDING` khi `nextAttemptAt <= now()`, nên sau broker failure có thể phải chờ theo backoff:
 
 ```sql
 SELECT id, status, attempts, "nextAttemptAt", now() AS current_time, "lastError"
@@ -571,48 +571,48 @@ ORDER BY "createdAt" DESC;
 
 ## 11. Troubleshooting
 
-### `GET /admin/audit-logs` tráº£ 401/403
+### `GET /admin/audit-logs` trả 401/403
 
-- Kiá»ƒm tra token cÃ³ pháº£i admin/center manager khÃ´ng.
-- Frontend chá»‰ gá»­i `Authorization`, khÃ´ng gá»­i `x-user-id`.
-- Kiá»ƒm tra Keycloak role mapping trong token.
+- Kiểm tra token có phải admin/center manager không.
+- Frontend chỉ gửi `Authorization`, không gửi `x-user-id`.
+- Kiểm tra Keycloak role mapping trong token.
 
-### Audited action success nhÆ°ng audit API chÆ°a tháº¥y record
+### Audited action success nhưng audit API chưa thấy record
 
-Check theo thá»© tá»±:
+Check theo thứ tự:
 
-1. Producer DB cÃ³ `outbox_messages` chÆ°a.
-2. `outbox_messages.status` lÃ  `PUBLISHED`, `PENDING`, hay `FAILED`.
-3. RabbitMQ cÃ³ queue `audit_service_events` khÃ´ng.
-4. `audit-service` cÃ³ running/healthy khÃ´ng.
-5. `audit_db.audit_logs` cÃ³ row theo `eventId` chÆ°a.
+1. Producer DB có `outbox_messages` chưa.
+2. `outbox_messages.status` là `PUBLISHED`, `PENDING`, hay `FAILED`.
+3. RabbitMQ có queue `audit_service_events` không.
+4. `audit-service` có running/healthy không.
+5. `audit_db.audit_logs` có row theo `eventId` chưa.
 
-### Access log khÃ´ng vÃ o Kibana
+### Access log không vào Kibana
 
-- Kiá»ƒm tra `elasticsearch`, `logstash`, `kibana` Ä‘ang cháº¡y.
-- Kiá»ƒm tra app log cÃ³ access log á»Ÿ stdout trÆ°á»›c.
-- Kiá»ƒm tra Logstash pipeline vÃ  index `microservices-logs-*`.
+- Kiểm tra `elasticsearch`, `logstash`, `kibana` đang chạy.
+- Kiểm tra app log có access log ở stdout trước.
+- Kiểm tra Logstash pipeline và index `microservices-logs-*`.
 
-### KhÃ´ng nÃªn log gÃ¬?
+### Không nên log gì?
 
-KhÃ´ng log:
+Không log:
 
-- Password hoáº·c temporary password.
+- Password hoặc temporary password.
 - Access/refresh token.
 - `Authorization` header.
 - Keycloak client secret.
 - Azure/storage account key.
-- Raw request body chá»©a dá»¯ liá»‡u nháº¡y cáº£m.
+- Raw request body chứa dữ liệu nhạy cảm.
 
 ---
 
-## 12. Demo Script Nhanh 5 PhÃºt
+## 12. Demo Script Nhanh 5 Phút
 
 ```powershell
 # 1. Health
 pnpm run smoke
 
-# 2. Gá»i audited action
+# 2. Gọi audited action
 curl -i -X PATCH "http://localhost:8000/admin/users/$STUDENT_ID/license-tier" `
   -H "Authorization: Bearer $TOKEN_ADMIN" `
   -H "Content-Type: application/json" `
@@ -629,67 +629,67 @@ curl -s "http://localhost:8000/admin/audit-logs?action=USER_LICENSE_ASSIGNED&res
 docker compose exec db-audit psql -U user -d audit_db -c "SELECT \"serviceName\", action, \"resourceId\", metadata FROM audit_logs ORDER BY \"occurredAt\" DESC LIMIT 3;"
 ```
 
-Expected: cÃ¹ng má»™t action xuáº¥t hiá»‡n á»Ÿ outbox producer vÃ  audit trail táº­p trung, cÃ³ `correlationId` Ä‘á»ƒ ná»‘i vá»›i access log.
+Expected: cùng một action xuất hiện ở outbox producer và audit trail tập trung, có `correlationId` để nối với access log.
 
 
 
 <!-- Merged legacy testing guide -->
-# Course Service â€” HÆ°á»›ng Dáº«n Test API Chi Tiáº¿t
+# Course Service — Hướng Dẫn Test API Chi Tiết
 
-> TÃ i liá»‡u nÃ y hÆ°á»›ng dáº«n test toÃ n bá»™ API cá»§a `course-service`, cáº£ khi gá»i **trá»±c tiáº¿p** (bá» qua Kong, dÃ¹ng cho dev/debug) láº«n khi gá»i **qua Kong** (production path).
+> Tài liệu này hướng dẫn test toàn bộ API của `course-service`, cả khi gọi **trực tiếp** (bỏ qua Kong, dùng cho dev/debug) lẫn khi gọi **qua Kong** (production path).
 
 ---
 
-## Má»¥c lá»¥c
+## Mục lục
 
-1. [Khá»Ÿi Ä‘á»™ng mÃ´i trÆ°á»ng](#1-khá»Ÿi-Ä‘á»™ng-mÃ´i-trÆ°á»ng)
-2. [Kiáº¿n trÃºc luá»“ng request](#2-kiáº¿n-trÃºc-luá»“ng-request)
-3. [Chuáº©n bá»‹ â€” Táº¡o dá»¯ liá»‡u máº«u](#3-chuáº©n-bá»‹--táº¡o-dá»¯-liá»‡u-máº«u)
+1. [Khởi động môi trường](#1-khởi-động-môi-trường)
+2. [Kiến trúc luồng request](#2-kiến-trúc-luồng-request)
+3. [Chuẩn bị — Tạo dữ liệu mẫu](#3-chuẩn-bị--tạo-dữ-liệu-mẫu)
 4. [Test Course endpoints](#4-test-course-endpoints)
 5. [Test Enrollment endpoints](#5-test-enrollment-endpoints)
-6. [Test luá»“ng RabbitMQ event](#6-test-luá»“ng-rabbitmq-event)
-7. [Kiá»ƒm tra Database trá»±c tiáº¿p](#7-kiá»ƒm-tra-database-trá»±c-tiáº¿p)
-8. [Test Security Audit VÃ  Outbox](#8-test-security-audit-vÃ -outbox)
+6. [Test luồng RabbitMQ event](#6-test-luồng-rabbitmq-event)
+7. [Kiểm tra Database trực tiếp](#7-kiểm-tra-database-trực-tiếp)
+8. [Test Security Audit Và Outbox](#8-test-security-audit-và-outbox)
 9. [Troubleshooting](#9-troubleshooting)
 
 ---
 
-## 1. Khá»Ÿi Ä‘á»™ng mÃ´i trÆ°á»ng
+## 1. Khởi động môi trường
 
-### BÆ°á»›c 1.1 â€” Start infrastructure
+### Bước 1.1 — Start infrastructure
 
 ```bash
-# Tá»« root cá»§a project
+# Từ root của project
 pnpm run infra:up
 ```
 
-Chá» khoáº£ng 10-15 giÃ¢y Ä‘á»ƒ Consul khá»Ÿi Ä‘á»™ng vÃ  seed xong.
+Chờ khoảng 10-15 giây để Consul khởi động và seed xong.
 
-**Kiá»ƒm tra Consul healthy:**
+**Kiểm tra Consul healthy:**
 
 ```bash
 curl http://localhost:8500/v1/status/leader
-# Káº¿t quáº£ mong Ä‘á»£i: "..." (Ä‘á»‹a chá»‰ leader node)
+# Kết quả mong đợi: "..." (địa chỉ leader node)
 ```
 
 **Consul UI:** http://localhost:8500/ui
 
-### BÆ°á»›c 1.2 â€” Seed config vÃ o Consul
+### Bước 1.2 — Seed config vào Consul
 
 ```bash
 pnpm run consul:seed:local
 ```
 
-Sau khi seed, kiá»ƒm tra config course-service:
+Sau khi seed, kiểm tra config course-service:
 
 ```bash
 pnpm run consul:list
 pnpm run consul:get -- config/development-local/course-service/redis.url
 # Expected: redis://localhost:6379
-# TÃ¬m cÃ¡c key: config/development-local/course-service/...
+# Tìm các key: config/development-local/course-service/...
 ```
 
-### BÆ°á»›c 1.3 â€” Migrate database
+### Bước 1.3 — Migrate database
 
 ```bash
 cd apps/course-service
@@ -697,58 +697,58 @@ pnpm run db:generate
 pnpm run db:migrate
 ```
 
-Hoáº·c náº¿u migration Ä‘Ã£ tá»“n táº¡i:
+Hoặc nếu migration đã tồn tại:
 
 ```bash
 cd apps/course-service
 pnpm run db:deploy
 ```
 
-**Kiá»ƒm tra schema:**
+**Kiểm tra schema:**
 
 ```bash
 pnpm run db:studio
-# Má»Ÿ browser táº¡i http://localhost:5555
+# Mở browser tại http://localhost:5555
 ```
 
-### BÆ°á»›c 1.4 â€” Start course-service
+### Bước 1.4 — Start course-service
 
 ```bash
-# Tá»« root
+# Từ root
 pnpm run dev --filter=course-service
 ```
 
-**Kiá»ƒm tra service Ä‘ang cháº¡y:**
+**Kiểm tra service đang chạy:**
 
 ```bash
 curl http://localhost:3004/docs-json
-# Káº¿t quáº£: OpenAPI JSON spec
+# Kết quả: OpenAPI JSON spec
 ```
 
 **Swagger UI:** http://localhost:3004/docs
 
 ---
 
-## 2. Kiáº¿n trÃºc luá»“ng request
+## 2. Kiến trúc luồng request
 
 ```
 Client (curl/Postman)
-    â”‚
-    â”œâ”€â”€â”€ DIRECT (dev/debug) â”€â”€â†’ http://localhost:3004  â†â”€â”€ Port course-service local
-    â”‚                            (Æ¯u tiÃªn JWT tháº­t; x-user-id chá»‰ lÃ  fallback legacy)
-    â”‚
-    â””â”€â”€â”€ VIA KONG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â†’ http://localhost:8000  â†â”€â”€ Kong gateway
-                                 (Cáº§n JWT há»£p lá»‡ tá»« Keycloak)
-                                 Service Ä‘á»c actor tá»« JWT.sub
+    │
+    ├─── DIRECT (dev/debug) ──→ http://localhost:3004  ←── Port course-service local
+    │                            (Ưu tiên JWT thật; x-user-id chỉ là fallback legacy)
+    │
+    └─── VIA KONG ────────────→ http://localhost:8000  ←── Kong gateway
+                                 (Cần JWT hợp lệ từ Keycloak)
+                                 Service đọc actor từ JWT.sub
 ```
 
-> **LÆ°u Ã½:** course-service hiá»‡n validate JWT/RBAC táº¡i service vÃ  Ä‘á»c user tá»« `@AuthenticatedUser()`. CÃ¡c lá»‡nh `x-user-id` trong guide nÃ y chá»‰ cÃ²n dÃ¹ng cho debug legacy khi endpoint váº«n cÃ³ fallback; frontend vÃ  demo chuáº©n pháº£i gá»­i `Authorization: Bearer <access_token>`.
+> **Lưu ý:** course-service hiện validate JWT/RBAC tại service và đọc user từ `@AuthenticatedUser()`. Các lệnh `x-user-id` trong guide này chỉ còn dùng cho debug legacy khi endpoint vẫn có fallback; frontend và demo chuẩn phải gửi `Authorization: Bearer <access_token>`.
 
 ---
 
-## 3. Chuáº©n bá»‹ â€” Táº¡o dá»¯ liá»‡u máº«u
+## 3. Chuẩn bị — Tạo dữ liệu mẫu
 
-### ID máº«u dÃ¹ng xuyÃªn suá»‘t tÃ i liá»‡u nÃ y
+### ID mẫu dùng xuyên suốt tài liệu này
 
 ```
 INSTRUCTOR_ID = instructor-uuid-0001
@@ -756,7 +756,7 @@ STUDENT_ID    = student-uuid-0002
 ADMIN_ID      = admin-uuid-0003
 ```
 
-> ÄÃ¢y chá»‰ lÃ  UUID giáº£ (user-service khÃ´ng cáº§n cháº¡y vÃ¬ cross-service ref khÃ´ng cÃ³ FK).
+> Đây chỉ là UUID giả (user-service không cần chạy vì cross-service ref không có FK).
 
 ---
 
@@ -764,29 +764,29 @@ ADMIN_ID      = admin-uuid-0003
 
 > Course list/detail uses Redis cache-aside with 600-second TTL. If Redis is unavailable, requests fall back to PostgreSQL and keep the same response shape.
 
-> Táº¥t cáº£ cÃ¡c lá»‡nh curl sau gá»i **trá»±c tiáº¿p** vÃ o course-service (port 3004). Khi demo chuáº©n, thay cÃ¡c header `x-user-id` báº±ng `Authorization: Bearer <access_token>` láº¥y tá»« Keycloak.
+> Tất cả các lệnh curl sau gọi **trực tiếp** vào course-service (port 3004). Khi demo chuẩn, thay các header `x-user-id` bằng `Authorization: Bearer <access_token>` lấy từ Keycloak.
 
 ---
 
-### 4.1 POST /admin/courses â€” Táº¡o khÃ³a há»c
+### 4.1 POST /admin/courses — Tạo khóa học
 
-**Happy path â€” táº¡o khÃ³a há»c Ä‘áº§y Ä‘á»§:**
+**Happy path — tạo khóa học đầy đủ:**
 
 ```bash
 curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
   -d '{
-    "title": "KhÃ³a há»c B2 â€“ CÆ¡ báº£n",
+    "title": "Khóa học B2 – Cơ bản",
     "licenseCategory": "B2",
-    "description": "KhÃ³a há»c lÃ½ thuyáº¿t vÃ  thá»±c hÃ nh thi báº±ng B2",
-    "duration": "3 thÃ¡ng",
+    "description": "Khóa học lý thuyết và thực hành thi bằng B2",
+    "duration": "3 tháng",
     "tuitionFee": 5000000,
     "capacity": 30,
     "instructorIds": ["instructor-uuid-0001"],
     "requirement": {
       "minAge": 18,
-      "prerequisites": "CÃ³ giáº¥y phÃ©p B1",
+      "prerequisites": "Có giấy phép B1",
       "attendanceRate": 80,
       "minPassScore": 80,
       "requiredExams": 2
@@ -794,7 +794,7 @@ curl -s -X POST http://localhost:3004/admin/courses \
   }' | jq .
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (201):**
+**Kết quả mong đợi (201):**
 
 ```json
 {
@@ -805,12 +805,12 @@ curl -s -X POST http://localhost:3004/admin/courses \
   "path": "/courses",
   "data": {
     "id": "<course-uuid>",
-    "title": "KhÃ³a há»c B2 â€“ CÆ¡ báº£n",
-    "description": "KhÃ³a há»c lÃ½ thuyáº¿t vÃ  thá»±c hÃ nh thi báº±ng B2",
+    "title": "Khóa học B2 – Cơ bản",
+    "description": "Khóa học lý thuyết và thực hành thi bằng B2",
     "licenseCategory": "B2",
     "status": "DRAFT",
     "totalLessons": 0,
-    "duration": "3 thÃ¡ng",
+    "duration": "3 tháng",
     "tuitionFee": 5000000,
     "capacity": 30,
     "createdById": "instructor-uuid-0001",
@@ -821,7 +821,7 @@ curl -s -X POST http://localhost:3004/admin/courses \
     "requirement": {
       "id": "<requirement-uuid>",
       "minAge": 18,
-      "prerequisites": "CÃ³ giáº¥y phÃ©p B1",
+      "prerequisites": "Có giấy phép B1",
       "attendanceRate": 80,
       "minPassScore": 80,
       "requiredExams": 2
@@ -831,10 +831,10 @@ curl -s -X POST http://localhost:3004/admin/courses \
 }
 ```
 
-> **LÆ°u Ã½:** LÆ°u láº¡i `course-uuid` tá»« response Ä‘á»ƒ dÃ¹ng cho cÃ¡c bÆ°á»›c tiáº¿p theo.
+> **Lưu ý:** Lưu lại `course-uuid` từ response để dùng cho các bước tiếp theo.
 
 ```bash
-# LÆ°u course ID
+# Lưu course ID
 COURSE_ID=$(curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
@@ -843,26 +843,26 @@ COURSE_ID=$(curl -s -X POST http://localhost:3004/admin/courses \
 echo "COURSE_ID=$COURSE_ID"
 ```
 
-**Táº¡o thÃªm course A1 Ä‘á»ƒ test list/filter:**
+**Tạo thêm course A1 để test list/filter:**
 
 ```bash
 curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
   -d '{
-    "title": "KhÃ³a há»c A1 â€“ Xe mÃ¡y 50cc",
+    "title": "Khóa học A1 – Xe máy 50cc",
     "licenseCategory": "A1",
     "tuitionFee": 2000000
   }' | jq '.data.id'
 ```
 
-**Case: Thiáº¿u field báº¯t buá»™c (expect 400):**
+**Case: Thiếu field bắt buộc (expect 400):**
 
 ```bash
 curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
-  -d '{"title": "KhÃ´ng cÃ³ licenseCategory"}' | jq .
+  -d '{"title": "Không có licenseCategory"}' | jq .
 ```
 
 ```json
@@ -878,34 +878,34 @@ curl -s -X POST http://localhost:3004/admin/courses \
 
 ---
 
-### 4.2 GET /courses â€” Danh sÃ¡ch khÃ³a há»c
+### 4.2 GET /courses — Danh sách khóa học
 
-**Láº¥y táº¥t cáº£:**
+**Lấy tất cả:**
 
 ```bash
 curl -s "http://localhost:3004/admin/courses" | jq '.data | {total, page, size}'
 ```
 
-**Lá»c theo háº¡ng báº±ng:**
+**Lọc theo hạng bằng:**
 
 ```bash
 curl -s "http://localhost:3004/courses?licenseCategory=B2" | jq '.data.items | length'
 ```
 
-**Lá»c theo status:**
+**Lọc theo status:**
 
 ```bash
 curl -s "http://localhost:3004/courses?status=DRAFT" | jq '.data.items | map(.status)'
 curl -s "http://localhost:3004/courses?status=ACTIVE" | jq '.data.items | map(.title)'
 ```
 
-**PhÃ¢n trang:**
+**Phân trang:**
 
 ```bash
 curl -s "http://localhost:3004/courses?page=1&size=1" | jq '.data | {total, page, size, items_count: (.items | length)}'
 ```
 
-**Káº¿t há»£p filter:**
+**Kết hợp filter:**
 
 ```bash
 curl -s "http://localhost:3004/courses?licenseCategory=B2&status=DRAFT" | jq .
@@ -913,13 +913,13 @@ curl -s "http://localhost:3004/courses?licenseCategory=B2&status=DRAFT" | jq .
 
 ---
 
-### 4.3 GET /courses/:id â€” Chi tiáº¿t khÃ³a há»c
+### 4.3 GET /courses/:id — Chi tiết khóa học
 
 ```bash
 curl -s "http://localhost:3004/courses/$COURSE_ID" | jq .data
 ```
 
-**Case: ID khÃ´ng tá»“n táº¡i (expect 404):**
+**Case: ID không tồn tại (expect 404):**
 
 ```bash
 curl -s "http://localhost:3004/courses/non-existent-uuid" | jq .
@@ -937,21 +937,21 @@ curl -s "http://localhost:3004/courses/non-existent-uuid" | jq .
 
 ---
 
-### 4.4 PATCH /admin/courses/:id â€” Cáº­p nháº­t khÃ³a há»c
+### 4.4 PATCH /admin/courses/:id — Cập nhật khóa học
 
-**Cáº­p nháº­t metadata:**
+**Cập nhật metadata:**
 
 ```bash
 curl -s -X PATCH "http://localhost:3004/courses/$COURSE_ID" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "KhÃ³a há»c B2 â€“ NÃ¢ng cao",
+    "title": "Khóa học B2 – Nâng cao",
     "tuitionFee": 6000000,
-    "duration": "4 thÃ¡ng"
+    "duration": "4 tháng"
   }' | jq '.data | {title, tuitionFee, duration}'
 ```
 
-**Cáº­p nháº­t requirement:**
+**Cập nhật requirement:**
 
 ```bash
 curl -s -X PATCH "http://localhost:3004/courses/$COURSE_ID" \
@@ -968,61 +968,61 @@ curl -s -X PATCH "http://localhost:3004/courses/$COURSE_ID" \
 
 ---
 
-### 4.5 POST /admin/courses/:id/lessons â€” ThÃªm bÃ i há»c
+### 4.5 POST /admin/courses/:id/lessons — Thêm bài học
 
-**ThÃªm bÃ i há»c 1:**
+**Thêm bài học 1:**
 
 ```bash
 curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "BÃ i 1 â€“ Biá»ƒn bÃ¡o giao thÃ´ng",
+    "title": "Bài 1 – Biển báo giao thông",
     "order": 1,
-    "content": "# Biá»ƒn bÃ¡o\nNá»™i dung markdown..."
+    "content": "# Biển báo\nNội dung markdown..."
   }' | jq '.data | {totalLessons, lessons_count: (.lessons | length)}'
 ```
 
-**ThÃªm bÃ i há»c 2:**
+**Thêm bài học 2:**
 
 ```bash
 curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "BÃ i 2 â€“ Ká»¹ nÄƒng lÃ¡i xe",
+    "title": "Bài 2 – Kỹ năng lái xe",
     "order": 2
   }' | jq '.data.totalLessons'
-# Káº¿t quáº£ mong Ä‘á»£i: 2
+# Kết quả mong đợi: 2
 ```
 
-**ThÃªm bÃ i há»c 3 (Ä‘á»ƒ test complete enrollment):**
+**Thêm bài học 3 (để test complete enrollment):**
 
 ```bash
 LESSON_1_ID=$(curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{"title":"Lesson A","order":1}' | jq -r '.data.lessons[0].id')
 
-# Láº¥y lesson IDs tá»« course
+# Lấy lesson IDs từ course
 curl -s "http://localhost:3004/courses/$COURSE_ID" | jq '.data.lessons | map({id, title, order})'
 ```
 
-> **LÆ°u Ã½:** LÆ°u cÃ¡c `lesson_id` tá»« response Ä‘á»ƒ dÃ¹ng cho test complete-lesson.
+> **Lưu ý:** Lưu các `lesson_id` từ response để dùng cho test complete-lesson.
 
-**Case: Thiáº¿u field báº¯t buá»™c (expect 400):**
+**Case: Thiếu field bắt buộc (expect 400):**
 
 ```bash
 curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
-  -d '{"content": "KhÃ´ng cÃ³ title vÃ  order"}' | jq .
+  -d '{"content": "Không có title và order"}' | jq .
 ```
 
 ---
 
-### 4.6 PATCH /admin/courses/:id/activate â€” KÃ­ch hoáº¡t khÃ³a há»c
+### 4.6 PATCH /admin/courses/:id/activate — Kích hoạt khóa học
 
-**Case: KÃ­ch hoáº¡t khi chÆ°a cÃ³ lesson (expect 422):**
+**Case: Kích hoạt khi chưa có lesson (expect 422):**
 
 ```bash
-# Táº¡o course rá»—ng rá»“i thá»­ activate
+# Tạo course rỗng rồi thử activate
 EMPTY_COURSE_ID=$(curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
@@ -1041,33 +1041,33 @@ curl -s -X PATCH "http://localhost:3004/admin/courses/$EMPTY_COURSE_ID/activate"
 }
 ```
 
-**Happy path â€” KÃ­ch hoáº¡t course cÃ³ lesson:**
+**Happy path — Kích hoạt course có lesson:**
 
 ```bash
 curl -s -X PATCH "http://localhost:3004/admin/courses/$COURSE_ID/activate" | jq '.data.status'
-# Káº¿t quáº£ mong Ä‘á»£i: "ACTIVE"
+# Kết quả mong đợi: "ACTIVE"
 ```
 
-**XÃ¡c nháº­n filter status=ACTIVE:**
+**Xác nhận filter status=ACTIVE:**
 
 ```bash
 curl -s "http://localhost:3004/courses?status=ACTIVE" | jq '.data.items | map(.title)'
-# Pháº£i tháº¥y course vá»«a activate
+# Phải thấy course vừa activate
 ```
 
 ---
 
-### 4.7 DELETE /admin/courses/:id/lessons/:lessonId â€” XÃ³a bÃ i há»c
+### 4.7 DELETE /admin/courses/:id/lessons/:lessonId — Xóa bài học
 
 ```bash
-# Láº¥y lessonId tá»« course
+# Lấy lessonId từ course
 LESSON_ID=$(curl -s "http://localhost:3004/courses/$COURSE_ID" | jq -r '.data.lessons[-1].id')
 
 curl -s -X DELETE "http://localhost:3004/admin/courses/$COURSE_ID/lessons/$LESSON_ID" \
   | jq '.data | {totalLessons}'
 ```
 
-**Case: Lesson khÃ´ng tá»“n táº¡i (expect 404):**
+**Case: Lesson không tồn tại (expect 404):**
 
 ```bash
 curl -s -X DELETE "http://localhost:3004/admin/courses/$COURSE_ID/lessons/non-existent-lesson-id" | jq .
@@ -1085,27 +1085,27 @@ curl -s -X DELETE "http://localhost:3004/admin/courses/$COURSE_ID/lessons/non-ex
 
 ---
 
-### 4.8 POST /admin/courses/:id/materials â€” ThÃªm tÃ i liá»‡u
+### 4.8 POST /admin/courses/:id/materials — Thêm tài liệu
 
-**ThÃªm PDF:**
+**Thêm PDF:**
 
 ```bash
 curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/materials" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "GiÃ¡o trÃ¬nh lÃ½ thuyáº¿t B2",
+    "title": "Giáo trình lý thuyết B2",
     "fileUrl": "https://example.com/giao-trinh.pdf",
     "type": "PDF"
   }' | jq '.data.materials'
 ```
 
-**ThÃªm video:**
+**Thêm video:**
 
 ```bash
 curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/materials" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Video hÆ°á»›ng dáº«n thá»±c hÃ nh",
+    "title": "Video hướng dẫn thực hành",
     "fileUrl": "https://example.com/video.mp4",
     "type": "VIDEO"
   }' | jq '.data.materials | length'
@@ -1113,15 +1113,15 @@ curl -s -X POST "http://localhost:3004/admin/courses/$COURSE_ID/materials" \
 
 ---
 
-### 4.9 POST /courses/:id/enroll â€” ÄÄƒng kÃ½ khÃ³a há»c
+### 4.9 POST /courses/:id/enroll — Đăng ký khóa học
 
-> Äáº£m báº£o course Ä‘ang á»Ÿ status ACTIVE trÆ°á»›c khi test enroll.
+> Đảm bảo course đang ở status ACTIVE trước khi test enroll.
 
-**Chuáº©n bá»‹ license tier read model cho student:**
+**Chuẩn bị license tier read model cho student:**
 
-Course-service enroll dá»±a trÃªn read model Ä‘Æ°á»£c sync tá»« event `user.student.license-assigned`. TrÆ°á»›c khi gá»i enroll trá»±c tiáº¿p trong mÃ´i trÆ°á»ng test, publish event vÃ o queue `course_service_events` hoáº·c dÃ¹ng flow user-service assign license tier.
+Course-service enroll dựa trên read model được sync từ event `user.student.license-assigned`. Trước khi gọi enroll trực tiếp trong môi trường test, publish event vào queue `course_service_events` hoặc dùng flow user-service assign license tier.
 
-Payload RabbitMQ máº«u cho course `$COURSE_ID` cÃ³ `licenseCategory = B2`:
+Payload RabbitMQ mẫu cho course `$COURSE_ID` có `licenseCategory = B2`:
 
 ```json
 {
@@ -1139,7 +1139,7 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
   -H "x-user-id: student-uuid-0002" | jq .data
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (201):**
+**Kết quả mong đợi (201):**
 
 ```json
 {
@@ -1153,13 +1153,13 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
 }
 ```
 
-> **LÆ°u láº¡i enrollment ID:**
+> **Lưu lại enrollment ID:**
 > ```bash
 > ENROLLMENT_ID=$(curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
 >   -H "x-user-id: student-uuid-NEW" | jq -r '.data.id')
 > ```
 
-**Case: ÄÄƒng kÃ½ khÃ³a há»c DRAFT (expect 422):**
+**Case: Đăng ký khóa học DRAFT (expect 422):**
 
 ```bash
 curl -s -X POST "http://localhost:3004/courses/$EMPTY_COURSE_ID/enroll" \
@@ -1176,7 +1176,7 @@ curl -s -X POST "http://localhost:3004/courses/$EMPTY_COURSE_ID/enroll" \
 }
 ```
 
-**Case: ÄÄƒng kÃ½ láº§n 2 (expect 409):**
+**Case: Đăng ký lần 2 (expect 409):**
 
 ```bash
 curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
@@ -1193,7 +1193,7 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
 }
 ```
 
-**Case: Student chÆ°a cÃ³ license tier sync sang course-service (expect 422):**
+**Case: Student chưa có license tier sync sang course-service (expect 422):**
 
 ```bash
 curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
@@ -1210,9 +1210,9 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
 }
 ```
 
-**Case: License tier khÃ´ng khá»›p licenseCategory cá»§a course (expect 422):**
+**Case: License tier không khớp licenseCategory của course (expect 422):**
 
-Publish event `user.student.license-assigned` cho `student-wrong-license` vá»›i `newLicenseTier = "A1"`, rá»“i enroll vÃ o course B2:
+Publish event `user.student.license-assigned` cho `student-wrong-license` với `newLicenseTier = "A1"`, rồi enroll vào course B2:
 
 ```bash
 curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
@@ -1229,28 +1229,28 @@ curl -s -X POST "http://localhost:3004/courses/$COURSE_ID/enroll" \
 }
 ```
 
-**Case: KhÃ³a há»c háº¿t chá»— (expect 422):**
+**Case: Khóa học hết chỗ (expect 422):**
 
 ```bash
-# Táº¡o course vá»›i capacity=1 vÃ  Ä‘Äƒng kÃ½ student thá»© 2
+# Tạo course với capacity=1 và đăng ký student thứ 2
 SMALL_COURSE_ID=$(curl -s -X POST http://localhost:3004/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: instructor-uuid-0001" \
   -d '{"title":"Small Course","licenseCategory":"C","capacity":1}' | jq -r '.data.id')
 
-# ThÃªm lesson vÃ  activate
+# Thêm lesson và activate
 curl -s -X POST "http://localhost:3004/admin/courses/$SMALL_COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{"title":"Only lesson","order":1}' > /dev/null
 curl -s -X PATCH "http://localhost:3004/admin/courses/$SMALL_COURSE_ID/activate" > /dev/null
 
-# ÄÄƒng kÃ½ student 1 (thÃ nh cÃ´ng)
-# TrÆ°á»›c Ä‘Ã³ cáº§n sync license tier C cho student-a qua event user.student.license-assigned.
+# Đăng ký student 1 (thành công)
+# Trước đó cần sync license tier C cho student-a qua event user.student.license-assigned.
 curl -s -X POST "http://localhost:3004/courses/$SMALL_COURSE_ID/enroll" \
-  -H "x-user-id: student-a" | jq '.success'  # â†’ true
+  -H "x-user-id: student-a" | jq '.success'  # → true
 
-# ÄÄƒng kÃ½ student 2 (expect 422)
-# TrÆ°á»›c Ä‘Ã³ cáº§n sync license tier C cho student-b qua event user.student.license-assigned.
+# Đăng ký student 2 (expect 422)
+# Trước đó cần sync license tier C cho student-b qua event user.student.license-assigned.
 curl -s -X POST "http://localhost:3004/courses/$SMALL_COURSE_ID/enroll" \
   -H "x-user-id: student-b" | jq .
 ```
@@ -1269,18 +1269,18 @@ curl -s -X POST "http://localhost:3004/courses/$SMALL_COURSE_ID/enroll" \
 
 ## 5. Test Enrollment endpoints
 
-> Cáº§n cÃ³ `ENROLLMENT_ID` há»£p lá»‡. Láº¥y tá»« bÆ°á»›c 4.9 hoáº·c táº¡o má»›i.
+> Cần có `ENROLLMENT_ID` hợp lệ. Lấy từ bước 4.9 hoặc tạo mới.
 
 ---
 
-### 5.1 GET /enrollments â€” Danh sÃ¡ch enrollment cá»§a student
+### 5.1 GET /enrollments — Danh sách enrollment của student
 
 ```bash
 curl -s "http://localhost:3004/enrollments" \
   -H "x-user-id: student-uuid-0002" | jq '.data | {total, items_count: (.items | length)}'
 ```
 
-**Lá»c theo status:**
+**Lọc theo status:**
 
 ```bash
 curl -s "http://localhost:3004/enrollments?status=ACTIVE" \
@@ -1289,13 +1289,13 @@ curl -s "http://localhost:3004/enrollments?status=ACTIVE" \
 
 ---
 
-### 5.2 GET /enrollments/:id â€” Chi tiáº¿t enrollment
+### 5.2 GET /enrollments/:id — Chi tiết enrollment
 
 ```bash
 curl -s "http://localhost:3004/enrollments/$ENROLLMENT_ID" | jq .data
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i:**
+**Kết quả mong đợi:**
 
 ```json
 {
@@ -1309,7 +1309,7 @@ curl -s "http://localhost:3004/enrollments/$ENROLLMENT_ID" | jq .data
 }
 ```
 
-**Case: KhÃ´ng tÃ¬m tháº¥y (expect 404):**
+**Case: Không tìm thấy (expect 404):**
 
 ```bash
 curl -s "http://localhost:3004/enrollments/non-existent-id" | jq .
@@ -1317,9 +1317,9 @@ curl -s "http://localhost:3004/enrollments/non-existent-id" | jq .
 
 ---
 
-### 5.3 POST /enrollments/:id/lessons/:lessonId/complete â€” HoÃ n thÃ nh bÃ i há»c
+### 5.3 POST /enrollments/:id/lessons/:lessonId/complete — Hoàn thành bài học
 
-**Setup â€” Láº¥y lesson IDs tá»« course:**
+**Setup — Lấy lesson IDs từ course:**
 
 ```bash
 LESSONS=$(curl -s "http://localhost:3004/courses/$COURSE_ID" | jq '.data.lessons | map(.id)')
@@ -1329,14 +1329,14 @@ echo "LESSON_1=$LESSON_1_ID"
 echo "LESSON_2=$LESSON_2_ID"
 ```
 
-**HoÃ n thÃ nh bÃ i há»c 1:**
+**Hoàn thành bài học 1:**
 
 ```bash
 curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSON_1_ID/complete" \
   | jq '.data | {progress, status}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (progress = 50% náº¿u cÃ³ 2 bÃ i):**
+**Kết quả mong đợi (progress = 50% nếu có 2 bài):**
 
 ```json
 {
@@ -1345,14 +1345,14 @@ curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSO
 }
 ```
 
-**HoÃ n thÃ nh bÃ i há»c 2 â†’ enrollment COMPLETED:**
+**Hoàn thành bài học 2 → enrollment COMPLETED:**
 
 ```bash
 curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSON_2_ID/complete" \
   | jq '.data | {progress, status, completedAt}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (progress = 100%):**
+**Kết quả mong đợi (progress = 100%):**
 
 ```json
 {
@@ -1362,9 +1362,9 @@ curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSO
 }
 ```
 
-> **LÆ°u Ã½:** KhÃ´ng cÃ³ per-lesson tracking â€” má»—i láº§n gá»i `complete` tÄƒng `progress += 100/totalLessons`. KhÃ´ng cÃ³ `LESSON_ALREADY_COMPLETED` vÃ¬ khÃ´ng track per-lesson state.
+> **Lưu ý:** Không có per-lesson tracking — mỗi lần gọi `complete` tăng `progress += 100/totalLessons`. Không có `LESSON_ALREADY_COMPLETED` vì không track per-lesson state.
 
-**Case: Enrollment Ä‘Ã£ COMPLETED (expect 422):**
+**Case: Enrollment đã COMPLETED (expect 422):**
 
 ```bash
 curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSON_1_ID/complete" \
@@ -1383,36 +1383,36 @@ curl -s -X POST "http://localhost:3004/enrollments/$ENROLLMENT_ID/lessons/$LESSO
 
 ---
 
-## 6. Test luá»“ng RabbitMQ event
+## 6. Test luồng RabbitMQ event
 
-### 6.1 Kiá»ƒm tra RabbitMQ Ä‘ang cháº¡y
+### 6.1 Kiểm tra RabbitMQ đang chạy
 
 **RabbitMQ Management UI:** http://localhost:15672
 Username: `guest` / Password: `guest`
 
-VÃ o tab **Queues** Ä‘á»ƒ tháº¥y:
+Vào tab **Queues** để thấy:
 
-- `course_service_events` â€” queue course-service CONSUME (nháº­n event tá»« user-service)
-- `course_service_publish` â€” queue course-service PUBLISH events vÃ o
+- `course_service_events` — queue course-service CONSUME (nhận event từ user-service)
+- `course_service_publish` — queue course-service PUBLISH events vào
 
-### 6.2 Kiá»ƒm tra events Ä‘Æ°á»£c publish sau enroll
+### 6.2 Kiểm tra events được publish sau enroll
 
-Sau khi `POST /courses/:id/enroll` thÃ nh cÃ´ng, vÃ o tab **Queues** â†’ `course_service_publish` â†’ **Get messages** Ä‘á»ƒ xem event `course.enrollment.created`.
+Sau khi `POST /courses/:id/enroll` thành công, vào tab **Queues** → `course_service_publish` → **Get messages** để xem event `course.enrollment.created`.
 
-### 6.3 Kiá»ƒm tra events sau complete lesson
+### 6.3 Kiểm tra events sau complete lesson
 
 Sau khi `POST /enrollments/:id/lessons/:lessonId/complete`:
-- TÃ¬m event `course.lesson.completed` trong queue
-- Náº¿u enrollment = 100%, tÃ¬m thÃªm `course.enrollment.completed`
+- Tìm event `course.lesson.completed` trong queue
+- Nếu enrollment = 100%, tìm thêm `course.enrollment.completed`
 
 ### 6.4 Simulate event `user.student.license-assigned`
 
-Publish thá»§ cÃ´ng vÃ o `course_service_events`:
+Publish thủ công vào `course_service_events`:
 
-**CÃ¡ch 1: RabbitMQ Management UI**
+**Cách 1: RabbitMQ Management UI**
 
-1. VÃ o http://localhost:15672
-2. Tab **Queues** â†’ `course_service_events` â†’ **Publish message**
+1. Vào http://localhost:15672
+2. Tab **Queues** → `course_service_events` → **Publish message**
 3. Routing key: `user.student.license-assigned`
 4. Payload theo Nest RMQ packet format:
 ```json
@@ -1428,20 +1428,20 @@ Publish thá»§ cÃ´ng vÃ o `course_service_events`:
 ```
 5. Click **Publish message**
 
-**Káº¿t quáº£ mong Ä‘á»£i:** Course-service log: `Received user.student.license-assigned for studentId=student-uuid-0002, newLicenseTier=B2` vÃ  table `student_license_profiles` cÃ³ record tÆ°Æ¡ng á»©ng.
+**Kết quả mong đợi:** Course-service log: `Received user.student.license-assigned for studentId=student-uuid-0002, newLicenseTier=B2` và table `student_license_profiles` có record tương ứng.
 
 ---
 
-## 7. Kiá»ƒm tra Database trá»±c tiáº¿p
+## 7. Kiểm tra Database trực tiếp
 
-### DÃ¹ng Prisma Studio
+### Dùng Prisma Studio
 
 ```bash
 cd apps/course-service
 pnpm run db:studio
 ```
 
-Má»Ÿ http://localhost:5555 Ä‘á»ƒ xem cÃ¡c báº£ng:
+Mở http://localhost:5555 để xem các bảng:
 - `courses`
 - `lessons`
 - `course_instructors`
@@ -1450,25 +1450,25 @@ Má»Ÿ http://localhost:5555 Ä‘á»ƒ xem cÃ¡c báº£ng:
 - `course_enrollments`
 - `student_license_profiles`
 
-### DÃ¹ng psql trá»±c tiáº¿p
+### Dùng psql trực tiếp
 
 ```bash
 psql postgresql://user:password@localhost:5435/course_db
 ```
 
 ```sql
--- Xem táº¥t cáº£ courses vÃ  sá»‘ bÃ i há»c
+-- Xem tất cả courses và số bài học
 SELECT id, title, "licenseCategory", status, "totalLessons", "tuitionFee", capacity
 FROM courses
 ORDER BY "createdAt" DESC;
 
--- Xem lessons cá»§a má»™t course
+-- Xem lessons của một course
 SELECT id, title, "order", content
 FROM lessons
 WHERE "courseId" = '<course-uuid>'
 ORDER BY "order";
 
--- Xem enrollments vÃ  tiáº¿n Ä‘á»™
+-- Xem enrollments và tiến độ
 SELECT
   id,
   "studentId",
@@ -1479,12 +1479,12 @@ SELECT
 FROM course_enrollments
 ORDER BY "enrolledAt" DESC;
 
--- Xem license tier read model sync tá»« user-service
+-- Xem license tier read model sync từ user-service
 SELECT "studentId", "licenseTier", "syncedAt", "updatedAt"
 FROM student_license_profiles
 ORDER BY "updatedAt" DESC;
 
--- Äáº¿m sá»‘ enrollment theo course (kiá»ƒm tra capacity)
+-- Đếm số enrollment theo course (kiểm tra capacity)
 SELECT "courseId", COUNT(*) AS enrolled_count
 FROM course_enrollments
 WHERE status != 'DROPPED'
@@ -1493,11 +1493,11 @@ GROUP BY "courseId";
 
 ---
 
-## 8. Test Security Audit VÃ  Outbox
+## 8. Test Security Audit Và Outbox
 
-Má»¥c tiÃªu: chá»©ng minh cÃ¡c course mutation quan trá»ng ghi audit event báº±ng transactional outbox vÃ  xuáº¥t hiá»‡n trong `audit-service`.
+Mục tiêu: chứng minh các course mutation quan trọng ghi audit event bằng transactional outbox và xuất hiện trong `audit-service`.
 
-### 8.1 Audited actions cáº§n cover
+### 8.1 Audited actions cần cover
 
 | API | Expected audit action |
 | --- | --- |
@@ -1510,9 +1510,9 @@ Má»¥c tiÃªu: chá»©ng minh cÃ¡c course mutation quan trá»ng ghi aud
 | `POST /admin/courses/:id/materials` | `COURSE_MATERIAL_ADDED` |
 | `POST /enrollments/:id/reset-progress` | `ENROLLMENT_PROGRESS_RESET` |
 
-### 8.2 Gá»i má»™t mutation vÃ  láº¥y correlation id
+### 8.2 Gọi một mutation và lấy correlation id
 
-VÃ­ dá»¥ archive course:
+Ví dụ archive course:
 
 ```bash
 curl -i -X DELETE http://localhost:8000/admin/courses/<course-id> \
@@ -1522,8 +1522,8 @@ curl -i -X DELETE http://localhost:8000/admin/courses/<course-id> \
 Expected:
 
 - HTTP `200`.
-- Response header cÃ³ `x-correlation-id`.
-- Course Ä‘Æ°á»£c archive/soft delete theo behavior hiá»‡n táº¡i.
+- Response header có `x-correlation-id`.
+- Course được archive/soft delete theo behavior hiện tại.
 
 ### 8.3 Verify outbox trong `course_db`
 
@@ -1543,10 +1543,10 @@ LIMIT 10;
 
 Expected:
 
-- CÃ³ row `action = COURSE_ARCHIVED`.
+- Có row `action = COURSE_ARCHIVED`.
 - `resource_type = COURSE`.
 - `resource_id = <course-id>`.
-- BÃ¬nh thÆ°á»ng sau vÃ i giÃ¢y `status = PUBLISHED`.
+- Bình thường sau vài giây `status = PUBLISHED`.
 
 ### 8.4 Verify centralized audit-service
 
@@ -1557,17 +1557,17 @@ curl -s "http://localhost:8000/admin/audit-logs?serviceName=course-service&resou
 
 Expected:
 
-- CÃ³ item `serviceName = course-service`.
-- `action` Ä‘Ãºng vá»›i API vá»«a gá»i.
-- `correlationId` tá»“n táº¡i Ä‘á»ƒ join vá»›i access log.
-- `metadata` Ä‘Ãºng theo action, vÃ­ dá»¥ `COURSE_ARCHIVED` cÃ³ `{ "status": "ARCHIVED" }`.
+- Có item `serviceName = course-service`.
+- `action` đúng với API vừa gọi.
+- `correlationId` tồn tại để join với access log.
+- `metadata` đúng theo action, ví dụ `COURSE_ARCHIVED` có `{ "status": "ARCHIVED" }`.
 
-### 8.5 Verify outbox retry khi RabbitMQ lá»—i
+### 8.5 Verify outbox retry khi RabbitMQ lỗi
 
 ```bash
 docker compose stop rabbitmq
 
-# Gá»i má»™t audited mutation, vÃ­ dá»¥ update course title
+# Gọi một audited mutation, ví dụ update course title
 curl -i -X PATCH http://localhost:8000/admin/courses/<course-id> \
   -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" \
   -H "Content-Type: application/json" \
@@ -1576,36 +1576,36 @@ curl -i -X PATCH http://localhost:8000/admin/courses/<course-id> \
 
 Expected:
 
-- Business update váº«n thÃ nh cÃ´ng náº¿u request path khÃ´ng cáº§n RabbitMQ trá»±c tiáº¿p.
-- `course_db.outbox_messages` cÃ³ row `PENDING` hoáº·c sau retry thÃ nh `FAILED`.
-- `audit_db.audit_logs` chÆ°a cÃ³ ngay record má»›i.
+- Business update vẫn thành công nếu request path không cần RabbitMQ trực tiếp.
+- `course_db.outbox_messages` có row `PENDING` hoặc sau retry thành `FAILED`.
+- `audit_db.audit_logs` chưa có ngay record mới.
 
-Start RabbitMQ láº¡i:
+Start RabbitMQ lại:
 
 ```bash
 docker compose start rabbitmq
 ```
 
-Expected: relay publish láº¡i message cÃ²n `PENDING`; audit log xuáº¥t hiá»‡n trong `audit-service`.
+Expected: relay publish lại message còn `PENDING`; audit log xuất hiện trong `audit-service`.
 
 ---
 
 ## 9. Troubleshooting
 
-### Service khÃ´ng start â€” PrismaClientConstructorValidationError
+### Service không start — PrismaClientConstructorValidationError
 
 ```
 PrismaClientConstructorValidationError: Invalid value undefined for datasource "db"
 ```
 
-â†’ Consul chÆ°a cháº¡y hoáº·c chÆ°a seed. Cháº¡y:
+→ Consul chưa chạy hoặc chưa seed. Chạy:
 
 ```bash
 pnpm run infra:up
 pnpm run consul:seed:local
 ```
 
-Sau Ä‘Ã³ restart service.
+Sau đó restart service.
 
 ---
 
@@ -1615,7 +1615,7 @@ Sau Ä‘Ã³ restart service.
 Error: Can't reach database server at localhost:5435
 ```
 
-â†’ Cháº¡y:
+→ Chạy:
 
 ```bash
 pnpm run infra:up
@@ -1623,13 +1623,13 @@ pnpm run infra:up
 
 ---
 
-### Prisma schema chÆ°a migrate
+### Prisma schema chưa migrate
 
 ```
 PrismaClientInitializationError
 ```
 
-â†’ Cháº¡y:
+→ Chạy:
 
 ```bash
 cd apps/course-service
@@ -1641,27 +1641,27 @@ pnpm run db:migrate
 
 ### `422 COURSE_HAS_NO_LESSON` khi activate
 
-â†’ ÄÃºng behavior. Pháº£i thÃªm Ã­t nháº¥t 1 lesson trÆ°á»›c khi activate.
+→ Đúng behavior. Phải thêm ít nhất 1 lesson trước khi activate.
 
 ---
 
 ### `409 ENROLLMENT_ALREADY_EXISTS`
 
-â†’ ÄÃºng behavior. Má»—i student chá»‰ Ä‘Æ°á»£c Ä‘Äƒng kÃ½ má»™t khÃ³a há»c má»™t láº§n. DÃ¹ng `studentId` khÃ¡c hoáº·c táº¡o course má»›i Ä‘á»ƒ test láº¡i.
+→ Đúng behavior. Mỗi student chỉ được đăng ký một khóa học một lần. Dùng `studentId` khác hoặc tạo course mới để test lại.
 
 ---
 
-### RabbitMQ event khÃ´ng Ä‘Æ°á»£c publish
+### RabbitMQ event không được publish
 
-1. Kiá»ƒm tra `rabbitmq.url` trong Consul KV Ä‘Ã£ Ä‘Æ°á»£c seed
-2. Kiá»ƒm tra course-service log: `Course Service listening on port 3004` â†’ microservice start OK
-3. VÃ o RabbitMQ UI â†’ tab Connections kiá»ƒm tra course-service Ä‘Ã£ connect
+1. Kiểm tra `rabbitmq.url` trong Consul KV đã được seed
+2. Kiểm tra course-service log: `Course Service listening on port 3004` → microservice start OK
+3. Vào RabbitMQ UI → tab Connections kiểm tra course-service đã connect
 
 ---
 
-### Response format sai (khÃ´ng cÃ³ `success` field)
+### Response format sai (không có `success` field)
 
-â†’ `DomainExceptionFilter` hoáº·c `ApiExceptionFilter` chÆ°a register. Kiá»ƒm tra `main.ts`:
+→ `DomainExceptionFilter` hoặc `ApiExceptionFilter` chưa register. Kiểm tra `main.ts`:
 
 ```typescript
 app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
@@ -1671,52 +1671,52 @@ app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
 
 ## Checklist test nhanh (Happy Path)
 
-Cháº¡y tá»« root Ä‘á»ƒ verify toÃ n bá»™ flow sau má»—i thay Ä‘á»•i:
+Chạy từ root để verify toàn bộ flow sau mỗi thay đổi:
 
 ```bash
 BASE="http://localhost:3004"
 INSTRUCTOR="instructor-test-001"
 STUDENT="student-test-002"
 
-# 1. Táº¡o course
+# 1. Tạo course
 COURSE_ID=$(curl -s -X POST $BASE/admin/courses \
   -H "Content-Type: application/json" \
   -H "x-user-id: $INSTRUCTOR" \
   -d '{"title":"Test Course","licenseCategory":"B1","capacity":10}' \
   | jq -r '.data.id')
-echo "âœ“ Course created: $COURSE_ID"
+echo "✓ Course created: $COURSE_ID"
 
-# 2. ThÃªm 2 lessons
+# 2. Thêm 2 lessons
 curl -s -X POST "$BASE/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{"title":"Lesson 1","order":1}' > /dev/null
 curl -s -X POST "$BASE/admin/courses/$COURSE_ID/lessons" \
   -H "Content-Type: application/json" \
   -d '{"title":"Lesson 2","order":2}' > /dev/null
-echo "âœ“ 2 lessons added"
+echo "✓ 2 lessons added"
 
 # 3. Activate
 STATUS=$(curl -s -X PATCH "$BASE/courses/$COURSE_ID/activate" | jq -r '.data.status')
-echo "âœ“ Course activated: $STATUS"  # â†’ ACTIVE
+echo "✓ Course activated: $STATUS"  # → ACTIVE
 
 # 4. Enroll student
 ENROLLMENT_ID=$(curl -s -X POST "$BASE/courses/$COURSE_ID/enroll" \
   -H "x-user-id: $STUDENT" | jq -r '.data.id')
-echo "âœ“ Enrolled: $ENROLLMENT_ID"
+echo "✓ Enrolled: $ENROLLMENT_ID"
 
-# 5. Láº¥y lesson IDs
+# 5. Lấy lesson IDs
 L1=$(curl -s "$BASE/courses/$COURSE_ID" | jq -r '.data.lessons[0].id')
 L2=$(curl -s "$BASE/courses/$COURSE_ID" | jq -r '.data.lessons[1].id')
 
 # 6. Complete lesson 1
 PROGRESS=$(curl -s -X POST "$BASE/enrollments/$ENROLLMENT_ID/lessons/$L1/complete" \
   | jq '.data.progress')
-echo "âœ“ Lesson 1 completed. Progress: $PROGRESS%"  # â†’ 50
+echo "✓ Lesson 1 completed. Progress: $PROGRESS%"  # → 50
 
-# 7. Complete lesson 2 â†’ enrollment COMPLETED
+# 7. Complete lesson 2 → enrollment COMPLETED
 FINAL=$(curl -s -X POST "$BASE/enrollments/$ENROLLMENT_ID/lessons/$L2/complete" \
   | jq '{progress: .data.progress, status: .data.status}')
-echo "âœ“ Lesson 2 completed: $FINAL"  # â†’ {progress:100, status:"COMPLETED"}
+echo "✓ Lesson 2 completed: $FINAL"  # → {progress:100, status:"COMPLETED"}
 
 echo ""
 echo "All checks passed!"
@@ -1764,40 +1764,40 @@ Expected: course status becomes `ARCHIVED`; normal list endpoints no longer retu
 
 
 <!-- Merged legacy testing guide -->
-# Exam Service - HÆ°á»›ng Dáº«n Test API Chi Tiáº¿t
+# Exam Service - Hướng Dẫn Test API Chi Tiết
 
-> TÃ i liá»‡u nÃ y hÆ°á»›ng dáº«n test `exam-service` v1 khi cháº¡y local hybrid mode, cáº£ khi gá»i trá»±c tiáº¿p port `3003` vÃ  khi gá»i qua Kong `8000`.
+> Tài liệu này hướng dẫn test `exam-service` v1 khi chạy local hybrid mode, cả khi gọi trực tiếp port `3003` và khi gọi qua Kong `8000`.
 
 ---
 
-## Má»¥c Lá»¥c
+## Mục Lục
 
-1. [Khá»Ÿi Ä‘á»™ng mÃ´i trÆ°á»ng](#1-khá»Ÿi-Ä‘á»™ng-mÃ´i-trÆ°á»ng)
-2. [Kiáº¿n trÃºc request flow](#2-kiáº¿n-trÃºc-request-flow)
-3. [Biáº¿n mÃ´i trÆ°á»ng test](#3-biáº¿n-mÃ´i-trÆ°á»ng-test)
-4. [Láº¥y access token](#4-láº¥y-access-token)
-5. [Seed dá»¯ liá»‡u phá»¥ thuá»™c](#5-seed-dá»¯-liá»‡u-phá»¥-thuá»™c)
+1. [Khởi động môi trường](#1-khởi-động-môi-trường)
+2. [Kiến trúc request flow](#2-kiến-trúc-request-flow)
+3. [Biến môi trường test](#3-biến-môi-trường-test)
+4. [Lấy access token](#4-lấy-access-token)
+5. [Seed dữ liệu phụ thuộc](#5-seed-dữ-liệu-phụ-thuộc)
 6. [Test exam template endpoints](#6-test-exam-template-endpoints)
 7. [Test student exam session flow](#7-test-student-exam-session-flow)
 8. [Negative scenarios](#8-negative-scenarios)
-9. [Kiá»ƒm tra DB vÃ  RabbitMQ](#9-kiá»ƒm-tra-db-vÃ -rabbitmq)
-10. [Test Security Audit VÃ  Outbox](#10-test-security-audit-vÃ -outbox)
+9. [Kiểm tra DB và RabbitMQ](#9-kiểm-tra-db-và-rabbitmq)
+10. [Test Security Audit Và Outbox](#10-test-security-audit-và-outbox)
 11. [Quality gates](#11-quality-gates)
 12. [Troubleshooting](#12-troubleshooting)
 
 ---
 
-## 1. Khá»Ÿi Äá»™ng MÃ´i TrÆ°á»ng
+## 1. Khởi Động Môi Trường
 
 ### 1.1 Start infrastructure
 
-Tá»« root project:
+Từ root project:
 
 ```bash
 pnpm run infra:up
 ```
 
-Hybrid infra gá»“m:
+Hybrid infra gồm:
 
 - PostgreSQL databases: `5432..5440`
 - RabbitMQ: `5672`, UI `15672`
@@ -1806,7 +1806,7 @@ Hybrid infra gá»“m:
 - Keycloak: `8080`
 - Kong dev gateway: proxy `8000`, admin `8001`
 
-Kiá»ƒm tra nhanh:
+Kiểm tra nhanh:
 
 ```bash
 curl -s http://localhost:8500/v1/status/leader
@@ -1814,19 +1814,19 @@ curl -s http://localhost:8001/services | jq '.data | map(.name)'
 curl -s http://localhost:15672/api/overview -u guest:guest | jq '.rabbitmq_version'
 ```
 
-### 1.2 Seed config vÃ o Consul
+### 1.2 Seed config vào Consul
 
 ```bash
 pnpm run consul:seed:local
 ```
 
-Kiá»ƒm tra config exam-service:
+Kiểm tra config exam-service:
 
 ```bash
 curl -s "http://localhost:8500/v1/kv/config/development-local/exam-service/?recurse" | jq '.[].Key'
 ```
 
-Cáº§n cÃ³ cÃ¡c key quan trá»ng:
+Cần có các key quan trọng:
 
 ```text
 config/development-local/exam-service/port
@@ -1840,9 +1840,9 @@ config/development-local/exam-service/services.question.baseUrl
 config/development-local/exam-service/services.user.baseUrl
 ```
 
-### 1.3 Generate vÃ  migrate database
+### 1.3 Generate và migrate database
 
-Cháº¡y migrate cho cÃ¡c service liÃªn quan Ä‘áº¿n flow:
+Chạy migrate cho các service liên quan đến flow:
 
 ```bash
 pnpm --filter=identity-service run db:generate
@@ -1858,7 +1858,7 @@ pnpm --filter=exam-service run prisma:generate
 pnpm --filter=exam-service run db:migrate
 ```
 
-Náº¿u migration Ä‘Ã£ tá»“n táº¡i vÃ  chá»‰ cáº§n apply:
+Nếu migration đã tồn tại và chỉ cần apply:
 
 ```bash
 pnpm --filter=exam-service run db:deploy
@@ -1866,7 +1866,7 @@ pnpm --filter=exam-service run db:deploy
 
 ### 1.4 Start required services
 
-Exam flow cáº§n tá»‘i thiá»ƒu 4 services:
+Exam flow cần tối thiểu 4 services:
 
 ```bash
 pnpm run dev --filter=identity-service
@@ -1875,7 +1875,7 @@ pnpm run dev --filter=question-service
 pnpm run dev --filter=exam-service
 ```
 
-Kiá»ƒm tra Swagger:
+Kiểm tra Swagger:
 
 ```bash
 curl -s http://localhost:3003/docs-json | jq '.info.title'
@@ -1889,29 +1889,29 @@ Swagger UI:
 
 ---
 
-## 2. Kiáº¿n TrÃºc Request Flow
+## 2. Kiến Trúc Request Flow
 
 ```text
 Client/Postman
   |
   |-- DIRECT --> http://localhost:3003/exams/...
-  |              Váº«n cáº§n Authorization header vÃ¬ exam-service tá»± validate JWT
+  |              Vẫn cần Authorization header vì exam-service tự validate JWT
   |
   |-- KONG ----> http://localhost:8000/exams/...
-                 Kong forward path /exams vá»›i strip_path=false
-                 exam-service váº«n validate JWT/RBAC báº±ng nest-keycloak-connect
+                 Kong forward path /exams với strip_path=false
+                 exam-service vẫn validate JWT/RBAC bằng nest-keycloak-connect
 
 exam-service
   |-- validates student profile --> user-service GET /users/me
-  |                                dÃ¹ng incoming student bearer token
+  |                                dùng incoming student bearer token
   |
   |-- fetches question pool -----> question-service POST /admin/questions/pool
-                                   dÃ¹ng service-account token
+                                   dùng service-account token
 ```
 
 Endpoint path:
 
-| NhÃ³m | Direct local | Qua Kong |
+| Nhóm | Direct local | Qua Kong |
 | --- | --- | --- |
 | Templates | `http://localhost:3003/admin/exams/templates` | `http://localhost:8000/admin/exams/templates` |
 | Sessions | `http://localhost:3003/exams/sessions` | `http://localhost:8000/exams/sessions` |
@@ -1919,9 +1919,9 @@ Endpoint path:
 
 ---
 
-## 3. Biáº¿n MÃ´i TrÆ°á»ng Test
+## 3. Biến Môi Trường Test
 
-DÃ¹ng Git Bash/macOS/Linux style:
+Dùng Git Bash/macOS/Linux style:
 
 ```bash
 IDENTITY_BASE="http://localhost:8000"
@@ -1938,7 +1938,7 @@ STUDENT_PASSWORD="Temp@1234"
 LICENSE_CATEGORY="B2"
 ```
 
-Náº¿u test trá»±c tiáº¿p service, Ä‘á»•i:
+Nếu test trực tiếp service, đổi:
 
 ```bash
 IDENTITY_BASE="http://localhost:3001"
@@ -1947,7 +1947,7 @@ QUESTION_BASE="http://localhost:3005"
 EXAM_BASE="http://localhost:3003"
 ```
 
-LÆ°u Ã½ direct identity path khÃ¡c Kong:
+Lưu ý direct identity path khác Kong:
 
 | Action | Direct local | Qua Kong |
 | --- | --- | --- |
@@ -1955,11 +1955,11 @@ LÆ°u Ã½ direct identity path khÃ¡c Kong:
 | Refresh | `POST /refresh` | `POST /auth/refresh` |
 | Admin users | `POST /admin/identity-users` | `POST /admin/identity-users` |
 
-Náº¿u dÃ¹ng PowerShell, Ä‘á»•i `\` thÃ nh backtick `` ` `` hoáº·c viáº¿t trÃªn má»™t dÃ²ng.
+Nếu dùng PowerShell, đổi `\` thành backtick `` ` `` hoặc viết trên một dòng.
 
 ---
 
-## 4. Láº¥y Access Token
+## 4. Lấy Access Token
 
 ### 4.1 Login admin
 
@@ -1987,18 +1987,18 @@ ADMIN_TOKEN=$(curl -s -X POST "http://localhost:3001/login" \
   }" | jq -r '.data.accessToken')
 ```
 
-Kiá»ƒm tra token cÃ³ role admin:
+Kiểm tra token có role admin:
 
 ```bash
 curl -s "$IDENTITY_BASE/admin/identity-users?page=1&size=1" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.success, .data.total'
 ```
 
-Expect `true` vÃ  HTTP `200`.
+Expect `true` và HTTP `200`.
 
-### 4.2 Táº¡o student test qua identity-service
+### 4.2 Tạo student test qua identity-service
 
-`user-service` khÃ´ng expose HTTP `POST /users`. Táº¡o user báº±ng identity-service, identity-service sáº½ publish RabbitMQ event `identity.user.created`, user-service sáº½ táº¡o profile.
+`user-service` không expose HTTP `POST /users`. Tạo user bằng identity-service, identity-service sẽ publish RabbitMQ event `identity.user.created`, user-service sẽ tạo profile.
 
 ```bash
 STUDENT_USER_ID=$(curl -s -X POST "$IDENTITY_BASE/admin/identity-users" \
@@ -2014,14 +2014,14 @@ STUDENT_USER_ID=$(curl -s -X POST "$IDENTITY_BASE/admin/identity-users" \
 echo "STUDENT_USER_ID=$STUDENT_USER_ID"
 ```
 
-Náº¿u user Ä‘Ã£ tá»“n táº¡i, láº¥y id tá»« list:
+Nếu user đã tồn tại, lấy id từ list:
 
 ```bash
 STUDENT_USER_ID=$(curl -s "$IDENTITY_BASE/admin/identity-users?search=$STUDENT_EMAIL" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.data.items[0].id')
 ```
 
-Chá» user-service consume event, rá»“i verify profile:
+Chờ user-service consume event, rồi verify profile:
 
 ```bash
 sleep 2
@@ -2042,9 +2042,9 @@ Expect:
 }
 ```
 
-### 4.3 Gáº¯n license tier cho student
+### 4.3 Gắn license tier cho student
 
-Exam start sáº½ fail náº¿u `studentDetail.licenseTier` khÃ¡c template `licenseCategory`.
+Exam start sẽ fail nếu `studentDetail.licenseTier` khác template `licenseCategory`.
 
 ```bash
 curl -s -X PATCH "$USER_BASE/users/$STUDENT_USER_ID/license-tier" \
@@ -2077,7 +2077,7 @@ STUDENT_TOKEN=$(curl -s -X POST "$IDENTITY_BASE/auth/login" \
 echo "$STUDENT_TOKEN" | cut -c1-25
 ```
 
-Kiá»ƒm tra current profile:
+Kiểm tra current profile:
 
 ```bash
 curl -s "$USER_BASE/users/me" \
@@ -2086,11 +2086,11 @@ curl -s "$USER_BASE/users/me" \
 
 ---
 
-## 5. Seed Dá»¯ Liá»‡u Phá»¥ Thuá»™c
+## 5. Seed Dữ Liệu Phụ Thuộc
 
-Exam-service cáº§n active question pool tá»« question-service. Äá»ƒ test nhanh, táº¡o 3 cÃ¢u há»i `B2`, trong Ä‘Ã³ cÃ³ 1 cÃ¢u critical.
+Exam-service cần active question pool từ question-service. Để test nhanh, tạo 3 câu hỏi `B2`, trong đó có 1 câu critical.
 
-### 5.1 Táº¡o topic
+### 5.1 Tạo topic
 
 ```bash
 TOPIC_ID=$(curl -s -X POST "$QUESTION_BASE/admin/questions/topics" \
@@ -2098,97 +2098,97 @@ TOPIC_ID=$(curl -s -X POST "$QUESTION_BASE/admin/questions/topics" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Exam B2 Seed Topic",
-    "description": "Topic dÃ¹ng Ä‘á»ƒ test exam-service"
+    "description": "Topic dùng để test exam-service"
   }' | jq -r '.data.id')
 
 echo "TOPIC_ID=$TOPIC_ID"
 ```
 
-Náº¿u topic Ä‘Ã£ tá»“n táº¡i, cÃ³ thá»ƒ láº¥y topic Ä‘áº§u tiÃªn:
+Nếu topic đã tồn tại, có thể lấy topic đầu tiên:
 
 ```bash
 TOPIC_ID=$(curl -s "$QUESTION_BASE/admin/questions/topics?page=1&size=1" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.data.items[0].id')
 ```
 
-### 5.2 Táº¡o question 1
+### 5.2 Tạo question 1
 
 ```bash
 Q1=$(curl -s -X POST "$QUESTION_BASE/admin/questions" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"content\": \"Khi gáº·p Ä‘Ã¨n Ä‘á», ngÆ°á»i lÃ¡i xe pháº£i lÃ m gÃ¬?\",
+    \"content\": \"Khi gặp đèn đỏ, người lái xe phải làm gì?\",
     \"type\": \"SINGLE_CHOICE\",
     \"licenseCategories\": [\"$LICENSE_CATEGORY\"],
     \"difficulty\": \"EASY\",
-    \"explanation\": \"ÄÃ¨n Ä‘á» báº¯t buá»™c dá»«ng láº¡i trÆ°á»›c váº¡ch dá»«ng.\",
+    \"explanation\": \"Đèn đỏ bắt buộc dừng lại trước vạch dừng.\",
     \"topicId\": \"$TOPIC_ID\",
     \"isCritical\": true,
     \"isActive\": true,
     \"options\": [
-      {\"content\": \"Dá»«ng láº¡i trÆ°á»›c váº¡ch dá»«ng\", \"isCorrect\": true, \"displayOrder\": 1},
-      {\"content\": \"TÄƒng tá»‘c Ä‘i qua\", \"isCorrect\": false, \"displayOrder\": 2},
-      {\"content\": \"Báº¥m cÃ²i vÃ  tiáº¿p tá»¥c Ä‘i\", \"isCorrect\": false, \"displayOrder\": 3}
+      {\"content\": \"Dừng lại trước vạch dừng\", \"isCorrect\": true, \"displayOrder\": 1},
+      {\"content\": \"Tăng tốc đi qua\", \"isCorrect\": false, \"displayOrder\": 2},
+      {\"content\": \"Bấm còi và tiếp tục đi\", \"isCorrect\": false, \"displayOrder\": 3}
     ]
   }" | jq -r '.data.id')
 
 echo "Q1=$Q1"
 ```
 
-### 5.3 Táº¡o question 2
+### 5.3 Tạo question 2
 
 ```bash
 Q2=$(curl -s -X POST "$QUESTION_BASE/admin/questions" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"content\": \"Biá»ƒn bÃ¡o hÃ¬nh trÃ²n ná»n xanh thÆ°á»ng thá»ƒ hiá»‡n Ä‘iá»u gÃ¬?\",
+    \"content\": \"Biển báo hình tròn nền xanh thường thể hiện điều gì?\",
     \"type\": \"SINGLE_CHOICE\",
     \"licenseCategories\": [\"$LICENSE_CATEGORY\"],
     \"difficulty\": \"EASY\",
-    \"explanation\": \"Biá»ƒn trÃ²n ná»n xanh thÆ°á»ng lÃ  biá»ƒn hiá»‡u lá»‡nh.\",
+    \"explanation\": \"Biển tròn nền xanh thường là biển hiệu lệnh.\",
     \"topicId\": \"$TOPIC_ID\",
     \"isCritical\": false,
     \"isActive\": true,
     \"options\": [
-      {\"content\": \"Biá»ƒn hiá»‡u lá»‡nh\", \"isCorrect\": true, \"displayOrder\": 1},
-      {\"content\": \"Biá»ƒn cáº¥m\", \"isCorrect\": false, \"displayOrder\": 2},
-      {\"content\": \"Biá»ƒn nguy hiá»ƒm\", \"isCorrect\": false, \"displayOrder\": 3}
+      {\"content\": \"Biển hiệu lệnh\", \"isCorrect\": true, \"displayOrder\": 1},
+      {\"content\": \"Biển cấm\", \"isCorrect\": false, \"displayOrder\": 2},
+      {\"content\": \"Biển nguy hiểm\", \"isCorrect\": false, \"displayOrder\": 3}
     ]
   }" | jq -r '.data.id')
 
 echo "Q2=$Q2"
 ```
 
-### 5.4 Táº¡o question 3
+### 5.4 Tạo question 3
 
 ```bash
 Q3=$(curl -s -X POST "$QUESTION_BASE/admin/questions" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"content\": \"Khoáº£ng cÃ¡ch an toÃ n phá»¥ thuá»™c vÃ o yáº¿u tá»‘ nÃ o?\",
+    \"content\": \"Khoảng cách an toàn phụ thuộc vào yếu tố nào?\",
     \"type\": \"SINGLE_CHOICE\",
     \"licenseCategories\": [\"$LICENSE_CATEGORY\"],
     \"difficulty\": \"MEDIUM\",
-    \"explanation\": \"Tá»‘c Ä‘á»™, máº·t Ä‘Æ°á»ng, thá»i tiáº¿t vÃ  tÃ¬nh huá»‘ng giao thÃ´ng Ä‘á»u áº£nh hÆ°á»Ÿng.\",
+    \"explanation\": \"Tốc độ, mặt đường, thời tiết và tình huống giao thông đều ảnh hưởng.\",
     \"topicId\": \"$TOPIC_ID\",
     \"isCritical\": false,
     \"isActive\": true,
     \"options\": [
-      {\"content\": \"Tá»‘c Ä‘á»™ vÃ  Ä‘iá»u kiá»‡n giao thÃ´ng\", \"isCorrect\": true, \"displayOrder\": 1},
-      {\"content\": \"MÃ u xe\", \"isCorrect\": false, \"displayOrder\": 2},
-      {\"content\": \"Sá»‘ gháº¿ trÃªn xe\", \"isCorrect\": false, \"displayOrder\": 3}
+      {\"content\": \"Tốc độ và điều kiện giao thông\", \"isCorrect\": true, \"displayOrder\": 1},
+      {\"content\": \"Màu xe\", \"isCorrect\": false, \"displayOrder\": 2},
+      {\"content\": \"Số ghế trên xe\", \"isCorrect\": false, \"displayOrder\": 3}
     ]
   }" | jq -r '.data.id')
 
 echo "Q3=$Q3"
 ```
 
-### 5.5 Kiá»ƒm tra question pool
+### 5.5 Kiểm tra question pool
 
-Endpoint pool lÃ  internal/admin endpoint, student khÃ´ng gá»i trá»±c tiáº¿p.
+Endpoint pool là internal/admin endpoint, student không gọi trực tiếp.
 
 ```bash
 curl -s -X POST "$QUESTION_BASE/admin/questions/pool" \
@@ -2206,16 +2206,16 @@ Expect `count >= 3`.
 
 ## 6. Test Exam Template Endpoints
 
-Táº¥t cáº£ template endpoints cáº§n role `ADMIN`.
+Tất cả template endpoints cần role `ADMIN`.
 
-### 6.1 POST /admin/exams/templates - táº¡o template
+### 6.1 POST /admin/exams/templates - tạo template
 
 ```bash
 TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"name\": \"Äá» thi $LICENSE_CATEGORY smoke test\",
+    \"name\": \"Đề thi $LICENSE_CATEGORY smoke test\",
     \"description\": \"Smoke test strict topic distribution\",
     \"licenseCategory\": \"$LICENSE_CATEGORY\",
     \"totalQuestions\": 3,
@@ -2232,7 +2232,7 @@ TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
 echo "TEMPLATE_ID=$TEMPLATE_ID"
 ```
 
-Kiá»ƒm tra response Ä‘áº§y Ä‘á»§:
+Kiểm tra response đầy đủ:
 
 ```bash
 curl -s "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
@@ -2241,8 +2241,8 @@ curl -s "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
 
 Expect:
 
-- HTTP `201 Created` khi táº¡o
-- `data.id` lÃ  UUID
+- HTTP `201 Created` khi tạo
+- `data.id` là UUID
 - `data.licenseCategory = "B2"`
 - `data.totalQuestions = 3`
 - `data.passingScore = 2`
@@ -2254,7 +2254,7 @@ Expect:
 - `data.isActive = true`
 - `data.isDeleted = false`
 - `data.version = 1`
-- `data.createdById` báº±ng admin user id trong token
+- `data.createdById` bằng admin user id trong token
 
 ### 6.2 GET /admin/exams/templates - list/filter
 
@@ -2266,12 +2266,12 @@ curl -s "$EXAM_BASE/admin/exams/templates?page=1&size=20&licenseCategory=$LICENS
 Expect:
 
 - HTTP `200`
-- `data.items` cÃ³ template vá»«a táº¡o
-- `page`, `size`, `total` há»£p lá»‡
+- `data.items` có template vừa tạo
+- `page`, `size`, `total` hợp lệ
 
-### 6.3 PATCH /admin/exams/templates/:id - update vá»›i version
+### 6.3 PATCH /admin/exams/templates/:id - update với version
 
-Láº¥y version hiá»‡n táº¡i:
+Lấy version hiện tại:
 
 ```bash
 TEMPLATE_VERSION=$(curl -s "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
@@ -2288,7 +2288,7 @@ curl -s -X PATCH "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
   -H "Content-Type: application/json" \
   -d "{
     \"version\": $TEMPLATE_VERSION,
-    \"name\": \"Äá» thi $LICENSE_CATEGORY smoke test updated\",
+    \"name\": \"Đề thi $LICENSE_CATEGORY smoke test updated\",
     \"durationMinutes\": 25,
     \"isActive\": true
   }" | jq '.data | {id,name,durationMinutes,version}'
@@ -2297,12 +2297,12 @@ curl -s -X PATCH "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
 Expect:
 
 - HTTP `200`
-- `version` tÄƒng lÃªn 1
+- `version` tăng lên 1
 - `durationMinutes = 25`
 
 ### 6.4 PATCH stale version - expect conflict
 
-Gá»i láº¡i version cÅ©:
+Gọi lại version cũ:
 
 ```bash
 curl -s -X PATCH "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
@@ -2321,7 +2321,7 @@ Expect:
 
 ### 6.5 DELETE /admin/exams/templates/:id - soft delete unused template
 
-Chá»‰ test vá»›i template chÆ°a cÃ³ session. Táº¡o template táº¡m:
+Chỉ test với template chưa có session. Tạo template tạm:
 
 ```bash
 DELETE_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
@@ -2365,7 +2365,7 @@ Expect:
 
 ## 7. Test Student Exam Session Flow
 
-Táº¥t cáº£ session endpoints cáº§n role `STUDENT` vÃ  owner-scope theo `JWT.sub`.
+Tất cả session endpoints cần role `STUDENT` và owner-scope theo `JWT.sub`.
 
 ### 7.1 GET /exams/available - list exams student can start
 
@@ -2412,11 +2412,11 @@ Expect start response:
 - `data.isPassed = null`
 - `data.failedByCritical = false`
 - `data.questions.length = 3`
-- má»—i question cÃ³ `questionId`, `content`, `options`, `displayOrder`, `isBookmarked`, `selectedOptionId`
+- mỗi question có `questionId`, `content`, `options`, `displayOrder`, `isBookmarked`, `selectedOptionId`
 
 ### 7.3 Confidentiality check cho active questions
 
-Active question payload khÃ´ng Ä‘Æ°á»£c leak Ä‘Ã¡p Ã¡n.
+Active question payload không được leak đáp án.
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -2424,14 +2424,14 @@ curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
   | jq '.data.items[] | keys'
 ```
 
-KhÃ´ng Ä‘Æ°á»£c cÃ³:
+Không được có:
 
 - `correctOptionId`
 - `isCritical`
 - `isCorrect`
 - `explanation`
 
-Kiá»ƒm tra options:
+Kiểm tra options:
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -2439,7 +2439,7 @@ curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
   | jq '.data.items[0].options[0] | keys'
 ```
 
-Expect chá»‰ cÃ³:
+Expect chỉ có:
 
 ```json
 [
@@ -2449,7 +2449,7 @@ Expect chá»‰ cÃ³:
 ]
 ```
 
-### 7.4 Láº¥y question/option ids Ä‘á»ƒ autosave
+### 7.4 Lấy question/option ids để autosave
 
 ```bash
 QUESTIONS_JSON=$(curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -2481,12 +2481,12 @@ curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
 Expect:
 
 - HTTP `200`
-- question Ä‘Ã³ cÃ³ `selectedOptionId = OPTION_1_ID`
+- question đó có `selectedOptionId = OPTION_1_ID`
 - `isBookmarked = true`
-- response váº«n khÃ´ng cÃ³ `isCorrect`
-- náº¿u session Ä‘Ã£ quÃ¡ `expiresAt`, API khÃ´ng lÆ°u answer má»›i; service tá»± grade timeout vÃ  tráº£ vá» `status = "TIMED_OUT"`
+- response vẫn không có `isCorrect`
+- nếu session đã quá `expiresAt`, API không lưu answer mới; service tự grade timeout và trả về `status = "TIMED_OUT"`
 
-Autosave thÃªm cÃ¢u 2 vÃ  cÃ¢u 3:
+Autosave thêm câu 2 và câu 3:
 
 ```bash
 curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
@@ -2518,18 +2518,18 @@ curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
   }" | jq '.data.questions[] | select(.questionId == "'$QUESTION_2_ID'") | {selectedOptionId,isBookmarked}'
 ```
 
-Expect selected answer Ä‘Æ°á»£c giá»¯ nguyÃªn, bookmark Ä‘á»•i thÃ nh `true`.
+Expect selected answer được giữ nguyên, bookmark đổi thành `true`.
 
-### 7.7 GET /exams/sessions - history khi Ä‘ang lÃ m bÃ i
+### 7.7 GET /exams/sessions - history khi đang làm bài
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions?page=1&size=10&status=IN_PROGRESS" \
   -H "Authorization: Bearer $STUDENT_TOKEN" | jq '.data | {total,page,size,items: [.items[] | {id,status,score,isPassed}]}'
 ```
 
-Expect cÃ³ session hiá»‡n táº¡i, `status = "IN_PROGRESS"`.
+Expect có session hiện tại, `status = "IN_PROGRESS"`.
 
-### 7.8 POST /exams/sessions/:id/submit - submit vÃ  grade
+### 7.8 POST /exams/sessions/:id/submit - submit và grade
 
 ```bash
 curl -s -X POST "$EXAM_BASE/exams/sessions/$SESSION_ID/submit" \
@@ -2539,12 +2539,12 @@ curl -s -X POST "$EXAM_BASE/exams/sessions/$SESSION_ID/submit" \
 Expect:
 
 - HTTP `200`
-- `status = "COMPLETED"` náº¿u chÆ°a háº¿t giá»
-- `score` lÃ  sá»‘ cÃ¢u Ä‘Ãºng
-- `criticalMistakes` lÃ  sá»‘ cÃ¢u critical sai hoáº·c bá» trá»‘ng
-- `isPassed = true` náº¿u `score >= passingScore` vÃ  `criticalMistakes <= maxCriticalMistakes`
-- `failedByCritical = true` náº¿u `criticalMistakes > maxCriticalMistakes`
-- result payload Ä‘Æ°á»£c phÃ©p cÃ³ `questions[].isCorrect`
+- `status = "COMPLETED"` nếu chưa hết giờ
+- `score` là số câu đúng
+- `criticalMistakes` là số câu critical sai hoặc bỏ trống
+- `isPassed = true` nếu `score >= passingScore` và `criticalMistakes <= maxCriticalMistakes`
+- `failedByCritical = true` nếu `criticalMistakes > maxCriticalMistakes`
+- result payload được phép có `questions[].isCorrect`
 - result payload does not expose `questions[].isCritical`; fatal-question outcome is visible only through `failedByCritical` and `criticalMistakes`
 
 Retry submit with the same session:
@@ -2560,7 +2560,7 @@ Expect:
 - returns the already graded result
 - does not grade again, duplicate answers, or publish another event
 
-### 7.9 GET /exams/sessions/:id/result - xem káº¿t quáº£
+### 7.9 GET /exams/sessions/:id/result - xem kết quả
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/result" \
@@ -2570,10 +2570,10 @@ curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/result" \
 Expect:
 
 - HTTP `200`
-- data giá»‘ng submit result
-- `questions[].isCorrect` cÃ³ giÃ¡ trá»‹ `true/false/null`
+- data giống submit result
+- `questions[].isCorrect` có giá trị `true/false/null`
 - result does not expose `correctOptionId`, `options[].isCorrect`, or `questions[].isCritical`
-- náº¿u session Ä‘Ã£ quÃ¡ `expiresAt` nhÆ°ng DB váº«n Ä‘ang `IN_PROGRESS`, endpoint nÃ y tá»± finalize thÃ nh `TIMED_OUT` vÃ  tráº£ result thay vÃ¬ bÃ¡o `EXAM_SESSION_NOT_FINISHED`
+- nếu session đã quá `expiresAt` nhưng DB vẫn đang `IN_PROGRESS`, endpoint này tự finalize thành `TIMED_OUT` và trả result thay vì báo `EXAM_SESSION_NOT_FINISHED`
 
 ### 7.10 GET /exams/sessions - history sau submit
 
@@ -2582,7 +2582,7 @@ curl -s "$EXAM_BASE/exams/sessions?page=1&size=10&status=COMPLETED" \
   -H "Authorization: Bearer $STUDENT_TOKEN" | jq '.data.items[] | {id,status,score,isPassed,failedByCritical}'
 ```
 
-Expect cÃ³ session vá»«a submit.
+Expect có session vừa submit.
 
 ---
 
@@ -2590,14 +2590,14 @@ Expect cÃ³ session vá»«a submit.
 
 ### 8.1 Student license tier mismatch
 
-Táº¡o template license khÃ¡c:
+Tạo template license khác:
 
 ```bash
 MISMATCH_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Äá» thi A1 mismatch",
+    "name": "Đề thi A1 mismatch",
     "licenseCategory": "A1",
     "totalQuestions": 1,
     "passingScore": 1,
@@ -2625,14 +2625,14 @@ Expect:
 
 ### 8.2 Insufficient question pool
 
-Táº¡o template yÃªu cáº§u nhiá»u cÃ¢u hÆ¡n pool:
+Tạo template yêu cầu nhiều câu hơn pool:
 
 ```bash
 BIG_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"name\": \"Äá» thi $LICENSE_CATEGORY insufficient pool\",
+    \"name\": \"Đề thi $LICENSE_CATEGORY insufficient pool\",
     \"licenseCategory\": \"$LICENSE_CATEGORY\",
     \"totalQuestions\": 999,
     \"passingScore\": 900,
@@ -2660,7 +2660,7 @@ Expect:
 
 ### 8.3 Get result before submit
 
-Start session má»›i:
+Start session mới:
 
 ```bash
 OPEN_SESSION_ID=$(curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -2679,7 +2679,7 @@ Expect:
 - HTTP `422`
 - `code = "EXAM_SESSION_NOT_FINISHED"`
 
-### 8.4 Submit láº§n 2
+### 8.4 Submit lần 2
 
 ```bash
 curl -s -X POST "$EXAM_BASE/exams/sessions/$SESSION_ID/submit" \
@@ -2706,13 +2706,13 @@ curl -s -X PATCH "$EXAM_BASE/exams/sessions/$SESSION_ID/answers" \
 Expect:
 
 - HTTP `409`
-- `code = "EXAM_SESSION_ALREADY_FINISHED"` hoáº·c domain conflict tá»« session state
+- `code = "EXAM_SESSION_ALREADY_FINISHED"` hoặc domain conflict từ session state
 
 ### 8.6 Session timeout lazy finalization
 
-Má»¥c tiÃªu: chá»©ng minh session háº¿t giá» Ä‘Æ°á»£c server finalize khi student gá»i `result` hoáº·c `answers`, khÃ´ng cáº§n background cron.
+Mục tiêu: chứng minh session hết giờ được server finalize khi student gọi `result` hoặc `answers`, không cần background cron.
 
-Start má»™t session riÃªng Ä‘á»ƒ test timeout:
+Start một session riêng để test timeout:
 
 ```bash
 TIMEOUT_SESSION_ID=$(curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -2725,14 +2725,14 @@ TIMEOUT_SESSION_ID=$(curl -s -X POST "$EXAM_BASE/exams/sessions" \
 echo "$TIMEOUT_SESSION_ID"
 ```
 
-Äá»ƒ demo nhanh, chá»‰nh `expiresAt` vá» quÃ¡ khá»© trong DB local:
+Để demo nhanh, chỉnh `expiresAt` về quá khứ trong DB local:
 
 ```bash
 docker exec -i luyen-thi-lai-xe-microservices-db-exam-1 psql -U user -d exam_db \
   -c "update exam_sessions set \"expiresAt\" = now() - interval '1 minute' where id = '$TIMEOUT_SESSION_ID';"
 ```
 
-Gá»i result:
+Gọi result:
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$TIMEOUT_SESSION_ID/result" \
@@ -2744,11 +2744,11 @@ Expect:
 
 - HTTP `200`
 - `status = "TIMED_OUT"`
-- `finishedAt` khÃ¡c `null`
-- `score`, `isPassed`, `failedByCritical`, `criticalMistakes` Ä‘Ã£ Ä‘Æ°á»£c tÃ­nh
-- RabbitMQ cÃ³ `exam.session.completed` vÃ  `exam.session.passed` hoáº·c `exam.session.failed`
+- `finishedAt` khác `null`
+- `score`, `isPassed`, `failedByCritical`, `criticalMistakes` đã được tính
+- RabbitMQ có `exam.session.completed` và `exam.session.passed` hoặc `exam.session.failed`
 
-Náº¿u gá»i autosave sau khi Ä‘Ã£ quÃ¡ háº¡n, API cÅ©ng finalize timeout vÃ  khÃ´ng apply answer má»›i:
+Nếu gọi autosave sau khi đã quá hạn, API cũng finalize timeout và không apply answer mới:
 
 ```bash
 TIMEOUT_AUTOSAVE_SESSION_ID=$(curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -2778,9 +2778,9 @@ curl -s -X PATCH "$EXAM_BASE/exams/sessions/$TIMEOUT_AUTOSAVE_SESSION_ID/answers
 
 Expect `status = "TIMED_OUT"`.
 
-Náº¿u session Ä‘Ã£ Ä‘Æ°á»£c finalize báº±ng `result` trÆ°á»›c Ä‘Ã³, autosave tiáº¿p theo cÃ³ thá»ƒ tráº£ `EXAM_SESSION_ALREADY_FINISHED`; Ä‘Ã³ lÃ  Ä‘Ãºng vÃ¬ session khÃ´ng cÃ²n `IN_PROGRESS`.
+Nếu session đã được finalize bằng `result` trước đó, autosave tiếp theo có thể trả `EXAM_SESSION_ALREADY_FINISHED`; đó là đúng vì session không còn `IN_PROGRESS`.
 
-### 8.7 Student khÃ´ng Ä‘Æ°á»£c gá»i template admin endpoints
+### 8.7 Student không được gọi template admin endpoints
 
 ```bash
 curl -s "$EXAM_BASE/admin/exams/templates" \
@@ -2792,7 +2792,7 @@ Expect:
 - HTTP `403`
 - `code = "FORBIDDEN"`
 
-### 8.8 Admin khÃ´ng Ä‘Æ°á»£c start student session
+### 8.8 Admin không được start student session
 
 ```bash
 curl -s -X POST "$EXAM_BASE/exams/sessions" \
@@ -2808,9 +2808,9 @@ Expect:
 - HTTP `403`
 - `code = "FORBIDDEN"`
 
-### 8.9 Student A khÃ´ng Ä‘Æ°á»£c Ä‘á»c session cá»§a Student B
+### 8.9 Student A không được đọc session của Student B
 
-Táº¡o student B tÆ°Æ¡ng tá»± má»¥c 4.2, login láº¥y `STUDENT_B_TOKEN`, sau Ä‘Ã³:
+Tạo student B tương tự mục 4.2, login lấy `STUDENT_B_TOKEN`, sau đó:
 
 ```bash
 curl -s "$EXAM_BASE/exams/sessions/$SESSION_ID/questions" \
@@ -2822,9 +2822,9 @@ Expect:
 - HTTP `403`
 - `code = "EXAM_SESSION_UNAUTHORIZED"`
 
-### 8.10 Delete template Ä‘Ã£ cÃ³ session
+### 8.10 Delete template đã có session
 
-Láº¥y version template Ä‘Ã£ cÃ³ session:
+Lấy version template đã có session:
 
 ```bash
 TEMPLATE_VERSION_NOW=$(curl -s "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
@@ -2867,16 +2867,16 @@ curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
 Expect:
 
 - HTTP `400`
-- `code = "INVALID_EXAM_TEMPLATE"` hoáº·c `VALIDATION_ERROR`
+- `code = "INVALID_EXAM_TEMPLATE"` hoặc `VALIDATION_ERROR`
 - domain invariant: `passingScore <= totalQuestions`
 
 ---
 
-## 9. Kiá»ƒm Tra DB VÃ  RabbitMQ
+## 9. Kiểm Tra DB Và RabbitMQ
 
-### 9.1 Kiá»ƒm tra DB exam-service
+### 9.1 Kiểm tra DB exam-service
 
-Náº¿u dÃ¹ng Docker Postgres local:
+Nếu dùng Docker Postgres local:
 
 ```bash
 docker exec -it luyen-thi-lai-xe-microservices-db-exam-1 psql -U user -d exam_db
@@ -2901,13 +2901,13 @@ where "sessionId" = '<SESSION_ID>'
 order by "displayOrder";
 ```
 
-Kiá»ƒm tra snapshot security:
+Kiểm tra snapshot security:
 
-- DB cÃ³ `correctOptionId` Ä‘á»ƒ grade.
+- DB có `correctOptionId` để grade.
 - Student active endpoints do not expose `correctOptionId` or `questions[].isCritical`.
-- Result endpoint chá»‰ expose `isCorrect`, khÃ´ng expose correct answer id.
+- Result endpoint chỉ expose `isCorrect`, không expose correct answer id.
 
-### 9.2 Kiá»ƒm tra RabbitMQ events
+### 9.2 Kiểm tra RabbitMQ events
 
 Sau khi submit, exam-service publish:
 
@@ -2944,7 +2944,7 @@ Payload expected:
 }
 ```
 
-Failed event cÃ³ thÃªm:
+Failed event có thêm:
 
 ```json
 {
@@ -2954,11 +2954,11 @@ Failed event cÃ³ thÃªm:
 
 ---
 
-## 10. Test Security Audit VÃ  Outbox
+## 10. Test Security Audit Và Outbox
 
-Má»¥c tiÃªu: chá»©ng minh admin exam-template mutations Ä‘Æ°á»£c audit báº±ng transactional outbox. Student exam session/answer flow khÃ´ng náº±m trong audit phase 1; chÃºng Ä‘Ã£ Ä‘Æ°á»£c lÆ°u nhÆ° business state trong `exam_db`.
+Mục tiêu: chứng minh admin exam-template mutations được audit bằng transactional outbox. Student exam session/answer flow không nằm trong audit phase 1; chúng đã được lưu như business state trong `exam_db`.
 
-### 10.1 Audited actions cáº§n cover
+### 10.1 Audited actions cần cover
 
 | API | Expected audit action |
 | --- | --- |
@@ -2966,14 +2966,14 @@ Má»¥c tiÃªu: chá»©ng minh admin exam-template mutations Ä‘Æ°á»£c
 | `PATCH /admin/exams/templates/:id` | `EXAM_TEMPLATE_UPDATED` |
 | `DELETE /admin/exams/templates/:id` | `EXAM_TEMPLATE_DELETED` |
 
-### 10.2 Create template vÃ  verify audit
+### 10.2 Create template và verify audit
 
 ```bash
 curl -i -X POST http://localhost:8000/admin/exams/templates \
   -H "Authorization: Bearer <ADMIN_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Äá» thi B1 Audit Demo",
+    "name": "Đề thi B1 Audit Demo",
     "description": "Template created to verify audit trail",
     "licenseCategory": "B1",
     "totalQuestions": 1,
@@ -2994,8 +2994,8 @@ curl -i -X POST http://localhost:8000/admin/exams/templates \
 Expected:
 
 - HTTP `201`.
-- Response header cÃ³ `x-correlation-id`.
-- Response body cÃ³ `data.id`; lÆ°u láº¡i thÃ nh `<template-id>`.
+- Response header có `x-correlation-id`.
+- Response body có `data.id`; lưu lại thành `<template-id>`.
 
 Verify `exam_db.outbox_messages`:
 
@@ -3018,15 +3018,15 @@ Expected:
 - `action = EXAM_TEMPLATE_CREATED`.
 - `resource_type = EXAM_TEMPLATE`.
 - `resource_id = <template-id>`.
-- BÃ¬nh thÆ°á»ng sau vÃ i giÃ¢y `status = PUBLISHED`.
+- Bình thường sau vài giây `status = PUBLISHED`.
 
-### 10.3 Update template vÃ  query centralized audit
+### 10.3 Update template và query centralized audit
 
 ```bash
 curl -i -X PATCH http://localhost:8000/admin/exams/templates/<template-id> \
   -H "Authorization: Bearer <ADMIN_TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{ "name": "Äá» thi B1 Audit Demo Updated", "version": 1 }'
+  -d '{ "name": "Đề thi B1 Audit Demo Updated", "version": 1 }'
 ```
 
 Query audit-service:
@@ -3038,13 +3038,13 @@ curl -s "http://localhost:8000/admin/audit-logs?serviceName=exam-service&resourc
 
 Expected:
 
-- CÃ³ `EXAM_TEMPLATE_CREATED`.
-- CÃ³ `EXAM_TEMPLATE_UPDATED`.
-- Metadata update cÃ³ `name` vÃ  `version`.
+- Có `EXAM_TEMPLATE_CREATED`.
+- Có `EXAM_TEMPLATE_UPDATED`.
+- Metadata update có `name` và `version`.
 
 ### 10.4 Delete template audit
 
-Chá»‰ delete Ä‘Æ°á»£c template chÆ°a cÃ³ session:
+Chỉ delete được template chưa có session:
 
 ```bash
 curl -i -X DELETE "http://localhost:8000/admin/exams/templates/<template-id>" \
@@ -3057,7 +3057,7 @@ Expected:
 
 - HTTP `200`.
 - Audit action `EXAM_TEMPLATE_DELETED`.
-- Náº¿u template Ä‘Ã£ cÃ³ session, API tráº£ `EXAM_TEMPLATE_IN_USE` vÃ  khÃ´ng táº¡o success audit event phase nÃ y.
+- Nếu template đã có session, API trả `EXAM_TEMPLATE_IN_USE` và không tạo success audit event phase này.
 
 ### 10.5 Outbox failure demo
 
@@ -3072,9 +3072,9 @@ curl -i -X PATCH http://localhost:8000/admin/exams/templates/<template-id> \
 
 Expected:
 
-- Business update váº«n commit náº¿u request path khÃ´ng cáº§n RabbitMQ trá»±c tiáº¿p.
-- `exam_db.outbox_messages` cÃ³ row `PENDING` hoáº·c `FAILED`.
-- Audit-service chÆ°a cÃ³ record má»›i ngay.
+- Business update vẫn commit nếu request path không cần RabbitMQ trực tiếp.
+- `exam_db.outbox_messages` có row `PENDING` hoặc `FAILED`.
+- Audit-service chưa có record mới ngay.
 
 Start RabbitMQ:
 
@@ -3082,13 +3082,13 @@ Start RabbitMQ:
 docker compose start rabbitmq
 ```
 
-Expected: pending outbox Ä‘Æ°á»£c relay vÃ  audit record xuáº¥t hiá»‡n.
+Expected: pending outbox được relay và audit record xuất hiện.
 
 ---
 
 ## 11. Quality Gates
 
-Cháº¡y háº¹p trÆ°á»›c:
+Chạy hẹp trước:
 
 ```bash
 pnpm --filter=exam-service run prisma:generate
@@ -3096,7 +3096,7 @@ pnpm --filter=exam-service run check-types
 pnpm --filter=exam-service run build
 ```
 
-Náº¿u cÃ³ sá»­a common/config/Kong:
+Nếu có sửa common/config/Kong:
 
 ```bash
 pnpm run check-types
@@ -3104,7 +3104,7 @@ docker compose config --quiet
 docker compose -f docker-compose.infra.yml config --quiet
 ```
 
-Test focused náº¿u cÃ³:
+Test focused nếu có:
 
 ```bash
 pnpm --filter=exam-service run test
@@ -3116,14 +3116,14 @@ pnpm --filter=exam-service run test
 
 ### 11.1 `401 UNAUTHORIZED`
 
-NguyÃªn nhÃ¢n thÆ°á»ng gáº·p:
+Nguyên nhân thường gặp:
 
-- Thiáº¿u `Authorization: Bearer <token>`.
-- Token háº¿t háº¡n.
-- Direct local váº«n cáº§n JWT vÃ¬ exam-service tá»± validate token.
+- Thiếu `Authorization: Bearer <token>`.
+- Token hết hạn.
+- Direct local vẫn cần JWT vì exam-service tự validate token.
 - `keycloak.authServerUrl`, `realm`, `clientId` trong Consul sai.
 
-Kiá»ƒm tra:
+Kiểm tra:
 
 ```bash
 curl -s "http://localhost:8500/v1/kv/config/development-local/exam-service/keycloak.authServerUrl?raw"
@@ -3132,25 +3132,25 @@ curl -s http://localhost:8080/realms/luyen-thi-lai-xe-realm/.well-known/openid-c
 
 ### 11.2 `403 FORBIDDEN`
 
-Kiá»ƒm tra role trong token:
+Kiểm tra role trong token:
 
-- Template endpoints cáº§n `ADMIN`.
-- Session endpoints cáº§n `STUDENT`.
-- Question seed endpoints cáº§n `ADMIN` hoáº·c `CENTER_MANAGER`.
+- Template endpoints cần `ADMIN`.
+- Session endpoints cần `STUDENT`.
+- Question seed endpoints cần `ADMIN` hoặc `CENTER_MANAGER`.
 
-Náº¿u service account gá»i question-service pool fail, kiá»ƒm tra client `nestjs-backend` cÃ³ service account role phÃ¹ há»£p Ä‘á»ƒ gá»i `POST /admin/questions/pool`.
+Nếu service account gọi question-service pool fail, kiểm tra client `nestjs-backend` có service account role phù hợp để gọi `POST /admin/questions/pool`.
 
 ### 11.3 `STUDENT_PROFILE_INVALID`
 
-Exam-service start session gá»i `user-service /users/me` báº±ng bearer token cá»§a student. Lá»—i nÃ y thÆ°á»ng do:
+Exam-service start session gọi `user-service /users/me` bằng bearer token của student. Lỗi này thường do:
 
-- user-service chÆ°a cháº¡y.
-- profile chÆ°a Ä‘Æ°á»£c táº¡o tá»« event `identity.user.created`.
-- student profile khÃ´ng active.
-- role khÃ´ng pháº£i `STUDENT`.
-- `studentDetail` bá»‹ thiáº¿u.
+- user-service chưa chạy.
+- profile chưa được tạo từ event `identity.user.created`.
+- student profile không active.
+- role không phải `STUDENT`.
+- `studentDetail` bị thiếu.
 
-Kiá»ƒm tra:
+Kiểm tra:
 
 ```bash
 curl -s "$USER_BASE/users/me" \
@@ -3159,7 +3159,7 @@ curl -s "$USER_BASE/users/me" \
 
 ### 11.4 `STUDENT_LICENSE_MISMATCH`
 
-License tier trong user profile khÃ¡c template:
+License tier trong user profile khác template:
 
 ```bash
 curl -s "$USER_BASE/users/me" \
@@ -3169,7 +3169,7 @@ curl -s "$EXAM_BASE/admin/exams/templates/$TEMPLATE_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data.licenseCategory'
 ```
 
-Sá»­a báº±ng:
+Sửa bằng:
 
 ```bash
 curl -s -X PATCH "$USER_BASE/users/$STUDENT_USER_ID/license-tier" \
@@ -3182,7 +3182,7 @@ curl -s -X PATCH "$USER_BASE/users/$STUDENT_USER_ID/license-tier" \
 
 ### 11.5 `INSUFFICIENT_QUESTION_POOL`
 
-Question-service khÃ´ng cÃ³ Ä‘á»§ cÃ¢u active cho license category:
+Question-service không có đủ câu active cho license category:
 
 ```bash
 curl -s -X POST "$QUESTION_BASE/admin/questions/pool" \
@@ -3194,23 +3194,23 @@ curl -s -X POST "$QUESTION_BASE/admin/questions/pool" \
   }" | jq '.data.items | length'
 ```
 
-Cáº§n Ä‘áº£m báº£o:
+Cần đảm bảo:
 
-- `licenseCategories` cá»§a question cÃ³ category template.
+- `licenseCategories` của question có category template.
 - `isActive = true`.
-- Question chÆ°a bá»‹ soft delete.
-- Má»—i question cÃ³ Ä‘Ãºng 1 option `isCorrect = true`.
+- Question chưa bị soft delete.
+- Mỗi question có đúng 1 option `isCorrect = true`.
 
 ### 11.6 Kong `502 Bad Gateway`
 
-Kong dev route forward vá» local host port:
+Kong dev route forward về local host port:
 
 - exam-service: `3003`
 - user-service: `3002`
 - question-service: `3005`
 - identity-service: `3001`
 
-Kiá»ƒm tra service local:
+Kiểm tra service local:
 
 ```bash
 curl -s http://localhost:3003/docs-json | jq '.info.title'
@@ -3218,7 +3218,7 @@ curl -s http://localhost:3002/docs-json | jq '.info.title'
 curl -s http://localhost:3005/docs-json | jq '.info.title'
 ```
 
-Kiá»ƒm tra Kong logs:
+Kiểm tra Kong logs:
 
 ```bash
 docker logs luyen-thi-lai-xe-microservices-kong-dev-1 --tail 100
@@ -3226,14 +3226,14 @@ docker logs luyen-thi-lai-xe-microservices-kong-dev-1 --tail 100
 
 ### 11.7 Consul config stale
 
-Náº¿u vá»«a sá»­a `.env` hoáº·c `docker/consul/init.sh`, reseed:
+Nếu vừa sửa `.env` hoặc `docker/consul/init.sh`, reseed:
 
 ```bash
 docker compose -f docker-compose.infra.yml up -d --force-recreate consul-init
 pnpm run consul:seed:local
 ```
 
-Kiá»ƒm tra key:
+Kiểm tra key:
 
 ```bash
 curl -s "http://localhost:8500/v1/kv/config/development-local/exam-service/services.question.baseUrl?raw"
@@ -3242,11 +3242,11 @@ curl -s "http://localhost:8500/v1/kv/config/development-local/exam-service/servi
 
 ### 11.8 Windows PowerShell note
 
-CÃ¡c command trong guide dÃ¹ng Bash syntax. Náº¿u dÃ¹ng PowerShell:
+Các command trong guide dùng Bash syntax. Nếu dùng PowerShell:
 
-- Thay `\` thÃ nh backtick `` ` ``.
-- Thay `VAR=value` báº±ng `$env:VAR="value"` hoáº·c `$VAR="value"` tÃ¹y nhu cáº§u.
-- Náº¿u `curl` bá»‹ alias sang `Invoke-WebRequest`, dÃ¹ng `curl.exe`.
+- Thay `\` thành backtick `` ` ``.
+- Thay `VAR=value` bằng `$env:VAR="value"` hoặc `$VAR="value"` tùy nhu cầu.
+- Nếu `curl` bị alias sang `Invoke-WebRequest`, dùng `curl.exe`.
 ## ASR: Admin History And Missed Questions
 
 ### Admin Exam History
@@ -3286,39 +3286,39 @@ After starting a session, verify `exam_sessions` stores template snapshot column
 
 
 <!-- Merged from docs/testing/services-test-guide.md -->
-# Identity Service â€” HÆ°á»›ng Dáº«n Test API Chi Tiáº¿t
+# Identity Service — Hướng Dẫn Test API Chi Tiết
 
-> TÃ i liá»‡u nÃ y hÆ°á»›ng dáº«n test toÃ n bá»™ API cá»§a `identity-service`, bao gá»“m auth flow, admin user management, vÃ  xÃ¡c nháº­n event propagation sang user-service.
+> Tài liệu này hướng dẫn test toàn bộ API của `identity-service`, bao gồm auth flow, admin user management, và xác nhận event propagation sang user-service.
 
 ---
 
-## Má»¥c lá»¥c
+## Mục lục
 
-1. [Khá»Ÿi Ä‘á»™ng mÃ´i trÆ°á»ng](#1-khá»Ÿi-Ä‘á»™ng-mÃ´i-trÆ°á»ng)
-2. [Cáº¥u hÃ¬nh Keycloak Client](#2-cáº¥u-hÃ¬nh-keycloak-client)
+1. [Khởi động môi trường](#1-khởi-động-môi-trường)
+2. [Cấu hình Keycloak Client](#2-cấu-hình-keycloak-client)
 3. [Test Auth Flow](#3-test-auth-flow)
-4. [Test Admin User Management](#4-test-admin-user-management) â€” create, list, get, update, delete, role, lock
-5. [XÃ¡c nháº­n Event Propagation](#5-xÃ¡c-nháº­n-event-propagation) â€” created, updated, role-changed, locked, deleted
+4. [Test Admin User Management](#4-test-admin-user-management) — create, list, get, update, delete, role, lock
+5. [Xác nhận Event Propagation](#5-xác-nhận-event-propagation) — created, updated, role-changed, locked, deleted
 6. [Test Token Blacklist (Redis)](#6-test-token-blacklist-redis)
-7. [Kiá»ƒm tra Redis trá»±c tiáº¿p](#7-kiá»ƒm-tra-redis-trá»±c-tiáº¿p)
+7. [Kiểm tra Redis trực tiếp](#7-kiểm-tra-redis-trực-tiếp)
 8. [Troubleshooting](#8-troubleshooting)
 
 ---
 
-## 1. Khá»Ÿi Ä‘á»™ng mÃ´i trÆ°á»ng
+## 1. Khởi động môi trường
 
-### BÆ°á»›c 1.1 â€” Start toÃ n bá»™ infra
+### Bước 1.1 — Start toàn bộ infra
 
 ```bash
-# Tá»« root cá»§a project
+# Từ root của project
 pnpm run infra:up
 ```
 
-Lá»‡nh nÃ y khá»Ÿi Ä‘á»™ng: PostgreSQL, RabbitMQ, Consul, Keycloak, Kong, **Redis**.
+Lệnh này khởi động: PostgreSQL, RabbitMQ, Consul, Keycloak, Kong, **Redis**.
 
-Chá» khoáº£ng 30-60 giÃ¢y.
+Chờ khoảng 30-60 giây.
 
-**Kiá»ƒm tra cÃ¡c service healthy:**
+**Kiểm tra các service healthy:**
 
 ```bash
 # Consul
@@ -3334,50 +3334,50 @@ open http://localhost:8080   # admin/admin
 redis-cli ping               # PONG
 ```
 
-### BÆ°á»›c 1.2 â€” Seed config vÃ o Consul
+### Bước 1.2 — Seed config vào Consul
 
 ```bash
 pnpm run consul:seed:local
 ```
 
-Kiá»ƒm tra config Ä‘Ã£ Ä‘Æ°á»£c seed:
+Kiểm tra config đã được seed:
 
 ```bash
 pnpm run consul:list
-# Pháº£i tháº¥y: config/development-local/identity-service/redis.url
+# Phải thấy: config/development-local/identity-service/redis.url
 #             config/development-local/identity-service/keycloak.authServerUrl
 ```
 
-### BÆ°á»›c 1.3 â€” CÃ i dependencies (láº§n Ä‘áº§u)
+### Bước 1.3 — Cài dependencies (lần đầu)
 
 ```bash
 npm install
 ```
 
-### BÆ°á»›c 1.4 â€” Cháº¡y identity-service vÃ  user-service
+### Bước 1.4 — Chạy identity-service và user-service
 
 ```bash
-# Terminal 1 â€” identity-service
+# Terminal 1 — identity-service
 pnpm run dev --filter=identity-service
 
-# Terminal 2 â€” user-service (Ä‘á»ƒ xÃ¡c nháº­n event propagation)
+# Terminal 2 — user-service (để xác nhận event propagation)
 pnpm run dev --filter=user-service
 ```
 
-Kiá»ƒm tra khá»Ÿi Ä‘á»™ng thÃ nh cÃ´ng:
+Kiểm tra khởi động thành công:
 
 ```
-âœ“ Identity Service listening on port 3001
-âœ“ User Service listening on port 3002
+✓ Identity Service listening on port 3001
+✓ User Service listening on port 3002
 ```
 
 ---
 
-## 2. Cáº¥u hÃ¬nh Keycloak Client
+## 2. Cấu hình Keycloak Client
 
-> **Báº¯t buá»™c** trÆ°á»›c khi test admin endpoints.
+> **Bắt buộc** trước khi test admin endpoints.
 
-### BÆ°á»›c 2.1 â€” Má»Ÿ Keycloak Admin UI
+### Bước 2.1 — Mở Keycloak Admin UI
 
 ```
 http://localhost:8080
@@ -3385,35 +3385,35 @@ Username: admin
 Password: admin
 ```
 
-### BÆ°á»›c 2.2 â€” Enable Service Account cho client
+### Bước 2.2 — Enable Service Account cho client
 
-1. Chá»n realm: **luyen-thi-lai-xe-realm**
-2. Menu trÃ¡i: **Clients** â†’ chá»n **nestjs-backend**
-3. Tab **Settings** â†’ báº­t **Service accounts roles** â†’ **Save**
+1. Chọn realm: **luyen-thi-lai-xe-realm**
+2. Menu trái: **Clients** → chọn **nestjs-backend**
+3. Tab **Settings** → bật **Service accounts roles** → **Save**
 
-### BÆ°á»›c 2.3 â€” GÃ¡n realm-management roles
+### Bước 2.3 — Gán realm-management roles
 
-1. Tab **Service accounts roles** (trÃªn cÃ¹ng client nestjs-backend)
-2. Click **Assign role** â†’ Filter by client â†’ chá»n **realm-management**
-3. TÃ­ch chá»n: `manage-users`, `view-realm` â†’ **Assign**
+1. Tab **Service accounts roles** (trên cùng client nestjs-backend)
+2. Click **Assign role** → Filter by client → chọn **realm-management**
+3. Tích chọn: `manage-users`, `view-realm` → **Assign**
 
-### BÆ°á»›c 2.4 â€” Táº¡o Realm Roles (náº¿u chÆ°a cÃ³)
+### Bước 2.4 — Tạo Realm Roles (nếu chưa có)
 
-1. Menu trÃ¡i: **Realm roles** â†’ **Create role**
-2. Táº¡o láº§n lÆ°á»£t: `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
+1. Menu trái: **Realm roles** → **Create role**
+2. Tạo lần lượt: `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
 
-### BÆ°á»›c 2.5 â€” Táº¡o tÃ i khoáº£n admin Ä‘á»ƒ test
+### Bước 2.5 — Tạo tài khoản admin để test
 
-1. Menu trÃ¡i: **Users** â†’ **Add user**
+1. Menu trái: **Users** → **Add user**
 2. Username: `admin_test`, Email: `admin@test.com`, **Save**
-3. Tab **Credentials** â†’ Set Password: `Admin@123`, Temporary: OFF
-4. Tab **Role mapping** â†’ Assign role: `ADMIN`
+3. Tab **Credentials** → Set Password: `Admin@123`, Temporary: OFF
+4. Tab **Role mapping** → Assign role: `ADMIN`
 
 ---
 
 ## 3. Test Auth Flow
 
-### 3.1 â€” Login
+### 3.1 — Login
 
 ```bash
 curl -X POST http://localhost:3001/login \
@@ -3424,7 +3424,7 @@ curl -X POST http://localhost:3001/login \
   }'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:**
+**Kết quả mong đợi `200`:**
 
 ```json
 {
@@ -3444,21 +3444,21 @@ curl -X POST http://localhost:3001/login \
 }
 ```
 
-> LÆ°u `accessToken` vÃ  `refreshToken` vÃ o biáº¿n mÃ´i trÆ°á»ng Ä‘á»ƒ dÃ¹ng cho cÃ¡c bÆ°á»›c tiáº¿p theo.
+> Lưu `accessToken` và `refreshToken` vào biến môi trường để dùng cho các bước tiếp theo.
 
 ```bash
 ACCESS_TOKEN="eyJhbGciOi..."
 REFRESH_TOKEN="eyJhbGciOi..."
 ```
 
-### 3.2 â€” Truy cáº­p private endpoint
+### 3.2 — Truy cập private endpoint
 
 ```bash
 curl http://localhost:3001/private \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:**
+**Kết quả mong đợi `200`:**
 
 ```json
 {
@@ -3467,11 +3467,11 @@ curl http://localhost:3001/private \
   "message": "OK",
   "timestamp": "...",
   "path": "/private",
-  "data": { "message": "ChÃ o báº¡n, báº¡n Ä‘Ã£ Ä‘Äƒng nháº­p thÃ nh cÃ´ng!" }
+  "data": { "message": "Chào bạn, bạn đã đăng nhập thành công!" }
 }
 ```
 
-### 3.3 â€” Refresh token
+### 3.3 — Refresh token
 
 ```bash
 curl -X POST http://localhost:3001/refresh \
@@ -3479,11 +3479,11 @@ curl -X POST http://localhost:3001/refresh \
   -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:** CÃ¹ng cáº¥u trÃºc vá»›i login, `accessToken` má»›i.
+**Kết quả mong đợi `200`:** Cùng cấu trúc với login, `accessToken` mới.
 
-> Cáº­p nháº­t `ACCESS_TOKEN` vá»›i token má»›i.
+> Cập nhật `ACCESS_TOKEN` với token mới.
 
-### 3.4 â€” Forgot password
+### 3.4 — Forgot password
 
 Endpoint forgot-password la public. Direct local path la `POST /forgot-password`; qua Kong la `POST /auth/forgot-password`.
 
@@ -3586,9 +3586,9 @@ Neu email khong toi inbox:
 - Kiem tra provider yeu cau verify sender domain, SPF/DKIM/DMARC, hoac sandbox recipient.
 - Thu lai bang Mailpit default de tach loi forgot-password API khoi loi SMTP provider.
 
-### 3.5 â€” Logout
+### 3.5 — Logout
 
-Logout cáº§n cáº£ access token (header) vÃ  refresh token (body) Ä‘á»ƒ revoke toÃ n bá»™ session trÃªn Keycloak.
+Logout cần cả access token (header) và refresh token (body) để revoke toàn bộ session trên Keycloak.
 
 ```bash
 curl -X POST http://localhost:3001/logout \
@@ -3597,7 +3597,7 @@ curl -X POST http://localhost:3001/logout \
   -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:**
+**Kết quả mong đợi `200`:**
 
 ```json
 {
@@ -3614,14 +3614,14 @@ curl -X POST http://localhost:3001/logout \
 }
 ```
 
-### 3.6 â€” XÃ¡c nháº­n access token bá»‹ blacklist
+### 3.6 — Xác nhận access token bị blacklist
 
 ```bash
 curl http://localhost:3001/private \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `401`:**
+**Kết quả mong đợi `401`:**
 
 ```json
 {
@@ -3633,7 +3633,7 @@ curl http://localhost:3001/private \
 }
 ```
 
-### 3.7 â€” XÃ¡c nháº­n refresh token bá»‹ revoke (khÃ´ng thá»ƒ láº¥y token má»›i)
+### 3.7 — Xác nhận refresh token bị revoke (không thể lấy token mới)
 
 ```bash
 curl -X POST http://localhost:3001/refresh \
@@ -3641,13 +3641,13 @@ curl -X POST http://localhost:3001/refresh \
   -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `401`** â€” Keycloak tá»« chá»‘i vÃ¬ session Ä‘Ã£ bá»‹ revoke:
+**Kết quả mong đợi `401`** — Keycloak từ chối vì session đã bị revoke:
 
 ```json
 {
   "success": false,
   "code": "UNAUTHORIZED",
-  "message": "Refresh token khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n",
+  "message": "Refresh token không hợp lệ hoặc đã hết hạn",
   "timestamp": "...",
   "path": "/refresh"
 }
@@ -3657,17 +3657,17 @@ curl -X POST http://localhost:3001/refresh \
 
 ## 4. Test Admin User Management
 
-> Cáº§n `ACCESS_TOKEN` cá»§a tÃ i khoáº£n cÃ³ role `ADMIN`.
+> Cần `ACCESS_TOKEN` của tài khoản có role `ADMIN`.
 
 ```bash
-# Login láº¡i Ä‘á»ƒ láº¥y token má»›i (sau khi logout á»Ÿ bÆ°á»›c 3.5)
+# Login lại để lấy token mới (sau khi logout ở bước 3.5)
 ACCESS_TOKEN=$(curl -s -X POST http://localhost:3001/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin@test.com","password":"Admin@123"}' \
   | jq -r '.data.accessToken')
 ```
 
-### 4.1 â€” Táº¡o user má»›i (STUDENT)
+### 4.1 — Tạo user mới (STUDENT)
 
 ```bash
 curl -X POST http://localhost:3001/admin/identity-users \
@@ -3675,13 +3675,13 @@ curl -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
     "email": "student1@gm.uit.edu.vn",
-    "fullName": "Nguyá»…n VÄƒn A",
+    "fullName": "Nguyễn Văn A",
     "role": "STUDENT",
     "temporaryPassword": "Temp@1234"
   }'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `201`:**
+**Kết quả mong đợi `201`:**
 
 ```json
 {
@@ -3693,19 +3693,19 @@ curl -X POST http://localhost:3001/admin/identity-users \
   "data": {
     "userId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "email": "student1@gm.uit.edu.vn",
-    "fullName": "Nguyá»…n VÄƒn A",
+    "fullName": "Nguyễn Văn A",
     "role": "STUDENT"
   }
 }
 ```
 
-> LÆ°u `userId` Ä‘á»ƒ dÃ¹ng á»Ÿ cÃ¡c bÆ°á»›c tiáº¿p theo.
+> Lưu `userId` để dùng ở các bước tiếp theo.
 
 ```bash
 USER_ID="f47ac10b-58cc-4372-a567-0e02b2c3d479"
 ```
 
-### 4.2 â€” Táº¡o user trÃ¹ng email (kiá»ƒm tra conflict)
+### 4.2 — Tạo user trùng email (kiểm tra conflict)
 
 ```bash
 curl -X POST http://localhost:3001/admin/identity-users \
@@ -3719,7 +3719,7 @@ curl -X POST http://localhost:3001/admin/identity-users \
   }'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `400`:**
+**Kết quả mong đợi `400`:**
 
 ```json
 {
@@ -3731,7 +3731,7 @@ curl -X POST http://localhost:3001/admin/identity-users \
 }
 ```
 
-### 4.3 â€” Äá»•i role
+### 4.3 — Đổi role
 
 ```bash
 curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/role" \
@@ -3740,7 +3740,7 @@ curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/role" \
   -d '{"role": "INSTRUCTOR"}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:**
+**Kết quả mong đợi `200`:**
 
 ```json
 {
@@ -3753,7 +3753,7 @@ curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/role" \
 }
 ```
 
-### 4.4 â€” KhoÃ¡ tÃ i khoáº£n
+### 4.4 — Khoá tài khoản
 
 ```bash
 curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/lock" \
@@ -3762,7 +3762,7 @@ curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/lock" \
   -d '{"locked": true}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:**
+**Kết quả mong đợi `200`:**
 
 ```json
 {
@@ -3775,18 +3775,18 @@ curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/lock" \
 }
 ```
 
-### 4.5 â€” XÃ¡c nháº­n user bá»‹ khoÃ¡ khÃ´ng thá»ƒ login
+### 4.5 — Xác nhận user bị khoá không thể login
 
 ```bash
-# Thá»­ login báº±ng tÃ i khoáº£n vá»«a khoÃ¡
+# Thử login bằng tài khoản vừa khoá
 curl -X POST http://localhost:3001/login \
   -H "Content-Type: application/json" \
   -d '{"username":"student1@gm.uit.edu.vn","password":"Temp@1234"}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `401`**
+**Kết quả mong đợi `401`**
 
-### 4.6 â€” Má»Ÿ khoÃ¡ tÃ i khoáº£n
+### 4.6 — Mở khoá tài khoản
 
 ```bash
 curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/lock" \
@@ -3795,7 +3795,7 @@ curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/lock" \
   -d '{"locked": false}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:**
+**Kết quả mong đợi `200`:**
 
 ```json
 {
@@ -3808,14 +3808,14 @@ curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID/lock" \
 }
 ```
 
-### 4.7 â€” List users
+### 4.7 — List users
 
 ```bash
 curl "http://localhost:3001/admin/identity-users" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:**
+**Kết quả mong đợi `200`:**
 
 ```json
 {
@@ -3830,31 +3830,31 @@ curl "http://localhost:3001/admin/identity-users" \
 }
 ```
 
-Thá»­ filter: `?role=STUDENT`, `?isActive=true`, `?search=student1`, `?includeDeleted=true`.
+Thử filter: `?role=STUDENT`, `?isActive=true`, `?search=student1`, `?includeDeleted=true`.
 
-### 4.8 â€” Get user by ID
+### 4.8 — Get user by ID
 
 ```bash
 curl "http://localhost:3001/admin/identity-users/$USER_ID" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:** object `IdentityUserResponseDto` vá»›i `userId`, `email`, `fullName`, `role`, `isActive`, `isDeleted`, `createdAt`, `updatedAt`.
+**Kết quả mong đợi `200`:** object `IdentityUserResponseDto` với `userId`, `email`, `fullName`, `role`, `isActive`, `isDeleted`, `createdAt`, `updatedAt`.
 
-### 4.9 â€” Cáº­p nháº­t user (email + fullName)
+### 4.9 — Cập nhật user (email + fullName)
 
 ```bash
 curl -X PATCH "http://localhost:3001/admin/identity-users/$USER_ID" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"email": "student1-updated@gm.uit.edu.vn", "fullName": "Nguyá»…n VÄƒn A (updated)"}'
+  -d '{"email": "student1-updated@gm.uit.edu.vn", "fullName": "Nguyễn Văn A (updated)"}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:** object vá»›i `email` vÃ  `fullName` Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t.
+**Kết quả mong đợi `200`:** object với `email` và `fullName` đã được cập nhật.
 
-> Sau bÆ°á»›c nÃ y, user-service sáº½ nháº­n event `identity.user.updated` vÃ  Ä‘á»“ng bá»™ email/fullName trong `UserProfile`.
+> Sau bước này, user-service sẽ nhận event `identity.user.updated` và đồng bộ email/fullName trong `UserProfile`.
 
-### 4.10 â€” Soft delete user
+### 4.10 — Soft delete user
 
 ```bash
 curl -X DELETE "http://localhost:3001/admin/identity-users/$USER_ID" \
@@ -3863,14 +3863,14 @@ curl -X DELETE "http://localhost:3001/admin/identity-users/$USER_ID" \
   -d '{"deletedById": "<admin_keycloak_id>"}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:** object vá»›i `isDeleted: true`, `isActive: false`, `deletedAt` cÃ³ giÃ¡ trá»‹.
+**Kết quả mong đợi `200`:** object với `isDeleted: true`, `isActive: false`, `deletedAt` có giá trị.
 
-> Sau bÆ°á»›c nÃ y, user-service nháº­n event `identity.user.deleted` vÃ  set `isActive = false` trong `UserProfile`.
+> Sau bước này, user-service nhận event `identity.user.deleted` và set `isActive = false` trong `UserProfile`.
 
-### 4.11 â€” Test khÃ´ng Ä‘á»§ quyá»n (dÃ¹ng STUDENT token)
+### 4.11 — Test không đủ quyền (dùng STUDENT token)
 
 ```bash
-# Táº¡o student token (náº¿u student Ä‘Ã£ Ä‘á»•i password)
+# Tạo student token (nếu student đã đổi password)
 STUDENT_TOKEN=$(curl -s -X POST http://localhost:3001/login \
   -H "Content-Type: application/json" \
   -d '{"username":"student1@gm.uit.edu.vn","password":"<new_password>"}' \
@@ -3882,24 +3882,24 @@ curl -X POST http://localhost:3001/admin/identity-users \
   -d '{"email":"x@test.com","fullName":"X","role":"STUDENT","temporaryPassword":"Pass@123"}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `403`**
+**Kết quả mong đợi `403`**
 
 ---
 
-## 5. XÃ¡c nháº­n Event Propagation
+## 5. Xác nhận Event Propagation
 
-Sau khi táº¡o user á»Ÿ bÆ°á»›c 4.1, user-service pháº£i tá»± Ä‘á»™ng táº¡o `UserProfile`.
+Sau khi tạo user ở bước 4.1, user-service phải tự động tạo `UserProfile`.
 
-### 5.1 â€” Kiá»ƒm tra UserProfile Ä‘Æ°á»£c táº¡o
+### 5.1 — Kiểm tra UserProfile được tạo
 
 ```bash
-# Cáº§n ADMIN token; user-service Ä‘á»c actor tá»« JWT.sub.
-# Gá»i trá»±c tiáº¿p user-service (port 3002)
+# Cần ADMIN token; user-service đọc actor từ JWT.sub.
+# Gọi trực tiếp user-service (port 3002)
 curl "http://localhost:3002/users/$USER_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i `200`:**
+**Kết quả mong đợi `200`:**
 
 ```json
 {
@@ -3910,7 +3910,7 @@ curl "http://localhost:3002/users/$USER_ID" \
   "path": "/users/...",
   "data": {
     "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-    "fullName": "Nguyá»…n VÄƒn A",
+    "fullName": "Nguyễn Văn A",
     "email": "student1@gm.uit.edu.vn",
     "role": "STUDENT",
     "isActive": true,
@@ -3922,68 +3922,68 @@ curl "http://localhost:3002/users/$USER_ID" \
 }
 ```
 
-> Náº¿u `404` sau 2-3 giÃ¢y, kiá»ƒm tra RabbitMQ vÃ  user-service logs.
+> Nếu `404` sau 2-3 giây, kiểm tra RabbitMQ và user-service logs.
 
-### 5.2 â€” Kiá»ƒm tra event role-changed
+### 5.2 — Kiểm tra event role-changed
 
-Sau bÆ°á»›c 4.3 (Ä‘á»•i sang INSTRUCTOR):
-
-```bash
-curl "http://localhost:3002/users/$USER_ID" \
-  -H "Authorization: Bearer $ADMIN_TOKEN"
-```
-
-**Káº¿t quáº£ mong Ä‘á»£i:** `"role": "INSTRUCTOR"`, `"studentDetail": null`
-
-### 5.3 â€” Kiá»ƒm tra event identity.user.updated
-
-Sau bÆ°á»›c 4.9 (cáº­p nháº­t email + fullName):
+Sau bước 4.3 (đổi sang INSTRUCTOR):
 
 ```bash
 curl "http://localhost:3002/users/$USER_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i:** `"email": "student1-updated@gm.uit.edu.vn"`, `"fullName": "Nguyá»…n VÄƒn A (updated)"`.
+**Kết quả mong đợi:** `"role": "INSTRUCTOR"`, `"studentDetail": null`
 
-### 5.4 â€” Kiá»ƒm tra event identity.user.locked
+### 5.3 — Kiểm tra event identity.user.updated
 
-Sau bÆ°á»›c 4.4 (lock user):
-
-```bash
-curl "http://localhost:3002/users/$USER_ID" \
-  -H "Authorization: Bearer $ADMIN_TOKEN"
-```
-
-**Káº¿t quáº£ mong Ä‘á»£i:** `"isActive": false`.
-
-Sau bÆ°á»›c 4.6 (unlock):
-
-**Káº¿t quáº£ mong Ä‘á»£i:** `"isActive": true`.
-
-### 5.5 â€” Kiá»ƒm tra event identity.user.deleted
-
-Sau bÆ°á»›c 4.10 (soft delete):
+Sau bước 4.9 (cập nhật email + fullName):
 
 ```bash
 curl "http://localhost:3002/users/$USER_ID" \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i:** `"isActive": false` (profile bá»‹ deactivate nhÆ°ng váº«n tá»“n táº¡i trong user-service).
+**Kết quả mong đợi:** `"email": "student1-updated@gm.uit.edu.vn"`, `"fullName": "Nguyễn Văn A (updated)"`.
 
-### 5.6 â€” Theo dÃµi RabbitMQ events
+### 5.4 — Kiểm tra event identity.user.locked
 
-Má»Ÿ RabbitMQ Management: http://localhost:15672 (guest/guest)
+Sau bước 4.4 (lock user):
 
-- Tab **Queues** â†’ `user_service_events` â†’ **Get messages** â†’ xem payload events
-- Tab **Queues** â†’ `notification_queue` â†’ tÆ°Æ¡ng tá»±
+```bash
+curl "http://localhost:3002/users/$USER_ID" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Kết quả mong đợi:** `"isActive": false`.
+
+Sau bước 4.6 (unlock):
+
+**Kết quả mong đợi:** `"isActive": true`.
+
+### 5.5 — Kiểm tra event identity.user.deleted
+
+Sau bước 4.10 (soft delete):
+
+```bash
+curl "http://localhost:3002/users/$USER_ID" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Kết quả mong đợi:** `"isActive": false` (profile bị deactivate nhưng vẫn tồn tại trong user-service).
+
+### 5.6 — Theo dõi RabbitMQ events
+
+Mở RabbitMQ Management: http://localhost:15672 (guest/guest)
+
+- Tab **Queues** → `user_service_events` → **Get messages** → xem payload events
+- Tab **Queues** → `notification_queue` → tương tự
 
 ---
 
 ## 6. Test Token Blacklist (Redis)
 
-### 6.1 â€” Logout vÃ  verify blacklist trong Redis
+### 6.1 — Logout và verify blacklist trong Redis
 
 ```bash
 # Login
@@ -3992,51 +3992,51 @@ ACCESS_TOKEN=$(curl -s -X POST http://localhost:3001/login \
   -d '{"username":"admin@test.com","password":"Admin@123"}' \
   | jq -r '.data.accessToken')
 
-# Láº¥y jti tá»« JWT payload
+# Lấy jti từ JWT payload
 JTI=$(echo $ACCESS_TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq -r '.jti')
 echo "JTI: $JTI"
 
-# Logout (cáº§n cáº£ access token + refresh token)
+# Logout (cần cả access token + refresh token)
 curl -X POST http://localhost:3001/logout \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
 
-# Kiá»ƒm tra Redis
+# Kiểm tra Redis
 redis-cli GET "bl:$JTI"
-# Káº¿t quáº£ mong Ä‘á»£i: "1"
+# Kết quả mong đợi: "1"
 
 redis-cli TTL "bl:$JTI"
-# Káº¿t quáº£ mong Ä‘á»£i: sá»‘ giÃ¢y cÃ²n láº¡i cá»§a token
+# Kết quả mong đợi: số giây còn lại của token
 ```
 
-### 6.2 â€” Restart service, token váº«n bá»‹ blacklist
+### 6.2 — Restart service, token vẫn bị blacklist
 
 ```bash
 # Restart identity-service
-# (Ctrl+C terminal 1, rá»“i pnpm run dev --filter=identity-service)
+# (Ctrl+C terminal 1, rồi pnpm run dev --filter=identity-service)
 
-# Thá»­ dÃ¹ng token Ä‘Ã£ logout
+# Thử dùng token đã logout
 curl http://localhost:3001/private \
   -H "Authorization: Bearer $ACCESS_TOKEN"
-# Káº¿t quáº£ mong Ä‘á»£i: 401 (Redis váº«n giá»¯ key sau restart)
+# Kết quả mong đợi: 401 (Redis vẫn giữ key sau restart)
 ```
 
 ---
 
-## 7. Kiá»ƒm tra Redis trá»±c tiáº¿p
+## 7. Kiểm tra Redis trực tiếp
 
 ```bash
-# Káº¿t ná»‘i Redis CLI
+# Kết nối Redis CLI
 redis-cli
 
-# Xem táº¥t cáº£ blacklist keys
+# Xem tất cả blacklist keys
 KEYS bl:*
 
-# Xem TTL cá»§a má»™t key cá»¥ thá»ƒ
+# Xem TTL của một key cụ thể
 TTL bl:<jti>
 
-# Sá»‘ keys trong blacklist
+# Số keys trong blacklist
 DBSIZE
 ```
 
@@ -4044,52 +4044,52 @@ DBSIZE
 
 ## 8. Troubleshooting
 
-### identity-service khÃ´ng start Ä‘Æ°á»£c
+### identity-service không start được
 
 ```bash
-# Kiá»ƒm tra Consul cÃ³ Ä‘ang cháº¡y
+# Kiểm tra Consul có đang chạy
 curl http://localhost:8500/v1/status/leader
 
-# Kiá»ƒm tra Redis cÃ³ Ä‘ang cháº¡y
+# Kiểm tra Redis có đang chạy
 redis-cli ping
 
-# Kiá»ƒm tra logs
+# Kiểm tra logs
 pnpm run dev --filter=identity-service 2>&1 | head -50
 ```
 
-### Admin API tráº£ vá» 500 "Failed to obtain Keycloak admin token"
+### Admin API trả về 500 "Failed to obtain Keycloak admin token"
 
-â†’ Client `nestjs-backend` chÆ°a enable Service Accounts. Xem [BÆ°á»›c 2.2](#bÆ°á»›c-22--enable-service-account-cho-client).
+→ Client `nestjs-backend` chưa enable Service Accounts. Xem [Bước 2.2](#bước-22--enable-service-account-cho-client).
 
-### Admin API tráº£ vá» 500 "Keycloak createUser failed"
+### Admin API trả về 500 "Keycloak createUser failed"
 
-â†’ Service account chÆ°a cÃ³ `manage-users` role. Xem [BÆ°á»›c 2.3](#bÆ°á»›c-23--gÃ¡n-realm-management-roles).
+→ Service account chưa có `manage-users` role. Xem [Bước 2.3](#bước-23--gán-realm-management-roles).
 
-### user-service khÃ´ng nháº­n Ä‘Æ°á»£c event (UserProfile khÃ´ng Ä‘Æ°á»£c táº¡o)
+### user-service không nhận được event (UserProfile không được tạo)
 
 ```bash
-# Kiá»ƒm tra queue user_service_events cÃ³ tá»“n táº¡i
+# Kiểm tra queue user_service_events có tồn tại
 curl http://localhost:15672/api/queues/%2F/user_service_events \
   -u guest:guest | jq '.messages'
 
-# Kiá»ƒm tra user-service Ä‘ang consume queue
-# Má»Ÿ http://localhost:15672 â†’ Queues â†’ user_service_events â†’ Consumers
+# Kiểm tra user-service đang consume queue
+# Mở http://localhost:15672 → Queues → user_service_events → Consumers
 ```
 
-â†’ Náº¿u queue chÆ°a tá»“n táº¡i: user-service chÆ°a start hoáº·c chÆ°a connect RabbitMQ.
+→ Nếu queue chưa tồn tại: user-service chưa start hoặc chưa connect RabbitMQ.
 
-### Token blacklist khÃ´ng hoáº¡t Ä‘á»™ng sau restart
+### Token blacklist không hoạt động sau restart
 
-â†’ Kiá»ƒm tra `redis.url` trong Consul:
+→ Kiểm tra `redis.url` trong Consul:
 
 ```bash
 curl http://localhost:8500/v1/kv/config/development-local/identity-service/redis.url?raw
-# Káº¿t quáº£ mong Ä‘á»£i: redis://localhost:6379
+# Kết quả mong đợi: redis://localhost:6379
 ```
 
-### Lá»—i "Role 'STUDENT' not found in Keycloak realm"
+### Lỗi "Role 'STUDENT' not found in Keycloak realm"
 
-â†’ Realm roles chÆ°a Ä‘Æ°á»£c táº¡o. Xem [BÆ°á»›c 2.4](#bÆ°á»›c-24--táº¡o-realm-roles-náº¿u-chÆ°a-cÃ³).
+→ Realm roles chưa được tạo. Xem [Bước 2.4](#bước-24--tạo-realm-roles-nếu-chưa-có).
 
 
 
@@ -4111,27 +4111,27 @@ Redis is required because notification-service uses the Socket.IO Redis adapter.
 
 ## Firebase Push Setup
 
-Root `.env` cáº§n cÃ³ `FCM_CREDENTIALS` lÃ  Firebase service-account JSON trÃªn má»™t dÃ²ng. KhÃ´ng commit file JSON credential rá»i vÃ o repo.
+Root `.env` cần có `FCM_CREDENTIALS` là Firebase service-account JSON trên một dòng. Không commit file JSON credential rời vào repo.
 
-Sau khi cáº­p nháº­t `.env`, seed láº¡i Consul rá»“i restart notification-service:
+Sau khi cập nhật `.env`, seed lại Consul rồi restart notification-service:
 
 ```powershell
 pnpm run consul:seed:local
 pnpm --filter=notification-service run start:dev
 ```
 
-Náº¿u `FCM_CREDENTIALS` trá»‘ng, service váº«n cháº¡y vÃ  PUSH sáº½ Ä‘Æ°á»£c skip cÃ³ kiá»ƒm soÃ¡t. In-app/email khÃ´ng bá»‹ áº£nh hÆ°á»Ÿng.
+Nếu `FCM_CREDENTIALS` trống, service vẫn chạy và PUSH sẽ được skip có kiểm soát. In-app/email không bị ảnh hưởng.
 
 ## Frontend Device Token Flow
 
-TrÃªn thiáº¿t bá»‹ tháº­t hoáº·c emulator cÃ³ Firebase Messaging:
+Trên thiết bị thật hoặc emulator có Firebase Messaging:
 
-1. Cáº¥u hÃ¬nh Firebase app:
-   - Android: thÃªm `google-services.json`.
-   - iOS: thÃªm `GoogleService-Info.plist` vÃ  cáº¥u hÃ¬nh APNs key/certificate trong Firebase Console.
-2. Xin quyá»n notification tá»« há»‡ Ä‘iá»u hÃ nh.
-3. Láº¥y FCM registration token tá»« Firebase Messaging SDK.
-4. ÄÄƒng kÃ½ token vá»›i backend:
+1. Cấu hình Firebase app:
+   - Android: thêm `google-services.json`.
+   - iOS: thêm `GoogleService-Info.plist` và cấu hình APNs key/certificate trong Firebase Console.
+2. Xin quyền notification từ hệ điều hành.
+3. Lấy FCM registration token từ Firebase Messaging SDK.
+4. Đăng ký token với backend:
 
 ```http
 POST http://localhost:3006/notifications/devices
@@ -4144,15 +4144,15 @@ Content-Type: application/json
 }
 ```
 
-5. Khi Firebase refresh token, gá»i láº¡i endpoint trÃªn vá»›i token má»›i.
-6. Khi logout hoáº·c táº¯t push, URL-encode token rá»“i há»§y Ä‘Äƒng kÃ½:
+5. Khi Firebase refresh token, gọi lại endpoint trên với token mới.
+6. Khi logout hoặc tắt push, URL-encode token rồi hủy đăng ký:
 
 ```http
 DELETE http://localhost:3006/notifications/devices/<url_encoded_fcm_registration_token>
 Authorization: Bearer <student_token>
 ```
 
-Foreground test: app cáº§n tá»± hiá»ƒn thá»‹ local notification náº¿u muá»‘n tháº¥y banner khi Ä‘ang má»Ÿ app. Background/quit test: Ä‘Æ°a app xuá»‘ng background, trigger event cÃ³ kÃªnh PUSH, rá»“i kiá»ƒm tra system tray cá»§a thiáº¿t bá»‹.
+Foreground test: app cần tự hiển thị local notification nếu muốn thấy banner khi đang mở app. Background/quit test: đưa app xuống background, trigger event có kênh PUSH, rồi kiểm tra system tray của thiết bị.
 
 ## Send Academic Warning
 
@@ -4165,7 +4165,7 @@ Content-Type: application/json
   "studentId": "<studentId>",
   "reason": "LOW_EXAM_SCORE",
   "severity": "HIGH",
-  "message": "Báº¡n cáº§n Ã´n láº¡i nhÃ³m cÃ¢u há»i thÆ°á»ng sai trÆ°á»›c khi thi tiáº¿p."
+  "message": "Bạn cần ôn lại nhóm câu hỏi thường sai trước khi thi tiếp."
 }
 ```
 
@@ -4231,13 +4231,13 @@ Authorization: Bearer <student_token>
 
 
 <!-- Merged legacy testing guide -->
-# Question Service - HÆ°á»›ng Dáº«n Test API Chi Tiáº¿t
+# Question Service - Hướng Dẫn Test API Chi Tiết
 
-> TÃ i liá»‡u nÃ y hÆ°á»›ng dáº«n test API cá»§a `question-service` khi gá»i trá»±c tiáº¿p local port 3005 vÃ  khi gá»i qua Kong.
+> Tài liệu này hướng dẫn test API của `question-service` khi gọi trực tiếp local port 3005 và khi gọi qua Kong.
 
 ---
 
-## 1. Khá»Ÿi Ä‘á»™ng mÃ´i trÆ°á»ng
+## 1. Khởi động môi trường
 
 ### 1.1 Start infra
 
@@ -4246,13 +4246,13 @@ pnpm run infra:up
 pnpm run consul:seed:local
 ```
 
-Kiá»ƒm tra Consul:
+Kiểm tra Consul:
 
 ```bash
 curl http://localhost:8500/v1/status/leader
 ```
 
-`pnpm run infra:up` dÃ¹ng `docker-compose.infra.yml` cho hybrid mode, gá»“m:
+`pnpm run infra:up` dùng `docker-compose.infra.yml` cho hybrid mode, gồm:
 
 - PostgreSQL databases: `5432..5440`
 - RabbitMQ: `5672`, UI `15672`
@@ -4262,7 +4262,7 @@ curl http://localhost:8500/v1/status/leader
 - Kong dev gateway: proxy `8000`, admin `8001`
 - ELK: Elasticsearch `9200`, Logstash `5044`, Kibana `5601`
 
-Kiá»ƒm tra nhanh:
+Kiểm tra nhanh:
 
 ```bash
 docker compose -f docker-compose.infra.yml ps
@@ -4271,13 +4271,13 @@ curl -s http://localhost:9200/_cluster/health | jq .
 curl -I http://localhost:5601
 ```
 
-Náº¿u chá»‰ muá»‘n báº­t riÃªng ELK:
+Nếu chỉ muốn bật riêng ELK:
 
 ```bash
 docker compose -f docker-compose.infra.yml up -d elasticsearch logstash kibana
 ```
 
-### 1.2 Generate vÃ  migrate database
+### 1.2 Generate và migrate database
 
 ```bash
 cd apps/question-service
@@ -4285,7 +4285,7 @@ pnpm run db:generate
 pnpm run db:migrate
 ```
 
-Náº¿u migration Ä‘Ã£ tá»“n táº¡i:
+Nếu migration đã tồn tại:
 
 ```bash
 cd apps/question-service
@@ -4294,37 +4294,37 @@ pnpm run db:deploy
 
 ### 1.3 Seed question topics and questions
 
-Seed 6 topic gá»‘c vÃ  toÃ n bá»™ 600 cÃ¢u há»i tá»« `seed/600-cau-hoi.docx`:
+Seed 6 topic gốc và toàn bộ 600 câu hỏi từ `seed/600-cau-hoi.docx`:
 
 ```bash
 cd apps/question-service
 pnpm run db:seed
 ```
 
-Hoáº·c cháº¡y tá»« root:
+Hoặc chạy từ root:
 
 ```bash
 pnpm run db:seed:question
 ```
 
-Khi nhiá»u service cÃ³ seed riÃªng, cháº¡y toÃ n bá»™ seed tá»« root:
+Khi nhiều service có seed riêng, chạy toàn bộ seed từ root:
 
 ```bash
 pnpm run db:seed
 ```
 
-Seed nÃ y idempotent, cÃ³ thá»ƒ cháº¡y láº¡i nhiá»u láº§n mÃ  khÃ´ng táº¡o trÃ¹ng topic/question/option.
-CÃ¡c cÃ¢u cÃ³ hÃ¬nh váº«n Ä‘Æ°á»£c seed pháº§n text vÃ  Ä‘Ã¡p Ã¡n; cháº¡y seed áº£nh á»Ÿ bÆ°á»›c káº¿ tiáº¿p Ä‘á»ƒ upload Azure vÃ  link `imageUrl`/`mediaFileId`.
+Seed này idempotent, có thể chạy lại nhiều lần mà không tạo trùng topic/question/option.
+Các câu có hình vẫn được seed phần text và đáp án; chạy seed ảnh ở bước kế tiếp để upload Azure và link `imageUrl`/`mediaFileId`.
 
-Seed áº£nh nhÃºng tá»« DOCX lÃªn Azure Blob Storage vÃ  link vÃ o question:
+Seed ảnh nhúng từ DOCX lên Azure Blob Storage và link vào question:
 
 ```bash
 pnpm run db:seed:question-images
 ```
 
-Seed áº£nh cáº§n config `media-service` trong Consul: `storage.accountName`, `storage.accountKey`, `storage.containerName`, cÃ¹ng database URL cá»§a `question-service` vÃ  `media-service`. Frontend nÃªn dÃ¹ng `mediaFileId` Ä‘á»ƒ gá»i `GET /media/files/:id/url` láº¥y presigned URL rá»“i render áº£nh.
+Seed ảnh cần config `media-service` trong Consul: `storage.accountName`, `storage.accountKey`, `storage.containerName`, cùng database URL của `question-service` và `media-service`. Frontend nên dùng `mediaFileId` để gọi `GET /media/files/:id/url` lấy presigned URL rồi render ảnh.
 
-Kiá»ƒm tra nhanh sau khi start service:
+Kiểm tra nhanh sau khi start service:
 
 ```bash
 curl -s "http://localhost:3005/admin/questions/topics?page=1&size=20" | jq '.data | {total, topics: [.items[] | {name, description}]}'
@@ -4332,16 +4332,16 @@ curl -s "http://localhost:3005/admin/questions?page=1&size=1" | jq '.data.total'
 curl -s "http://localhost:3005/admin/questions?type=TRAFFIC_SIGN&page=1&size=5" | jq '.data.items[] | {id, imageUrl, mediaFileId}'
 ```
 
-Expect cÃ³ 6 topic gá»‘c:
+Expect có 6 topic gốc:
 
-- Quy Ä‘á»‹nh chung vÃ  quy táº¯c giao thÃ´ng Ä‘Æ°á»ng bá»™
-- VÄƒn hÃ³a giao thÃ´ng, Ä‘áº¡o Ä‘á»©c ngÆ°á»i lÃ¡i xe, ká»¹ nÄƒng PCCC vÃ  cá»©u há»™ cá»©u náº¡n
-- Ká»¹ thuáº­t lÃ¡i xe
-- Cáº¥u táº¡o vÃ  sá»­a chá»¯a
-- BÃ¡o hiá»‡u Ä‘Æ°á»ng bá»™
-- Giáº£i tháº¿ sa hÃ¬nh vÃ  ká»¹ nÄƒng xá»­ lÃ½ tÃ¬nh huá»‘ng giao thÃ´ng
+- Quy định chung và quy tắc giao thông đường bộ
+- Văn hóa giao thông, đạo đức người lái xe, kỹ năng PCCC và cứu hộ cứu nạn
+- Kỹ thuật lái xe
+- Cấu tạo và sửa chữa
+- Báo hiệu đường bộ
+- Giải thế sa hình và kỹ năng xử lý tình huống giao thông
 
-Expect question total lÃ  `600`.
+Expect question total là `600`.
 
 ### 1.4 Start question-service
 
@@ -4349,7 +4349,7 @@ Expect question total lÃ  `600`.
 pnpm run dev --filter=question-service
 ```
 
-Kiá»ƒm tra:
+Kiểm tra:
 
 ```bash
 curl http://localhost:3005/docs-json
@@ -4364,45 +4364,45 @@ Swagger UI: http://localhost:3005/docs
 ```
 Client
   |-- DIRECT --> http://localhost:3005
-  |              Æ¯u tiÃªn JWT tháº­t; x-user-id chá»‰ lÃ  fallback legacy
+  |              Ưu tiên JWT thật; x-user-id chỉ là fallback legacy
   |
   |-- KONG ----> http://localhost:8000/admin/questions
-                 Service Ä‘á»c actor tá»« JWT.sub
+                 Service đọc actor từ JWT.sub
 ```
 
-Trong local hybrid mode, Kong container `kong-dev` Ä‘á»c `kong/kong.dev.yaml` vÃ  forward `/admin/questions` vá» `host.docker.internal:3005`. VÃ¬ váº­y frontend/Postman nÃªn test qua `http://localhost:8000` Ä‘á»ƒ giá»‘ng production path hÆ¡n. CÃ¡c lá»‡nh `x-user-id` trong guide nÃ y chá»‰ cÃ²n dÃ¹ng cho debug legacy; frontend/demo chuáº©n gá»­i `Authorization: Bearer <access_token>`.
+Trong local hybrid mode, Kong container `kong-dev` đọc `kong/kong.dev.yaml` và forward `/admin/questions` về `host.docker.internal:3005`. Vì vậy frontend/Postman nên test qua `http://localhost:8000` để giống production path hơn. Các lệnh `x-user-id` trong guide này chỉ còn dùng cho debug legacy; frontend/demo chuẩn gửi `Authorization: Bearer <access_token>`.
 
-Kiá»ƒm tra Kong Ä‘Ã£ náº¡p route:
+Kiểm tra Kong đã nạp route:
 
 ```bash
 curl -s http://localhost:8001/routes | jq '.data[] | {name, paths}'
 curl -s http://localhost:8001/services/question-service | jq .
 ```
 
-Kiá»ƒm tra Swagger qua Kong:
+Kiểm tra Swagger qua Kong:
 
 ```bash
 curl -s http://localhost:8000/question-service/docs-json | jq '.info.title'
 ```
 
-Kiá»ƒm tra API qua Kong:
+Kiểm tra API qua Kong:
 
 ```bash
 curl -s "http://localhost:8000/admin/questions?page=1&size=5" | jq .
 ```
 
-Náº¿u gá»i qua Kong bá»‹ `502`, thá»­:
+Nếu gọi qua Kong bị `502`, thử:
 
 ```bash
 curl -s http://localhost:3005/docs-json | jq '.info.title'
 docker logs luyen-thi-lai-xe-microservices-kong-dev-1 --tail 100
 ```
 
-`502` thÆ°á»ng cÃ³ nghÄ©a question-service local chÆ°a cháº¡y á»Ÿ port 3005 hoáº·c Kong container khÃ´ng reach Ä‘Æ°á»£c `host.docker.internal`.
+`502` thường có nghĩa question-service local chưa chạy ở port 3005 hoặc Kong container không reach được `host.docker.internal`.
 
 ---
 
-## 3. Biáº¿n mÃ´i trÆ°á»ng test
+## 3. Biến môi trường test
 
 ```bash
 BASE="http://localhost:3005"
@@ -4414,22 +4414,22 @@ ADMIN_ID="550e8400-e29b-41d4-a716-446655440000"
 
 ## 4. Test Topic Endpoints
 
-### 4.1 Táº¡o topic
+### 4.1 Tạo topic
 
 ```bash
 TOPIC_ID=$(curl -s -X POST "$BASE/admin/questions/topics" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Biá»ƒn bÃ¡o giao thÃ´ng",
-    "description": "CÃ¢u há»i vá» biá»ƒn bÃ¡o"
+    "name": "Biển báo giao thông",
+    "description": "Câu hỏi về biển báo"
   }' | jq -r '.data.id')
 
 echo "TOPIC_ID=$TOPIC_ID"
 ```
 
-Expect `201 Created`, response cÃ³ `data.id`.
+Expect `201 Created`, response có `data.id`.
 
-Qua Kong thÃ¬ Ä‘á»•i `$BASE` thÃ nh `$KONG_BASE`:
+Qua Kong thì đổi `$BASE` thành `$KONG_BASE`:
 
 ```bash
 curl -s -X POST "$KONG_BASE/admin/questions/topics" \
@@ -4454,38 +4454,38 @@ curl -s "$BASE/admin/questions/topics/$TOPIC_ID" | jq .data
 ```bash
 curl -s -X PATCH "$BASE/admin/questions/topics/$TOPIC_ID" \
   -H "Content-Type: application/json" \
-  -d '{"description":"MÃ´ táº£ má»›i"}' | jq '.data.description'
+  -d '{"description":"Mô tả mới"}' | jq '.data.description'
 ```
 
 ---
 
 ## 5. Test Question Endpoints
 
-### 5.1 Táº¡o question
+### 5.1 Tạo question
 
 ```bash
 QUESTION_ID=$(curl -s -X POST "$BASE/admin/questions" \
   -H "Content-Type: application/json" \
   -H "x-user-id: $ADMIN_ID" \
   -d "{
-    \"content\": \"Khi gáº·p Ä‘Ã¨n Ä‘á», ngÆ°á»i lÃ¡i xe pháº£i lÃ m gÃ¬?\",
+    \"content\": \"Khi gặp đèn đỏ, người lái xe phải làm gì?\",
     \"type\": \"THEORY\",
     \"licenseCategories\": [\"B2\"],
     \"difficulty\": \"EASY\",
-    \"explanation\": \"ÄÃ¨n Ä‘á» yÃªu cáº§u dá»«ng láº¡i trÆ°á»›c váº¡ch dá»«ng.\",
+    \"explanation\": \"Đèn đỏ yêu cầu dừng lại trước vạch dừng.\",
     \"mediaFileId\": null,
     \"isCritical\": false,
     \"topicId\": \"$TOPIC_ID\",
     \"options\": [
-      { \"content\": \"Dá»«ng láº¡i\", \"isCorrect\": true, \"displayOrder\": 1 },
-      { \"content\": \"Äi tiáº¿p\", \"isCorrect\": false, \"displayOrder\": 2 }
+      { \"content\": \"Dừng lại\", \"isCorrect\": true, \"displayOrder\": 1 },
+      { \"content\": \"Đi tiếp\", \"isCorrect\": false, \"displayOrder\": 2 }
     ]
   }" | jq -r '.data.id')
 
 echo "QUESTION_ID=$QUESTION_ID"
 ```
 
-Táº¡o question qua Kong:
+Tạo question qua Kong:
 
 ```bash
 curl -s -X POST "$KONG_BASE/admin/questions" \
@@ -4511,7 +4511,7 @@ Expect:
 curl -s "$BASE/admin/questions/$QUESTION_ID" | jq '.data | {id, version, isActive, isDeleted, correct: [.options[] | select(.isCorrect == true)]}'
 ```
 
-### 5.2 Validation: khÃ´ng cÃ³ Ä‘Ãºng 1 Ä‘Ã¡p Ã¡n Ä‘Ãºng
+### 5.2 Validation: không có đúng 1 đáp án đúng
 
 ```bash
 curl -s -X POST "$BASE/admin/questions" \
@@ -4552,7 +4552,7 @@ curl -s "$BASE/admin/questions?isActive=true&isCritical=false" | jq '.data.items
 curl -s "$BASE/admin/questions/$QUESTION_ID" | jq .data
 ```
 
-### 5.5 Update question vá»›i version Ä‘Ãºng
+### 5.5 Update question với version đúng
 
 ```bash
 VERSION=$(curl -s "$BASE/admin/questions/$QUESTION_ID" | jq -r '.data.version')
@@ -4562,11 +4562,11 @@ curl -s -X PATCH "$BASE/admin/questions/$QUESTION_ID" \
   -d "{
     \"version\": $VERSION,
     \"difficulty\": \"MEDIUM\",
-    \"explanation\": \"Giáº£i thÃ­ch Ä‘Ã£ cáº­p nháº­t\"
+    \"explanation\": \"Giải thích đã cập nhật\"
   }" | jq '.data | {difficulty, explanation, version}'
 ```
 
-Expect `version` tÄƒng lÃªn 1.
+Expect `version` tăng lên 1.
 
 ### 5.6 Version conflict
 
@@ -4575,7 +4575,7 @@ curl -s -X PATCH "$BASE/admin/questions/$QUESTION_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "version": 1,
-    "content": "Update báº±ng version cÅ©"
+    "content": "Update bằng version cũ"
   }' | jq .
 ```
 
@@ -4594,11 +4594,11 @@ curl -s -X PATCH "$BASE/admin/questions/$QUESTION_ID" \
   }" | jq '.data | {isActive, version}'
 ```
 
-Kiá»ƒm tra RabbitMQ queue `question_service_publish` cÃ³ event `question.deactivated`.
+Kiểm tra RabbitMQ queue `question_service_publish` có event `question.deactivated`.
 
-### 5.8 Gáº¯n áº£nh tá»« media-service
+### 5.8 Gắn ảnh từ media-service
 
-Upload/initiate file qua media-service trÆ°á»›c Ä‘á»ƒ láº¥y `mediaFileId`, sau Ä‘Ã³ táº¡o hoáº·c update question vá»›i `mediaFileId`.
+Upload/initiate file qua media-service trước để lấy `mediaFileId`, sau đó tạo hoặc update question với `mediaFileId`.
 
 ```bash
 MEDIA_FILE_ID="550e8400-e29b-41d4-a716-446655440001"
@@ -4612,11 +4612,11 @@ curl -s -X PATCH "$BASE/admin/questions/$QUESTION_ID" \
   }" | jq '.data | {mediaFileId, version}'
 ```
 
-Expect question-service publish event `question.image.linked` vÃ o queue `media_service_events`; media-service consume event vÃ  mark FileObject `LINKED`. Question-service chá»‰ lÆ°u UUID reference, khÃ´ng gá»i trá»±c tiáº¿p Azure Blob.
+Expect question-service publish event `question.image.linked` vào queue `media_service_events`; media-service consume event và mark FileObject `LINKED`. Question-service chỉ lưu UUID reference, không gọi trực tiếp Azure Blob.
 
 ### 5.9 Question pool
 
-Táº¡o thÃªm question active náº¿u question trÃªn Ä‘Ã£ deactivate, sau Ä‘Ã³:
+Tạo thêm question active nếu question trên đã deactivate, sau đó:
 
 ```bash
 curl -s -X POST "$BASE/admin/questions/pool" \
@@ -4628,7 +4628,7 @@ curl -s -X POST "$BASE/admin/questions/pool" \
   }' | jq '.data.items | map({id, isActive, isDeleted, options})'
 ```
 
-Expect chá»‰ tráº£ vá» question `isActive=true`, `isDeleted=false`. Pool response cÃ³ `options[].isCorrect` Ä‘á»ƒ exam-service snapshot/grade ná»™i bá»™.
+Expect chỉ trả về question `isActive=true`, `isDeleted=false`. Pool response có `options[].isCorrect` để exam-service snapshot/grade nội bộ.
 
 Qua Kong:
 
@@ -4651,13 +4651,13 @@ curl -s -X DELETE "$BASE/admin/questions/$QUESTION_ID" \
 
 Expect `isDeleted=true`, `isActive=false`.
 
-Máº·c Ä‘á»‹nh list khÃ´ng tráº£ vá» question Ä‘Ã£ xÃ³a:
+Mặc định list không trả về question đã xóa:
 
 ```bash
 curl -s "$BASE/admin/questions" | jq ".data.items | map(select(.id == \"$QUESTION_ID\"))"
 ```
 
-Náº¿u cáº§n debug:
+Nếu cần debug:
 
 ```bash
 curl -s "$BASE/admin/questions?includeDeleted=true" | jq ".data.items | map(select(.id == \"$QUESTION_ID\"))"
@@ -4670,20 +4670,20 @@ curl -s "$BASE/admin/questions?includeDeleted=true" | jq ".data.items | map(sele
 RabbitMQ UI: http://localhost:15672  
 Username/password: `guest` / `guest`
 
-Queues liÃªn quan:
+Queues liên quan:
 
-- `question_service_events`: queue consume cá»§a question-service
+- `question_service_events`: queue consume của question-service
 - `question_service_publish`: queue publish domain events
 
-Sau `POST /admin/questions`, kiá»ƒm tra `question.created`.
+Sau `POST /admin/questions`, kiểm tra `question.created`.
 
-Sau deactivate hoáº·c delete, kiá»ƒm tra `question.deactivated`.
+Sau deactivate hoặc delete, kiểm tra `question.deactivated`.
 
-Sau create/update cÃ³ `mediaFileId`, kiá»ƒm tra event `question.image.linked` trong `media_service_events` vÃ  FileObject chuyá»ƒn sang `LINKED`.
+Sau create/update có `mediaFileId`, kiểm tra event `question.image.linked` trong `media_service_events` và FileObject chuyển sang `LINKED`.
 
 ---
 
-## 7. Kiá»ƒm tra Database
+## 7. Kiểm tra Database
 
 ### Prisma Studio
 
@@ -4692,7 +4692,7 @@ cd apps/question-service
 pnpm run db:studio
 ```
 
-Má»Ÿ http://localhost:5555 vÃ  xem:
+Mở http://localhost:5555 và xem:
 
 - `QuestionTopic`
 - `Question`
@@ -4718,14 +4718,14 @@ ORDER BY "questionId", "displayOrder";
 
 ## 8. Troubleshooting
 
-### Prisma client chÆ°a generate
+### Prisma client chưa generate
 
 ```bash
 cd apps/question-service
 pnpm run db:generate
 ```
 
-### Database chÆ°a sáºµn sÃ ng
+### Database chưa sẵn sàng
 
 ```bash
 pnpm run infra:up
@@ -4734,20 +4734,20 @@ pnpm run consul:seed:local
 
 ### `QUESTION_TOPIC_NOT_FOUND`
 
-Táº¡o topic trÆ°á»›c khi táº¡o question, hoáº·c kiá»ƒm tra `topicId`.
+Tạo topic trước khi tạo question, hoặc kiểm tra `topicId`.
 
 ### `QUESTION_VERSION_CONFLICT`
 
-Client Ä‘ang gá»­i version cÅ©. Gá»i `GET /admin/questions/:id` Ä‘á»ƒ láº¥y version má»›i nháº¥t rá»“i retry.
+Client đang gửi version cũ. Gọi `GET /admin/questions/:id` để lấy version mới nhất rồi retry.
 
-### Pool khÃ´ng cÃ³ items
+### Pool không có items
 
-Kiá»ƒm tra question pháº£i:
+Kiểm tra question phải:
 
 - `isActive=true`
 - `isDeleted=false`
-- cÃ³ `licenseCategories` chá»©a license Ä‘ang query
-- khá»›p `type`, `difficulty`, `topicId` náº¿u cÃ³ filter
+- có `licenseCategories` chứa license đang query
+- khớp `type`, `difficulty`, `topicId` nếu có filter
 
 ---
 
@@ -4849,147 +4849,147 @@ Save answer while `IN_PROGRESS`, then submit. A later answer save should fail be
 
 
 <!-- Merged legacy testing guide -->
-# User Service â€” HÆ°á»›ng Dáº«n Test API Chi Tiáº¿t
+# User Service — Hướng Dẫn Test API Chi Tiết
 
-> TÃ i liá»‡u nÃ y hÆ°á»›ng dáº«n test toÃ n bá»™ API cá»§a `user-service`, cáº£ khi gá»i **trá»±c tiáº¿p** (bá» qua Kong, dÃ¹ng cho dev/debug) láº«n khi gá»i **qua Kong** (production path).
+> Tài liệu này hướng dẫn test toàn bộ API của `user-service`, cả khi gọi **trực tiếp** (bỏ qua Kong, dùng cho dev/debug) lẫn khi gọi **qua Kong** (production path).
 
 ---
 
-## Má»¥c lá»¥c
+## Mục lục
 
-1. [Khá»Ÿi Ä‘á»™ng mÃ´i trÆ°á»ng](#1-khá»Ÿi-Ä‘á»™ng-mÃ´i-trÆ°á»ng)
-2. [Kiáº¿n trÃºc luá»“ng request](#2-kiáº¿n-trÃºc-luá»“ng-request)
-3. [Chuáº©n bá»‹ â€” Táº¡o dá»¯ liá»‡u máº«u trá»±c tiáº¿p](#3-chuáº©n-bá»‹--táº¡o-dá»¯-liá»‡u-máº«u-trá»±c-tiáº¿p)
-4. [Test tá»«ng endpoint](#4-test-tá»«ng-endpoint)
-5. [Test luá»“ng RabbitMQ event](#5-test-luá»“ng-rabbitmq-event)
+1. [Khởi động môi trường](#1-khởi-động-môi-trường)
+2. [Kiến trúc luồng request](#2-kiến-trúc-luồng-request)
+3. [Chuẩn bị — Tạo dữ liệu mẫu trực tiếp](#3-chuẩn-bị--tạo-dữ-liệu-mẫu-trực-tiếp)
+4. [Test từng endpoint](#4-test-từng-endpoint)
+5. [Test luồng RabbitMQ event](#5-test-luồng-rabbitmq-event)
 6. [Test qua Kong (production path)](#6-test-qua-kong-production-path)
-7. [Kiá»ƒm tra Database trá»±c tiáº¿p](#7-kiá»ƒm-tra-database-trá»±c-tiáº¿p)
-8. [Test Security Audit VÃ  Outbox](#8-test-security-audit-vÃ -outbox)
+7. [Kiểm tra Database trực tiếp](#7-kiểm-tra-database-trực-tiếp)
+8. [Test Security Audit Và Outbox](#8-test-security-audit-và-outbox)
 9. [Troubleshooting](#9-troubleshooting)
 
 ---
 
-## 1. Khá»Ÿi Ä‘á»™ng mÃ´i trÆ°á»ng
+## 1. Khởi động môi trường
 
-### BÆ°á»›c 1.1 â€” Start infrastructure (DB + RabbitMQ + Consul)
+### Bước 1.1 — Start infrastructure (DB + RabbitMQ + Consul)
 
 ```bash
-# Tá»« root cá»§a project
+# Từ root của project
 docker-compose up -d db-user rabbitmq consul consul-init
 ```
 
-Chá» khoáº£ng 10-15 giÃ¢y Ä‘á»ƒ Consul khá»Ÿi Ä‘á»™ng xong.
+Chờ khoảng 10-15 giây để Consul khởi động xong.
 
-**Kiá»ƒm tra Consul healthy:**
+**Kiểm tra Consul healthy:**
 
 ```bash
 curl http://localhost:8500/v1/status/leader
-# Káº¿t quáº£ mong Ä‘á»£i: "..." (Ä‘á»‹a chá»‰ leader node)
+# Kết quả mong đợi: "..." (địa chỉ leader node)
 ```
 
 **Consul UI:** http://localhost:8500/ui
 
-### BÆ°á»›c 1.2 â€” Seed config vÃ o Consul
+### Bước 1.2 — Seed config vào Consul
 
 ```bash
 pnpm run consul:seed:local
 ```
 
-Lá»‡nh nÃ y Ä‘á»c `consul-seed-development-local.json` vÃ  Ä‘áº©y config vÃ o Consul KV store.
+Lệnh này đọc `consul-seed-development-local.json` và đẩy config vào Consul KV store.
 
-**Kiá»ƒm tra:**
+**Kiểm tra:**
 
 ```bash
 pnpm run consul:list
-# Hoáº·c xem trá»±c tiáº¿p: http://localhost:8500/ui/dc1/kv
+# Hoặc xem trực tiếp: http://localhost:8500/ui/dc1/kv
 ```
 
-Sau khi seed thÃ nh cÃ´ng, báº¡n sáº½ tháº¥y cÃ¡c key nhÆ°:
+Sau khi seed thành công, bạn sẽ thấy các key như:
 
 - `config/development-local/shared/log.level`
 - `config/development-local/user-service/port`
 - `config/development-local/user-service/database.url`
 
-### BÆ°á»›c 1.3 â€” Migrate database
+### Bước 1.3 — Migrate database
 
 ```bash
 cd apps/user-service
 npx prisma migrate dev --name init
 ```
 
-Hoáº·c náº¿u migration Ä‘Ã£ tá»“n táº¡i:
+Hoặc nếu migration đã tồn tại:
 
 ```bash
 cd apps/user-service
 npx prisma migrate deploy
 ```
 
-**Kiá»ƒm tra schema Ä‘Ã£ táº¡o:**
+**Kiểm tra schema đã tạo:**
 
 ```bash
 npx prisma studio
-# Má»Ÿ browser táº¡i http://localhost:5555 Ä‘á»ƒ xem DB
+# Mở browser tại http://localhost:5555 để xem DB
 ```
 
-### BÆ°á»›c 1.4 â€” Start user-service
+### Bước 1.4 — Start user-service
 
 ```bash
-# Tá»« root
+# Từ root
 pnpm run dev --filter=user-service
 
-# Hoáº·c vÃ o thÆ° má»¥c service
+# Hoặc vào thư mục service
 cd apps/user-service
 pnpm run start:dev
 ```
 
-**Kiá»ƒm tra service Ä‘ang cháº¡y:**
+**Kiểm tra service đang chạy:**
 
 ```bash
 curl http://localhost:3002/docs-json
-# Káº¿t quáº£: OpenAPI JSON spec
+# Kết quả: OpenAPI JSON spec
 ```
 
 **Swagger UI:** http://localhost:3002/docs
 
 ---
 
-## 2. Kiáº¿n trÃºc luá»“ng request
+## 2. Kiến trúc luồng request
 
 ```
 Client (curl/Postman)
-    â”‚
-    â”œâ”€â”€â”€ DIRECT (dev/debug) â”€â”€â†’ http://localhost:3002  â†â”€â”€ Port user-service local
-    â”‚                            (Æ¯u tiÃªn JWT tháº­t; x-user-id chá»‰ lÃ  fallback legacy)
-    â”‚
-    â””â”€â”€â”€ VIA KONG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â†’ http://localhost:8000  â†â”€â”€ Kong gateway
-                                 (Cáº§n JWT há»£p lá»‡ tá»« Keycloak)
-                                 Service Ä‘á»c actor tá»« JWT.sub
+    │
+    ├─── DIRECT (dev/debug) ──→ http://localhost:3002  ←── Port user-service local
+    │                            (Ưu tiên JWT thật; x-user-id chỉ là fallback legacy)
+    │
+    └─── VIA KONG ────────────→ http://localhost:8000  ←── Kong gateway
+                                 (Cần JWT hợp lệ từ Keycloak)
+                                 Service đọc actor từ JWT.sub
 ```
 
-> **LÆ°u Ã½:** user-service hiá»‡n validate JWT/RBAC táº¡i service vÃ  Ä‘á»c actor tá»« `@AuthenticatedUser()`. Middleware váº«n cÃ³ thá»ƒ map `JWT.sub` sang `x-user-id` Ä‘á»ƒ tÆ°Æ¡ng thÃ­ch code cÅ©, nhÆ°ng frontend/demo chuáº©n khÃ´ng tá»± gá»­i `x-user-id`.
+> **Lưu ý:** user-service hiện validate JWT/RBAC tại service và đọc actor từ `@AuthenticatedUser()`. Middleware vẫn có thể map `JWT.sub` sang `x-user-id` để tương thích code cũ, nhưng frontend/demo chuẩn không tự gửi `x-user-id`.
 
 ---
 
-## 3. Chuáº©n bá»‹ â€” Táº¡o dá»¯ liá»‡u máº«u trá»±c tiáº¿p
+## 3. Chuẩn bị — Tạo dữ liệu mẫu trực tiếp
 
-TrÆ°á»›c khi test, cáº§n cÃ³ Ã­t nháº¥t 1 user trong DB. Production flow nÃªn táº¡o account qua `identity-service` admin API Ä‘á»ƒ publish RabbitMQ event `identity.user.created`; user-service cÅ©ng expose `POST /admin/users` cho ADMIN/CENTER_MANAGER khi cáº§n backfill profile vá»›i Keycloak user id Ä‘Ã£ cÃ³.
+Trước khi test, cần có ít nhất 1 user trong DB. Production flow nên tạo account qua `identity-service` admin API để publish RabbitMQ event `identity.user.created`; user-service cũng expose `POST /admin/users` cho ADMIN/CENTER_MANAGER khi cần backfill profile với Keycloak user id đã có.
 
-CÃ¡c lá»‡nh `POST http://localhost:3001/admin/identity-users` bÃªn dÆ°á»›i cáº§n thÃªm header `Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>` khi cháº¡y vá»›i guard Keycloak.
+Các lệnh `POST http://localhost:3001/admin/identity-users` bên dưới cần thêm header `Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>` khi chạy với guard Keycloak.
 
-### Táº¡o user ADMIN
+### Tạo user ADMIN
 
 ```bash
 curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "fullName": "Nguyá»…n Admin",
+    "fullName": "Nguyễn Admin",
     "email": "admin@example.com",
     "role": "ADMIN",
     "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (201):**
+**Kết quả mong đợi (201):**
 
 ```json
 {
@@ -5000,40 +5000,40 @@ curl -s -X POST http://localhost:3001/admin/identity-users \
   "path": "/users",
   "data": {
     "id": "admin-uuid-0001",
-    "fullName": "Nguyá»…n Admin",
+    "fullName": "Nguyễn Admin",
     "email": "admin@example.com",
     "role": "ADMIN"
   }
 }
 ```
 
-### Táº¡o user CENTER_MANAGER
+### Tạo user CENTER_MANAGER
 
 ```bash
 curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "fullName": "Tráº§n Manager",
+    "fullName": "Trần Manager",
     "email": "manager@example.com",
     "role": "CENTER_MANAGER",
     "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
-### Táº¡o user STUDENT (vá»›i Ä‘áº§y Ä‘á»§ thÃ´ng tin)
+### Tạo user STUDENT (với đầy đủ thông tin)
 
 ```bash
 curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "fullName": "LÃª Há»c ViÃªn",
+    "fullName": "Lê Học Viên",
     "email": "student@example.com",
     "role": "STUDENT",
     "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (201):**
+**Kết quả mong đợi (201):**
 
 ```json
 {
@@ -5044,20 +5044,20 @@ curl -s -X POST http://localhost:3001/admin/identity-users \
   "path": "/users",
   "data": {
     "id": "student-uuid-0003",
-    "fullName": "LÃª Há»c ViÃªn",
+    "fullName": "Lê Học Viên",
     "email": "student@example.com",
     "role": "STUDENT"
   }
 }
 ```
 
-### Táº¡o user INSTRUCTOR
+### Tạo user INSTRUCTOR
 
 ```bash
 curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "fullName": "Pháº¡m GiÃ¡o ViÃªn",
+    "fullName": "Phạm Giáo Viên",
     "email": "instructor@example.com",
     "role": "INSTRUCTOR",
     "temporaryPassword": "Temp@1234"
@@ -5066,15 +5066,15 @@ curl -s -X POST http://localhost:3001/admin/identity-users \
 
 ---
 
-## 4. Test tá»«ng endpoint
+## 4. Test từng endpoint
 
-> Táº¥t cáº£ cÃ¡c lá»‡nh curl sau Ä‘Ã¢y gá»i **trá»±c tiáº¿p** vÃ o user-service (port 3002), khÃ´ng qua Kong. Khi demo chuáº©n, dÃ¹ng `Authorization: Bearer <access_token>`. CÃ¡c vÃ­ dá»¥ cÃ²n dÃ¹ng `x-user-id` lÃ  debug legacy cho endpoint/case cÅ©, khÃ´ng pháº£i contract cho frontend.
+> Tất cả các lệnh curl sau đây gọi **trực tiếp** vào user-service (port 3002), không qua Kong. Khi demo chuẩn, dùng `Authorization: Bearer <access_token>`. Các ví dụ còn dùng `x-user-id` là debug legacy cho endpoint/case cũ, không phải contract cho frontend.
 
 ---
 
-### 4.1 POST /admin/users â€” táº¡o user profile
+### 4.1 POST /admin/users — tạo user profile
 
-**Happy path â€” táº¡o profile trá»±c tiáº¿p báº±ng Keycloak user id Ä‘Ã£ cÃ³**
+**Happy path — tạo profile trực tiếp bằng Keycloak user id đã có**
 
 ```bash
 curl -s -X POST http://localhost:3002/users \
@@ -5082,7 +5082,7 @@ curl -s -X POST http://localhost:3002/users \
   -H "Content-Type: application/json" \
   -d '{
     "id": "keycloak-user-uuid",
-    "fullName": "LÃª Há»c ViÃªn",
+    "fullName": "Lê Học Viên",
     "email": "student-profile@example.com",
     "role": "STUDENT",
     "phoneNumber": "0912345678",
@@ -5094,22 +5094,22 @@ curl -s -X POST http://localhost:3002/users \
   }' | jq .
 ```
 
-Best practice: khÃ´ng dÃ¹ng endpoint nÃ y Ä‘á»ƒ táº¡o account Ä‘Äƒng nháº­p; account váº«n pháº£i Ä‘Æ°á»£c táº¡o á»Ÿ identity-service/Keycloak trÆ°á»›c.
+Best practice: không dùng endpoint này để tạo account đăng nhập; account vẫn phải được tạo ở identity-service/Keycloak trước.
 
-**Case: Email Ä‘Ã£ tá»“n táº¡i (expect 409)**
+**Case: Email đã tồn tại (expect 409)**
 
 ```bash
 curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "fullName": "NgÆ°á»i KhÃ¡c",
+    "fullName": "Người Khác",
     "email": "admin@example.com",
     "role": "ADMIN",
     "temporaryPassword": "Temp@1234"
   }' | jq .
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (409):**
+**Kết quả mong đợi (409):**
 
 ```json
 {
@@ -5121,17 +5121,17 @@ curl -s -X POST http://localhost:3001/admin/identity-users \
 }
 ```
 
-**Case: Body thiáº¿u field báº¯t buá»™c (expect 400)**
+**Case: Body thiếu field bắt buộc (expect 400)**
 
 ```bash
 curl -s -X POST http://localhost:3001/admin/identity-users \
   -H "Content-Type: application/json" \
   -d '{
-    "fullName": "Thiáº¿u email"
+    "fullName": "Thiếu email"
   }' | jq .
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (400):**
+**Kết quả mong đợi (400):**
 
 ```json
 {
@@ -5146,15 +5146,15 @@ curl -s -X POST http://localhost:3001/admin/identity-users \
 
 ---
 
-### 4.2 GET /admin/users â€” Danh sÃ¡ch user profile (cÃ³ phÃ¢n trang + filter)
+### 4.2 GET /admin/users — Danh sách user profile (có phân trang + filter)
 
-**Láº¥y táº¥t cáº£ users (page 1, size 20):**
+**Lấy tất cả users (page 1, size 20):**
 
 ```bash
 curl -s "http://localhost:3002/users" | jq .
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (200):**
+**Kết quả mong đợi (200):**
 
 ```json
 {
@@ -5165,7 +5165,7 @@ curl -s "http://localhost:3002/users" | jq .
   "path": "/users",
   "data": {
     "items": [
-      /* máº£ng UserProfileResponse */
+      /* mảng UserProfileResponse */
     ],
     "total": 4,
     "page": 1,
@@ -5174,39 +5174,39 @@ curl -s "http://localhost:3002/users" | jq .
 }
 ```
 
-**Lá»c theo role STUDENT:**
+**Lọc theo role STUDENT:**
 
 ```bash
 curl -s "http://localhost:3002/admin/users?role=STUDENT" | jq .
 ```
 
-**Lá»c theo isActive:**
+**Lọc theo isActive:**
 
 ```bash
 curl -s "http://localhost:3002/admin/users?isActive=true" | jq .
 ```
 
-**TÃ¬m kiáº¿m theo tÃªn/email/SÄT:**
+**Tìm kiếm theo tên/email/SĐT:**
 
 ```bash
-curl -s "http://localhost:3002/admin/users?search=Há»c+ViÃªn" | jq .
+curl -s "http://localhost:3002/admin/users?search=Học+Viên" | jq .
 curl -s "http://localhost:3002/admin/users?search=student@" | jq .
 ```
 
-**PhÃ¢n trang:**
+**Phân trang:**
 
 ```bash
 curl -s "http://localhost:3002/admin/users?page=1&size=2" | jq .
 curl -s "http://localhost:3002/admin/users?page=2&size=2" | jq .
 ```
 
-**Káº¿t há»£p filter:**
+**Kết hợp filter:**
 
 ```bash
 curl -s "http://localhost:3002/admin/users?role=STUDENT&isActive=true&page=1&size=10" | jq .
 ```
 
-**Case: size vÆ°á»£t giá»›i háº¡n (expect 400):**
+**Case: size vượt giới hạn (expect 400):**
 
 ```bash
 curl -s "http://localhost:3002/admin/users?size=200" | jq .
@@ -5214,9 +5214,9 @@ curl -s "http://localhost:3002/admin/users?size=200" | jq .
 
 ---
 
-### 4.3 GET /users/me â€” Láº¥y profile cá»§a chÃ­nh mÃ¬nh
+### 4.3 GET /users/me — Lấy profile của chính mình
 
-> Endpoint nÃ y láº¥y user hiá»‡n táº¡i tá»« `JWT.sub` qua `@AuthenticatedUser()`.
+> Endpoint này lấy user hiện tại từ `JWT.sub` qua `@AuthenticatedUser()`.
 
 **Happy path:**
 
@@ -5225,7 +5225,7 @@ curl -s http://localhost:3002/users/me \
   -H "Authorization: Bearer <STUDENT_TOKEN>" | jq .
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (200):**
+**Kết quả mong đợi (200):**
 
 ```json
 {
@@ -5236,13 +5236,13 @@ curl -s http://localhost:3002/users/me \
   "path": "/users/me",
   "data": {
     "id": "student-uuid-0003",
-    "fullName": "LÃª Há»c ViÃªn",
+    "fullName": "Lê Học Viên",
     "email": "student@example.com",
     "phoneNumber": "0912345678",
     "dateOfBirth": "2000-01-15T00:00:00.000Z",
     "avatarUrl": null,
     "gender": "MALE",
-    "address": "123 ÄÆ°á»ng ABC, TP.HCM",
+    "address": "123 Đường ABC, TP.HCM",
     "role": "STUDENT",
     "isActive": true,
     "createdAt": "...",
@@ -5255,7 +5255,7 @@ curl -s http://localhost:3002/users/me \
 }
 ```
 
-**Case: token há»£p lá»‡ nhÆ°ng profile tÆ°Æ¡ng á»©ng chÆ°a tá»“n táº¡i (expect 404):**
+**Case: token hợp lệ nhưng profile tương ứng chưa tồn tại (expect 404):**
 
 ```bash
 curl -s http://localhost:3002/users/me \
@@ -5274,7 +5274,7 @@ curl -s http://localhost:3002/users/me \
 
 ---
 
-### 4.4 GET /admin/users/:id â€” Láº¥y profile theo ID
+### 4.4 GET /admin/users/:id — Lấy profile theo ID
 
 **Happy path:**
 
@@ -5283,12 +5283,12 @@ curl -s http://localhost:3002/admin/users/admin-uuid-0001 | jq .
 curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq .
 ```
 
-**So sÃ¡nh studentDetail:**
+**So sánh studentDetail:**
 
 - User ADMIN/INSTRUCTOR: `studentDetail: null`
 - User STUDENT: `studentDetail: { licenseTier, enrolledAt, notes }`
 
-**Case: ID khÃ´ng tá»“n táº¡i (expect 404):**
+**Case: ID không tồn tại (expect 404):**
 
 ```bash
 curl -s http://localhost:3002/admin/users/does-not-exist | jq .
@@ -5296,24 +5296,24 @@ curl -s http://localhost:3002/admin/users/does-not-exist | jq .
 
 ---
 
-### 4.5 PATCH /users/me â€” Cáº­p nháº­t profile báº£n thÃ¢n
+### 4.5 PATCH /users/me — Cập nhật profile bản thân
 
-> User Ä‘Æ°á»£c xÃ¡c Ä‘á»‹nh báº±ng `JWT.sub`.
+> User được xác định bằng `JWT.sub`.
 
-**Cáº­p nháº­t má»™t sá»‘ field:**
+**Cập nhật một số field:**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/users/me \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <STUDENT_TOKEN>" \
   -d '{
-    "fullName": "LÃª Há»c ViÃªn (Updated)",
-    "address": "456 ÄÆ°á»ng Má»›i, HÃ  Ná»™i",
+    "fullName": "Lê Học Viên (Updated)",
+    "address": "456 Đường Mới, Hà Nội",
     "gender": "FEMALE"
   }' | jq .
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (200)** â€” tráº£ vá» profile Ä‘Ã£ update:
+**Kết quả mong đợi (200)** — trả về profile đã update:
 
 ```json
 {
@@ -5323,15 +5323,15 @@ curl -s -X PATCH http://localhost:3002/users/me \
   "timestamp": "...",
   "path": "/users/me",
   "data": {
-    "fullName": "LÃª Há»c ViÃªn (Updated)",
-    "address": "456 ÄÆ°á»ng Má»›i, HÃ  Ná»™i",
+    "fullName": "Lê Học Viên (Updated)",
+    "address": "456 Đường Mới, Hà Nội",
     "gender": "FEMALE",
     ...
   }
 }
 ```
 
-**Cáº­p nháº­t SÄT há»£p lá»‡:**
+**Cập nhật SĐT hợp lệ:**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/users/me \
@@ -5340,18 +5340,18 @@ curl -s -X PATCH http://localhost:3002/users/me \
   -d '{ "phoneNumber": "0987654321" }' | jq .
 ```
 
-**Cáº­p nháº­t ghi chÃº (chá»‰ Ã¡p dá»¥ng cho STUDENT):**
+**Cập nhật ghi chú (chỉ áp dụng cho STUDENT):**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/users/me \
   -H "Content-Type: application/json" \
   -H "x-user-id: student-uuid-0003" \
-  -d '{ "notes": "Há»c viÃªn cáº§n luyá»‡n thÃªm pháº§n biá»ƒn bÃ¡o" }' | jq .
+  -d '{ "notes": "Học viên cần luyện thêm phần biển báo" }' | jq .
 ```
 
-> Náº¿u user khÃ´ng pháº£i STUDENT, `notes` bá»‹ bá» qua (khÃ´ng lá»—i, chá»‰ silent ignore).
+> Nếu user không phải STUDENT, `notes` bị bỏ qua (không lỗi, chỉ silent ignore).
 
-**Case: SÄT khÃ´ng há»£p lá»‡ (expect 400):**
+**Case: SĐT không hợp lệ (expect 400):**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/users/me \
@@ -5362,61 +5362,61 @@ curl -s -X PATCH http://localhost:3002/users/me \
 
 ---
 
-### 4.6 PATCH /admin/users/:id â€” Cáº­p nháº­t profile báº¥t ká»³ (admin)
+### 4.6 PATCH /admin/users/:id — Cập nhật profile bất kỳ (admin)
 
 ```bash
 curl -s -X PATCH http://localhost:3002/admin/users/instructor-uuid-0004 \
   -H "Content-Type: application/json" \
   -d '{
-    "fullName": "Pháº¡m GiÃ¡o ViÃªn (Admin Updated)",
-    "address": "789 ÄÆ°á»ng Admin"
+    "fullName": "Phạm Giáo Viên (Admin Updated)",
+    "address": "789 Đường Admin"
   }' | jq .
 ```
 
 ---
 
-### 4.7 PATCH /admin/users/:id/lock â€” KhÃ³a / má»Ÿ khÃ³a user
+### 4.7 PATCH /admin/users/:id/lock — Khóa / mở khóa user
 
-**KhÃ³a user (isActive â†’ false):**
+**Khóa user (isActive → false):**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/lock \
   -H "Content-Type: application/json" \
   -d '{ "lock": true }'
-# Káº¿t quáº£ mong Ä‘á»£i: HTTP 204 (khÃ´ng cÃ³ body)
+# Kết quả mong đợi: HTTP 204 (không có body)
 ```
 
-**XÃ¡c nháº­n user Ä‘Ã£ bá»‹ khÃ³a:**
+**Xác nhận user đã bị khóa:**
 
 ```bash
 curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data.isActive'
-# Káº¿t quáº£ mong Ä‘á»£i: false
+# Kết quả mong đợi: false
 ```
 
-**Kiá»ƒm tra user khÃ´ng xuáº¥t hiá»‡n khi lá»c isActive=true:**
+**Kiểm tra user không xuất hiện khi lọc isActive=true:**
 
 ```bash
 curl -s "http://localhost:3002/admin/users?isActive=true" | jq '.data.items | map(.id)'
-# student-uuid-0003 khÃ´ng cÃ³ trong danh sÃ¡ch
+# student-uuid-0003 không có trong danh sách
 ```
 
-**Má»Ÿ khÃ³a user (isActive â†’ true):**
+**Mở khóa user (isActive → true):**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/lock \
   -H "Content-Type: application/json" \
   -d '{ "lock": false }'
-# Káº¿t quáº£ mong Ä‘á»£i: HTTP 204
+# Kết quả mong đợi: HTTP 204
 ```
 
-**XÃ¡c nháº­n:**
+**Xác nhận:**
 
 ```bash
 curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data.isActive'
-# Káº¿t quáº£ mong Ä‘á»£i: true
+# Kết quả mong đợi: true
 ```
 
-**Case: ID khÃ´ng tá»“n táº¡i (expect 404):**
+**Case: ID không tồn tại (expect 404):**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/admin/users/fake-uuid/lock \
@@ -5424,7 +5424,7 @@ curl -s -X PATCH http://localhost:3002/admin/users/fake-uuid/lock \
   -d '{ "lock": true }' | jq .
 ```
 
-**Case: Body khÃ´ng há»£p lá»‡ â€” thiáº¿u field `lock` (expect 400):**
+**Case: Body không hợp lệ — thiếu field `lock` (expect 400):**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/lock \
@@ -5434,37 +5434,37 @@ curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/lock \
 
 ---
 
-### 4.8 PATCH /admin/users/:id/license-tier â€” GÃ¡n háº¡ng báº±ng lÃ¡i
+### 4.8 PATCH /admin/users/:id/license-tier — Gán hạng bằng lái
 
-> Endpoint nÃ y láº¥y `changedById` tá»« `JWT.sub` cá»§a ADMIN/CENTER_MANAGER Ä‘á»ƒ ghi audit.
+> Endpoint này lấy `changedById` từ `JWT.sub` của ADMIN/CENTER_MANAGER để ghi audit.
 
-**GÃ¡n háº¡ng B2 cho student:**
+**Gán hạng B2 cho student:**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/license-tier \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" \
   -d '{ "licenseTier": "B2" }' | jq '.data.studentDetail.licenseTier'
-# Káº¿t quáº£ mong Ä‘á»£i: "B2"
+# Kết quả mong đợi: "B2"
 ```
 
-**XÃ¡c nháº­n license tier Ä‘Ã£ Ä‘Æ°á»£c gÃ¡n:**
+**Xác nhận license tier đã được gán:**
 
 ```bash
 curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data.studentDetail'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i:**
+**Kết quả mong đợi:**
 
 ```json
 {
   "licenseTier": "B2",
   "enrolledAt": "2026-01-01T00:00:00.000Z",
-  "notes": "Há»c viÃªn cáº§n luyá»‡n thÃªm pháº§n biá»ƒn bÃ¡o"
+  "notes": "Học viên cần luyện thêm phần biển báo"
 }
 ```
 
-**Thay Ä‘á»•i háº¡ng (tá»« B2 â†’ C):**
+**Thay đổi hạng (từ B2 → C):**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/license-tier \
@@ -5473,9 +5473,9 @@ curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/license-tie
   -d '{ "licenseTier": "C" }'
 ```
 
-**Kiá»ƒm tra audit trail trong DB (xem pháº§n 7).**
+**Kiểm tra audit trail trong DB (xem phần 7).**
 
-**Case: GÃ¡n cho user KHÃ”NG pháº£i STUDENT (expect 422):**
+**Case: Gán cho user KHÔNG phải STUDENT (expect 422):**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/admin/users/admin-uuid-0001/license-tier \
@@ -5484,7 +5484,7 @@ curl -s -X PATCH http://localhost:3002/admin/users/admin-uuid-0001/license-tier 
   -d '{ "licenseTier": "B2" }' | jq .
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i (422):**
+**Kết quả mong đợi (422):**
 
 ```json
 {
@@ -5496,7 +5496,7 @@ curl -s -X PATCH http://localhost:3002/admin/users/admin-uuid-0001/license-tier 
 }
 ```
 
-**Case: licenseTier khÃ´ng há»£p lá»‡ (expect 400):**
+**Case: licenseTier không hợp lệ (expect 400):**
 
 ```bash
 curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/license-tier \
@@ -5507,48 +5507,48 @@ curl -s -X PATCH http://localhost:3002/admin/users/student-uuid-0003/license-tie
 
 ---
 
-## 5. Test luá»“ng RabbitMQ event
+## 5. Test luồng RabbitMQ event
 
-### 5.1 Kiá»ƒm tra RabbitMQ Ä‘ang cháº¡y
+### 5.1 Kiểm tra RabbitMQ đang chạy
 
 **RabbitMQ Management UI:** http://localhost:15672  
 Username: `guest` / Password: `guest`
 
-VÃ o tab **Queues** Ä‘á»ƒ tháº¥y:
+Vào tab **Queues** để thấy:
 
-- `user_service_events` â€” queue user-service Ä‘ang CONSUME
-- `user_service_publish` â€” queue user-service PUBLISH events vÃ o
-- `course_service_events` â€” nháº­n event `user.student.license-assigned` tá»« user-service Ä‘á»ƒ course-service sync license tier read model
+- `user_service_events` — queue user-service đang CONSUME
+- `user_service_publish` — queue user-service PUBLISH events vào
+- `course_service_events` — nhận event `user.student.license-assigned` từ user-service để course-service sync license tier read model
 
 ### 5.2 Simulate event `identity.user.created`
 
-Thay vÃ¬ dÃ¹ng Keycloak, publish trá»±c tiáº¿p vÃ o RabbitMQ queue báº±ng Management UI hoáº·c CLI:
+Thay vì dùng Keycloak, publish trực tiếp vào RabbitMQ queue bằng Management UI hoặc CLI:
 
-**CÃ¡ch 1: DÃ¹ng RabbitMQ Management UI**
+**Cách 1: Dùng RabbitMQ Management UI**
 
-1. VÃ o http://localhost:15672
-2. Tab **Queues** â†’ chá»n queue `user_service_events`
-3. Scroll xuá»‘ng **Publish message**
-4. Äiá»n:
+1. Vào http://localhost:15672
+2. Tab **Queues** → chọn queue `user_service_events`
+3. Scroll xuống **Publish message**
+4. Điền:
    - Routing key: `identity.user.created`
    - Payload:
    ```json
    {
      "userId": "rabbitmq-user-uuid-0005",
      "email": "rabbitmq-user@example.com",
-     "fullName": "NgÆ°á»i DÃ¹ng RabbitMQ",
+     "fullName": "Người Dùng RabbitMQ",
      "role": "STUDENT"
    }
    ```
 5. Click **Publish message**
 
-**XÃ¡c nháº­n user Ä‘Ã£ Ä‘Æ°á»£c táº¡o:**
+**Xác nhận user đã được tạo:**
 
 ```bash
 curl -s http://localhost:3002/admin/users/rabbitmq-user-uuid-0005 | jq .
 ```
 
-**CÃ¡ch 2: DÃ¹ng amqp script**
+**Cách 2: Dùng amqp script**
 
 ```javascript
 // scripts/test-rabbitmq-event.mjs
@@ -5564,7 +5564,7 @@ channel.sendToQueue(
     JSON.stringify({
       userId: "rabbitmq-user-uuid-0005",
       email: "rabbitmq-user@example.com",
-      fullName: "NgÆ°á»i DÃ¹ng RabbitMQ",
+      fullName: "Người Dùng RabbitMQ",
       role: "STUDENT",
     }),
   ),
@@ -5600,7 +5600,7 @@ channel.sendToQueue(
 curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data | {role, studentDetail}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i:**
+**Kết quả mong đợi:**
 
 ```json
 {
@@ -5609,9 +5609,9 @@ curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data | {role,
 }
 ```
 
-> `studentDetail` bá»‹ xÃ³a vÃ¬ user khÃ´ng cÃ²n lÃ  STUDENT ná»¯a.
+> `studentDetail` bị xóa vì user không còn là STUDENT nữa.
 
-**Promote trá»Ÿ láº¡i STUDENT:**
+**Promote trở lại STUDENT:**
 
 ```javascript
 channel.sendToQueue(
@@ -5632,7 +5632,7 @@ channel.sendToQueue(
 curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data | {role, studentDetail}'
 ```
 
-**Káº¿t quáº£ mong Ä‘á»£i:**
+**Kết quả mong đợi:**
 
 ```json
 {
@@ -5645,13 +5645,13 @@ curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data | {role,
 }
 ```
 
-> `studentDetail` Ä‘Æ°á»£c táº¡o má»›i (empty) vÃ¬ user vá»«a Ä‘Æ°á»£c promote.
+> `studentDetail` được tạo mới (empty) vì user vừa được promote.
 
 ---
 
 ## 6. Test qua Kong (production path)
 
-> Cáº§n start thÃªm Kong. Chá»‰ Ã¡p dá»¥ng khi Ä‘Ã£ cáº¥u hÃ¬nh Keycloak vÃ  Kong Ä‘áº§y Ä‘á»§.
+> Cần start thêm Kong. Chỉ áp dụng khi đã cấu hình Keycloak và Kong đầy đủ.
 
 ### 6.1 Start Kong
 
@@ -5659,9 +5659,9 @@ curl -s http://localhost:3002/admin/users/student-uuid-0003 | jq '.data | {role,
 docker-compose up -d kong
 ```
 
-Kong cháº¡y trÃªn port `8000` (HTTP proxy) vÃ  `8001` (Admin API).
+Kong chạy trên port `8000` (HTTP proxy) và `8001` (Admin API).
 
-### 6.2 Láº¥y JWT tá»« Keycloak
+### 6.2 Lấy JWT từ Keycloak
 
 ```bash
 curl -s -X POST http://localhost:8080/realms/<realm>/protocol/openid-connect/token \
@@ -5672,7 +5672,7 @@ curl -s -X POST http://localhost:8080/realms/<realm>/protocol/openid-connect/tok
   -d "password=<password>" | jq .access_token
 ```
 
-### 6.3 Gá»i API qua Kong
+### 6.3 Gọi API qua Kong
 
 ```bash
 TOKEN="eyJhbGci..."
@@ -5681,33 +5681,33 @@ curl -s http://localhost:8000/users/me \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
-> Frontend chá»‰ gá»­i `Authorization`. Service tá»± validate token vÃ  láº¥y actor tá»« `JWT.sub`.
+> Frontend chỉ gửi `Authorization`. Service tự validate token và lấy actor từ `JWT.sub`.
 
 ---
 
-## 7. Kiá»ƒm tra Database trá»±c tiáº¿p
+## 7. Kiểm tra Database trực tiếp
 
-### DÃ¹ng Prisma Studio
+### Dùng Prisma Studio
 
 ```bash
 cd apps/user-service
 npx prisma studio
 ```
 
-Má»Ÿ http://localhost:5555 Ä‘á»ƒ xem:
+Mở http://localhost:5555 để xem:
 
 - Table `user_profiles`
 - Table `student_details`
-- Table `license_assignment_audits` â€” **quan trá»ng Ä‘á»ƒ verify audit trail**
+- Table `license_assignment_audits` — **quan trọng để verify audit trail**
 
-### DÃ¹ng psql trá»±c tiáº¿p
+### Dùng psql trực tiếp
 
 ```bash
 psql postgresql://user:password@localhost:5433/user_db
 ```
 
 ```sql
--- Xem táº¥t cáº£ user profiles
+-- Xem tất cả user profiles
 SELECT id, "fullName", email, role, "isActive", "createdAt"
 FROM user_profiles
 ORDER BY "createdAt" DESC;
@@ -5717,7 +5717,7 @@ SELECT u."fullName", s."licenseTier", s."enrolledAt", s.notes
 FROM user_profiles u
 JOIN student_details s ON s."studentId" = u.id;
 
--- Xem audit trail cá»§a license assignment
+-- Xem audit trail của license assignment
 SELECT
   u."fullName" as student,
   a."oldLicenseTier",
@@ -5731,11 +5731,11 @@ ORDER BY a."changedAt" DESC;
 
 ---
 
-## 8. Test Security Audit VÃ  Outbox
+## 8. Test Security Audit Và Outbox
 
-Má»¥c tiÃªu: chá»©ng minh `PATCH /admin/users/:id/license-tier` vá»«a update profile thÃ nh cÃ´ng, vá»«a táº¡o centralized audit trail qua transactional outbox.
+Mục tiêu: chứng minh `PATCH /admin/users/:id/license-tier` vừa update profile thành công, vừa tạo centralized audit trail qua transactional outbox.
 
-### 8.1 Gá»i audited action
+### 8.1 Gọi audited action
 
 ```bash
 curl -i -X PATCH http://localhost:8000/admin/users/<student-id>/license-tier \
@@ -5747,8 +5747,8 @@ curl -i -X PATCH http://localhost:8000/admin/users/<student-id>/license-tier \
 Expected:
 
 - HTTP `200`.
-- Response header cÃ³ `x-correlation-id`.
-- Response body cÃ³ `data.studentDetail.licenseTier = "B1"`.
+- Response header có `x-correlation-id`.
+- Response body có `data.studentDetail.licenseTier = "B1"`.
 
 ### 8.2 Verify local bounded-context audit
 
@@ -5760,7 +5760,7 @@ ORDER BY "changedAt" DESC
 LIMIT 5;
 ```
 
-Expected: cÃ³ row vá»›i `newLicenseTier = B1`.
+Expected: có row với `newLicenseTier = B1`.
 
 ### 8.3 Verify transactional outbox
 
@@ -5781,8 +5781,8 @@ Expected:
 
 - `action = USER_LICENSE_ASSIGNED`.
 - `resource_id = <student-id>`.
-- BÃ¬nh thÆ°á»ng sau vÃ i giÃ¢y `status = PUBLISHED`.
-- Náº¿u RabbitMQ Ä‘ang down, row váº«n cÃ²n `PENDING` hoáº·c `FAILED`, khÃ´ng máº¥t.
+- Bình thường sau vài giây `status = PUBLISHED`.
+- Nếu RabbitMQ đang down, row vẫn còn `PENDING` hoặc `FAILED`, không mất.
 
 ### 8.4 Verify centralized audit-service
 
@@ -5794,24 +5794,24 @@ curl -s "http://localhost:8000/admin/audit-logs?action=USER_LICENSE_ASSIGNED&res
 Expected:
 
 - `data.total >= 1`.
-- Item má»›i nháº¥t cÃ³:
+- Item mới nhất có:
   - `serviceName = user-service`
   - `resourceType = USER_PROFILE`
   - `resourceId = <student-id>`
   - `metadata.newLicenseTier = B1`
-  - `correlationId` khá»›p response header náº¿u copy láº¡i lÃºc gá»i API.
+  - `correlationId` khớp response header nếu copy lại lúc gọi API.
 
 ---
 
 ## 9. Troubleshooting
 
-### Service khÃ´ng start Ä‘Æ°á»£c
+### Service không start được
 
 ```
 Error: Failed to connect to Consul
 ```
 
-â†’ Cháº¡y `docker-compose up -d consul consul-init` vÃ  seed láº¡i: `pnpm run consul:seed:local`
+→ Chạy `docker-compose up -d consul consul-init` và seed lại: `pnpm run consul:seed:local`
 
 ---
 
@@ -5821,17 +5821,17 @@ Error: Failed to connect to Consul
 Error: Can't reach database server at localhost:5433
 ```
 
-â†’ Cháº¡y `docker-compose up -d db-user`
+→ Chạy `docker-compose up -d db-user`
 
 ---
 
-### Prisma schema chÆ°a migrate
+### Prisma schema chưa migrate
 
 ```
 PrismaClientInitializationError: Unable to open a TLS connection
 ```
 
-â†’ Cháº¡y:
+→ Chạy:
 
 ```bash
 cd apps/user-service
@@ -5840,17 +5840,17 @@ npx prisma migrate dev
 
 ---
 
-### RabbitMQ event khÃ´ng Ä‘Æ°á»£c consume
+### RabbitMQ event không được consume
 
-1. Kiá»ƒm tra queue `user_service_events` tá»“n táº¡i trong RabbitMQ UI
-2. Kiá»ƒm tra user-service log: event pattern pháº£i lÃ  `identity.user.created` hoáº·c `identity.user.role-changed`
-3. Äáº£m báº£o `noAck: false` trong config â€” RabbitMQ chá» acknowledgment
+1. Kiểm tra queue `user_service_events` tồn tại trong RabbitMQ UI
+2. Kiểm tra user-service log: event pattern phải là `identity.user.created` hoặc `identity.user.role-changed`
+3. Đảm bảo `noAck: false` trong config — RabbitMQ chờ acknowledgment
 
 ---
 
-### Response format sai (khÃ´ng cÃ³ `success` field)
+### Response format sai (không có `success` field)
 
-â†’ `DomainExceptionFilter` hoáº·c `ApiExceptionFilter` chÆ°a Ä‘Æ°á»£c register. Kiá»ƒm tra `main.ts`:
+→ `DomainExceptionFilter` hoặc `ApiExceptionFilter` chưa được register. Kiểm tra `main.ts`:
 
 ```typescript
 app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
@@ -5858,48 +5858,48 @@ app.useGlobalFilters(new ApiExceptionFilter(), new DomainExceptionFilter());
 
 ---
 
-### `422 USER_NOT_STUDENT` khi gÃ¡n license tier
+### `422 USER_NOT_STUDENT` khi gán license tier
 
-â†’ ÄÃºng behavior. User cáº§n cÃ³ `role = STUDENT` má»›i Ä‘Æ°á»£c gÃ¡n license tier.
+→ Đúng behavior. User cần có `role = STUDENT` mới được gán license tier.
 
 ---
 
 ## Checklist test nhanh
 
-DÃ¹ng Ä‘á»ƒ verify toÃ n bá»™ happy path sau má»—i thay Ä‘á»•i:
+Dùng để verify toàn bộ happy path sau mỗi thay đổi:
 
 ```bash
 BASE="http://localhost:3002"
 
-# 1. Táº¡o user
+# 1. Tạo user
 curl -s -X POST $BASE/users -H "Content-Type: application/json" \
   -d '{"id":"test-001","fullName":"Test User","email":"test-001@test.com","role":"STUDENT"}' \
-  | jq '.success'  # â†’ true
+  | jq '.success'  # → true
 
-# 2. Láº¥y profile báº±ng ID
-curl -s $BASE/users/test-001 | jq '.data.role'  # â†’ "STUDENT"
+# 2. Lấy profile bằng ID
+curl -s $BASE/users/test-001 | jq '.data.role'  # → "STUDENT"
 
-# 3. Láº¥y profile /me - cáº§n token cÃ³ sub = test-001 náº¿u guard Ä‘ang báº­t
+# 3. Lấy profile /me - cần token có sub = test-001 nếu guard đang bật
 curl -s $BASE/users/me -H "Authorization: Bearer <STUDENT_TOKEN>" | jq '.data.email'
 
 # 4. Update profile
 curl -s -X PATCH $BASE/users/me -H "Content-Type: application/json" -H "Authorization: Bearer <STUDENT_TOKEN>" \
-  -d '{"address":"123 Test St"}' | jq '.data.address'  # â†’ "123 Test St"
+  -d '{"address":"123 Test St"}' | jq '.data.address'  # → "123 Test St"
 
-# 5. GÃ¡n license tier
+# 5. Gán license tier
 curl -s -X PATCH $BASE/admin/users/test-001/license-tier \
   -H "Content-Type: application/json" -H "Authorization: Bearer <ADMIN_OR_CENTER_MANAGER_TOKEN>" \
-  -d '{"licenseTier":"B2"}' | jq '.data.studentDetail.licenseTier'  # â†’ "B2"
+  -d '{"licenseTier":"B2"}' | jq '.data.studentDetail.licenseTier'  # → "B2"
 
 # 6. Verify license tier
-curl -s $BASE/users/test-001 | jq '.data.studentDetail.licenseTier'  # â†’ "B2"
+curl -s $BASE/users/test-001 | jq '.data.studentDetail.licenseTier'  # → "B2"
 
 # 7. Lock user
 curl -s -X PATCH $BASE/users/test-001/lock -H "Content-Type: application/json" \
-  -d '{"lock":true}' -o /dev/null -w "%{http_code}"  # â†’ 204
+  -d '{"lock":true}' -o /dev/null -w "%{http_code}"  # → 204
 
 # 8. Verify locked
-curl -s $BASE/users/test-001 | jq '.data.isActive'  # â†’ false
+curl -s $BASE/users/test-001 | jq '.data.isActive'  # → false
 
 echo "All checks passed!"
 ```
@@ -5911,55 +5911,55 @@ echo "All checks passed!"
 
 ## Overview
 
-UC33 Logout Ä‘Ã£ Ä‘Æ°á»£c triá»ƒn khai táº¡i `identity-service` vá»›i cÃ¡c thÃ nh pháº§n:
+UC33 Logout đã được triển khai tại `identity-service` với các thành phần:
 
 - Endpoint: `POST /logout`
-- YÃªu cáº§u: JWT access token (Authorization header) + refresh token (request body)
-- Response: ThÃ´ng bÃ¡o logout thÃ nh cÃ´ng vá»›i hÆ°á»›ng dáº«n xÃ³a token
-- Backend: Revoke session trÃªn Keycloak + Redis blacklist theo `jti`/token TTL
+- Yêu cầu: JWT access token (Authorization header) + refresh token (request body)
+- Response: Thông báo logout thành công với hướng dẫn xóa token
+- Backend: Revoke session trên Keycloak + Redis blacklist theo `jti`/token TTL
 
 ## Architecture
 
 ```
-Client â†’ POST /logout
+Client → POST /logout
            Authorization: Bearer <access_token>
            Body: { "refreshToken": "<refresh_token>" }
-           â†“
-         Kong Gateway (truyá»n token qua)
-           â†“
+           ↓
+         Kong Gateway (truyền token qua)
+           ↓
          identity-service: AuthController.logout()
-           â†“
+           ↓
          AppService.logout(token, refreshToken)
-           â€¢ Decode JWT â†’ láº¥y exp claim
-           â€¢ Revoke session trÃªn Keycloak (dÃ¹ng refreshToken)
-           â€¢ ThÃªm access token vÃ o blacklist vá»›i TTL
-           â†“
+           • Decode JWT → lấy exp claim
+           • Revoke session trên Keycloak (dùng refreshToken)
+           • Thêm access token vào blacklist với TTL
+           ↓
          TokenBlacklistService
-           â€¢ LÆ°u key `bl:<jti>` vÃ o Redis
-           â€¢ TTL theo `exp` cá»§a access token
-           â†“
+           • Lưu key `bl:<jti>` vào Redis
+           • TTL theo `exp` của access token
+           ↓
          LogoutResponseDto (MSG130)
-           â†“
-         Client: XÃ³a token tá»« LocalStorage/Cookie
+           ↓
+         Client: Xóa token từ LocalStorage/Cookie
 ```
 
 ## Files Changed
 
 ### Core Implementation
 
-- `apps/identity-service/src/presentation/dtos/logout.response.dto.ts` â€” Response DTO
-- `apps/identity-service/src/presentation/dtos/logout.request.dto.ts` â€” Request DTO
-- `apps/identity-service/src/infrastructure/token-blacklist/token-blacklist.service.ts` â€” Blacklist service
-- `apps/identity-service/src/app.service.ts` â€” Logout business logic + JWT decode
-- `apps/identity-service/src/presentation/http/auth.controller.ts` â€” Logout endpoint
-- `apps/identity-service/src/app.module.ts` â€” DI wiring
+- `apps/identity-service/src/presentation/dtos/logout.response.dto.ts` — Response DTO
+- `apps/identity-service/src/presentation/dtos/logout.request.dto.ts` — Request DTO
+- `apps/identity-service/src/infrastructure/token-blacklist/token-blacklist.service.ts` — Blacklist service
+- `apps/identity-service/src/app.service.ts` — Logout business logic + JWT decode
+- `apps/identity-service/src/presentation/http/auth.controller.ts` — Logout endpoint
+- `apps/identity-service/src/app.module.ts` — DI wiring
 
 ### Infrastructure
 
-- `docker-compose.infra.yml` â€” ThÃªm Redis service
-- `docker-compose.yaml` â€” ThÃªm Redis service
-- `consul-seed-development-local.json` â€” ThÃªm redis.url config
-- `consul-seed-development.json` â€” ThÃªm redis.url config
+- `docker-compose.infra.yml` — Thêm Redis service
+- `docker-compose.yaml` — Thêm Redis service
+- `consul-seed-development-local.json` — Thêm redis.url config
+- `consul-seed-development.json` — Thêm redis.url config
 
 ## Behavior
 
@@ -6030,26 +6030,26 @@ Response:
 
 ## Manual Testing Steps
 
-### 1. Khá»Ÿi Ä‘á»™ng Infrastructure
+### 1. Khởi động Infrastructure
 
 ```bash
-# Terminal 1: Khá»Ÿi Ä‘á»™ng infra (PostgreSQL, RabbitMQ, Consul, Keycloak, Redis)
+# Terminal 1: Khởi động infra (PostgreSQL, RabbitMQ, Consul, Keycloak, Redis)
 pnpm run infra:up
 
-# Chá» khoáº£ng 30 giÃ¢y Ä‘á»ƒ táº¥t cáº£ services healthy
+# Chờ khoảng 30 giây để tất cả services healthy
 ```
 
-### 2. Khá»Ÿi Ä‘á»™ng Services
+### 2. Khởi động Services
 
 ```bash
-# Terminal 2: Khá»Ÿi Ä‘á»™ng identity-service local
+# Terminal 2: Khởi động identity-service local
 pnpm run dev --filter=identity-service
 ```
 
 ### 3. Test Login
 
 ```bash
-# Láº¥y access token tá»« Keycloak
+# Lấy access token từ Keycloak
 curl -X POST http://localhost:8080/realms/luyen-thi-lai-xe-realm/protocol/openid-connect/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=nestjs-backend" \
@@ -6058,17 +6058,17 @@ curl -X POST http://localhost:8080/realms/luyen-thi-lai-xe-realm/protocol/openid
   -d "username=demo" \
   -d "password=demo"
 
-# Hoáº·c qua identity-service login endpoint
+# Hoặc qua identity-service login endpoint
 curl -X POST http://localhost:3001/login \
   -H "Content-Type: application/json" \
   -d '{"username": "demo", "password": "demo"}'
 
-# LÆ°u láº¡i accessToken vÃ  refreshToken tá»« response
+# Lưu lại accessToken và refreshToken từ response
 TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 REFRESH_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
-### 4. Test Logout â€” Success Case
+### 4. Test Logout — Success Case
 
 ```bash
 curl -X POST http://localhost:3001/logout \
@@ -6091,7 +6091,7 @@ curl -X POST http://localhost:3001/logout \
 # }
 ```
 
-### 5. Test Logout â€” Missing Token
+### 5. Test Logout — Missing Token
 
 ```bash
 curl -X POST http://localhost:3001/logout \
@@ -6100,7 +6100,7 @@ curl -X POST http://localhost:3001/logout \
 # Expected: 401 Unauthorized
 ```
 
-### 6. Test Logout â€” Invalid Token
+### 6. Test Logout — Invalid Token
 
 ```bash
 curl -X POST http://localhost:3001/logout \
@@ -6113,14 +6113,14 @@ curl -X POST http://localhost:3001/logout \
 ### 7. Test Blacklist Enforcement (After Logout)
 
 ```bash
-# Logout thÃ nh cÃ´ng â†’ Token vÃ o blacklist
+# Logout thành công → Token vào blacklist
 curl -X POST http://localhost:3001/logout \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
 
-# LÃºc nÃ y, token váº«n há»£p lá»‡ vá» cáº¥u trÃºc, nhÆ°ng Ä‘Ã£ bá»‹ blacklist
-# Khi gá»i protected API cá»§a identity-service, TokenBlacklistGuard check Redis
+# Lúc này, token vẫn hợp lệ về cấu trúc, nhưng đã bị blacklist
+# Khi gọi protected API của identity-service, TokenBlacklistGuard check Redis
 # Expected: 401 Token has been revoked
 ```
 
@@ -6128,21 +6128,21 @@ curl -X POST http://localhost:3001/logout \
 
 ### Current enforcement
 
-Hiá»‡n táº¡i blacklist Ä‘Æ°á»£c enforce á»Ÿ service layer cá»§a `identity-service` báº±ng global `TokenBlacklistGuard` vÃ  Redis. Kong váº«n validate/route request nhÆ°ng khÃ´ng tá»± check Redis blacklist.
+Hiện tại blacklist được enforce ở service layer của `identity-service` bằng global `TokenBlacklistGuard` và Redis. Kong vẫn validate/route request nhưng không tự check Redis blacklist.
 
-1. `POST /logout` decode access token, láº¥y `exp`, revoke refresh token/session trÃªn Keycloak.
-2. `TokenBlacklistService` lÆ°u key `bl:<jti>` vÃ o Redis vá»›i TTL Ä‘áº¿n khi access token háº¿t háº¡n.
-3. Protected API trong `identity-service` reject token Ä‘Ã£ logout báº±ng `401`.
+1. `POST /logout` decode access token, lấy `exp`, revoke refresh token/session trên Keycloak.
+2. `TokenBlacklistService` lưu key `bl:<jti>` vào Redis với TTL đến khi access token hết hạn.
+3. Protected API trong `identity-service` reject token đã logout bằng `401`.
 
 ### Gateway/backlog note
 
-Náº¿u muá»‘n cháº·n token Ä‘Ã£ logout trÆ°á»›c khi request tá»›i má»i service, cáº§n thÃªm blacklist guard/plugin dÃ¹ng chung á»Ÿ API gateway hoáº·c shared guard trong tá»«ng service. ÄÃ¢y lÃ  hardening má»Ÿ rá»™ng, khÃ´ng giáº£ Ä‘á»‹nh frontend pháº£i gá»­i header nÃ o khÃ¡c ngoÃ i `Authorization`.
+Nếu muốn chặn token đã logout trước khi request tới mọi service, cần thêm blacklist guard/plugin dùng chung ở API gateway hoặc shared guard trong từng service. Đây là hardening mở rộng, không giả định frontend phải gửi header nào khác ngoài `Authorization`.
 
 ### Redis Integration
 
-Hiá»‡n táº¡i: `TokenBlacklistService` dÃ¹ng `ioredis` client Ä‘Æ°á»£c inject tá»« `identity-service` app module.
+Hiện tại: `TokenBlacklistService` dùng `ioredis` client được inject từ `identity-service` app module.
 
-**Cáº¥u hÃ¬nh**:
+**Cấu hình**:
 
 ```typescript
 // In AppModule
@@ -6158,18 +6158,18 @@ RedisModule.forRootAsync({
 
 **UC33: Logout**
 
-| BR | MÃ´ táº£ | Status |
+| BR | Mô tả | Status |
 | -- | -- | -- |
-| BR01 | JWT Validation: Extract tá»« header, validate | âœ… Implemented |
-| BR02 | Token Blacklisting: Add to blacklist vá»›i TTL | âœ… Implemented (in-memory) |
-| BR03 | Client-Side Cleanup: Return instruction | âœ… Implemented |
-| BR04 | Post-Logout Verification: Check blacklist O(1) | ðŸŸ¡ In-memory only |
-| BR05 | Success Response: Return MSG130 | âœ… Implemented |
+| BR01 | JWT Validation: Extract từ header, validate | ✅ Implemented |
+| BR02 | Token Blacklisting: Add to blacklist với TTL | ✅ Implemented (in-memory) |
+| BR03 | Client-Side Cleanup: Return instruction | ✅ Implemented |
+| BR04 | Post-Logout Verification: Check blacklist O(1) | 🟡 In-memory only |
+| BR05 | Success Response: Return MSG130 | ✅ Implemented |
 
 | Message | Use Case | Status |
 | -- | -- | -- |
-| MSG129 | Token missing/invalid | âœ… Implemented |
-| MSG130 | Logout success | âœ… Implemented |
+| MSG129 | Token missing/invalid | ✅ Implemented |
+| MSG130 | Logout success | ✅ Implemented |
 
 ## Next Steps
 
@@ -6189,7 +6189,7 @@ RedisModule.forRootAsync({
    - Test error cases
 
 4. **Add E2E Tests**
-   - Full flow: Login â†’ Logout â†’ Try to use old token
+   - Full flow: Login → Logout → Try to use old token
 
 5. **Add Monitoring**
    - Log logout events
@@ -6198,7 +6198,7 @@ RedisModule.forRootAsync({
 
 ## Swagger Documentation
 
-Endpoint tá»± Ä‘á»™ng Ä‘Æ°á»£c documented á»Ÿ:
+Endpoint tự động được documented ở:
 
 - Swagger UI: `http://localhost:3001/swagger`
 - Endpoint: `POST /logout`

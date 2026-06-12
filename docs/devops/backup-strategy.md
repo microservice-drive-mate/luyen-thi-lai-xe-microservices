@@ -1,10 +1,10 @@
-﻿# Backup Strategy, Keycloak Backup vÃ  Restore Test
+﻿# Backup Strategy, Keycloak Backup và Restore Test
 
-TÃ i liá»‡u nÃ y mÃ´ táº£ pháº¡m vi backup, cÆ¡ cháº¿ tá»± Ä‘á»™ng backup háº±ng ngÃ y, backup Keycloak vÃ  kiá»ƒm tra restore.
+Tài liệu này mô tả phạm vi backup, cơ chế tự động backup hằng ngày, backup Keycloak và kiểm tra restore.
 
 ## Backup Strategy & Scope
 
-CÃ¡c database Ä‘Æ°á»£c backup:
+Các database được backup:
 
 | Service | Container | Database | User |
 | ------- | --------- | -------- | ---- |
@@ -20,86 +20,86 @@ CÃ¡c database Ä‘Æ°á»£c backup:
 | `audit-service` | `db-audit` | `audit_db` | `user` |
 | `keycloak` | `db-keycloak` | `keycloak_db` | `keycloak` |
 
-Backup dÃ¹ng `pg_dump --format=custom` Ä‘á»ƒ táº¡o file `.dump`. Äá»‹nh dáº¡ng custom phÃ¹ há»£p cho restore báº±ng `pg_restore`, há»— trá»£ kiá»ƒm tra metadata vÃ  linh hoáº¡t hÆ¡n plain SQL.
+Backup dùng `pg_dump --format=custom` để tạo file `.dump`. Định dạng custom phù hợp cho restore bằng `pg_restore`, hỗ trợ kiểm tra metadata và linh hoạt hơn plain SQL.
 
-Quy Æ°á»›c tÃªn file:
+Quy ước tên file:
 
 ```text
 <service>_<env>_<yyyyMMddTHHmmssZ>.dump
 ```
 
-VÃ­ dá»¥:
+Ví dụ:
 
 ```text
 user-service_production_20260524T150000Z.dump
 keycloak_production_20260524T150000Z.dump
 ```
 
-Má»—i láº§n backup táº¡o thÃªm:
+Mỗi lần backup tạo thêm:
 
-- File `.dump` cho tá»«ng database.
-- File `.sha256` Ä‘á»ƒ kiá»ƒm tra checksum.
-- `manifest.csv` ghi danh sÃ¡ch service, database, host, port vÃ  file dump.
+- File `.dump` cho từng database.
+- File `.sha256` để kiểm tra checksum.
+- `manifest.csv` ghi danh sách service, database, host, port và file dump.
 
-ThÆ° má»¥c lÆ°u:
+Thư mục lưu:
 
 ```text
 backups/postgres/<env>/<timestamp>/
 ```
 
-`backups/` bá»‹ ignore bá»Ÿi Git vÃ¬ chá»©a dá»¯ liá»‡u tháº­t.
+`backups/` bị ignore bởi Git vì chứa dữ liệu thật.
 
 ## Automated Daily Backup
 
-Service `postgres-backup` Ä‘Ã£ Ä‘Æ°á»£c thÃªm vÃ o:
+Service `postgres-backup` đã được thêm vào:
 
 - `docker-compose.infra.yml` cho local/hybrid.
 - `docker-compose.deploy.yml` cho staging/production deploy.
 
-Service nÃ y dÃ¹ng image `postgres:15-alpine`, mount script:
+Service này dùng image `postgres:15-alpine`, mount script:
 
 ```text
 docker/backup/postgres-daily-backup.sh
 ```
 
-Máº·c Ä‘á»‹nh service sáº½:
+Mặc định service sẽ:
 
-- Chá» táº¥t cáº£ PostgreSQL containers healthy.
-- Backup ngay khi container khá»Ÿi Ä‘á»™ng.
-- Láº·p láº¡i má»—i `86400` giÃ¢y, tÆ°Æ¡ng Ä‘Æ°Æ¡ng háº±ng ngÃ y.
-- XÃ³a backup cÅ© theo `BACKUP_RETENTION_DAYS`.
-- Má»—i Chá»§ nháº­t táº¡o thÃªm weekly snapshot vÃ  giá»¯ theo `BACKUP_WEEKLY_RETENTION_WEEKS`.
+- Chờ tất cả PostgreSQL containers healthy.
+- Backup ngay khi container khởi động.
+- Lặp lại mỗi `86400` giây, tương đương hằng ngày.
+- Xóa backup cũ theo `BACKUP_RETENTION_DAYS`.
+- Mỗi Chủ nhật tạo thêm weekly snapshot và giữ theo `BACKUP_WEEKLY_RETENTION_WEEKS`.
 
-Biáº¿n mÃ´i trÆ°á»ng chÃ­nh:
+Biến môi trường chính:
 
-| Biáº¿n | Máº·c Ä‘á»‹nh | Ã nghÄ©a |
+| Biến | Mặc định | Ý nghĩa |
 | ---- | -------- | ------- |
-| `BACKUP_ROOT` | `/backups/postgres` | ThÆ° má»¥c backup trong container |
-| `BACKUP_RETENTION_DAYS` | `7` | Sá»‘ ngÃ y giá»¯ backup |
-| `BACKUP_WEEKLY_RETENTION_WEEKS` | `4` | Sá»‘ tuáº§n giá»¯ weekly snapshot |
-| `BACKUP_INTERVAL_SECONDS` | `86400` | Khoáº£ng cÃ¡ch giá»¯a 2 láº§n backup |
-| `BACKUP_RUN_ONCE` | `false` | Cháº¡y má»™t láº§n rá»“i thoÃ¡t |
+| `BACKUP_ROOT` | `/backups/postgres` | Thư mục backup trong container |
+| `BACKUP_RETENTION_DAYS` | `7` | Số ngày giữ backup |
+| `BACKUP_WEEKLY_RETENTION_WEEKS` | `4` | Số tuần giữ weekly snapshot |
+| `BACKUP_INTERVAL_SECONDS` | `86400` | Khoảng cách giữa 2 lần backup |
+| `BACKUP_RUN_ONCE` | `false` | Chạy một lần rồi thoát |
 
-Staging giá»¯ máº·c Ä‘á»‹nh 7 ngÃ y. Production example Ä‘áº·t 14 ngÃ y.
+Staging giữ mặc định 7 ngày. Production example đặt 14 ngày.
 
-Weekly snapshot Ä‘Æ°á»£c lÆ°u riÃªng:
+Weekly snapshot được lưu riêng:
 
 ```text
 backups/postgres/weekly/<env>/<yyyy-Www>/
 backups/keycloak/weekly/<env>/<yyyy-Www>/
 ```
 
-ChÃ­nh sÃ¡ch hiá»‡n táº¡i Ä‘Ã¡p á»©ng yÃªu cáº§u tá»‘i thiá»ƒu: daily backup giá»¯ 7-14 ngÃ y tÃ¹y mÃ´i trÆ°á»ng, weekly snapshot giá»¯ 4 tuáº§n.
+Chính sách hiện tại đáp ứng yêu cầu tối thiểu: daily backup giữ 7-14 ngày tùy môi trường, weekly snapshot giữ 4 tuần.
 
-## CÃ¡ch cháº¡y local
+## Cách chạy local
 
-Backup one-shot báº±ng script TypeScript cÅ© Ä‘Ã£ Ä‘Æ°á»£c chuáº©n hÃ³a láº¡i:
+Backup one-shot bằng script TypeScript cũ đã được chuẩn hóa lại:
 
 ```bash
 npm run db:backup:local
 ```
 
-Backup one-shot báº±ng chÃ­nh container backup:
+Backup one-shot bằng chính container backup:
 
 ```bash
 npm run db:backup:once
@@ -111,19 +111,19 @@ Backup Keycloak realm one-shot:
 npm run keycloak:backup:once
 ```
 
-Cháº¡y tá»± Ä‘á»™ng cÃ¹ng infra:
+Chạy tự động cùng infra:
 
 ```bash
 npm run infra:up
 ```
 
-Sau khi cháº¡y, kiá»ƒm tra thÆ° má»¥c:
+Sau khi chạy, kiểm tra thư mục:
 
 ```text
 backups/postgres/development-local/<timestamp>/
 ```
 
-## Kiá»ƒm tra nhanh file backup
+## Kiểm tra nhanh file backup
 
 Checksum:
 
@@ -131,70 +131,70 @@ Checksum:
 sha256sum -c backups/postgres/<env>/<timestamp>/<file>.sha256
 ```
 
-Liá»‡t kÃª metadata báº±ng `pg_restore`:
+Liệt kê metadata bằng `pg_restore`:
 
 ```bash
 pg_restore --list backups/postgres/<env>/<timestamp>/<file>.dump
 ```
 
-Diá»…n táº­p restore Ä‘áº§y Ä‘á»§ Ä‘Æ°á»£c mÃ´ táº£ á»Ÿ pháº§n Restore Test.
+Diễn tập restore đầy đủ được mô tả ở phần Restore Test.
 
 ## Keycloak Backup
 
-Keycloak Ä‘Æ°á»£c backup theo 2 lá»›p:
+Keycloak được backup theo 2 lớp:
 
-- `keycloak_db` Ä‘Æ°á»£c backup báº±ng `pg_dump --format=custom` giá»‘ng cÃ¡c PostgreSQL DB khÃ¡c.
-- Realm runtime config Ä‘Æ°á»£c export háº±ng ngÃ y báº±ng `kcadm.sh` tá»« service `keycloak-backup`.
+- `keycloak_db` được backup bằng `pg_dump --format=custom` giống các PostgreSQL DB khác.
+- Realm runtime config được export hằng ngày bằng `kcadm.sh` từ service `keycloak-backup`.
 
-Service `keycloak-backup` Ä‘Ã£ Ä‘Æ°á»£c thÃªm vÃ o:
+Service `keycloak-backup` đã được thêm vào:
 
 - `docker-compose.infra.yml`
 - `docker-compose.deploy.yml`
 
-Artifact Keycloak export náº±m á»Ÿ:
+Artifact Keycloak export nằm ở:
 
 ```text
 backups/keycloak/<env>/<timestamp>/
 ```
 
-Weekly export cá»§a Keycloak cÅ©ng Ä‘Æ°á»£c táº¡o vÃ o Chá»§ nháº­t vÃ  giá»¯ theo `BACKUP_WEEKLY_RETENTION_WEEKS`.
+Weekly export của Keycloak cũng được tạo vào Chủ nhật và giữ theo `BACKUP_WEEKLY_RETENTION_WEEKS`.
 
-CÃ¡c file Ä‘Æ°á»£c táº¡o:
+Các file được tạo:
 
-| File | Ná»™i dung |
+| File | Nội dung |
 | ---- | -------- |
-| `realm.json` | Cáº¥u hÃ¬nh realm |
-| `users.json` | Danh sÃ¡ch users |
-| `clients.json` | Danh sÃ¡ch clients |
+| `realm.json` | Cấu hình realm |
+| `users.json` | Danh sách users |
+| `clients.json` | Danh sách clients |
 | `roles.json` | Realm roles |
-| `SHA256SUMS` | Checksum cÃ¡c file JSON |
-| `manifest.csv` | Danh sÃ¡ch artifact |
+| `SHA256SUMS` | Checksum các file JSON |
+| `manifest.csv` | Danh sách artifact |
 
-LÆ°u Ã½: source khÃ´i phá»¥c Ä‘áº§y Ä‘á»§ nháº¥t cho Keycloak váº«n lÃ  `keycloak_db` dump. Realm export giÃºp review cáº¥u hÃ¬nh, phá»¥c há»“i thá»§ cÃ´ng má»™t pháº§n vÃ  kiá»ƒm tra nhanh drift cáº¥u hÃ¬nh.
+Lưu ý: source khôi phục đầy đủ nhất cho Keycloak vẫn là `keycloak_db` dump. Realm export giúp review cấu hình, phục hồi thủ công một phần và kiểm tra nhanh drift cấu hình.
 
-## Backup trÃªn GCP/K3s
+## Backup trên GCP/K3s
 
-Khi deploy báº±ng Helm lÃªn GCP hiá»‡n táº¡i, há»‡ thá»‘ng cháº¡y theo mÃ´ hÃ¬nh **K3s trÃªn Compute Engine VM**. PostgreSQL vÃ  Keycloak váº«n cháº¡y trong Kubernetes namespace `staging`, dá»¯ liá»‡u PostgreSQL náº±m trÃªn PVC local-path cá»§a K3s. VÃ¬ váº­y backup trÃªn GCP hiá»‡n chÆ°a dÃ¹ng Cloud SQL automated backup/PITR, mÃ  nÃªn xá»­ lÃ½ theo hÆ°á»›ng:
+Khi deploy bằng Helm lên GCP hiện tại, hệ thống chạy theo mô hình **K3s trên Compute Engine VM**. PostgreSQL và Keycloak vẫn chạy trong Kubernetes namespace `staging`, dữ liệu PostgreSQL nằm trên PVC local-path của K3s. Vì vậy backup trên GCP hiện chưa dùng Cloud SQL automated backup/PITR, mà nên xử lý theo hướng:
 
-- Backup thá»§ cÃ´ng hoáº·c theo CronJob trong Kubernetes.
-- LÆ°u file `.dump`, checksum vÃ  manifest ra ngoÃ i VM.
-- Äáº©y báº£n backup quan trá»ng lÃªn Google Cloud Storage Ä‘á»ƒ trÃ¡nh máº¥t dá»¯ liá»‡u náº¿u VM hoáº·c disk lá»—i.
+- Backup thủ công hoặc theo CronJob trong Kubernetes.
+- Lưu file `.dump`, checksum và manifest ra ngoài VM.
+- Đẩy bản backup quan trọng lên Google Cloud Storage để tránh mất dữ liệu nếu VM hoặc disk lỗi.
 
-### Backup thá»§ cÃ´ng PostgreSQL trÃªn GCP
+### Backup thủ công PostgreSQL trên GCP
 
-Káº¿t ná»‘i vÃ o cluster trÆ°á»›c theo hÆ°á»›ng dáº«n trong `docs/devops/gcp-setup.md`, sau Ä‘Ã³ kiá»ƒm tra pod PostgreSQL:
+Kết nối vào cluster trước theo hướng dẫn trong `docs/devops/gcp-setup.md`, sau đó kiểm tra pod PostgreSQL:
 
 ```bash
 kubectl get pods -n staging | grep postgres
 ```
 
-Táº¡o thÆ° má»¥c backup trÃªn mÃ¡y Ä‘ang cháº¡y lá»‡nh:
+Tạo thư mục backup trên máy đang chạy lệnh:
 
 ```bash
 mkdir -p backups/gcp/postgres/$(date -u +%Y%m%dT%H%M%SZ)
 ```
 
-VÃ­ dá»¥ backup má»™t database:
+Ví dụ backup một database:
 
 ```bash
 NAMESPACE=staging
@@ -211,9 +211,9 @@ sha256sum "$BACKUP_DIR/user-service_staging_$TIMESTAMP.dump" \
   > "$BACKUP_DIR/user-service_staging_$TIMESTAMP.dump.sha256"
 ```
 
-CÃ¡c database cáº§n backup giá»‘ng báº£ng pháº¡m vi á»Ÿ Ä‘áº§u tÃ i liá»‡u: `identity_db`, `user_db`, `exam_db`, `course_db`, `question_db`, `notification_db`, `analytics_db`, `simulation_db`, `media_db`, `audit_db` vÃ  `keycloak_db`.
+Các database cần backup giống bảng phạm vi ở đầu tài liệu: `identity_db`, `user_db`, `exam_db`, `course_db`, `question_db`, `notification_db`, `analytics_db`, `simulation_db`, `media_db`, `audit_db` và `keycloak_db`.
 
-Náº¿u muá»‘n backup nhanh toÃ n bá»™ trong má»™t láº§n demo, cÃ³ thá»ƒ láº·p danh sÃ¡ch database:
+Nếu muốn backup nhanh toàn bộ trong một lần demo, có thể lặp danh sách database:
 
 ```bash
 NAMESPACE=staging
@@ -252,9 +252,9 @@ do
 done
 ```
 
-### Äáº©y backup lÃªn Google Cloud Storage
+### Đẩy backup lên Google Cloud Storage
 
-Táº¡o bucket riÃªng cho backup:
+Tạo bucket riêng cho backup:
 
 ```bash
 gcloud storage buckets create gs://<project-id>-luyen-thi-lai-xe-backups \
@@ -262,24 +262,24 @@ gcloud storage buckets create gs://<project-id>-luyen-thi-lai-xe-backups \
   --uniform-bucket-level-access
 ```
 
-Äáº©y thÆ° má»¥c backup vá»«a táº¡o:
+Đẩy thư mục backup vừa tạo:
 
 ```bash
 gcloud storage cp --recursive "$BACKUP_DIR" \
   "gs://<project-id>-luyen-thi-lai-xe-backups/postgres/staging/$TIMESTAMP/"
 ```
 
-Kiá»ƒm tra láº¡i object:
+Kiểm tra lại object:
 
 ```bash
 gcloud storage ls "gs://<project-id>-luyen-thi-lai-xe-backups/postgres/staging/$TIMESTAMP/"
 ```
 
-Vá»›i demo mÃ´n há»c, cÃ³ thá»ƒ nÃ³i ráº±ng báº£n backup Ä‘Æ°á»£c táº¡o trong cluster, sau Ä‘Ã³ copy ra Cloud Storage Ä‘á»ƒ cÃ³ má»™t báº£n offsite khÃ´ng phá»¥ thuá»™c vÃ o disk cá»§a VM.
+Với demo môn học, có thể nói rằng bản backup được tạo trong cluster, sau đó copy ra Cloud Storage để có một bản offsite không phụ thuộc vào disk của VM.
 
-### Backup Keycloak realm trÃªn GCP
+### Backup Keycloak realm trên GCP
 
-`keycloak_db` Ä‘Ã£ Ä‘Æ°á»£c backup báº±ng PostgreSQL dump á»Ÿ bÆ°á»›c trÃªn. Náº¿u muá»‘n export thÃªm realm runtime config, cÃ³ thá»ƒ exec vÃ o pod Keycloak:
+`keycloak_db` đã được backup bằng PostgreSQL dump ở bước trên. Nếu muốn export thêm realm runtime config, có thể exec vào pod Keycloak:
 
 ```bash
 NAMESPACE=staging
@@ -302,16 +302,16 @@ kubectl exec -n "$NAMESPACE" "$KEYCLOAK_POD" -- \
 sha256sum "$EXPORT_DIR/realm.json" > "$EXPORT_DIR/SHA256SUMS"
 ```
 
-Sau Ä‘Ã³ Ä‘áº©y lÃªn Cloud Storage:
+Sau đó đẩy lên Cloud Storage:
 
 ```bash
 gcloud storage cp --recursive "$EXPORT_DIR" \
   "gs://<project-id>-luyen-thi-lai-xe-backups/keycloak/staging/$TIMESTAMP/"
 ```
 
-### Restore rehearsal tá»« backup GCP
+### Restore rehearsal từ backup GCP
 
-Táº£i má»™t báº£n backup tá»« Cloud Storage vá» mÃ¡y:
+Tải một bản backup từ Cloud Storage về máy:
 
 ```bash
 gcloud storage cp \
@@ -319,28 +319,28 @@ gcloud storage cp \
   "backups/gcp/restore-test/user-service_staging_<timestamp>.dump"
 ```
 
-Cháº¡y restore test báº±ng script hiá»‡n cÃ³:
+Chạy restore test bằng script hiện có:
 
 ```bash
 RESTORE_TEST_BACKUP_FILE=backups/gcp/restore-test/user-service_staging_<timestamp>.dump npm run db:restore:test
 ```
 
-Khi demo, nÃªn ghi láº¡i:
+Khi demo, nên ghi lại:
 
-- TÃªn bucket.
-- Timestamp cá»§a backup.
-- File `.dump` Ä‘Ã£ restore test.
-- Káº¿t quáº£ `Restore completed successfully`.
+- Tên bucket.
+- Timestamp của backup.
+- File `.dump` đã restore test.
+- Kết quả `Restore completed successfully`.
 
-### HÆ°á»›ng nÃ¢ng cáº¥p sau demo
+### Hướng nâng cấp sau demo
 
-Äá»ƒ Ä‘áº§y Ä‘á»§ hÆ¡n trÃªn GCP, nÃªn thÃªm cÃ¡c bÆ°á»›c sau:
+Để đầy đủ hơn trên GCP, nên thêm các bước sau:
 
-- Táº¡o Kubernetes `CronJob` cho PostgreSQL backup, cháº¡y má»—i ngÃ y vÃ  upload tháº³ng lÃªn Cloud Storage.
-- Táº¡o Kubernetes `CronJob` cho Keycloak realm export.
-- DÃ¹ng Secret hoáº·c Workload Identity Ä‘á»ƒ cáº¥p quyá»n ghi Cloud Storage thay vÃ¬ lÆ°u service account key trong cluster.
-- ThÃªm lifecycle rule cho bucket, vÃ­ dá»¥ giá»¯ daily backup 14 ngÃ y vÃ  weekly backup 4-8 tuáº§n.
-- Náº¿u chuyá»ƒn PostgreSQL sang Cloud SQL, báº­t automated backup vÃ  point-in-time recovery, sau Ä‘Ã³ giá»¯ script `pg_dump` nhÆ° lá»›p backup logic/application-level.
+- Tạo Kubernetes `CronJob` cho PostgreSQL backup, chạy mỗi ngày và upload thẳng lên Cloud Storage.
+- Tạo Kubernetes `CronJob` cho Keycloak realm export.
+- Dùng Secret hoặc Workload Identity để cấp quyền ghi Cloud Storage thay vì lưu service account key trong cluster.
+- Thêm lifecycle rule cho bucket, ví dụ giữ daily backup 14 ngày và weekly backup 4-8 tuần.
+- Nếu chuyển PostgreSQL sang Cloud SQL, bật automated backup và point-in-time recovery, sau đó giữ script `pg_dump` như lớp backup logic/application-level.
 
 ## Restore Test
 
@@ -350,24 +350,24 @@ Script test restore:
 npm run db:restore:test
 ```
 
-Máº·c Ä‘á»‹nh script tÃ¬m file `.dump` má»›i nháº¥t trong:
+Mặc định script tìm file `.dump` mới nhất trong:
 
 ```text
 backups/postgres/
 ```
 
-Hoáº·c chá»‰ Ä‘á»‹nh file cá»¥ thá»ƒ:
+Hoặc chỉ định file cụ thể:
 
 ```bash
 RESTORE_TEST_BACKUP_FILE=backups/postgres/development-local/<timestamp>/user-service_development-local_<timestamp>.dump npm run db:restore:test
 ```
 
-Script sáº½:
+Script sẽ:
 
-- Táº¡o PostgreSQL container táº¡m báº±ng image `postgres:15-alpine`.
-- Chá» DB táº¡m sáºµn sÃ ng.
-- Cháº¡y `pg_restore --list` Ä‘á»ƒ kiá»ƒm tra metadata backup.
-- Restore tháº­t vÃ o DB táº¡m báº±ng `pg_restore`.
-- XÃ³a container táº¡m sau khi test xong.
+- Tạo PostgreSQL container tạm bằng image `postgres:15-alpine`.
+- Chờ DB tạm sẵn sàng.
+- Chạy `pg_restore --list` để kiểm tra metadata backup.
+- Restore thật vào DB tạm bằng `pg_restore`.
+- Xóa container tạm sau khi test xong.
 
-Káº¿t quáº£ pass cá»§a `npm run db:restore:test` lÃ  báº±ng chá»©ng backup cÃ³ thá»ƒ dÃ¹ng Ä‘Æ°á»£c á»Ÿ má»©c ká»¹ thuáº­t. Khi test production tháº­t, nÃªn chá»n má»™t backup má»›i nháº¥t vÃ  ghi láº¡i timestamp/file Ä‘Ã£ test trong log váº­n hÃ nh.
+Kết quả pass của `npm run db:restore:test` là bằng chứng backup có thể dùng được ở mức kỹ thuật. Khi test production thật, nên chọn một backup mới nhất và ghi lại timestamp/file đã test trong log vận hành.
