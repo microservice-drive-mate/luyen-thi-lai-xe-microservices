@@ -4,6 +4,8 @@ import { RecordDashboardEventUseCase } from '../../application/use-cases/record-
 import { RecordLearningEventUseCase } from '../../application/use-cases/record-events/record-events.use-case';
 import type { DashboardActivityType } from '../../domain/dashboard/admin-dashboard.types';
 import type { ExamCompletedPayload } from '../../domain/repositories/learning-progress.repository';
+import { InstructorDashboardRepository } from '../../domain/repositories/instructor-dashboard.repository';
+import { ProgressCacheService } from '../../infrastructure/cache/progress-cache.service';
 
 type DashboardEventPayload = Record<string, unknown>;
 
@@ -20,6 +22,8 @@ export class MessagingController {
   constructor(
     private readonly recordLearningEventUseCase: RecordLearningEventUseCase,
     private readonly recordDashboardEventUseCase: RecordDashboardEventUseCase,
+    private readonly instructorDashboardRepository: InstructorDashboardRepository,
+    private readonly cache: ProgressCacheService,
   ) {}
 
   @EventPattern('identity.user.created')
@@ -126,12 +130,29 @@ export class MessagingController {
 
   @EventPattern('exam.session.completed')
   async handleExamCompleted(
-    @Payload() payload: ExamCompletedPayload & DashboardEventPayload,
+    @Payload() payload: DashboardEventPayload,
   ): Promise<void> {
     await this.handleSafely('exam.session.completed', async () => {
+      const sessionId = readString(payload, 'sessionId');
+      const studentId = readString(payload, 'studentId');
+      const score = readNumber(payload, 'score') ?? 0;
+      const isPassed = readBoolean(payload, 'isPassed');
+      if (!sessionId || !studentId || isPassed === undefined) return;
+      const questions = readExamQuestions(payload);
+      const examPayload: ExamCompletedPayload = {
+        sessionId,
+        studentId,
+        score,
+        isPassed,
+        occurredAt:
+          typeof payload.occurredAt === 'string'
+            ? payload.occurredAt
+            : undefined,
+        questions,
+      };
       await this.recordLearningEventUseCase.execute({
         type: 'exam-completed',
-        payload,
+        payload: examPayload,
       });
       const eventId = deriveEventId('exam.session.completed', payload);
       const occurredAt = readOccurredAt(payload);
@@ -141,10 +162,10 @@ export class MessagingController {
         eventId,
         eventName: 'exam.session.completed',
         exam: {
-          sessionId: payload.sessionId,
-          studentId: payload.studentId,
-          score: payload.score,
-          isPassed: payload.isPassed,
+          sessionId,
+          studentId,
+          score,
+          isPassed,
           licenseCategory,
           completedAt: occurredAt,
         },
@@ -154,13 +175,22 @@ export class MessagingController {
           title: `Học viên ${payload.studentId} hoàn thành bài thi ${licenseCategory} - ${
             payload.isPassed ? 'Đạt' : 'Không đạt'
           }`,
-          description: `Score: ${payload.score}`,
+          description: `Score: ${score}`,
           resourceType: 'EXAM_SESSION',
-          resourceId: payload.sessionId,
+          resourceId: sessionId,
           licenseCategory,
           occurredAt,
         },
       });
+      await this.instructorDashboardRepository.recordExamCompleted({
+        sessionId,
+        studentId,
+        score,
+        isPassed,
+        completedAt: occurredAt,
+        questions,
+      });
+      await this.cache.invalidateInstructorDashboard();
     });
   }
 
@@ -203,6 +233,38 @@ export class MessagingController {
     });
   }
 
+  @EventPattern('course.schedule.created')
+  async handleCourseScheduleCreated(
+    @Payload() payload: DashboardEventPayload,
+  ): Promise<void> {
+    await this.handleSafely('course.schedule.created', async () => {
+      await this.recordScheduleProjection(payload);
+    });
+  }
+
+  @EventPattern('course.schedule.updated')
+  async handleCourseScheduleUpdated(
+    @Payload() payload: DashboardEventPayload,
+  ): Promise<void> {
+    await this.handleSafely('course.schedule.updated', async () => {
+      await this.recordScheduleProjection(payload);
+    });
+  }
+
+  @EventPattern('course.schedule.deleted')
+  async handleCourseScheduleDeleted(
+    @Payload() payload: DashboardEventPayload,
+  ): Promise<void> {
+    await this.handleSafely('course.schedule.deleted', async () => {
+      const scheduleId = readString(payload, 'scheduleId');
+      if (!scheduleId) return;
+      await this.instructorDashboardRepository.deactivateSchedule(scheduleId);
+      await this.cache.invalidateInstructorDashboard(
+        readString(payload, 'instructorId'),
+      );
+    });
+  }
+
   @EventPattern('course.enrollment.created')
   async handleEnrollmentCreated(
     @Payload() payload: StudentPayload,
@@ -218,6 +280,7 @@ export class MessagingController {
         payload,
         'created',
       );
+      await this.recordInstructorEnrollmentProjection(payload, 'ACTIVE', 0);
     });
   }
 
@@ -235,6 +298,11 @@ export class MessagingController {
         'course.enrollment.completed',
         payload,
         'completed',
+      );
+      await this.recordInstructorEnrollmentProjection(
+        payload,
+        'COMPLETED',
+        100,
       );
     });
   }
@@ -254,6 +322,7 @@ export class MessagingController {
         payload,
         'lesson-completed',
       );
+      await this.recordInstructorEnrollmentProjection(payload);
     });
   }
 
@@ -268,6 +337,7 @@ export class MessagingController {
         type: 'progress-reset',
         studentId: payload.studentId,
       });
+      await this.recordInstructorEnrollmentProjection(payload, 'ACTIVE', 0);
     });
   }
 
@@ -385,6 +455,19 @@ export class MessagingController {
         occurredAt,
       },
     });
+    await this.instructorDashboardRepository.upsertCourseProjection({
+      courseId,
+      title,
+      licenseCategory,
+      status,
+      isDeleted: readBoolean(payload, 'isDeleted') ?? action === 'archived',
+      capacity: readNumber(payload, 'capacity') ?? null,
+      totalLessons: readNumber(payload, 'totalLessons') ?? 0,
+      instructorIds: readStringArray(payload, 'instructorIds'),
+      createdAt: occurredAt,
+      updatedAt: occurredAt,
+    });
+    await this.cache.invalidateInstructorDashboard();
   }
 
   private async recordEnrollmentActivity(
@@ -407,6 +490,53 @@ export class MessagingController {
         occurredAt,
       },
     });
+  }
+
+  private async recordInstructorEnrollmentProjection(
+    payload: DashboardEventPayload,
+    fallbackStatus?: string,
+    fallbackProgress?: number,
+  ): Promise<void> {
+    const enrollmentId = readString(payload, 'enrollmentId');
+    const courseId = readString(payload, 'courseId');
+    const studentId = readString(payload, 'studentId');
+    if (!enrollmentId || !courseId || !studentId) return;
+    await this.instructorDashboardRepository.upsertEnrollmentProjection({
+      enrollmentId,
+      courseId,
+      studentId,
+      status: readString(payload, 'status') ?? fallbackStatus ?? 'ACTIVE',
+      progress: readNumber(payload, 'progress') ?? fallbackProgress ?? 0,
+      enrolledAt: readOccurredAt(payload),
+      completedAt:
+        (readString(payload, 'status') ?? fallbackStatus) === 'COMPLETED'
+          ? readOccurredAt(payload)
+          : null,
+    });
+    await this.cache.invalidateInstructorDashboard();
+  }
+
+  private async recordScheduleProjection(
+    payload: DashboardEventPayload,
+  ): Promise<void> {
+    const scheduleId = readString(payload, 'scheduleId');
+    const courseId = readString(payload, 'courseId');
+    const instructorId = readString(payload, 'instructorId');
+    const effectiveFrom = readDateOnly(payload, 'effectiveFrom');
+    if (!scheduleId || !courseId || !instructorId || !effectiveFrom) return;
+    await this.instructorDashboardRepository.upsertScheduleProjection({
+      scheduleId,
+      courseId,
+      instructorId,
+      dayOfWeek: readNumber(payload, 'dayOfWeek') ?? 1,
+      startTime: readString(payload, 'startTime') ?? '00:00',
+      endTime: readString(payload, 'endTime') ?? '00:00',
+      room: readString(payload, 'room') ?? null,
+      effectiveFrom,
+      effectiveTo: readDateOnly(payload, 'effectiveTo'),
+      isActive: readBoolean(payload, 'isActive') ?? true,
+    });
+    await this.cache.invalidateInstructorDashboard(instructorId);
   }
 
   private async handleSafely(
@@ -468,6 +598,63 @@ function readBoolean(
   key: string,
 ): boolean | undefined {
   return typeof payload[key] === 'boolean' ? payload[key] : undefined;
+}
+
+function readNumber(
+  payload: DashboardEventPayload,
+  key: string,
+): number | undefined {
+  const value = payload[key];
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
+function readExamQuestions(
+  payload: DashboardEventPayload,
+): NonNullable<ExamCompletedPayload['questions']> {
+  const value = payload.questions;
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is DashboardEventPayload => isObjectRecord(item))
+    .map((item) => ({
+      questionId: readString(item, 'questionId') ?? '',
+      topicId: readNullableString(item, 'topicId'),
+      topicName: readNullableString(item, 'topicName'),
+      isCorrect: readBoolean(item, 'isCorrect') ?? null,
+    }))
+    .filter((item) => item.questionId.length > 0);
+}
+
+function readStringArray(
+  payload: DashboardEventPayload,
+  key: string,
+): string[] {
+  const value = payload[key];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+function readDateOnly(
+  payload: DashboardEventPayload,
+  key: string,
+): Date | null {
+  const value = readString(payload, key);
+  if (!value) return null;
+  const date = new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function readNullableString(
+  payload: DashboardEventPayload,
+  key: string,
+): string | null {
+  return readString(payload, key) ?? null;
+}
+
+function isObjectRecord(value: unknown): value is DashboardEventPayload {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function buildUserTitle(label: string, action: string, role?: string): string {

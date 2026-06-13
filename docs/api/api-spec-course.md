@@ -27,6 +27,10 @@ Course-service validate JWT/RBAC tại service bằng Keycloak guard. Frontend g
 | `PATCH /admin/courses/:id/activate` | `ADMIN`, `CENTER_MANAGER` |
 | `POST /admin/courses/:id/lessons` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 | `DELETE /admin/courses/:id/lessons/:lessonId` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `GET /admin/courses/:id/schedules` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `POST /admin/courses/:id/schedules` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `PATCH /admin/courses/:id/schedules/:scheduleId` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
+| `DELETE /admin/courses/:id/schedules/:scheduleId` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 | `POST /admin/courses/:id/materials` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 | `GET /courses` | JWT hợp lệ |
 | `GET /courses/:id` | JWT hợp lệ |
@@ -562,6 +566,95 @@ Xóa bài học khỏi khóa học.
 
 ---
 
+### Course schedules
+
+Course schedule APIs manage weekly teaching slots for a course. These schedules are the source of truth for instructor dashboard metrics such as teaching hours this month, weekly teaching trend, and today's schedule.
+
+`dayOfWeek` follows ISO weekday: `1 = Monday`, ..., `7 = Sunday`. `startTime` and `endTime` use `HH:mm` 24-hour format. `effectiveFrom` and `effectiveTo` are date-only strings (`YYYY-MM-DD`). A deleted schedule is deactivated and published to analytics as `course.schedule.deleted`.
+
+#### GET `/admin/courses/:id/schedules`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-06-13T10:00:00.000Z",
+  "path": "/admin/courses/course-uuid/schedules",
+  "data": [
+    {
+      "id": "schedule-uuid",
+      "courseId": "course-uuid",
+      "instructorId": "instructor-uuid",
+      "dayOfWeek": 1,
+      "startTime": "07:00",
+      "endTime": "09:00",
+      "room": "Phong 101",
+      "effectiveFrom": "2026-06-01",
+      "effectiveTo": null,
+      "isActive": true,
+      "createdAt": "2026-06-13T10:00:00.000Z",
+      "updatedAt": "2026-06-13T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### POST `/admin/courses/:id/schedules`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+**Body**
+
+```json
+{
+  "instructorId": "instructor-uuid",
+  "dayOfWeek": 1,
+  "startTime": "07:00",
+  "endTime": "09:00",
+  "room": "Phong 101",
+  "effectiveFrom": "2026-06-01",
+  "effectiveTo": null
+}
+```
+
+**Response `201 Created`**: same `CourseSchedule` shape as list item.
+
+**Event published:** `course.schedule.created`.
+
+#### PATCH `/admin/courses/:id/schedules/:scheduleId`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+All body fields are optional. The resulting schedule must still have a valid day, valid time range, and valid effective date range.
+
+```json
+{
+  "dayOfWeek": 3,
+  "startTime": "14:00",
+  "endTime": "16:00",
+  "room": "Phong 102",
+  "effectiveTo": "2026-12-31",
+  "isActive": true
+}
+```
+
+**Event published:** `course.schedule.updated`.
+
+#### DELETE `/admin/courses/:id/schedules/:scheduleId`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+Soft-deactivates the schedule. Analytics receives `course.schedule.deleted` and removes it from future instructor dashboard calculations.
+
+**Response `204 No Content`**.
+
+---
+
 ### POST `/admin/courses/:id/materials`
 
 Thêm tài liệu học tập. Nếu có `mediaFileId`, course-service phát event `course.material.linked`.
@@ -799,6 +892,42 @@ Course-service lưu event này vào read model `student_license_profiles` để 
 
 ## Events Published
 
+Course events used by analytics include instructor assignment, capacity, and total lesson count where applicable.
+
+### `course.created | course.updated | course.archived`
+
+```json
+{
+  "eventName": "course.updated",
+  "courseId": "course-uuid",
+  "title": "B1 - Sang T2,T4,T6",
+  "licenseCategory": "B1",
+  "status": "ACTIVE",
+  "isDeleted": false,
+  "instructorIds": ["instructor-uuid"],
+  "capacity": 24,
+  "totalLessons": 12
+}
+```
+
+### `course.schedule.created | course.schedule.updated | course.schedule.deleted`
+
+```json
+{
+  "eventName": "course.schedule.created",
+  "scheduleId": "schedule-uuid",
+  "courseId": "course-uuid",
+  "instructorId": "instructor-uuid",
+  "dayOfWeek": 1,
+  "startTime": "07:00",
+  "endTime": "09:00",
+  "room": "Phong 101",
+  "effectiveFrom": "2026-06-01",
+  "effectiveTo": null,
+  "isActive": true
+}
+```
+
 ## Security Audit
 
 Access logging is emitted for every HTTP request. Successful audited mutations write `security.audit.recorded` into `course_db.outbox_messages` in the same transaction as the business change. The outbox relay publishes it to RabbitMQ, and `audit-service` persists it into `audit_db.audit_logs`.
@@ -874,7 +1003,9 @@ Authorization: Bearer <admin_access_token>
   "eventName": "course.enrollment.created",
   "enrollmentId": "enrollment-uuid",
   "studentId": "student-uuid",
-  "courseId": "course-uuid"
+  "courseId": "course-uuid",
+  "status": "ACTIVE",
+  "progress": 0
 }
 ```
 
@@ -883,9 +1014,12 @@ Authorization: Bearer <admin_access_token>
 ```json
 {
   "eventName": "course.lesson.completed",
+  "enrollmentId": "enrollment-uuid",
   "lessonId": "lesson-uuid",
   "studentId": "student-uuid",
-  "courseId": "course-uuid"
+  "courseId": "course-uuid",
+  "status": "ACTIVE",
+  "progress": 50
 }
 ```
 
@@ -896,7 +1030,9 @@ Authorization: Bearer <admin_access_token>
   "eventName": "course.enrollment.completed",
   "enrollmentId": "enrollment-uuid",
   "studentId": "student-uuid",
-  "courseId": "course-uuid"
+  "courseId": "course-uuid",
+  "status": "COMPLETED",
+  "progress": 100
 }
 ```
 

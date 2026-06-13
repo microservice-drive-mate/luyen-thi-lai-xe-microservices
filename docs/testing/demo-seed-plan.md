@@ -51,17 +51,17 @@ Seed scripts dùng deterministic ids và `upsert`, nên có thể chạy lại n
 
 ## Seeded Demo Users
 
-| Role | Email | Notes |
-| --- | --- | --- |
-| `ADMIN` | `admin@test.com` | Seeded admin, id cố định `10000000-0000-0000-0000-000000000001` |
-| `CENTER_MANAGER` | `manager@test.com` | Manager demo |
-| `INSTRUCTOR` | `instructor.b1@test.com` | Instructor cho các khóa A1/B1 |
-| `INSTRUCTOR` | `instructor.b2@test.com` | Instructor cho các khóa B2 |
-| `STUDENT` | `student.a1@test.com` | License `A1`, progress active |
-| `STUDENT` | `student.b1@test.com` | License `B1`, progress tốt |
-| `STUDENT` | `student.b1.low@test.com` | License `B1`, có warning/weak topics |
-| `STUDENT` | `student.b2@test.com` | License `B2`, có course completed |
-| `STUDENT` | `student.b2.new@test.com` | License `B2`, trạng thái mới |
+| Role             | Email                     | Notes                                                           |
+| ---------------- | ------------------------- | --------------------------------------------------------------- |
+| `ADMIN`          | `admin@test.com`          | Seeded admin, id cố định `10000000-0000-0000-0000-000000000001` |
+| `CENTER_MANAGER` | `manager@test.com`        | Manager demo                                                    |
+| `INSTRUCTOR`     | `instructor.b1@test.com`  | Instructor cho các khóa A1/B1                                   |
+| `INSTRUCTOR`     | `instructor.b2@test.com`  | Instructor cho các khóa B2                                      |
+| `STUDENT`        | `student.a1@test.com`     | License `A1`, progress active                                   |
+| `STUDENT`        | `student.b1@test.com`     | License `B1`, progress tốt                                      |
+| `STUDENT`        | `student.b1.low@test.com` | License `B1`, có warning/weak topics                            |
+| `STUDENT`        | `student.b2@test.com`     | License `B2`, có course completed                               |
+| `STUDENT`        | `student.b2.new@test.com` | License `B2`, trạng thái mới                                    |
 
 Tất cả demo users được seed vào cả `identity_db` và Keycloak. Password mặc định:
 
@@ -80,32 +80,32 @@ npm.cmd --workspace=apps/identity-service run db:seed
 
 ## Seeded Dataset Summary
 
-| Service | Data |
-| --- | --- |
-| `identity-service` | 9 demo identity users |
-| `user-service` | 9 user profiles, 5 student details, license assignment audits |
-| `question-service` | 6 topics, 600 questions từ `seed/600-cau-hoi.docx` |
-| `exam-service` | 4 active templates: A1 basic, B1 basic, B2 basic, B2 advanced |
-| `course-service` | 8 courses, lessons, materials, requirements, instructor assignments, enrollments, student license read model |
-| `analytics-service` | Learning profiles, 7-day activity trend, weak-topic trackers |
-| `notification-service` | Welcome/reminder notifications and one academic warning for low-score B1 student |
-| `simulation-service` | 12 maneuvers, 36 checkpoints, 12 maneuver errors, one completed sample simulation session |
+| Service                | Data                                                                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `identity-service`     | 9 demo identity users                                                                                                       |
+| `user-service`         | 9 user profiles, 5 student details, license assignment audits                                                               |
+| `question-service`     | 6 topics, 600 questions từ `seed/600-cau-hoi.docx`, including 60 critical questions                                          |
+| `exam-service`         | 4 active templates: A1 basic, B1 basic, B2 basic, B2 advanced                                                               |
+| `course-service`       | 8 courses, lessons, materials, requirements, instructor assignments, schedules, enrollments, student license read model     |
+| `analytics-service`    | Learning profiles, 7-day activity trend, weak-topic trackers, admin dashboard projections, instructor dashboard projections |
+| `notification-service` | Welcome/reminder notifications and one academic warning for low-score B1 student                                            |
+| `simulation-service`   | 12 maneuvers, 36 checkpoints, 12 maneuver errors, one completed sample simulation session                                   |
 
 ---
 
 ## Current Seed Audit
 
-| Service | Seed status | Notes |
-| --- | --- | --- |
-| `identity-service` | Đã có script và seed demo users | Seed admin, manager, instructors, students. |
-| `user-service` | Đã có script và seed profile/license | Đã fix thiếu `apps/user-service/prisma/seed.ts`. |
-| `question-service` | Có script và có seed lớn | Seed 6 topic và 600 câu hỏi từ `seed/600-cau-hoi.docx`. Đây là nguồn dữ liệu chính cho exam template/session. |
-| `course-service` | Đã có seed script | Seed course, lesson, material, enrollment, student license profile demo tự động. |
-| `exam-service` | Đã có seed script | Seed exam templates demo tự động. |
-| `analytics-service` | Đã có seed script | Seed read model trực tiếp cho demo speed. |
-| `notification-service` | Đã có seed script | Seed warning/notification demo. |
-| `simulation-service` | Đã có seed script | Seed `maneuvers`, `maneuver_checkpoints`, `maneuver_errors`. |
-| `media-service` | Seed qua `db:seed:question-images` | Upload/link ảnh câu hỏi lên Azure Blob và upsert metadata khi cần demo media thật. |
+| Service                | Seed status                          | Notes                                                                                                         |
+| ---------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `identity-service`     | Đã có script và seed demo users      | Seed admin, manager, instructors, students.                                                                   |
+| `user-service`         | Đã có script và seed profile/license | Đã fix thiếu `apps/user-service/prisma/seed.ts`.                                                              |
+| `question-service`     | Có script và có seed lớn             | Seed 6 topic và 600 câu hỏi từ `seed/600-cau-hoi.docx`. Đây là nguồn dữ liệu chính cho exam template/session. |
+| `course-service`       | Đã có seed script                    | Seed course, lesson, material, enrollment, student license profile demo tự động.                              |
+| `exam-service`         | Đã có seed script                    | Seed exam templates demo tự động.                                                                             |
+| `analytics-service`    | Đã có seed script                    | Seed read model trực tiếp cho demo speed.                                                                     |
+| `notification-service` | Đã có seed script                    | Seed warning/notification demo.                                                                               |
+| `simulation-service`   | Đã có seed script                    | Seed `maneuvers`, `maneuver_checkpoints`, `maneuver_errors`.                                                  |
+| `media-service`        | Seed qua `db:seed:question-images`   | Upload/link ảnh câu hỏi lên Azure Blob và upsert metadata khi cần demo media thật.                            |
 
 Root seed runner `scripts/prisma-seed-all.ts` hiện discover service có `db:seed` và sort theo thứ tự phụ thuộc tường minh để tránh service sau cần dữ liệu từ service trước.
 
@@ -117,12 +117,12 @@ Root seed runner `scripts/prisma-seed-all.ts` hiện discover service có `db:se
 
 Seed deterministic ids để dễ dùng trong test guide và frontend fixtures.
 
-| Role | Suggested count | Purpose |
-| --- | ---: | --- |
-| `ADMIN` | 1 | Quản trị toàn hệ thống |
-| `CENTER_MANAGER` | 1 | Duyệt/cấu hình course, warning |
-| `INSTRUCTOR` | 2 | Phụ trách course và xem progress student |
-| `STUDENT` | 8-12 | Demo nhiều license tier, progress, notification, exam history |
+| Role             | Suggested count | Purpose                                                       |
+| ---------------- | --------------: | ------------------------------------------------------------- |
+| `ADMIN`          |               1 | Quản trị toàn hệ thống                                        |
+| `CENTER_MANAGER` |               1 | Duyệt/cấu hình course, warning                                |
+| `INSTRUCTOR`     |               2 | Phụ trách course và xem progress student                      |
+| `STUDENT`        |            8-12 | Demo nhiều license tier, progress, notification, exam history |
 
 User-service cần seed:
 
@@ -134,18 +134,18 @@ Course-service cũng cần seed `student_license_profiles` mirror từ user-serv
 
 ### Question/Exam
 
-Question-service hiện đã seed 600 câu hỏi. Exam-service nên seed template dựa trên topic ids thật từ question seed.
+Question-service hiện đã seed 600 câu hỏi. Seed marks 60 official critical questions with `isCritical = true`; by topic ranges the critical counts are `47 / 2 / 11 / 0 / 0 / 0`. Exam-service nên seed template dựa trên topic ids thật từ question seed.
 
 Suggested templates:
 
-| License | Template | Questions | Passing | Duration |
-| --- | --- | ---: | ---: | ---: |
-| `A1` | `Đề thi A1 cơ bản` | 25 | 21 | 19 |
-| `B1` | `Đề thi B1 cơ bản` | 30 | 26 | 20 |
-| `B2` | `Đề thi B2 cơ bản` | 35 | 32 | 22 |
-| `B2` | `Đề thi B2 nâng cao` | 35 | 32 | 22 |
+| License | Template             | Questions | Passing | Duration |
+| ------- | -------------------- | --------: | ------: | -------: |
+| `A1`    | `Đề thi A1 cơ bản`   |        25 |      21 |       19 |
+| `B1`    | `Đề thi B1 cơ bản`   |        30 |      26 |       20 |
+| `B2`    | `Đề thi B2 cơ bản`   |        35 |      32 |       22 |
+| `B2`    | `Đề thi B2 nâng cao` |        35 |      32 |       22 |
 
-Each template should have `topicDistribution` across the 6 seeded question topics. Keep ids deterministic or look up by `chapter` so the seed remains stable if deterministic topic ids change later.
+Each template should have `topicDistribution` across the 6 seeded question topics. Templates with `criticalQuestions > 0` must include topic 1, 2, or 3 because topics 4-6 have no critical questions. Keep ids deterministic or look up by `chapter` so the seed remains stable if deterministic topic ids change later.
 
 ### Course
 
@@ -173,6 +173,8 @@ Seed:
 - `student_learning_profiles` for every demo student.
 - `daily_activities` for the last 7-14 days.
 - `question_accuracy_trackers` for 3-5 weak topics/questions per active student.
+- `dashboard_*_projections` for admin dashboard cards, trend, pass rate and recent activities.
+- `instructor_*_projections` for instructor dashboard active classes, teaching hours, topic averages, class progress and today's schedule.
 
 This makes `GET /analytics/me/progress` useful immediately, without requiring the frontend demo to replay lessons/exams first.
 
@@ -235,7 +237,7 @@ Suggested B1/B2 dataset:
 
 ### Phase 4 - Seed demo state
 
-1. Done - Seed analytics read models for dashboard pages.
+1. Done - Seed analytics read models for progress, admin dashboard and instructor dashboard pages.
 2. Done - Seed notification rows and academic warnings.
 3. Deferred - Exam sessions should still be created through exam APIs because snapshots are domain-sensitive.
 

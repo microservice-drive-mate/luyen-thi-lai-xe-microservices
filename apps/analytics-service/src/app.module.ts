@@ -21,13 +21,16 @@ import {
 } from '@repo/common';
 import Joi from 'joi';
 import { GetAdminDashboardUseCase } from './application/use-cases/get-admin-dashboard/get-admin-dashboard.use-case';
+import { GetInstructorDashboardUseCase } from './application/use-cases/get-instructor-dashboard/get-instructor-dashboard.use-case';
 import { LearningProgressRepository } from './domain/repositories/learning-progress.repository';
 import { AdminDashboardRepository } from './domain/repositories/admin-dashboard.repository';
+import { InstructorDashboardRepository } from './domain/repositories/instructor-dashboard.repository';
 import {
   ProgressCacheService,
   REDIS_CLIENT,
 } from './infrastructure/cache/progress-cache.service';
 import { PrismaAdminDashboardRepository } from './infrastructure/persistence/prisma/prisma-admin-dashboard.repository';
+import { PrismaInstructorDashboardRepository } from './infrastructure/persistence/prisma/prisma-instructor-dashboard.repository';
 import { PrismaLearningProgressRepository } from './infrastructure/persistence/prisma/prisma-learning-progress.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { GetProgressUseCase } from './application/use-cases/get-progress/get-progress.use-case';
@@ -36,6 +39,7 @@ import { RecordDashboardEventUseCase } from './application/use-cases/record-dash
 import { BackfillAdminDashboardUseCase } from './application/use-cases/backfill-admin-dashboard/backfill-admin-dashboard.use-case';
 import { AnalyticsController } from './presentation/http/analytics.controller';
 import { AdminDashboardController } from './presentation/http/admin-dashboard.controller';
+import { InstructorDashboardController } from './presentation/http/instructor-dashboard.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';
 
 @Module({
@@ -116,6 +120,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
   controllers: [
     AnalyticsController,
     AdminDashboardController,
+    InstructorDashboardController,
     MessagingController,
   ],
   providers: [
@@ -145,8 +150,13 @@ import { MessagingController } from './presentation/messaging/messaging.controll
       provide: AdminDashboardRepository,
       useClass: PrismaAdminDashboardRepository,
     },
+    {
+      provide: InstructorDashboardRepository,
+      useClass: PrismaInstructorDashboardRepository,
+    },
     GetProgressUseCase,
     GetAdminDashboardUseCase,
+    GetInstructorDashboardUseCase,
     RecordLearningEventUseCase,
     RecordDashboardEventUseCase,
     BackfillAdminDashboardUseCase,

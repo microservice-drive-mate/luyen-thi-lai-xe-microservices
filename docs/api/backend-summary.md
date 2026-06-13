@@ -178,3 +178,19 @@ Ngoài các HTTP REST API, hệ thống microservices còn giao tiếp thông qu
 - **Media Service**: Lắng nghe các event xác nhận file đã được sử dụng (`user.avatar.linked`, `course.material.linked`, `question.image.linked`) để chuyển trạng thái file thành `LINKED`.
 - **Notification Service**: Lắng nghe `identity.user.created`, `identity.user.password-reset-requested`, `exam.session.passed/.failed`, `course.updated`, `notification.academic-warning.queued` để bắn email/push notification.
 - **User Service**: Lắng nghe `identity.user.*` (created, updated, role-changed, locked, deleted) từ Keycloak webhook để đồng bộ hồ sơ, và `media.file.deleted` để gỡ ảnh đại diện nếu file bị xóa.
+
+## Instructor Dashboard Update
+
+Instructor dashboard analytics has been added with projection-based read models in `analytics-service`.
+
+- `GET /analytics/instructor/dashboard?month=YYYY-MM&weekStart=YYYY-MM-DD&date=YYYY-MM-DD`
+- `GET /admin/analytics/instructors/:instructorId/dashboard?month=YYYY-MM&weekStart=YYYY-MM-DD&date=YYYY-MM-DD`
+
+Course schedules are now managed by `course-service` and feed instructor analytics:
+
+- `GET /admin/courses/:id/schedules`
+- `POST /admin/courses/:id/schedules`
+- `PATCH /admin/courses/:id/schedules/:scheduleId`
+- `DELETE /admin/courses/:id/schedules/:scheduleId`
+
+Analytics consumes `course.created|updated|archived`, `course.schedule.created|updated|deleted`, `course.enrollment.*`, `course.lesson.completed`, and `exam.session.completed` to calculate active classes, total students, pass rate, teaching hours, weekly teaching trend, topic averages, class progress, and today's schedule.

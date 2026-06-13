@@ -133,6 +133,9 @@ export class Course extends AggregateRoot<string> {
         course.licenseCategory,
         course.status,
         course.isDeleted,
+        course.instructorIds,
+        course.capacity,
+        course.totalLessons,
       ),
     );
     return course;
@@ -201,6 +204,9 @@ export class Course extends AggregateRoot<string> {
         this.licenseCategory,
         this.status,
         this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
       ),
     );
   }
@@ -212,12 +218,36 @@ export class Course extends AggregateRoot<string> {
     this._status = CourseStatus.ACTIVE;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   deactivate(): void {
     this._status = CourseStatus.DRAFT;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   archive(deletedBy?: string): void {
@@ -234,6 +264,9 @@ export class Course extends AggregateRoot<string> {
         this.licenseCategory,
         this.status,
         this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
       ),
     );
   }
@@ -251,6 +284,18 @@ export class Course extends AggregateRoot<string> {
     this._totalLessons = this._lessons.length;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
     return lesson;
   }
 
@@ -269,6 +314,18 @@ export class Course extends AggregateRoot<string> {
     this._totalLessons = this._lessons.length;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   addInstructor(instructorEntityId: string, instructorId: string): void {

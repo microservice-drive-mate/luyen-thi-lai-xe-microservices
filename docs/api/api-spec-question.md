@@ -80,6 +80,36 @@ Lỗi domain:
 
 ---
 
+## Seeded 600-Question Bank
+
+The local/demo seed imports the 600-question bank from `seed/600-cau-hoi.docx` and marks 60 official critical questions with `isCritical = true`.
+
+Critical question numbers:
+
+```text
+19,20,21,22,23,24,25,26,27,28,
+30,32,34,35,47,48,52,53,55,58,
+63,64,65,66,67,68,70,71,72,73,
+74,85,86,87,88,89,90,91,92,93,
+97,98,102,117,163,165,167,197,198,206,
+215,226,234,245,246,252,253,254,255,260
+```
+
+Critical counts by seeded topic:
+
+| Topic range | Critical count |
+| --- | ---: |
+| `1-180` | 47 |
+| `181-205` | 2 |
+| `206-263` | 11 |
+| `264-300` | 0 |
+| `301-485` | 0 |
+| `486-600` | 0 |
+
+Exam templates with `criticalQuestions > 0` must include at least one topic from the first three ranges in `topicDistribution`.
+
+---
+
 ## Image Contract
 
 Ảnh câu hỏi nên dùng `mediaFileId` để reference `media-service` FileObject. Frontend gọi `GET /media/files/:mediaFileId/url` để lấy presigned URL rồi render ảnh. `imageUrl` là URL blob ổn định/fallback, nhưng có thể không đọc trực tiếp được nếu Azure container private.

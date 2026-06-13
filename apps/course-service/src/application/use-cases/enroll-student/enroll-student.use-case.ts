@@ -88,6 +88,8 @@ export class EnrollStudentUseCase
         enrollment.id,
         command.studentId,
         command.courseId,
+        enrollment.status,
+        enrollment.progress,
       ),
     );
 

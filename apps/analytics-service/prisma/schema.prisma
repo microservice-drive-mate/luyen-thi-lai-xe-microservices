@@ -129,3 +129,92 @@ model DashboardProcessedEvent {
   @@index([eventId])
   @@map("dashboard_processed_events")
 }
+
+model InstructorCourseProjection {
+  id              String   @id @default(uuid())
+  courseId        String   @unique
+  title           String?
+  licenseCategory String
+  status          String
+  isDeleted       Boolean  @default(false)
+  capacity        Int?
+  totalLessons    Int      @default(0)
+  createdAt       DateTime
+  updatedAt       DateTime
+
+  @@index([status, createdAt])
+  @@map("instructor_course_projections")
+}
+
+model InstructorCourseAssignmentProjection {
+  id           String   @id @default(uuid())
+  courseId     String
+  instructorId String
+  createdAt    DateTime @default(now())
+
+  @@unique([courseId, instructorId])
+  @@index([instructorId, courseId])
+  @@map("instructor_course_assignment_projections")
+}
+
+model InstructorEnrollmentProjection {
+  id           String    @id @default(uuid())
+  enrollmentId String    @unique
+  courseId     String
+  studentId    String
+  status       String
+  progress     Int       @default(0)
+  enrolledAt   DateTime?
+  completedAt  DateTime?
+  updatedAt    DateTime  @default(now())
+
+  @@index([courseId, status])
+  @@index([studentId])
+  @@map("instructor_enrollment_projections")
+}
+
+model InstructorScheduleProjection {
+  id            String    @id @default(uuid())
+  scheduleId    String    @unique
+  courseId      String
+  instructorId  String
+  dayOfWeek     Int
+  startTime     String
+  endTime       String
+  room          String?
+  effectiveFrom DateTime  @db.Date
+  effectiveTo   DateTime? @db.Date
+  isActive      Boolean   @default(true)
+  updatedAt     DateTime  @default(now())
+
+  @@index([instructorId, dayOfWeek, isActive])
+  @@index([courseId, isActive])
+  @@map("instructor_schedule_projections")
+}
+
+model InstructorExamSessionProjection {
+  id          String   @id @default(uuid())
+  sessionId   String   @unique
+  studentId   String
+  score       Int?
+  isPassed    Boolean
+  completedAt DateTime
+
+  @@index([studentId, completedAt])
+  @@index([isPassed, completedAt])
+  @@map("instructor_exam_session_projections")
+}
+
+model InstructorTopicAttemptProjection {
+  id          String   @id @default(uuid())
+  sessionId   String
+  studentId   String
+  topicId     String?
+  topicName   String?
+  isCorrect   Boolean
+  occurredAt  DateTime
+
+  @@index([studentId, occurredAt])
+  @@index([topicId, occurredAt])
+  @@map("instructor_topic_attempt_projections")
+}

@@ -110,6 +110,7 @@ export class StartSessionUseCase
           return {
             id: crypto.randomUUID(),
             questionId: question.id,
+            topicId: question.topicId,
             questionContent: question.content,
             imageUrl: question.imageUrl,
             mediaFileId: question.mediaFileId,

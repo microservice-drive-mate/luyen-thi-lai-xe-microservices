@@ -6,9 +6,12 @@ import {
   PrismaClient,
 } from '@prisma/course-client';
 import {
+  DEMO_COURSE_ENROLLMENTS,
+  DEMO_COURSE_SCHEDULES,
   DEMO_COURSES,
   DEMO_IDS,
   DEMO_USERS,
+  demoInstructorIdsForCourse,
 } from '../../../scripts/demo-seed-data';
 
 const connectionString = process.env.DATABASE_URL;
@@ -28,44 +31,6 @@ const lessons = [
   'Xu ly tinh huong nguy hiem',
   'On tap va bai kiem tra',
 ];
-
-const enrollments = [
-  {
-    courseSlug: 'a1-basic',
-    studentIndex: 0,
-    progress: 45,
-    status: EnrollmentStatus.ACTIVE,
-  },
-  {
-    courseSlug: 'b1-basic',
-    studentIndex: 1,
-    progress: 75,
-    status: EnrollmentStatus.ACTIVE,
-  },
-  {
-    courseSlug: 'b1-intensive',
-    studentIndex: 2,
-    progress: 25,
-    status: EnrollmentStatus.ACTIVE,
-  },
-  {
-    courseSlug: 'b2-basic',
-    studentIndex: 3,
-    progress: 100,
-    status: EnrollmentStatus.COMPLETED,
-  },
-  {
-    courseSlug: 'b2-advanced',
-    studentIndex: 4,
-    progress: 10,
-    status: EnrollmentStatus.ACTIVE,
-  },
-];
-
-function instructorIdsForCourse(courseSlug: string): string[] {
-  if (courseSlug.startsWith('b2')) return [DEMO_USERS.instructors[1].id];
-  return [DEMO_USERS.instructors[0].id];
-}
 
 const legacyCourseId = 'seed-course-b2-0001';
 const legacyLessonId = 'seed-lesson-b2-0001';
@@ -157,7 +122,7 @@ async function seedCourse(course: (typeof DEMO_COURSES)[number]) {
     });
   }
 
-  for (const instructorId of instructorIdsForCourse(course.slug)) {
+  for (const instructorId of demoInstructorIdsForCourse(course.slug)) {
     await prisma.courseInstructor.upsert({
       where: {
         courseId_instructorId: {
@@ -170,6 +135,37 @@ async function seedCourse(course: (typeof DEMO_COURSES)[number]) {
         id: DEMO_IDS.instructor(course.slug, instructorId),
         courseId,
         instructorId,
+      },
+    });
+  }
+}
+
+async function seedCourseSchedules() {
+  for (const [index, schedule] of DEMO_COURSE_SCHEDULES.entries()) {
+    const instructorId = demoInstructorIdsForCourse(schedule.courseSlug)[0];
+    await prisma.courseSchedule.upsert({
+      where: { id: DEMO_IDS.schedule(schedule.courseSlug, index + 1) },
+      update: {
+        instructorId,
+        dayOfWeek: schedule.dayOfWeek,
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+        room: schedule.room,
+        effectiveFrom: new Date('2026-06-01T00:00:00.000Z'),
+        effectiveTo: null,
+        isActive: true,
+      },
+      create: {
+        id: DEMO_IDS.schedule(schedule.courseSlug, index + 1),
+        courseId: DEMO_IDS.course(schedule.courseSlug),
+        instructorId,
+        dayOfWeek: schedule.dayOfWeek,
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+        room: schedule.room,
+        effectiveFrom: new Date('2026-06-01T00:00:00.000Z'),
+        effectiveTo: null,
+        isActive: true,
       },
     });
   }
@@ -191,8 +187,11 @@ async function main() {
     await seedCourse(course);
   }
 
-  for (const enrollment of enrollments) {
+  await seedCourseSchedules();
+
+  for (const enrollment of DEMO_COURSE_ENROLLMENTS) {
     const student = DEMO_USERS.students[enrollment.studentIndex];
+    const status = enrollment.status as EnrollmentStatus;
     await prisma.courseEnrollment.upsert({
       where: {
         courseId_studentId: {
@@ -201,10 +200,10 @@ async function main() {
         },
       },
       update: {
-        status: enrollment.status,
+        status,
         progress: enrollment.progress,
         completedAt:
-          enrollment.status === EnrollmentStatus.COMPLETED
+          status === EnrollmentStatus.COMPLETED
             ? new Date('2026-05-18T09:00:00.000Z')
             : null,
       },
@@ -212,11 +211,11 @@ async function main() {
         id: DEMO_IDS.enrollment(enrollment.courseSlug, student.id),
         courseId: DEMO_IDS.course(enrollment.courseSlug),
         studentId: student.id,
-        status: enrollment.status,
+        status,
         progress: enrollment.progress,
         enrolledAt: new Date('2026-05-01T09:00:00.000Z'),
         completedAt:
-          enrollment.status === EnrollmentStatus.COMPLETED
+          status === EnrollmentStatus.COMPLETED
             ? new Date('2026-05-18T09:00:00.000Z')
             : null,
       },
@@ -260,7 +259,7 @@ async function main() {
   });
 
   console.log(
-    `Seeded course_db: ${DEMO_COURSES.length} courses, ${DEMO_USERS.students.length} student license profiles`,
+    `Seeded course_db: ${DEMO_COURSES.length} courses, ${DEMO_COURSE_SCHEDULES.length} schedules, ${DEMO_USERS.students.length} student license profiles`,
   );
 }
 
