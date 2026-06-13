@@ -6,6 +6,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { EventPublisher } from './application/ports/event-publisher.port';
 import { StoragePort } from './application/ports/storage.port';
+import { CompleteUploadUseCase } from './application/use-cases/complete-upload/complete-upload.use-case';
 import { ConfirmFileLinkedUseCase } from './application/use-cases/confirm-file-linked/confirm-file-linked.use-case';
 import { DeleteFileUseCase } from './application/use-cases/delete-file/delete-file.use-case';
 import { GetFileMetadataUseCase } from './application/use-cases/get-file-metadata/get-file-metadata.use-case';
@@ -66,6 +67,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
 
     UploadFileUseCase,
     InitiateUploadUseCase,
+    CompleteUploadUseCase,
     ConfirmFileLinkedUseCase,
     GetFileMetadataUseCase,
     GetPresignedUrlUseCase,

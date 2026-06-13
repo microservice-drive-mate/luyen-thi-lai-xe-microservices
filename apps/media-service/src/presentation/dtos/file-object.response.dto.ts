@@ -27,6 +27,9 @@ export class FileObjectResponseDto {
   @ApiProperty()
   isPublic!: boolean;
 
+  @ApiProperty({ enum: ['UNLINKED', 'UPLOADED', 'LINKED'] })
+  status!: string;
+
   @ApiProperty()
   createdAt!: Date;
 
@@ -40,6 +43,7 @@ export class FileObjectResponseDto {
     dto.bucketName = result.bucketName;
     dto.uploadedById = result.uploadedById;
     dto.isPublic = result.isPublic;
+    dto.status = result.status;
     dto.createdAt = result.createdAt;
     return dto;
   }

@@ -19,6 +19,7 @@ export class DomainExceptionFilter implements ExceptionFilter {
       FILE_TOO_LARGE: HttpStatus.UNPROCESSABLE_ENTITY,
       INVALID_MIME_TYPE: HttpStatus.UNPROCESSABLE_ENTITY,
       FILE_UPLOAD_FAILED: HttpStatus.BAD_GATEWAY,
+      FILE_UPLOAD_NOT_COMPLETED: HttpStatus.CONFLICT,
     };
 
     const status = statusMap[exception.code] ?? HttpStatus.BAD_REQUEST;

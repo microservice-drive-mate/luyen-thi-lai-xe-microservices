@@ -1,5 +1,6 @@
 export enum FileStatus {
   UNLINKED = 'UNLINKED',
+  UPLOADED = 'UPLOADED',
   LINKED = 'LINKED',
 }
 

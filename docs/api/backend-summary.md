@@ -123,6 +123,7 @@ Quản lý thông báo In-app và Push Notification tới thiết bị.
 Phân tích dữ liệu học tập và tổng hợp báo cáo.
 - `GET /analytics/me/progress`: Xuất dashboard tiến trình ôn luyện cho cá nhân (tỷ lệ giải đúng câu, số chuyên đề còn yếu).
 - `GET /admin/analytics/students/:studentId/progress`: Công cụ cho Giáo viên/Admin để giám sát độ siêng năng và năng lực thực tế của một học viên bất kỳ.
+- `GET /admin/analytics/dashboard`: Dashboard thống kê tổng cho Admin/CENTER_MANAGER: tổng học viên, khóa học, giảng viên, bài thi hoàn thành, trend theo tháng, phân bổ hạng GPLX, pass rate và recent activities.
 
 ### 8. Simulation Service (`/simulation/*`, `/practice2d/*`)
 Hệ thống ôn luyện thực hành và sa hình 2D/3D.
@@ -143,9 +144,9 @@ Hệ thống ôn luyện thực hành và sa hình 2D/3D.
 ### 9. Media Service (`/media/*`, `/admin/media/*`)
 Xử lý lưu trữ, tối ưu hóa và xuất URL các file định dạng ảnh/video.
 - `POST /media/files`: Tải trực tiếp file ảnh (dưới giới hạn dung lượng) thông qua formData.
-- `POST /media/files/init`: Khởi tạo quá trình Upload File Lớn (trả về presigned URLs S3 multipart/form).
+- `POST /media/files/init`: Khởi tạo direct upload, trả về Azure Blob SAS `uploadUrl`, `mediaFileId` và stable blob `publicUrl`.
 - `GET /media/files/:id`: Đọc metadata chuẩn của một tập tin.
-- `GET /media/files/:id/url`: Xin cấp URL Public (hoặc Signed Link có thời hạn) để hiển thị/stream ảnh/video trên Web.
+- `GET /media/files/:id/url`: Xin cấp SAS read URL có thời hạn để hiển thị/stream ảnh/video khi Azure container private.
 - `GET /admin/media/files`: Admin kiểm kê tất cả file có trong kho lưu trữ (Storage).
 - `DELETE /admin/media/files/:id`: Admin chủ động xóa file rác (Orphan files).
 

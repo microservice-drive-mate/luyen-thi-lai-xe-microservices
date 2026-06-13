@@ -50,7 +50,7 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=frontend
 | `course-service` | `/courses/*`, `/enrollments/*`, `/admin/courses/*` | `/course-service/docs` |
 | `question-service` | `/admin/questions/*` | `/question-service/docs` |
 | `notification-service` | `/notifications/*`, `/admin/academic-warnings/*` | `/notification-service/docs` |
-| `analytics-service` | `/analytics/*` | `/analytics-service/docs` |
+| `analytics-service` | `/analytics/*`, `/admin/analytics/*` | `/analytics-service/docs` |
 | `simulation-service` | `/simulation/*` | `/simulation-service/docs` |
 | `media-service` | `/media/*`, `/admin/media/*` | `/media-service/docs` |
 | `audit-service` | `/admin/audit-logs/*` | `/audit-service/docs` |

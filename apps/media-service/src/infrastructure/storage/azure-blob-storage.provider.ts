@@ -93,6 +93,13 @@ export class AzureBlobStorageProvider
     this.logger.log(`Deleted blob: ${key}`);
   }
 
+  async exists(key: string): Promise<boolean> {
+    return this.getClient()
+      .getContainerClient(this.containerName)
+      .getBlockBlobClient(key)
+      .exists();
+  }
+
   getPresignedUrl(key: string, expiresIn?: number): Promise<string> {
     const ttl = expiresIn ?? this.defaultPresignedUrlExpiry;
     const blockBlobClient = this.getClient()

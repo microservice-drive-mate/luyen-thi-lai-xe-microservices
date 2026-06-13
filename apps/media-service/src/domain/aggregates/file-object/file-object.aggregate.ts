@@ -98,6 +98,12 @@ export class FileObject extends AggregateRoot<string> {
     );
   }
 
+  markUploaded(): void {
+    if (this._status === FileStatus.UNLINKED) {
+      this._status = FileStatus.UPLOADED;
+    }
+  }
+
   link(): void {
     this._status = FileStatus.LINKED;
   }
