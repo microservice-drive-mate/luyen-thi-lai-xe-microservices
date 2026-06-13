@@ -20,8 +20,10 @@ Progress dashboard reads use Redis cache-aside by student. Admin dashboard reads
 | Endpoint | Role |
 | --- | --- |
 | `GET /analytics/me/progress` | `STUDENT` |
+| `GET /analytics/instructor/dashboard` | `INSTRUCTOR` |
 | `GET /admin/analytics/students/:studentId/progress` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 | `GET /admin/analytics/dashboard` | `ADMIN`, `CENTER_MANAGER` |
+| `GET /admin/analytics/instructors/:instructorId/dashboard` | `ADMIN`, `CENTER_MANAGER` |
 
 ---
 
@@ -127,6 +129,22 @@ students | courses | instructors | completedExams
 student | course | exam | audit
 ```
 
+### `InstructorDashboard`
+
+Instructor dashboard is an eventually-consistent read model for the instructor home screen.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `period` | `InstructorDashboardPeriod` | Requested month/week/date and timezone |
+| `summary.activeClassCount` | `number` | Active, non-deleted courses assigned to the instructor |
+| `summary.totalStudents` | `number` | Unique active students in the instructor active courses |
+| `summary.passRate` | `number` | Passed completed exam attempts / completed attempts in the selected month |
+| `summary.teachingHoursThisMonth` | `number` | Sum of weekly schedule occurrences in the selected month |
+| `weeklyTeachingTrend` | `InstructorWeeklyTeachingTrendPoint[]` | Seven points from `weekStart` |
+| `topicAverages` | `InstructorTopicAverage[]` | Correct answers / answered questions by topic |
+| `classProgress` | `InstructorClassProgress[]` | Completed enrollments / total enrollments by course |
+| `todaySchedule` | `InstructorTodayScheduleItem[]` | Schedule occurrences matching `date` |
+
 ---
 
 ## Endpoints
@@ -191,6 +209,87 @@ Authorization: Bearer <student_access_token>
 
 ---
 
+### GET `/analytics/instructor/dashboard`
+
+Returns the current instructor dashboard. The instructor id is read from JWT `sub`.
+
+**Auth:** `INSTRUCTOR`
+
+**Query Parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `month` | `YYYY-MM` | no | Calendar month for summary, pass rate, teaching hours, and topic averages |
+| `weekStart` | `YYYY-MM-DD` | no | Monday date for the 7-day line chart |
+| `date` | `YYYY-MM-DD` | no | Date used for today's schedule |
+
+**Response `200`**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-06-13T10:00:00.000Z",
+  "path": "/analytics/instructor/dashboard?month=2026-06&weekStart=2026-06-08&date=2026-06-13",
+  "data": {
+    "period": {
+      "month": "2026-06",
+      "weekStart": "2026-06-08",
+      "date": "2026-06-13",
+      "timezone": "Asia/Ho_Chi_Minh"
+    },
+    "summary": {
+      "activeClassCount": 8,
+      "totalStudents": 156,
+      "passRate": 89,
+      "teachingHoursThisMonth": 124
+    },
+    "weeklyTeachingTrend": [
+      {
+        "date": "2026-06-08",
+        "label": "T2",
+        "teachingHours": 8,
+        "studentCount": 42
+      }
+    ],
+    "topicAverages": [
+      {
+        "topicId": "topic-id",
+        "topicName": "Bien bao",
+        "averageScore": 82,
+        "answeredQuestions": 120
+      }
+    ],
+    "classProgress": [
+      {
+        "courseId": "course-id",
+        "title": "B1 - Sang T2,T4,T6",
+        "licenseCategory": "B1",
+        "totalStudents": 24,
+        "completedStudents": 18,
+        "progressPct": 75
+      }
+    ],
+    "todaySchedule": [
+      {
+        "scheduleId": "schedule-id",
+        "courseId": "course-id",
+        "title": "B1 - Sang T2,T4,T6",
+        "room": "Phong 101",
+        "startTime": "07:00",
+        "endTime": "09:00",
+        "studentCount": 24
+      }
+    ]
+  }
+}
+```
+
+**Common errors:** `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
+
+---
+
 ### GET `/admin/analytics/students/:studentId/progress`
 
 Returns a student's dashboard for instructor/admin monitoring. The `studentId` path parameter is the target student, while the caller is still derived from the admin/instructor JWT.
@@ -230,6 +329,24 @@ Same `ProgressDashboard` shape as `GET /analytics/me/progress`.
 ```
 
 **Common errors:** `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
+
+---
+
+### GET `/admin/analytics/instructors/:instructorId/dashboard`
+
+Admin/center-manager view of a specific instructor dashboard. Response shape is the same as `GET /analytics/instructor/dashboard`.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Path Parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `instructorId` | `uuid` | yes | Target instructor id |
+
+**Query Parameters:** same as `GET /analytics/instructor/dashboard`.
+
+**Common errors:** `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`.
 
 ---
 
@@ -354,6 +471,9 @@ Analytics-service consumes these event types from RabbitMQ:
 | `course.created` | Upserts course projection and records course activity |
 | `course.updated` | Upserts course projection and records course activity |
 | `course.archived` | Marks course projection archived/deleted and records course activity |
+| `course.schedule.created` | Upserts instructor schedule projection |
+| `course.schedule.updated` | Updates instructor schedule projection |
+| `course.schedule.deleted` | Deactivates instructor schedule projection |
 | `course.enrollment.created` | Increments enrolled course count |
 | `course.enrollment.completed` | Increments completed course count |
 | `course.lesson.completed` | Adds study minutes and daily study activity |

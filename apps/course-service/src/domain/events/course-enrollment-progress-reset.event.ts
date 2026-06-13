@@ -9,6 +9,8 @@ export class CourseEnrollmentProgressResetEvent extends DomainEvent {
     readonly enrollmentId: string,
     readonly studentId: string,
     readonly courseId: string,
+    readonly status = 'ACTIVE',
+    readonly progress = 0,
   ) {
     super();
   }

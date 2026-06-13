@@ -15,6 +15,9 @@ export class CourseUpdatedEvent extends DomainEvent {
     readonly licenseCategory: LicenseCategory,
     readonly status: CourseStatus,
     readonly isDeleted: boolean,
+    readonly instructorIds: string[] = [],
+    readonly capacity: number | null = null,
+    readonly totalLessons = 0,
   ) {
     super();
   }

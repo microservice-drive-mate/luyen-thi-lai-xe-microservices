@@ -77,7 +77,14 @@ export class CourseEnrollment extends AggregateRoot<string> {
     }
 
     this.addDomainEvent(
-      new CourseLessonCompletedEvent(lessonId, this._studentId, this._courseId),
+      new CourseLessonCompletedEvent(
+        this._id,
+        lessonId,
+        this._studentId,
+        this._courseId,
+        this._status,
+        this._progress,
+      ),
     );
 
     if (this._progress >= 100) {
@@ -88,6 +95,8 @@ export class CourseEnrollment extends AggregateRoot<string> {
           this._id,
           this._studentId,
           this._courseId,
+          this._status,
+          this._progress,
         ),
       );
     }
@@ -107,6 +116,8 @@ export class CourseEnrollment extends AggregateRoot<string> {
         this._id,
         this._studentId,
         this._courseId,
+        this._status,
+        this._progress,
       ),
     );
   }

@@ -5,6 +5,8 @@ export class CourseEnrollmentCompletedEvent extends DomainEvent {
     readonly enrollmentId: string,
     readonly studentId: string,
     readonly courseId: string,
+    readonly status = 'COMPLETED',
+    readonly progress = 100,
   ) {
     super();
   }

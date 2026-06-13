@@ -33,6 +33,13 @@ const LICENSE_CATEGORIES = [
   LicenseCategory.F,
 ];
 
+const CRITICAL_QUESTION_NUMBERS = new Set([
+  19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 32, 34, 35, 47, 48, 52, 53, 55,
+  58, 63, 64, 65, 66, 67, 68, 70, 71, 72, 73, 74, 85, 86, 87, 88, 89, 90, 91,
+  92, 93, 97, 98, 102, 117, 163, 165, 167, 197, 198, 206, 215, 226, 234, 245,
+  246, 252, 253, 254, 255, 260,
+]);
+
 const QUESTION_TOPICS = [
   {
     id: deterministicUuid('bca-600-topic-1'),
@@ -448,6 +455,10 @@ function questionTypeForNumber(questionNumber: number): QuestionType {
   return QuestionType.THEORY;
 }
 
+function isCriticalQuestion(questionNumber: number): boolean {
+  return CRITICAL_QUESTION_NUMBERS.has(questionNumber);
+}
+
 function validateQuestions(questions: ParsedQuestion[]): void {
   const numbers = new Set(questions.map((question) => question.number));
   const missing = Array.from({ length: 600 }, (_, index) => index + 1).filter(
@@ -510,6 +521,7 @@ async function seedQuestionTopics() {
 async function seedQuestions(questions: ParsedQuestion[]) {
   for (const question of questions) {
     const questionId = deterministicUuid(`bca-600-question-${question.number}`);
+    const isCritical = isCriticalQuestion(question.number);
 
     await prisma.$transaction(async (tx) => {
       await tx.question.upsert({
@@ -524,7 +536,7 @@ async function seedQuestions(questions: ParsedQuestion[]) {
           }`,
           imageUrl: null,
           mediaFileId: null,
-          isCritical: false,
+          isCritical,
           isActive: true,
           isDeleted: false,
           topicId: topicIdForQuestion(question.number),
@@ -544,7 +556,7 @@ async function seedQuestions(questions: ParsedQuestion[]) {
           }`,
           imageUrl: null,
           mediaFileId: null,
-          isCritical: false,
+          isCritical,
           isActive: true,
           isDeleted: false,
           topicId: topicIdForQuestion(question.number),

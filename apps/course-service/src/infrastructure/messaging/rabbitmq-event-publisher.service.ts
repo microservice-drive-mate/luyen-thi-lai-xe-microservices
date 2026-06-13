@@ -18,6 +18,9 @@ const ANALYTICS_NOTIFY_EVENTS = new Set([
   'course.enrollment.completed',
   'course.lesson.completed',
   'course.enrollment.progress-reset',
+  'course.schedule.created',
+  'course.schedule.updated',
+  'course.schedule.deleted',
 ]);
 
 @Injectable()

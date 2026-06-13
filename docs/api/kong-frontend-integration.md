@@ -357,3 +357,21 @@ docker compose -f docker-compose.infra.yml restart kong-dev
 - Không tự gửi `x-user-id`.
 - Swagger qua Kong dùng `/<service-name>/docs`.
 - Forgot password local xem mail ở Mailpit: `http://localhost:8025`.
+
+## Instructor Dashboard Routes
+
+Frontend calls instructor dashboard through the same Kong base URL and JWT interceptor:
+
+```http
+GET http://localhost:8000/analytics/instructor/dashboard?month=2026-06&weekStart=2026-06-08&date=2026-06-13
+Authorization: Bearer <instructor_access_token>
+```
+
+Admin/center-manager can inspect a specific instructor:
+
+```http
+GET http://localhost:8000/admin/analytics/instructors/<instructorId>/dashboard?month=2026-06&weekStart=2026-06-08&date=2026-06-13
+Authorization: Bearer <admin_access_token>
+```
+
+The response is projection-based. After creating courses, schedules, enrollments, lessons, or exam attempts, allow the RabbitMQ consumers to project events before expecting dashboard numbers to change.

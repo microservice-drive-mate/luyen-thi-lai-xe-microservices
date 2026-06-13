@@ -14,6 +14,8 @@ export class ExamSessionCompletedEvent extends DomainEvent {
     readonly licenseCategory: LicenseCategory,
     readonly questions: Array<{
       questionId: string;
+      topicId?: string | null;
+      topicName?: string | null;
       isCorrect: boolean | null;
     }> = [],
   ) {

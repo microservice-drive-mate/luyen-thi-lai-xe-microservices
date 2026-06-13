@@ -334,12 +334,12 @@ Seed hiá»‡n táº¡i dÃ¹ng topic IDs deterministic UUID v5. Khi táº¡o e
 
 | Topic | ID |
 | --- | --- |
-| KhÃ¡i niá»‡m vÃ  quy táº¯c giao thÃ´ng Ä‘Æ°á»ng bá»™ | `9f49045f-156e-5252-8486-babb36dc74fd` |
-| Nghiá»‡p vá»¥ váº­n táº£i | `6d568ff3-458d-5764-bb15-ae3258b75a40` |
-| VÄƒn hÃ³a giao thÃ´ng vÃ  Ä‘áº¡o Ä‘á»©c ngÆ°á»i lÃ¡i xe | `a81d3294-cc8b-579e-9567-8bbc39f96b60` |
-| Ká»¹ thuáº­t lÃ¡i xe | `6d38e12b-adec-5c2c-b029-e01ae1fdabd2` |
-| Cáº¥u táº¡o vÃ  sá»­a chá»¯a xe | `d7a509c3-153f-5c03-9398-6a5626aa70d0` |
-| Há»‡ thá»‘ng biá»ƒn bÃ¡o hiá»‡u Ä‘Æ°á»ng bá»™ | `0694bef4-6534-56d3-bc68-a3a0fb8f4f43` |
+| Quy Ä‘á»‹nh chung vÃ  quy táº¯c giao thÃ´ng Ä‘Æ°á»ng bá»™ | `9f49045f-156e-5252-8486-babb36dc74fd` |
+| VÄƒn hÃ³a giao thÃ´ng, Ä‘áº¡o Ä‘á»©c ngÆ°á»i lÃ¡i xe, ká»¹ nÄƒng PCCC vÃ  cá»©u há»™ cá»©u náº¡n | `6d568ff3-458d-5764-bb15-ae3258b75a40` |
+| Ká»¹ thuáº­t lÃ¡i xe | `a81d3294-cc8b-579e-9567-8bbc39f96b60` |
+| Cáº¥u táº¡o vÃ  sá»­a chá»¯a | `6d38e12b-adec-5c2c-b029-e01ae1fdabd2` |
+| BÃ¡o hiá»‡u Ä‘Æ°á»ng bá»™ | `d7a509c3-153f-5c03-9398-6a5626aa70d0` |
+| Giáº£i tháº¿ sa hÃ¬nh vÃ  ká»¹ nÄƒng xá»­ lÃ½ tÃ¬nh huá»‘ng giao thÃ´ng | `0694bef4-6534-56d3-bc68-a3a0fb8f4f43` |
 
 ### 7.2 Chuáº©n Bá»‹ User VÃ  License
 
@@ -418,6 +418,19 @@ TIMER_TEMPLATE_ID=$(curl -s -X POST "$EXAM_BASE/admin/exams/templates" \
       }
     ]
   }' | jq -r '.data.id')
+```
+
+Vá»›i template B2 Ä‘á»§ 30 cÃ¢u trong Scalar, dÃ¹ng distribution nÃ y Ä‘á»ƒ tá»•ng `questionCount` khá»›p `totalQuestions` vÃ  váº«n cÃ³ topic chá»©a cÃ¢u critical:
+
+```json
+[
+  { "topicId": "9f49045f-156e-5252-8486-babb36dc74fd", "questionCount": 9 },
+  { "topicId": "6d568ff3-458d-5764-bb15-ae3258b75a40", "questionCount": 1 },
+  { "topicId": "a81d3294-cc8b-579e-9567-8bbc39f96b60", "questionCount": 1 },
+  { "topicId": "6d38e12b-adec-5c2c-b029-e01ae1fdabd2", "questionCount": 1 },
+  { "topicId": "d7a509c3-153f-5c03-9398-6a5626aa70d0", "questionCount": 9 },
+  { "topicId": "0694bef4-6534-56d3-bc68-a3a0fb8f4f43", "questionCount": 9 }
+]
 ```
 
 ## 8. Start Services
