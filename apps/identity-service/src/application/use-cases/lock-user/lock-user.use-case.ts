@@ -5,6 +5,7 @@ import { IdentityUserNotFoundException } from '../../../domain/exceptions/identi
 import { IdentityUserRepository } from '../../../domain/repositories/identity-user.repository';
 import { IdentityEventPublisherPort } from '../../ports/identity-event-publisher.port';
 import { IdentityProviderPort } from '../../ports/identity-provider.port';
+import { TokenBlacklistPort } from '../../ports/token-blacklist.port';
 import { AuditPublisherPort } from '../../ports/audit-publisher.port';
 import { LockUserCommand } from './lock-user.command';
 import { LockUserResult } from './lock-user.result';
@@ -20,6 +21,7 @@ export class LockUserUseCase
     private readonly identityUserRepository: IdentityUserRepository,
     private readonly eventPublisher: IdentityEventPublisherPort,
     private readonly auditPublisher: AuditPublisherPort,
+    private readonly tokenBlacklist: TokenBlacklistPort,
   ) {}
 
   async execute(command: LockUserCommand): Promise<LockUserResult> {
@@ -29,6 +31,13 @@ export class LockUserUseCase
     }
 
     await this.identityProvider.setUserEnabled(command.userId, !command.locked);
+    if (command.locked) {
+      await this.identityProvider.logoutUserAllSessions(command.userId);
+      await this.tokenBlacklist.revokeUserTokensIssuedBefore(
+        command.userId,
+        currentUnixSeconds(),
+      );
+    }
     user.lock(command.locked);
     await this.identityUserRepository.save(user);
     await this.publishEvents(user);
@@ -47,6 +56,7 @@ export class LockUserUseCase
         requestContext: command.auditContext,
         metadata: {
           locked: command.locked,
+          sessionsRevoked: command.locked,
         },
       }),
     );
@@ -61,4 +71,8 @@ export class LockUserUseCase
       await this.eventPublisher.publish(event);
     }
   }
+}
+
+function currentUnixSeconds(): number {
+  return Math.floor(Date.now() / 1000);
 }

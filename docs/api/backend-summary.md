@@ -207,3 +207,12 @@ Implemented the filtered P1/P2 endpoint batch from `context/endpoint-iDrive.md`:
 - Question public topics/practice/report with student-safe practice DTO.
 
 Exam pause/resume/timer/review/statistics endpoints remain intentionally out of scope for a later integrity-focused design.
+
+## Auth Revocation Update - 2026-06-14
+
+Identity-service now uses Keycloak user logout plus Redis token revocation epochs for sensitive account flows:
+
+- `POST /auth/logout` revokes the current refresh token/session and blacklists the current access token.
+- `POST /auth/change-password`, `POST /auth/reset-password`, and locking an identity user log out all sessions for the affected user.
+- Shared `TokenBlacklistGuard` rejects tokens whose `iat` is older than `auth:revoked-after:{userId}`.
+- Media-service now also uses the shared token blacklist guard.

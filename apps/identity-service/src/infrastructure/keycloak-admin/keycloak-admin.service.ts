@@ -188,6 +188,22 @@ export class KeycloakAdminService extends IdentityProviderPort {
     }
   }
 
+  async logoutUserAllSessions(userId: string): Promise<void> {
+    const token = await this.getAdminToken();
+    const url = `${this.adminBaseUrl}/users/${userId}/logout`;
+
+    try {
+      await lastValueFrom(
+        this.httpService.post(url, undefined, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      this.logger.log(`Logged out all sessions for user ${userId}`);
+    } catch (error) {
+      this.handleKeycloakError(error, 'logoutUserAllSessions');
+    }
+  }
+
   async getUser(userId: string): Promise<KeycloakUserRepresentation> {
     const token = await this.getAdminToken();
     const url = `${this.adminBaseUrl}/users/${userId}`;

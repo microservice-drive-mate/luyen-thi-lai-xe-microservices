@@ -27,9 +27,27 @@ export class TokenBlacklistService {
     await this.redis.del(key);
   }
 
+  async revokeUserTokensIssuedBefore(
+    userId: string,
+    issuedBefore: number,
+  ): Promise<void> {
+    await this.redis.set(this.buildUserRevocationKey(userId), issuedBefore);
+  }
+
+  async getUserRevokedAfter(userId: string): Promise<number | null> {
+    const value = await this.redis.get(this.buildUserRevocationKey(userId));
+    if (!value) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
   private buildKey(token: string): string {
     const jti = this.extractJti(token);
     return `bl:${jti ?? token}`;
+  }
+
+  private buildUserRevocationKey(userId: string): string {
+    return `auth:revoked-after:${userId}`;
   }
 
   private extractJti(token: string): string | null {

@@ -387,3 +387,10 @@ Frontend should call the newly added endpoints through Kong with the same servic
 - Question practice: `/question-service/questions/topics`, `/question-service/questions/practice`, `/question-service/questions/:id/report`.
 
 `GET /questions/practice` is the safe client endpoint. Do not use `POST /admin/questions/pool` directly from frontend because it includes answer data for exam-service.
+
+## Auth Session Revocation Notes
+
+- `POST /auth/logout` is current-device logout: frontend should delete local access/refresh tokens after success.
+- `POST /auth/change-password` logs out all active devices for that user. After success, frontend should clear local auth state and redirect to login.
+- Admin `POST /auth/reset-password` and account lock also log out all target-user sessions. Any old access token should receive `401` on protected APIs after revocation propagates through Redis.
+- `POST /auth/forgot-password` only sends a reset email; it does not revoke sessions until the password is actually changed/reset.
