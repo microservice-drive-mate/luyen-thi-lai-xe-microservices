@@ -21,6 +21,7 @@ export abstract class IdentityProviderPort {
   abstract login(username: string, password: string): Promise<IdentityTokenSet>;
   abstract refreshToken(refreshToken: string): Promise<IdentityTokenSet>;
   abstract revokeSession(refreshToken: string): Promise<void>;
+  abstract logoutUserAllSessions(userId: string): Promise<void>;
   abstract createUser(
     email: string,
     password: string,

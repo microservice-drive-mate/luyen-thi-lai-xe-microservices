@@ -74,6 +74,9 @@ Notes:
 
 - `change-password` requires a logged-in user and verifies `currentPassword`.
 - `reset-password` is an admin/center-manager credential reset wrapper over Keycloak. It is not a public reset-token callback.
+- After `change-password`, all old tokens for that user should be rejected across protected services.
+- After admin `reset-password` or account lock, all old tokens for the target user should be rejected. Verify with a protected API in user-service, course-service, and media-service.
+- `forgot-password` only sends a reset email and should not revoke sessions immediately.
 
 ## 2. User
 

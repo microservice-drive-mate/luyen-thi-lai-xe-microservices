@@ -15,25 +15,39 @@ export class TokenBlacklistService extends TokenBlacklistPort {
     const ttl = expiresAt - now;
     if (ttl <= 0) return;
 
-    const key = this.buildKey(token);
-    await this.redis.set(key, '1', 'EX', ttl);
+    await this.redis.set(this.buildTokenKey(token), '1', 'EX', ttl);
   }
 
   async isBlacklisted(token: string): Promise<boolean> {
-    const key = this.buildKey(token);
-    const result = await this.redis.exists(key);
+    const result = await this.redis.exists(this.buildTokenKey(token));
     return result === 1;
   }
 
   async removeFromBlacklist(token: string): Promise<void> {
-    const key = this.buildKey(token);
-    await this.redis.del(key);
+    await this.redis.del(this.buildTokenKey(token));
   }
 
-  // Dùng jti claim nếu có, fallback về raw token (jti ngắn hơn và là UUID duy nhất)
-  private buildKey(token: string): string {
+  async revokeUserTokensIssuedBefore(
+    userId: string,
+    issuedBefore: number,
+  ): Promise<void> {
+    await this.redis.set(this.buildUserRevocationKey(userId), issuedBefore);
+  }
+
+  async getUserRevokedAfter(userId: string): Promise<number | null> {
+    const value = await this.redis.get(this.buildUserRevocationKey(userId));
+    if (!value) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private buildTokenKey(token: string): string {
     const jti = this.extractJti(token);
     return `bl:${jti ?? token}`;
+  }
+
+  private buildUserRevocationKey(userId: string): string {
+    return `auth:revoked-after:${userId}`;
   }
 
   private extractJti(token: string): string | null {
@@ -42,7 +56,7 @@ export class TokenBlacklistService extends TokenBlacklistPort {
       const parts = raw.split('.');
       if (parts.length !== 3) return null;
       const payload = JSON.parse(
-        Buffer.from(parts[1], 'base64').toString('utf-8'),
+        Buffer.from(parts[1], 'base64url').toString('utf-8'),
       ) as Record<string, unknown>;
       return typeof payload.jti === 'string' ? payload.jti : null;
     } catch {

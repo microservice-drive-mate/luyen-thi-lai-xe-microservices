@@ -675,6 +675,8 @@ Authenticated user changes their own password. Backend verifies the current pass
 }
 ```
 
+After a successful password change, identity-service logs out all Keycloak sessions for the current user and stores `auth:revoked-after:{userId}` in Redis. Old access tokens from all devices are rejected by services that use the shared `TokenBlacklistGuard`.
+
 ### POST `/auth/reset-password`
 
 Admin/center-manager credential reset wrapper over Keycloak. This is not the public forgot-password token callback; the production self-service flow still starts with `POST /auth/forgot-password`, which sends a Keycloak reset email/action link.
@@ -687,3 +689,18 @@ Admin/center-manager credential reset wrapper over Keycloak. This is not the pub
   "newPassword": "new-password"
 }
 ```
+
+After a successful admin reset, identity-service logs out all Keycloak sessions for the target user and stores `auth:revoked-after:{userId}` in Redis. The admin caller token is not revoked.
+
+## Session Revocation Semantics
+
+| Flow | Revocation behavior |
+| --- | --- |
+| `POST /auth/logout` | Revokes the submitted refresh token/session and blacklists the current access token until expiry. Other devices are not logged out. |
+| `POST /auth/change-password` | Logs out all sessions for the current user and rejects old access tokens through Redis `revoked-after`. |
+| `POST /auth/reset-password` | Logs out all sessions for the target user and rejects old access tokens through Redis `revoked-after`. |
+| `PATCH /admin/identity-users/:id/lock` with `locked=true` | Disables the user, logs out all sessions, and rejects old access tokens through Redis `revoked-after`. |
+| `POST /auth/forgot-password` | Sends the Keycloak reset email only. It does not revoke sessions at request time because the requester has not yet proven mailbox ownership to the backend. |
+| Unlock user | Does not clear `revoked-after`; the user must login again and receive a new token. |
+
+Access-token revocation is enforced in service code, not only Keycloak. The shared `TokenBlacklistGuard` checks both `bl:{jti}` for single-token logout and `auth:revoked-after:{sub}` for global user revocation.
