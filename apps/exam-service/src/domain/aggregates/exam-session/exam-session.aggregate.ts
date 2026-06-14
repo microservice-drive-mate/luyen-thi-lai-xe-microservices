@@ -214,6 +214,7 @@ export class ExamSession extends AggregateRoot<string> {
         this.licenseCategory,
         this._questions.map((question) => ({
           questionId: question.questionId,
+          topicId: question.topicId,
           isCorrect: question.isCorrect,
         })),
       ),

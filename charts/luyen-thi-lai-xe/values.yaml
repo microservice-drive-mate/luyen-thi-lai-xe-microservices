@@ -226,6 +226,9 @@ services:
       - name: analytics-route
         paths: ["/analytics"]
         stripPath: false
+      - name: analytics-admin-route
+        paths: ["/admin/analytics"]
+        stripPath: false
       - name: analytics-swagger-route
         paths: ["/analytics-service"]
         stripPath: true

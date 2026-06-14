@@ -53,6 +53,23 @@ model Notification {
   @@map("notifications")
 }
 
+model NotificationPreference {
+  id                     String   @id @default(uuid())
+  userId                 String   @unique
+  inAppEnabled           Boolean  @default(true)
+  emailEnabled           Boolean  @default(true)
+  pushEnabled            Boolean  @default(false)
+  smsEnabled             Boolean  @default(false)
+  studyReminderEnabled   Boolean  @default(true)
+  examReminderEnabled    Boolean  @default(true)
+  courseUpdateEnabled    Boolean  @default(true)
+  academicWarningEnabled Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
+
 model AcademicWarning {
   id             String                        @id @default(uuid())
   studentId      String

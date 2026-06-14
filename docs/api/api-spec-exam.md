@@ -104,6 +104,26 @@ Exam-service gọi nội bộ `question-service /admin/questions/pool` bằng Ke
     {
       "topicId": "9f49045f-156e-5252-8486-babb36dc74fd",
       "questionCount": 9
+    },
+    {
+      "topicId": "6d568ff3-458d-5764-bb15-ae3258b75a40",
+      "questionCount": 1
+    },
+    {
+      "topicId": "a81d3294-cc8b-579e-9567-8bbc39f96b60",
+      "questionCount": 1
+    },
+    {
+      "topicId": "6d38e12b-adec-5c2c-b029-e01ae1fdabd2",
+      "questionCount": 1
+    },
+    {
+      "topicId": "d7a509c3-153f-5c03-9398-6a5626aa70d0",
+      "questionCount": 9
+    },
+    {
+      "topicId": "0694bef4-6534-56d3-bc68-a3a0fb8f4f43",
+      "questionCount": 9
     }
   ],
   "isActive": true,
@@ -116,6 +136,8 @@ Exam-service gọi nội bộ `question-service /admin/questions/pool` bằng Ke
 ```
 
 `topicDistribution` uses strict counts: the sum of all `questionCount` values must equal `totalQuestions`. When a student starts a session, exam-service pulls exactly that many active questions per topic from question-service. If any topic lacks enough questions, the session start returns `INSUFFICIENT_QUESTION_POOL`.
+
+If `criticalQuestions > 0`, the distribution must include at least one topic that has critical questions in the question bank. The seeded 600-question bank has 60 critical questions: topic 1 has 47, topic 2 has 2, topic 3 has 11, and topics 4-6 have 0. A template that only pulls from topics 4-6 cannot satisfy `criticalQuestions: 1`.
 
 Critical passing rule: `isPassed = score >= passingScore && criticalMistakes <= maxCriticalMistakes`.
 
@@ -315,8 +337,24 @@ Create an exam template. This is an admin-only blueprint; students do not call t
       "questionCount": 9
     },
     {
+      "topicId": "6d568ff3-458d-5764-bb15-ae3258b75a40",
+      "questionCount": 1
+    },
+    {
+      "topicId": "a81d3294-cc8b-579e-9567-8bbc39f96b60",
+      "questionCount": 1
+    },
+    {
+      "topicId": "6d38e12b-adec-5c2c-b029-e01ae1fdabd2",
+      "questionCount": 1
+    },
+    {
       "topicId": "d7a509c3-153f-5c03-9398-6a5626aa70d0",
-      "questionCount": 21
+      "questionCount": 9
+    },
+    {
+      "topicId": "0694bef4-6534-56d3-bc68-a3a0fb8f4f43",
+      "questionCount": 9
     }
   ]
 }
@@ -361,8 +399,24 @@ Create an exam template. This is an admin-only blueprint; students do not call t
         "questionCount": 9
       },
       {
+        "topicId": "6d568ff3-458d-5764-bb15-ae3258b75a40",
+        "questionCount": 1
+      },
+      {
+        "topicId": "a81d3294-cc8b-579e-9567-8bbc39f96b60",
+        "questionCount": 1
+      },
+      {
+        "topicId": "6d38e12b-adec-5c2c-b029-e01ae1fdabd2",
+        "questionCount": 1
+      },
+      {
         "topicId": "d7a509c3-153f-5c03-9398-6a5626aa70d0",
-        "questionCount": 21
+        "questionCount": 9
+      },
+      {
+        "topicId": "0694bef4-6534-56d3-bc68-a3a0fb8f4f43",
+        "questionCount": 9
       }
     ],
     "isActive": true,
@@ -503,8 +557,24 @@ Optimistic concurrency uses `version`.
       "questionCount": 9
     },
     {
+      "topicId": "6d568ff3-458d-5764-bb15-ae3258b75a40",
+      "questionCount": 1
+    },
+    {
+      "topicId": "a81d3294-cc8b-579e-9567-8bbc39f96b60",
+      "questionCount": 1
+    },
+    {
+      "topicId": "6d38e12b-adec-5c2c-b029-e01ae1fdabd2",
+      "questionCount": 1
+    },
+    {
       "topicId": "d7a509c3-153f-5c03-9398-6a5626aa70d0",
-      "questionCount": 21
+      "questionCount": 9
+    },
+    {
+      "topicId": "0694bef4-6534-56d3-bc68-a3a0fb8f4f43",
+      "questionCount": 9
     }
   ],
   "isActive": true
@@ -551,8 +621,24 @@ Optimistic concurrency uses `version`.
         "questionCount": 9
       },
       {
+        "topicId": "6d568ff3-458d-5764-bb15-ae3258b75a40",
+        "questionCount": 1
+      },
+      {
+        "topicId": "a81d3294-cc8b-579e-9567-8bbc39f96b60",
+        "questionCount": 1
+      },
+      {
+        "topicId": "6d38e12b-adec-5c2c-b029-e01ae1fdabd2",
+        "questionCount": 1
+      },
+      {
         "topicId": "d7a509c3-153f-5c03-9398-6a5626aa70d0",
-        "questionCount": 21
+        "questionCount": 9
+      },
+      {
+        "topicId": "0694bef4-6534-56d3-bc68-a3a0fb8f4f43",
+        "questionCount": 9
       }
     ],
     "isActive": true,

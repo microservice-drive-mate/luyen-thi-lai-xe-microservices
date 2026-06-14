@@ -168,6 +168,7 @@ export class PrismaExamSessionRepository extends ExamSessionRepository {
         const questionData = {
           sessionId: session.id,
           questionId: question.questionId,
+          topicId: question.topicId,
           questionContent: question.questionContent,
           imageUrl: question.imageUrl,
           mediaFileId: question.mediaFileId,

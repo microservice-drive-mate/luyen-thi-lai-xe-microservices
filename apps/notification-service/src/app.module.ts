@@ -30,7 +30,9 @@ import {
   WsServerBinderPort,
 } from './application/ports/ws-emitter.port';
 import { NotificationDispatcher } from './application/services/notification-dispatcher.service';
+import { GetNotificationPreferencesUseCase } from './application/use-cases/get-notification-preferences/get-notification-preferences.use-case';
 import { ListNotificationsUseCase } from './application/use-cases/list-notifications/list-notifications.use-case';
+import { MarkAllNotificationsReadUseCase } from './application/use-cases/mark-all-notifications-read/mark-all-notifications-read.use-case';
 import { MarkNotificationReadUseCase } from './application/use-cases/mark-notification-read/mark-notification-read.use-case';
 import { QueueAcademicWarningsUseCase } from './application/use-cases/queue-academic-warnings/queue-academic-warnings.use-case';
 import { RegisterDeviceTokenUseCase } from './application/use-cases/register-device-token/register-device-token.use-case';
@@ -41,6 +43,7 @@ import { SendExamResultUseCase } from './application/use-cases/send-exam-result/
 import { SendPasswordResetUseCase } from './application/use-cases/send-password-reset/send-password-reset.use-case';
 import { SendWelcomeEmailUseCase } from './application/use-cases/send-welcome-email/send-welcome-email.use-case';
 import { UnregisterDeviceTokenUseCase } from './application/use-cases/unregister-device-token/unregister-device-token.use-case';
+import { UpdateNotificationPreferencesUseCase } from './application/use-cases/update-notification-preferences/update-notification-preferences.use-case';
 import { DeviceTokenRepository } from './domain/repositories/device-token.repository';
 import { NotificationRepository } from './domain/repositories/notification.repository';
 import { NotificationMetrics } from './infrastructure/metrics/notification.metrics';
@@ -194,6 +197,9 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     SendCourseUpdateUseCase,
     ListNotificationsUseCase,
     MarkNotificationReadUseCase,
+    MarkAllNotificationsReadUseCase,
+    GetNotificationPreferencesUseCase,
+    UpdateNotificationPreferencesUseCase,
     RetryAcademicWarningsUseCase,
     QueueAcademicWarningsUseCase,
     RegisterDeviceTokenUseCase,

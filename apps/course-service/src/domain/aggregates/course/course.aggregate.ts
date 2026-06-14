@@ -17,7 +17,10 @@ import {
 import { CourseHasNoLessonException } from '../../exceptions/course-has-no-lesson.exception';
 import { InstructorAlreadyAssignedException } from '../../exceptions/instructor-already-assigned.exception';
 import { LessonNotFoundException } from '../../exceptions/lesson-not-found.exception';
+import { CourseArchivedEvent } from '../../events/course-archived.event';
+import { CourseCreatedEvent } from '../../events/course-created.event';
 import { CourseMaterialLinkedEvent } from '../../events/course-material-linked.event';
+import { CourseUpdatedEvent } from '../../events/course-updated.event';
 import { CourseVersionConflictException } from '../../exceptions/course-version-conflict.exception';
 
 export class Course extends AggregateRoot<string> {
@@ -100,7 +103,7 @@ export class Course extends AggregateRoot<string> {
       ? CourseRequirement.create(props.id, props.requirement)
       : null;
 
-    return new Course(
+    const course = new Course(
       props.id,
       props.courseCode ?? null,
       props.title,
@@ -123,6 +126,19 @@ export class Course extends AggregateRoot<string> {
       requirement,
       [],
     );
+    course.addDomainEvent(
+      new CourseCreatedEvent(
+        course.id,
+        course.title,
+        course.licenseCategory,
+        course.status,
+        course.isDeleted,
+        course.instructorIds,
+        course.capacity,
+        course.totalLessons,
+      ),
+    );
+    return course;
   }
 
   static reconstitute(props: ReconstituteCourseProps): Course {
@@ -181,6 +197,18 @@ export class Course extends AggregateRoot<string> {
     if (props.capacity !== undefined) this._capacity = props.capacity;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   activate(): void {
@@ -190,12 +218,36 @@ export class Course extends AggregateRoot<string> {
     this._status = CourseStatus.ACTIVE;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   deactivate(): void {
     this._status = CourseStatus.DRAFT;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   archive(deletedBy?: string): void {
@@ -205,6 +257,18 @@ export class Course extends AggregateRoot<string> {
     this._deletedBy = deletedBy ?? null;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseArchivedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   addLesson(props: CreateLessonProps): Lesson {
@@ -220,6 +284,18 @@ export class Course extends AggregateRoot<string> {
     this._totalLessons = this._lessons.length;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
     return lesson;
   }
 
@@ -229,6 +305,18 @@ export class Course extends AggregateRoot<string> {
     lesson.update(props);
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   removeLesson(lessonId: string): void {
@@ -238,6 +326,18 @@ export class Course extends AggregateRoot<string> {
     this._totalLessons = this._lessons.length;
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   addInstructor(instructorEntityId: string, instructorId: string): void {
@@ -251,6 +351,18 @@ export class Course extends AggregateRoot<string> {
     );
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   removeInstructor(instructorId: string): void {
@@ -259,6 +371,18 @@ export class Course extends AggregateRoot<string> {
     );
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   setRequirements(props: CreateRequirementProps): void {

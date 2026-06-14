@@ -22,20 +22,40 @@ import { AddCourseMaterialCommand } from '../../application/use-cases/add-course
 import { AddCourseMaterialUseCase } from '../../application/use-cases/add-course-material/add-course-material.use-case';
 import { AddLessonCommand } from '../../application/use-cases/add-lesson/add-lesson.command';
 import { AddLessonUseCase } from '../../application/use-cases/add-lesson/add-lesson.use-case';
+import { AssignCourseInstructorCommand } from '../../application/use-cases/assign-course-instructor/assign-course-instructor.command';
+import { AssignCourseInstructorUseCase } from '../../application/use-cases/assign-course-instructor/assign-course-instructor.use-case';
+import { CreateCourseScheduleCommand } from '../../application/use-cases/create-course-schedule/create-course-schedule.command';
+import { CreateCourseScheduleUseCase } from '../../application/use-cases/create-course-schedule/create-course-schedule.use-case';
 import { CreateCourseCommand } from '../../application/use-cases/create-course/create-course.command';
 import { CreateCourseUseCase } from '../../application/use-cases/create-course/create-course.use-case';
+import { DeleteCourseScheduleCommand } from '../../application/use-cases/delete-course-schedule/delete-course-schedule.command';
+import { DeleteCourseScheduleUseCase } from '../../application/use-cases/delete-course-schedule/delete-course-schedule.use-case';
 import { DeleteCourseCommand } from '../../application/use-cases/delete-course/delete-course.command';
 import { DeleteCourseUseCase } from '../../application/use-cases/delete-course/delete-course.use-case';
 import { GetCourseQuery } from '../../application/use-cases/get-course/get-course.query';
 import { GetCourseUseCase } from '../../application/use-cases/get-course/get-course.use-case';
 import { ListCoursesQuery } from '../../application/use-cases/list-courses/list-courses.query';
 import { ListCoursesUseCase } from '../../application/use-cases/list-courses/list-courses.use-case';
+import { ListCourseSchedulesQuery } from '../../application/use-cases/list-course-schedules/list-course-schedules.query';
+import { ListCourseSchedulesUseCase } from '../../application/use-cases/list-course-schedules/list-course-schedules.use-case';
 import { RemoveLessonCommand } from '../../application/use-cases/remove-lesson/remove-lesson.command';
 import { RemoveLessonUseCase } from '../../application/use-cases/remove-lesson/remove-lesson.use-case';
+import { RemoveCourseInstructorCommand } from '../../application/use-cases/remove-course-instructor/remove-course-instructor.command';
+import { RemoveCourseInstructorUseCase } from '../../application/use-cases/remove-course-instructor/remove-course-instructor.use-case';
 import { UpdateCourseCommand } from '../../application/use-cases/update-course/update-course.command';
 import { UpdateCourseUseCase } from '../../application/use-cases/update-course/update-course.use-case';
+import { UpdateCourseScheduleCommand } from '../../application/use-cases/update-course-schedule/update-course-schedule.command';
+import { UpdateCourseScheduleUseCase } from '../../application/use-cases/update-course-schedule/update-course-schedule.use-case';
+import { UpdateLessonCommand } from '../../application/use-cases/update-lesson/update-lesson.command';
+import { UpdateLessonUseCase } from '../../application/use-cases/update-lesson/update-lesson.use-case';
 import { AddCourseMaterialRequestDto } from '../dtos/add-course-material.request.dto';
 import { AddLessonRequestDto } from '../dtos/add-lesson.request.dto';
+import { AssignCourseInstructorRequestDto } from '../dtos/assign-course-instructor.request.dto';
+import {
+  CreateCourseScheduleRequestDto,
+  UpdateCourseScheduleRequestDto,
+} from '../dtos/course-schedule.request.dto';
+import { CourseScheduleResponseDto } from '../dtos/course-schedule.response.dto';
 import {
   CourseResponseDto,
   ListCoursesResponseDto,
@@ -43,6 +63,7 @@ import {
 import { CreateCourseRequestDto } from '../dtos/create-course.request.dto';
 import { ListCoursesQueryDto } from '../dtos/list-courses.query.dto';
 import { UpdateCourseRequestDto } from '../dtos/update-course.request.dto';
+import { UpdateLessonRequestDto } from '../dtos/update-lesson.request.dto';
 
 interface JwtPayload {
   sub?: string;
@@ -72,6 +93,13 @@ export class AdminCourseController {
     private readonly getCourseUseCase: GetCourseUseCase,
     private readonly listCoursesUseCase: ListCoursesUseCase,
     private readonly deleteCourseUseCase: DeleteCourseUseCase,
+    private readonly createCourseScheduleUseCase: CreateCourseScheduleUseCase,
+    private readonly updateCourseScheduleUseCase: UpdateCourseScheduleUseCase,
+    private readonly deleteCourseScheduleUseCase: DeleteCourseScheduleUseCase,
+    private readonly listCourseSchedulesUseCase: ListCourseSchedulesUseCase,
+    private readonly updateLessonUseCase: UpdateLessonUseCase,
+    private readonly assignCourseInstructorUseCase: AssignCourseInstructorUseCase,
+    private readonly removeCourseInstructorUseCase: RemoveCourseInstructorUseCase,
   ) {}
 
   @Post()
@@ -126,6 +154,83 @@ export class AdminCourseController {
   async getCourse(@Param('id') id: string): Promise<CourseResponseDto> {
     const result = await this.getCourseUseCase.execute(new GetCourseQuery(id));
     return CourseResponseDto.fromResult(result);
+  }
+
+  @Get(':id/schedules')
+  @Roles({ roles: COURSE_ADMIN_ROLES })
+  @ApiOperation({ summary: 'List course teaching schedules' })
+  async listSchedules(
+    @Param('id') courseId: string,
+  ): Promise<CourseScheduleResponseDto[]> {
+    const result = await this.listCourseSchedulesUseCase.execute(
+      new ListCourseSchedulesQuery(courseId),
+    );
+    return result.map(CourseScheduleResponseDto.fromResult);
+  }
+
+  @Post(':id/schedules')
+  @Roles({ roles: COURSE_ADMIN_ROLES })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create course teaching schedule' })
+  async createSchedule(
+    @Param('id') courseId: string,
+    @Body() dto: CreateCourseScheduleRequestDto,
+  ): Promise<CourseScheduleResponseDto> {
+    const result = await this.createCourseScheduleUseCase.execute(
+      new CreateCourseScheduleCommand(
+        courseId,
+        dto.instructorId,
+        dto.dayOfWeek,
+        dto.startTime,
+        dto.endTime,
+        dto.room ?? null,
+        new Date(`${dto.effectiveFrom}T00:00:00.000Z`),
+        dto.effectiveTo ? new Date(`${dto.effectiveTo}T00:00:00.000Z`) : null,
+      ),
+    );
+    return CourseScheduleResponseDto.fromResult(result);
+  }
+
+  @Patch(':id/schedules/:scheduleId')
+  @Roles({ roles: COURSE_ADMIN_ROLES })
+  @ApiOperation({ summary: 'Update course teaching schedule' })
+  async updateSchedule(
+    @Param('id') courseId: string,
+    @Param('scheduleId') scheduleId: string,
+    @Body() dto: UpdateCourseScheduleRequestDto,
+  ): Promise<CourseScheduleResponseDto> {
+    const result = await this.updateCourseScheduleUseCase.execute(
+      new UpdateCourseScheduleCommand(
+        courseId,
+        scheduleId,
+        dto.instructorId,
+        dto.dayOfWeek,
+        dto.startTime,
+        dto.endTime,
+        dto.room,
+        dto.effectiveFrom
+          ? new Date(`${dto.effectiveFrom}T00:00:00.000Z`)
+          : undefined,
+        dto.effectiveTo !== undefined && dto.effectiveTo !== null
+          ? new Date(`${dto.effectiveTo}T00:00:00.000Z`)
+          : dto.effectiveTo,
+        dto.isActive,
+      ),
+    );
+    return CourseScheduleResponseDto.fromResult(result);
+  }
+
+  @Delete(':id/schedules/:scheduleId')
+  @Roles({ roles: COURSE_ADMIN_ROLES })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete course teaching schedule' })
+  async deleteSchedule(
+    @Param('id') courseId: string,
+    @Param('scheduleId') scheduleId: string,
+  ): Promise<void> {
+    await this.deleteCourseScheduleUseCase.execute(
+      new DeleteCourseScheduleCommand(courseId, scheduleId),
+    );
   }
 
   @Patch(':id')
@@ -216,6 +321,77 @@ export class AdminCourseController {
       new RemoveLessonCommand(
         courseId,
         lessonId,
+        actorId,
+        buildAuditRequestContext(request, user),
+      ),
+    );
+    return CourseResponseDto.fromResult(result);
+  }
+
+  @Patch(':id/lessons/:lessonId')
+  @Roles({ roles: COURSE_ADMIN_ROLES })
+  @ApiOperation({ summary: 'Update course lesson' })
+  async updateLesson(
+    @Param('id') courseId: string,
+    @Param('lessonId') lessonId: string,
+    @Body() dto: UpdateLessonRequestDto,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
+  ): Promise<CourseResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
+    const result = await this.updateLessonUseCase.execute(
+      new UpdateLessonCommand(
+        courseId,
+        lessonId,
+        dto.title,
+        dto.order,
+        dto.content,
+        actorId,
+        buildAuditRequestContext(request, user),
+      ),
+    );
+    return CourseResponseDto.fromResult(result);
+  }
+
+  @Post(':id/instructors')
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Assign instructor to course' })
+  async assignInstructor(
+    @Param('id') courseId: string,
+    @Body() dto: AssignCourseInstructorRequestDto,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
+  ): Promise<CourseResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
+    const result = await this.assignCourseInstructorUseCase.execute(
+      new AssignCourseInstructorCommand(
+        courseId,
+        dto.instructorId,
+        actorId,
+        buildAuditRequestContext(request, user),
+      ),
+    );
+    return CourseResponseDto.fromResult(result);
+  }
+
+  @Delete(':id/instructors/:userId')
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
+  @ApiOperation({ summary: 'Remove instructor from course' })
+  async removeInstructor(
+    @Param('id') courseId: string,
+    @Param('userId') instructorId: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
+  ): Promise<CourseResponseDto> {
+    const actorId = resolveActorId(user, headerUserId);
+    const result = await this.removeCourseInstructorUseCase.execute(
+      new RemoveCourseInstructorCommand(
+        courseId,
+        instructorId,
         actorId,
         buildAuditRequestContext(request, user),
       ),

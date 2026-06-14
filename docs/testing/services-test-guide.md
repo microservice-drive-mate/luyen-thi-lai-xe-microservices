@@ -1,23 +1,8 @@
-﻿
-<!-- Merged legacy testing guide -->
-# Analytics Service Test Guide
+# Services API Test Guide
 
-## Setup
+This is the master manual test guide for the backend services. Use it together with the per-service API specs in `docs/api/api-spec-*.md`.
 
-```powershell
-docker compose up -d db-analytics redis rabbitmq consul consul-init
-pnpm --filter=analytics-service run db:deploy
-pnpm run db:seed
-pnpm --filter=analytics-service run start:dev
-```
-
-Use a real Keycloak token. Frontend and Swagger calls should send `Authorization: Bearer <access_token>`; do not send `x-user-id`.
-
-## Demo Flow
-
-1. Complete an exam in `exam-service`.
-2. Complete a course lesson in `course-service`.
-3. Call:
+For the interactive UI, open Scalar:
 
 ```http
 GET http://localhost:3007/analytics/me/progress
@@ -91,6 +76,7 @@ pnpm run infra:up
 pnpm run consul:seed:local
 pnpm run db:generate
 pnpm run db:deploy
+pnpm run db:seed
 pnpm run dev
 ```
 
@@ -216,12 +202,9 @@ Expected:
 
 Student không được xem audit logs:
 
-```powershell
-curl -i "http://localhost:8000/admin/audit-logs" `
-  -H "Authorization: Bearer $TOKEN_STUDENT"
+```http
+POST /admin/users/:id/documents
 ```
-
-Expected:
 
 ```json
 {
@@ -505,9 +488,7 @@ Expected:
 - Nếu message đã thành `FAILED`, phase hiện tại chưa có manual requeue API; có thể update DB thủ công trong demo dev để retry:
 
 ```sql
-UPDATE outbox_messages
-SET status = 'PENDING', "nextAttemptAt" = now(), "lastError" = null
-WHERE status = 'FAILED';
+SELECT count(*) FROM questions WHERE "isCritical" = true;
 ```
 
 Sau đó audit log xuất hiện:
@@ -1726,19 +1707,10 @@ echo "All checks passed!"
 ### Reset Learning Progress
 
 ```http
-POST http://localhost:3004/enrollments/{enrollmentId}/reset-progress
-Authorization: Bearer <student_token>
+GET /analytics/instructor/dashboard?month=2026-06&weekStart=2026-06-08&date=2026-06-13
 ```
 
-Expected:
-
-- enrollment `progress = 0`
-- enrollment `status = ACTIVE`
-- `completedAt = null`
-- exam history remains unchanged in `exam-service`
-- `analytics-service` receives `course.enrollment.progress-reset`
-
-### Archive Course
+Admin view of instructor dashboard:
 
 ```http
 DELETE http://localhost:3004/admin/courses/{courseId}
@@ -3000,14 +2972,7 @@ Expected:
 Verify `exam_db.outbox_messages`:
 
 ```sql
-SELECT
-  payload->>'action' AS action,
-  payload->>'resourceType' AS resource_type,
-  payload->>'resourceId' AS resource_id,
-  status,
-  attempts,
-  "publishedAt",
-  "lastError"
+SELECT payload->>'action' AS action, status, attempts, "publishedAt", "lastError"
 FROM outbox_messages
 ORDER BY "createdAt" DESC
 LIMIT 10;
@@ -6228,5 +6193,3 @@ Endpoint tự động được documented ở:
 - SRS UC33: docs/requirements/srs-document.md (lines 1050-1082)
 - DDD Conventions: docs/architecture/clean-ddd-conventions.md
 - CLAUDE.md: Architecture overview
-
-

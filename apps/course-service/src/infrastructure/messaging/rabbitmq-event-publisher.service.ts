@@ -11,10 +11,16 @@ export const ANALYTICS_SERVICE_CLIENT = 'ANALYTICS_SERVICE_CLIENT';
 // Events routed exclusively to media-service for file ownership confirmation
 const MEDIA_NOTIFY_EVENTS = new Set(['course.material.linked']);
 const ANALYTICS_NOTIFY_EVENTS = new Set([
+  'course.created',
+  'course.updated',
+  'course.archived',
   'course.enrollment.created',
   'course.enrollment.completed',
   'course.lesson.completed',
   'course.enrollment.progress-reset',
+  'course.schedule.created',
+  'course.schedule.updated',
+  'course.schedule.deleted',
 ]);
 
 @Injectable()

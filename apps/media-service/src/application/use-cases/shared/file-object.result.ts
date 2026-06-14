@@ -8,6 +8,7 @@ export class FileObjectResult {
     readonly bucketName: string,
     readonly uploadedById: string,
     readonly isPublic: boolean,
+    readonly status: string,
     readonly createdAt: Date,
   ) {}
 }

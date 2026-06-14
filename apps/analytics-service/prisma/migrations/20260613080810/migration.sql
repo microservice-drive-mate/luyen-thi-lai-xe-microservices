@@ -1,0 +1,8 @@
+-- RenameIndex
+ALTER INDEX IF EXISTS "instructor_course_assignment_projections_courseId_instructorId_" RENAME TO "instructor_course_assignment_projections_courseId_instructo_key";
+
+-- RenameIndex
+ALTER INDEX IF EXISTS "instructor_course_assignment_projections_instructorId_courseId_" RENAME TO "instructor_course_assignment_projections_instructorId_cours_idx";
+
+-- RenameIndex
+ALTER INDEX IF EXISTS "instructor_schedule_projections_instructorId_dayOfWeek_isActive" RENAME TO "instructor_schedule_projections_instructorId_dayOfWeek_isAc_idx";

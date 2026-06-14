@@ -21,10 +21,14 @@ import {
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { AssignLicenseTierCommand } from '../../application/use-cases/assign-license-tier/assign-license-tier.command';
 import { AssignLicenseTierUseCase } from '../../application/use-cases/assign-license-tier/assign-license-tier.use-case';
+import { CreateUserDocumentCommand } from '../../application/use-cases/create-user-document/create-user-document.command';
+import { CreateUserDocumentUseCase } from '../../application/use-cases/create-user-document/create-user-document.use-case';
 import { CreateUserProfileCommand } from '../../application/use-cases/create-user-profile/create-user-profile.command';
 import { CreateUserProfileUseCase } from '../../application/use-cases/create-user-profile/create-user-profile.use-case';
 import { GetUserProfileQuery } from '../../application/use-cases/get-user-profile/get-user-profile.query';
 import { GetUserProfileUseCase } from '../../application/use-cases/get-user-profile/get-user-profile.use-case';
+import { ListUserDocumentsQuery } from '../../application/use-cases/list-user-documents/list-user-documents.query';
+import { ListUserDocumentsUseCase } from '../../application/use-cases/list-user-documents/list-user-documents.use-case';
 import { ListUsersQuery } from '../../application/use-cases/list-users/list-users.query';
 import { ListUsersUseCase } from '../../application/use-cases/list-users/list-users.use-case';
 import { LockUserCommand } from '../../application/use-cases/lock-user/lock-user.command';
@@ -41,6 +45,10 @@ import {
   PaginatedUsersResponseDto,
   UserProfileResponseDto,
 } from '../dtos/user-profile.response.dto';
+import {
+  CreateUserDocumentRequestDto,
+  UserDocumentResponseDto,
+} from '../dtos/user-document.dto';
 
 interface JwtPayload {
   sub: string;
@@ -57,6 +65,8 @@ export class AdminUserController {
     private readonly listUsersUseCase: ListUsersUseCase,
     private readonly lockUserUseCase: LockUserUseCase,
     private readonly assignLicenseTierUseCase: AssignLicenseTierUseCase,
+    private readonly createUserDocumentUseCase: CreateUserDocumentUseCase,
+    private readonly listUserDocumentsUseCase: ListUserDocumentsUseCase,
   ) {}
 
   @Post()
@@ -115,6 +125,38 @@ export class AdminUserController {
       new GetUserProfileQuery(id),
     );
     return UserProfileResponseDto.fromResult(result);
+  }
+
+  @Post(':id/documents')
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Attach a user document by media file id' })
+  async createUserDocument(
+    @Param('id') id: string,
+    @Body() dto: CreateUserDocumentRequestDto,
+  ): Promise<UserDocumentResponseDto> {
+    const result = await this.createUserDocumentUseCase.execute(
+      new CreateUserDocumentCommand(
+        id,
+        dto.type,
+        dto.mediaFileId,
+        dto.title,
+        dto.status,
+      ),
+    );
+    return UserDocumentResponseDto.fromResult(result);
+  }
+
+  @Get(':id/documents')
+  @Roles({ roles: ['realm:ADMIN', 'realm:CENTER_MANAGER'] })
+  @ApiOperation({ summary: 'List user documents' })
+  async listUserDocuments(
+    @Param('id') id: string,
+  ): Promise<UserDocumentResponseDto[]> {
+    const result = await this.listUserDocumentsUseCase.execute(
+      new ListUserDocumentsQuery(id),
+    );
+    return result.map(UserDocumentResponseDto.fromResult);
   }
 
   @Patch(':id')

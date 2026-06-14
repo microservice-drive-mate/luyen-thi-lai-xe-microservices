@@ -52,6 +52,7 @@ model Course {
 
   lessons     Lesson[]
   instructors CourseInstructor[]
+  schedules   CourseSchedule[]
   requirement CourseRequirement?
   materials   CourseMaterial[]
   enrollments CourseEnrollment[]
@@ -60,6 +61,27 @@ model Course {
   @@index([isDeleted, status, createdAt])
   @@index([createdById, createdAt])
   @@map("courses")
+}
+
+model CourseSchedule {
+  id            String    @id @default(uuid())
+  courseId      String
+  instructorId  String
+  dayOfWeek     Int
+  startTime     String
+  endTime       String
+  room          String?
+  effectiveFrom DateTime  @db.Date
+  effectiveTo   DateTime? @db.Date
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, isActive])
+  @@index([instructorId, dayOfWeek, isActive])
+  @@map("course_schedules")
 }
 
 model Lesson {

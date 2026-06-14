@@ -66,6 +66,7 @@ export class UploadFileUseCase
         fileObject.bucketName,
         fileObject.uploadedById,
         fileObject.isPublic,
+        fileObject.status,
         fileObject.createdAt,
       );
     } catch (error) {

@@ -109,6 +109,10 @@ services:
         paths:
           - /analytics
         strip_path: false
+      - name: analytics-admin-route
+        paths:
+          - /admin/analytics
+        strip_path: false
       - name: analytics-swagger-route
         paths:
           - /analytics-service

@@ -26,6 +26,7 @@ export class GetFileMetadataUseCase
       fileObject.bucketName,
       fileObject.uploadedById,
       fileObject.isPublic,
+      fileObject.status,
       fileObject.createdAt,
     );
   }

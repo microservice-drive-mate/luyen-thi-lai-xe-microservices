@@ -298,10 +298,11 @@ function canResetLocalRetryTopology(error: unknown): boolean {
   }
 
   const message = error instanceof Error ? error.message : String(error);
+  const normalizedMessage = message.toLowerCase();
   return (
-    message.includes('PRECONDITION_FAILED') &&
-    message.includes('inequivalent arg') &&
-    message.includes('x-message-ttl')
+    normalizedMessage.includes('precondition_failed') &&
+    normalizedMessage.includes('inequivalent arg') &&
+    normalizedMessage.includes('x-message-ttl')
   );
 }
 
