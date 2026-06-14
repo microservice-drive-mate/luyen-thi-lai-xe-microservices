@@ -34,4 +34,14 @@ export abstract class IdentityProviderPort {
   abstract setUserEnabled(userId: string, enabled: boolean): Promise<void>;
   abstract findUserByEmail(email: string): Promise<ExternalIdentityUser | null>;
   abstract sendPasswordResetEmail(userId: string): Promise<void>;
+  abstract resetPassword(
+    userId: string,
+    newPassword: string,
+    temporary?: boolean,
+  ): Promise<void>;
+  abstract changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void>;
 }

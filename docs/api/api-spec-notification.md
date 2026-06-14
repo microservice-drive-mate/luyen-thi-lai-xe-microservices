@@ -453,3 +453,43 @@ RabbitMQ resilience được cung cấp bởi `@repo/common`:
 - DLQ: `notification_service_events.dlq`
 
 `retry.maxAttempts` quyết định số retry queues được tạo. Khi không override, các retry queue dùng default TTL `5000`, `30000`, `120000` ms. `retry.intervalMs` chỉ dùng khi muốn mọi retry queue dùng cùng một TTL custom.
+## Endpoint Gap Batch Additions
+
+### PATCH `/notifications/mark-all-read`
+
+Marks all unread notifications of the current user as read and emits the websocket unread-count update.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
+
+Response:
+
+```json
+{
+  "updated": 3
+}
+```
+
+### GET `/notifications/preferences/me`
+
+Returns current user notification preferences. If no row exists, service creates a default preference row.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
+
+### PATCH `/notifications/preferences/me`
+
+Updates current user notification preferences.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`, `STUDENT`
+
+```json
+{
+  "inAppEnabled": true,
+  "emailEnabled": true,
+  "pushEnabled": false,
+  "smsEnabled": false,
+  "studyReminderEnabled": true,
+  "examReminderEnabled": true,
+  "courseUpdateEnabled": true,
+  "academicWarningEnabled": true
+}
+```

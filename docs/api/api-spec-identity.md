@@ -660,3 +660,30 @@ Client backend cần có:
 `POST /logout` stores the access token `jti` in Redis until the JWT expires. `identity-service` has a global `TokenBlacklistGuard`, so protected identity/admin APIs reject a logged-out access token with `401`.
 
 Kong still validates JWT signature/expiry. Redis blacklist enforcement is service-side and must be enabled in each service that needs immediate revocation beyond identity APIs.
+## Endpoint Gap Batch Additions
+
+### POST `/auth/change-password`
+
+Authenticated user changes their own password. Backend verifies the current password against Keycloak before resetting the credential.
+
+**Auth:** any logged-in user.
+
+```json
+{
+  "currentPassword": "old-password",
+  "newPassword": "new-password"
+}
+```
+
+### POST `/auth/reset-password`
+
+Admin/center-manager credential reset wrapper over Keycloak. This is not the public forgot-password token callback; the production self-service flow still starts with `POST /auth/forgot-password`, which sends a Keycloak reset email/action link.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+```json
+{
+  "userId": "keycloak-user-id",
+  "newPassword": "new-password"
+}
+```

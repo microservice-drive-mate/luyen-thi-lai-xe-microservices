@@ -11,6 +11,7 @@ import { IdentityEventPublisherPort } from './application/ports/identity-event-p
 import { IdentityProviderPort } from './application/ports/identity-provider.port';
 import { TokenBlacklistPort } from './application/ports/token-blacklist.port';
 import { ChangeUserRoleUseCase } from './application/use-cases/change-user-role/change-user-role.use-case';
+import { ChangePasswordUseCase } from './application/use-cases/change-password/change-password.use-case';
 import { CreateIdentityUserUseCase } from './application/use-cases/create-identity-user/create-identity-user.use-case';
 import { DeleteIdentityUserUseCase } from './application/use-cases/delete-identity-user/delete-identity-user.use-case';
 import { ForgotPasswordUseCase } from './application/use-cases/forgot-password/forgot-password.use-case';
@@ -20,6 +21,7 @@ import { LoginUseCase } from './application/use-cases/login/login.use-case';
 import { LockUserUseCase } from './application/use-cases/lock-user/lock-user.use-case';
 import { LogoutUseCase } from './application/use-cases/logout/logout.use-case';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token/refresh-token.use-case';
+import { ResetPasswordUseCase } from './application/use-cases/reset-password/reset-password.use-case';
 import { UpdateIdentityUserUseCase } from './application/use-cases/update-identity-user/update-identity-user.use-case';
 import { IdentityUserRepository } from './domain/repositories/identity-user.repository';
 import { KeycloakAdminService } from './infrastructure/keycloak-admin/keycloak-admin.service';
@@ -92,6 +94,8 @@ import { AuthController } from './presentation/http/auth.controller';
     LogoutUseCase,
     RefreshTokenUseCase,
     ForgotPasswordUseCase,
+    ResetPasswordUseCase,
+    ChangePasswordUseCase,
     CreateIdentityUserUseCase,
     ListIdentityUsersUseCase,
     GetIdentityUserUseCase,

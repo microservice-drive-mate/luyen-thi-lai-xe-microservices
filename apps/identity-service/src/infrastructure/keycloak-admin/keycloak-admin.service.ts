@@ -334,6 +334,47 @@ export class KeycloakAdminService extends IdentityProviderPort {
     }
   }
 
+  async resetPassword(
+    userId: string,
+    newPassword: string,
+    temporary = false,
+  ): Promise<void> {
+    const token = await this.getAdminToken();
+    const url = `${this.adminBaseUrl}/users/${userId}/reset-password`;
+
+    try {
+      await lastValueFrom(
+        this.httpService.put(
+          url,
+          {
+            type: 'password',
+            value: newPassword,
+            temporary,
+          },
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      );
+      this.logger.log(`Reset password for user ${userId}`);
+    } catch (error) {
+      this.handleKeycloakError(error, 'resetPassword');
+    }
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.getUser(userId);
+    const username = user.email ?? user.username;
+    if (!username) {
+      throw new BadRequestException('User does not have a login email');
+    }
+
+    await this.login(username, currentPassword);
+    await this.resetPassword(userId, newPassword, false);
+  }
+
   private get adminBaseUrl(): string {
     const authServerUrl = this.configService.getOrThrow<string>(
       'keycloak.authServerUrl',

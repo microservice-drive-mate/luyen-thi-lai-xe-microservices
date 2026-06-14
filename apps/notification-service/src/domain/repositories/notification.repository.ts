@@ -55,6 +55,8 @@ export abstract class NotificationRepository {
 
   abstract countUnreadByUser(userId: string): Promise<number>;
 
+  abstract markAllReadByUser(userId: string): Promise<number>;
+
   abstract saveNotificationReadState(
     notification: Notification,
   ): Promise<NotificationRecord>;

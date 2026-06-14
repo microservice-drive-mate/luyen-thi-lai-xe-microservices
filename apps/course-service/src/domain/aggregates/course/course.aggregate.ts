@@ -305,6 +305,18 @@ export class Course extends AggregateRoot<string> {
     lesson.update(props);
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   removeLesson(lessonId: string): void {
@@ -339,6 +351,18 @@ export class Course extends AggregateRoot<string> {
     );
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   removeInstructor(instructorId: string): void {
@@ -347,6 +371,18 @@ export class Course extends AggregateRoot<string> {
     );
     this._version += 1;
     this._updatedAt = new Date();
+    this.addDomainEvent(
+      new CourseUpdatedEvent(
+        this.id,
+        this.title,
+        this.licenseCategory,
+        this.status,
+        this.isDeleted,
+        this.instructorIds,
+        this.capacity,
+        this.totalLessons,
+      ),
+    );
   }
 
   setRequirements(props: CreateRequirementProps): void {

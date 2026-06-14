@@ -15,15 +15,23 @@ import { ListNotificationsQuery } from '../../application/use-cases/list-notific
 import { ListNotificationsUseCase } from '../../application/use-cases/list-notifications/list-notifications.use-case';
 import { MarkNotificationReadCommand } from '../../application/use-cases/mark-notification-read/mark-notification-read.command';
 import { MarkNotificationReadUseCase } from '../../application/use-cases/mark-notification-read/mark-notification-read.use-case';
+import { GetNotificationPreferencesUseCase } from '../../application/use-cases/get-notification-preferences/get-notification-preferences.use-case';
+import { MarkAllNotificationsReadCommand } from '../../application/use-cases/mark-all-notifications-read/mark-all-notifications-read.command';
+import { MarkAllNotificationsReadUseCase } from '../../application/use-cases/mark-all-notifications-read/mark-all-notifications-read.use-case';
 import { QueueAcademicWarningsCommand } from '../../application/use-cases/queue-academic-warnings/queue-academic-warnings.command';
 import { QueueAcademicWarningsUseCase } from '../../application/use-cases/queue-academic-warnings/queue-academic-warnings.use-case';
+import { UpdateNotificationPreferencesCommand } from '../../application/use-cases/update-notification-preferences/update-notification-preferences.command';
+import { UpdateNotificationPreferencesUseCase } from '../../application/use-cases/update-notification-preferences/update-notification-preferences.use-case';
 import { NotificationType } from '../../domain/repositories/notification.repository';
 import {
   AcademicWarningAcceptedResponseDto,
   ListNotificationsQueryDto,
   ListNotificationsResponseDto,
+  MarkAllNotificationsReadResponseDto,
   NotificationResponseDto,
+  NotificationPreferencesResponseDto,
   SendAcademicWarningRequestDto,
+  UpdateNotificationPreferencesRequestDto,
 } from '../dtos/notification.dtos';
 
 interface JwtPayload {
@@ -37,6 +45,9 @@ export class NotificationController {
   constructor(
     private readonly listNotificationsUseCase: ListNotificationsUseCase,
     private readonly markNotificationReadUseCase: MarkNotificationReadUseCase,
+    private readonly markAllNotificationsReadUseCase: MarkAllNotificationsReadUseCase,
+    private readonly getNotificationPreferencesUseCase: GetNotificationPreferencesUseCase,
+    private readonly updateNotificationPreferencesUseCase: UpdateNotificationPreferencesUseCase,
     private readonly queueAcademicWarningsUseCase: QueueAcademicWarningsUseCase,
   ) {}
 
@@ -117,5 +128,68 @@ export class NotificationController {
       new MarkNotificationReadCommand(id, user.sub ?? ''),
     );
     return NotificationResponseDto.fromRecord(result);
+  }
+
+  @Patch('notifications/mark-all-read')
+  @Roles({
+    roles: [
+      'realm:ADMIN',
+      'realm:CENTER_MANAGER',
+      'realm:INSTRUCTOR',
+      'realm:STUDENT',
+    ],
+  })
+  @ApiOperation({ summary: 'Mark all current user notifications as read' })
+  async markAllRead(
+    @AuthenticatedUser() user: JwtPayload,
+  ): Promise<MarkAllNotificationsReadResponseDto> {
+    return this.markAllNotificationsReadUseCase.execute(
+      new MarkAllNotificationsReadCommand(user.sub ?? ''),
+    );
+  }
+
+  @Get('notifications/preferences/me')
+  @Roles({
+    roles: [
+      'realm:ADMIN',
+      'realm:CENTER_MANAGER',
+      'realm:INSTRUCTOR',
+      'realm:STUDENT',
+    ],
+  })
+  @ApiOperation({ summary: 'Get current user notification preferences' })
+  async getPreferences(
+    @AuthenticatedUser() user: JwtPayload,
+  ): Promise<NotificationPreferencesResponseDto> {
+    return this.getNotificationPreferencesUseCase.execute(user.sub ?? '');
+  }
+
+  @Patch('notifications/preferences/me')
+  @Roles({
+    roles: [
+      'realm:ADMIN',
+      'realm:CENTER_MANAGER',
+      'realm:INSTRUCTOR',
+      'realm:STUDENT',
+    ],
+  })
+  @ApiOperation({ summary: 'Update current user notification preferences' })
+  async updatePreferences(
+    @AuthenticatedUser() user: JwtPayload,
+    @Body() dto: UpdateNotificationPreferencesRequestDto,
+  ): Promise<NotificationPreferencesResponseDto> {
+    return this.updateNotificationPreferencesUseCase.execute(
+      new UpdateNotificationPreferencesCommand(
+        user.sub ?? '',
+        dto.inAppEnabled,
+        dto.emailEnabled,
+        dto.pushEnabled,
+        dto.smsEnabled,
+        dto.studyReminderEnabled,
+        dto.examReminderEnabled,
+        dto.courseUpdateEnabled,
+        dto.academicWarningEnabled,
+      ),
+    );
   }
 }

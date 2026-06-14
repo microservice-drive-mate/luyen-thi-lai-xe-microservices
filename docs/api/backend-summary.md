@@ -194,3 +194,16 @@ Course schedules are now managed by `course-service` and feed instructor analyti
 - `DELETE /admin/courses/:id/schedules/:scheduleId`
 
 Analytics consumes `course.created|updated|archived`, `course.schedule.created|updated|deleted`, `course.enrollment.*`, `course.lesson.completed`, and `exam.session.completed` to calculate active classes, total students, pass rate, teaching hours, weekly teaching trend, topic averages, class progress, and today's schedule.
+## Endpoint Gap Batch - 2026-06-13
+
+Implemented the filtered P1/P2 endpoint batch from `context/endpoint-iDrive.md`:
+
+- Identity password change/admin reset.
+- User document metadata with `mediaFileId`.
+- Course lesson detail/update, unenroll, and instructor assignment management.
+- Simulation session history/result.
+- Notification mark-all-read and preferences.
+- Analytics weak-topics and study-streak convenience endpoints.
+- Question public topics/practice/report with student-safe practice DTO.
+
+Exam pause/resume/timer/review/statistics endpoints remain intentionally out of scope for a later integrity-focused design.

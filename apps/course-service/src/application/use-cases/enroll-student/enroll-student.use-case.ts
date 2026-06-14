@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
 import { CourseEnrollment } from '../../../domain/aggregates/course-enrollment/course-enrollment.aggregate';
+import { EnrollmentStatus } from '../../../domain/aggregates/course-enrollment/course-enrollment.types';
 import { CourseStatus } from '../../../domain/aggregates/course/course.types';
 import { CourseCapacityExceededException } from '../../../domain/exceptions/course-capacity-exceeded.exception';
 import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
@@ -41,7 +42,7 @@ export class EnrollStudentUseCase
       command.studentId,
       command.courseId,
     );
-    if (existing)
+    if (existing && existing.status !== EnrollmentStatus.DROPPED)
       throw new EnrollmentAlreadyExistsException(
         command.studentId,
         command.courseId,
@@ -74,11 +75,18 @@ export class EnrollStudentUseCase
       }
     }
 
-    const enrollment = CourseEnrollment.create({
-      id: crypto.randomUUID(),
-      courseId: command.courseId,
-      studentId: command.studentId,
-    });
+    const enrollment =
+      existing && existing.status === EnrollmentStatus.DROPPED
+        ? existing
+        : CourseEnrollment.create({
+            id: crypto.randomUUID(),
+            courseId: command.courseId,
+            studentId: command.studentId,
+          });
+
+    if (existing && existing.status === EnrollmentStatus.DROPPED) {
+      enrollment.reactivate();
+    }
 
     await this.enrollmentRepository.save(enrollment);
     await this.courseCache.invalidateCourse(command.courseId);

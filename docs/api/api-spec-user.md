@@ -670,3 +670,27 @@ Media-service dùng event này để mark file `LINKED`.
 ### `user.student.license-assigned`
 
 Payload xem endpoint `PATCH /admin/users/:id/license-tier`.
+## User Documents
+
+User-service stores document metadata only. Frontend uploads file bytes through media-service first, completes the media direct upload if needed, then sends `mediaFileId` to user-service.
+
+### POST `/admin/users/:id/documents`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+```json
+{
+  "type": "ID_CARD_FRONT",
+  "mediaFileId": "media-file-id",
+  "title": "CCCD mat truoc",
+  "status": "PENDING"
+}
+```
+
+Document types: `ID_CARD_FRONT`, `ID_CARD_BACK`, `PORTRAIT`, `HEALTH_CERTIFICATE`, `OTHER`.
+
+### GET `/admin/users/:id/documents`
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+Returns the document metadata list for the selected user.

@@ -8,6 +8,7 @@ import { EventPublisher } from './application/ports/event-publisher.port';
 import { ActivateCourseUseCase } from './application/use-cases/activate-course/activate-course.use-case';
 import { AddCourseMaterialUseCase } from './application/use-cases/add-course-material/add-course-material.use-case';
 import { AddLessonUseCase } from './application/use-cases/add-lesson/add-lesson.use-case';
+import { AssignCourseInstructorUseCase } from './application/use-cases/assign-course-instructor/assign-course-instructor.use-case';
 import { CompleteLessonUseCase } from './application/use-cases/complete-lesson/complete-lesson.use-case';
 import { CreateCourseScheduleUseCase } from './application/use-cases/create-course-schedule/create-course-schedule.use-case';
 import { CreateCourseUseCase } from './application/use-cases/create-course/create-course.use-case';
@@ -16,14 +17,18 @@ import { DeleteCourseUseCase } from './application/use-cases/delete-course/delet
 import { EnrollStudentUseCase } from './application/use-cases/enroll-student/enroll-student.use-case';
 import { GetCourseUseCase } from './application/use-cases/get-course/get-course.use-case';
 import { GetEnrollmentUseCase } from './application/use-cases/get-enrollment/get-enrollment.use-case';
+import { GetLessonUseCase } from './application/use-cases/get-lesson/get-lesson.use-case';
 import { ListCoursesUseCase } from './application/use-cases/list-courses/list-courses.use-case';
 import { ListCourseSchedulesUseCase } from './application/use-cases/list-course-schedules/list-course-schedules.use-case';
 import { ListStudentEnrollmentsUseCase } from './application/use-cases/list-student-enrollments/list-student-enrollments.use-case';
 import { RemoveLessonUseCase } from './application/use-cases/remove-lesson/remove-lesson.use-case';
+import { RemoveCourseInstructorUseCase } from './application/use-cases/remove-course-instructor/remove-course-instructor.use-case';
 import { ResetEnrollmentProgressUseCase } from './application/use-cases/reset-enrollment-progress/reset-enrollment-progress.use-case';
 import { SyncStudentLicenseUseCase } from './application/use-cases/sync-student-license/sync-student-license.use-case';
+import { UnenrollStudentUseCase } from './application/use-cases/unenroll-student/unenroll-student.use-case';
 import { UpdateCourseScheduleUseCase } from './application/use-cases/update-course-schedule/update-course-schedule.use-case';
 import { UpdateCourseUseCase } from './application/use-cases/update-course/update-course.use-case';
+import { UpdateLessonUseCase } from './application/use-cases/update-lesson/update-lesson.use-case';
 import { CourseEnrollmentRepository } from './domain/repositories/course-enrollment.repository';
 import { CourseRepository } from './domain/repositories/course.repository';
 import { CourseScheduleRepository } from './domain/repositories/course-schedule.repository';
@@ -135,17 +140,22 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     ActivateCourseUseCase,
     AddLessonUseCase,
     RemoveLessonUseCase,
+    UpdateLessonUseCase,
     AddCourseMaterialUseCase,
+    AssignCourseInstructorUseCase,
+    RemoveCourseInstructorUseCase,
     CreateCourseScheduleUseCase,
     UpdateCourseScheduleUseCase,
     DeleteCourseScheduleUseCase,
     ListCourseSchedulesUseCase,
     GetCourseUseCase,
+    GetLessonUseCase,
     ListCoursesUseCase,
     DeleteCourseUseCase,
 
     // Enrollment use cases
     EnrollStudentUseCase,
+    UnenrollStudentUseCase,
     CompleteLessonUseCase,
     GetEnrollmentUseCase,
     ListStudentEnrollmentsUseCase,

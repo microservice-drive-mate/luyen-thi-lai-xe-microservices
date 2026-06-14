@@ -1072,3 +1072,64 @@ Same `Enrollment` shape as `GET /enrollments/:id`, with `progress = 0`, `status 
 `DELETE /admin/courses/:id` keeps the existing archive behavior for API compatibility and also records soft-delete metadata: `isDeleted`, `deletedAt`, `deletedBy`. Courses with active/non-dropped enrollments return `COURSE_HAS_ACTIVE_ENROLLMENTS` with HTTP 409.
 
 Course responses include `courseCode`, `version`, `isDeleted`, `deletedAt`, and `deletedBy`.
+
+## Endpoint Gap Batch Additions
+
+### GET `/courses/:id/lessons/:lessonId`
+
+Returns one lesson from a course. Use this when the frontend opens a specific lesson from the `lessons` array already returned by `GET /courses/:id`.
+
+**Auth:** `STUDENT`, `INSTRUCTOR`
+
+```json
+{
+  "id": "lesson-uuid",
+  "courseId": "course-uuid",
+  "title": "Bai 1",
+  "content": "Markdown/content",
+  "order": 1,
+  "createdAt": "2026-06-13T10:00:00.000Z"
+}
+```
+
+### PATCH `/admin/courses/:id/lessons/:lessonId`
+
+Updates a lesson and returns the full course response.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR`
+
+```json
+{
+  "title": "Bai 1 updated",
+  "content": "Updated content",
+  "order": 2
+}
+```
+
+### POST `/courses/:id/unenroll`
+
+Drops the current student's enrollment from a course.
+
+**Auth:** `STUDENT`
+
+Response is the normal enrollment response with `status = "DROPPED"`.
+
+If the same student enrolls the same course again later, course-service reactivates the existing dropped enrollment row instead of creating a second row. This keeps the database unique constraint on `(courseId, studentId)` intact while allowing the user-facing re-enroll flow.
+
+### POST `/admin/courses/:id/instructors`
+
+Assigns an instructor to a course and publishes `course.updated` for analytics projections.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+```json
+{
+  "instructorId": "instructor-user-id"
+}
+```
+
+### DELETE `/admin/courses/:id/instructors/:userId`
+
+Removes an instructor assignment from a course and publishes `course.updated`.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`

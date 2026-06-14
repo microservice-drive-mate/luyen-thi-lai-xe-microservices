@@ -651,3 +651,62 @@ Pool response có đáp án đúng để exam-service snapshot/grade nội bộ.
   "mediaFileId": "media-file-uuid"
 }
 ```
+
+## Public Practice Endpoints
+
+### GET `/questions/topics`
+
+Student-safe topic list for practice screens. Same query shape as `GET /admin/questions/topics`.
+
+**Auth:** `STUDENT`, `INSTRUCTOR`, `ADMIN`, `CENTER_MANAGER`
+
+### GET `/questions/practice`
+
+Returns active, non-deleted questions for practice. Query shape matches `GET /admin/questions`, but the response intentionally strips answer data:
+
+- no `options[].isCorrect`
+- no `isCritical`
+- no `explanation`
+- no `createdById` or versioning fields
+
+**Auth:** `STUDENT`
+
+```json
+{
+  "items": [
+    {
+      "id": "question-uuid",
+      "content": "Question text",
+      "type": "THEORY",
+      "licenseCategories": ["B2"],
+      "difficulty": "EASY",
+      "imageUrl": null,
+      "mediaFileId": null,
+      "topicId": "topic-uuid",
+      "options": [
+        {
+          "id": "option-uuid",
+          "content": "Option text",
+          "displayOrder": 1
+        }
+      ]
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "size": 20
+}
+```
+
+### POST `/questions/:id/report`
+
+Creates a pending report for a question.
+
+**Auth:** `STUDENT`
+
+```json
+{
+  "reason": "WRONG_ANSWER",
+  "message": "I think this question has an incorrect answer."
+}
+```

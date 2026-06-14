@@ -106,6 +106,13 @@ export class CourseEnrollment extends AggregateRoot<string> {
     this._status = EnrollmentStatus.DROPPED;
   }
 
+  reactivate(): void {
+    this._status = EnrollmentStatus.ACTIVE;
+    this._progress = 0;
+    this._completedAt = null;
+    this._enrolledAt = new Date();
+  }
+
   resetProgress(): void {
     this._status = EnrollmentStatus.ACTIVE;
     this._progress = 0;

@@ -4,8 +4,10 @@ import { ClientsModule } from '@nestjs/microservices';
 import { createRabbitMqClientOptions } from '@repo/common';
 import { EventPublisher } from './application/ports/event-publisher.port';
 import { AssignLicenseTierUseCase } from './application/use-cases/assign-license-tier/assign-license-tier.use-case';
+import { CreateUserDocumentUseCase } from './application/use-cases/create-user-document/create-user-document.use-case';
 import { CreateUserProfileUseCase } from './application/use-cases/create-user-profile/create-user-profile.use-case';
 import { GetUserProfileUseCase } from './application/use-cases/get-user-profile/get-user-profile.use-case';
+import { ListUserDocumentsUseCase } from './application/use-cases/list-user-documents/list-user-documents.use-case';
 import { ListUsersUseCase } from './application/use-cases/list-users/list-users.use-case';
 import { LockUserUseCase } from './application/use-cases/lock-user/lock-user.use-case';
 import { SyncUserIdentityUseCase } from './application/use-cases/sync-user-identity/sync-user-identity.use-case';
@@ -80,6 +82,8 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     ListUsersUseCase,
     LockUserUseCase,
     AssignLicenseTierUseCase,
+    CreateUserDocumentUseCase,
+    ListUserDocumentsUseCase,
     SyncUserIdentityUseCase,
     SyncUserRoleUseCase,
   ],

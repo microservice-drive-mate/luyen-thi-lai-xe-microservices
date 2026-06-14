@@ -15,6 +15,7 @@ import {
 import {
   ManeuverErrorRecord,
   ManeuverRecord,
+  SimulationSessionResultRecord,
   SimulationSessionRecord,
 } from '../../domain/repositories/simulation.repository';
 import {
@@ -171,6 +172,26 @@ export class SimulationSessionResponseDto {
     record: SimulationSessionRecord,
   ): SimulationSessionResponseDto {
     return Object.assign(new SimulationSessionResponseDto(), record);
+  }
+}
+
+export class SimulationAnswerResponseDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() sessionId!: string;
+  @ApiProperty() scenarioId!: string;
+  @ApiProperty({ nullable: true }) selectedOptionId!: string | null;
+  @ApiProperty({ nullable: true }) isCorrect!: boolean | null;
+  @ApiProperty() answeredAt!: Date;
+}
+
+export class SimulationSessionResultResponseDto extends SimulationSessionResponseDto {
+  @ApiProperty({ type: [SimulationAnswerResponseDto] })
+  answers!: SimulationAnswerResponseDto[];
+
+  static fromRecord(
+    record: SimulationSessionResultRecord,
+  ): SimulationSessionResultResponseDto {
+    return Object.assign(new SimulationSessionResultResponseDto(), record);
   }
 }
 

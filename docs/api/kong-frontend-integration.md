@@ -375,3 +375,15 @@ Authorization: Bearer <admin_access_token>
 ```
 
 The response is projection-based. After creating courses, schedules, enrollments, lessons, or exam attempts, allow the RabbitMQ consumers to project events before expecting dashboard numbers to change.
+## Endpoint Gap Batch Notes
+
+Frontend should call the newly added endpoints through Kong with the same service prefixes already used in this project:
+
+- Identity: `POST /identity-service/auth/change-password`; admin reset via `POST /identity-service/auth/reset-password`.
+- User documents: upload/complete file through media-service first, then `POST /user-service/admin/users/:id/documents` with `mediaFileId`.
+- Course: `GET /course-service/courses/:id/lessons/:lessonId`, `POST /course-service/courses/:id/unenroll`, and admin lesson/instructor mutations under `/course-service/admin/courses/...`.
+- Simulation: `GET /simulation-service/simulation/sessions` and `GET /simulation-service/simulation/sessions/:id/result`.
+- Notification preferences: `/notification-service/notifications/preferences/me`.
+- Question practice: `/question-service/questions/topics`, `/question-service/questions/practice`, `/question-service/questions/:id/report`.
+
+`GET /questions/practice` is the safe client endpoint. Do not use `POST /admin/questions/pool` directly from frontend because it includes answer data for exam-service.
