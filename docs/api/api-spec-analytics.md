@@ -489,3 +489,18 @@ Admin dashboard events are de-duplicated by `eventId` in `dashboard_processed_ev
 `GET /analytics/me/progress` remains owner-only: `studentId` is read only from JWT `sub`. The cache key is scoped as `analytics:progress:{studentId}:{licenseTier|default}` so progress can be separated by license tier when the claim is available.
 
 Projection still comes from analytics read-model tables. Weak topics are computed from `QuestionAccuracyTracker`; no realtime raw-log aggregation is performed on request path.
+## Student Convenience Endpoints
+
+### GET `/analytics/me/weak-topics`
+
+Returns the current student's weak topics from the existing progress dashboard projection.
+
+**Auth:** `STUDENT`
+
+### GET `/analytics/me/study-streak`
+
+Returns a lightweight study streak summary computed from the current 30-day progress trend.
+
+**Auth:** `STUDENT`
+
+The endpoint normalizes cached date strings and database `Date` values before returning `lastActivityDate`, so it should behave the same on Redis cache hit and miss.

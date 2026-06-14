@@ -140,6 +140,20 @@ export class PrismaNotificationRepository extends NotificationRepository {
     });
   }
 
+  async markAllReadByUser(userId: string): Promise<number> {
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        userId,
+        isRead: false,
+      },
+      data: {
+        isRead: true,
+        readAt: new Date(),
+      },
+    });
+    return result.count;
+  }
+
   async saveNotificationReadState(
     notification: Notification,
   ): Promise<NotificationRecord> {

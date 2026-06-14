@@ -23,6 +23,8 @@ import {
 import Joi from 'joi';
 import {
   GetManeuverUseCase,
+  GetSimulationSessionResultUseCase,
+  ListSimulationSessionsUseCase,
   ListManeuverErrorsUseCase,
   ListManeuversUseCase,
   SaveSimulationAnswerUseCase,
@@ -175,6 +177,8 @@ import { SimulationController } from './presentation/http/simulation.controller'
     StartSimulationSessionUseCase,
     SaveSimulationAnswerUseCase,
     SubmitSimulationSessionUseCase,
+    ListSimulationSessionsUseCase,
+    GetSimulationSessionResultUseCase,
     StartPractice2dSessionUseCase,
     IngestPractice2dTelemetryUseCase,
     EndPractice2dSessionUseCase,

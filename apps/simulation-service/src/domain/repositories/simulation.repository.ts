@@ -48,6 +48,19 @@ export interface SimulationSessionRecord {
   completedAt: Date | null;
 }
 
+export interface SimulationAnswerRecord {
+  id: string;
+  sessionId: string;
+  scenarioId: string;
+  selectedOptionId: string | null;
+  isCorrect: boolean | null;
+  answeredAt: Date;
+}
+
+export interface SimulationSessionResultRecord extends SimulationSessionRecord {
+  answers: SimulationAnswerRecord[];
+}
+
 export abstract class SimulationRepository {
   abstract listManeuvers(
     licenseCategory: LicenseCategory,
@@ -71,4 +84,9 @@ export abstract class SimulationRepository {
     sessionId: string,
     studentId: string,
   ): Promise<SimulationSessionRecord>;
+  abstract listSessions(studentId: string): Promise<SimulationSessionRecord[]>;
+  abstract getSessionResult(
+    sessionId: string,
+    studentId: string,
+  ): Promise<SimulationSessionResultRecord | null>;
 }

@@ -32,6 +32,20 @@ enum LicenseTier {
   F
 }
 
+enum UserDocumentType {
+  ID_CARD_FRONT
+  ID_CARD_BACK
+  PORTRAIT
+  HEALTH_CERTIFICATE
+  OTHER
+}
+
+enum UserDocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 model UserProfile {
   id          String    @id
   fullName    String
@@ -49,6 +63,7 @@ model UserProfile {
 
   studentDetail           StudentDetail?
   licenseAssignmentAudits LicenseAssignmentAudit[]
+  documents               UserDocument[]
 
   @@map("user_profiles")
   // ASR-PERF-02: pg_trgm GIN indexes for ILIKE-based user search across all searchable fields.
@@ -58,6 +73,23 @@ model UserProfile {
   @@index([fullName(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_user_profiles_fullname_trgm")
   @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_user_profiles_email_trgm")
   @@index([phoneNumber(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_user_profiles_phone_trgm")
+}
+
+model UserDocument {
+  id          String             @id @default(uuid())
+  userId      String
+  type        UserDocumentType
+  mediaFileId String
+  title       String?
+  status      UserDocumentStatus @default(PENDING)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([mediaFileId])
+  @@map("user_documents")
 }
 
 model StudentDetail {

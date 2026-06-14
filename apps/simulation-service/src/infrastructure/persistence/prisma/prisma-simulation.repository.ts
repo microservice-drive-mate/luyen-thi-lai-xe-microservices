@@ -11,6 +11,7 @@ import {
   ManeuverErrorRecord,
   ManeuverRecord,
   SimulationRepository,
+  SimulationSessionResultRecord,
   SimulationSessionRecord,
 } from '../../../domain/repositories/simulation.repository';
 import { PrismaService } from './prisma.service';
@@ -130,6 +131,24 @@ export class PrismaSimulationRepository extends SimulationRepository {
         isPassed: score >= 80,
         completedAt: new Date(),
       },
+    });
+  }
+
+  async listSessions(studentId: string): Promise<SimulationSessionRecord[]> {
+    return this.prisma.simulationSession.findMany({
+      where: { studentId },
+      orderBy: { startedAt: 'desc' },
+      take: 50,
+    });
+  }
+
+  async getSessionResult(
+    sessionId: string,
+    studentId: string,
+  ): Promise<SimulationSessionResultRecord | null> {
+    return this.prisma.simulationSession.findFirst({
+      where: { id: sessionId, studentId },
+      include: { answers: { orderBy: { answeredAt: 'asc' } } },
     });
   }
 }

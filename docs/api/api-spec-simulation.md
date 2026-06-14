@@ -670,3 +670,16 @@ Retrieves a detailed summary of a 2D practice session including all feedback eve
 ### Maneuver Metadata
 
 `ManeuverCheckpoint` supports coordinates `x`, `y` and `visualColor`. `ManeuverError` supports `pointsDeducted`, `isFatal`, `isGeneral`, `isActive`, `visualColor`, and `icon`; `GET /simulation/maneuver-errors` returns active general errors only.
+## Endpoint Gap Batch Additions
+
+### GET `/simulation/sessions`
+
+Lists up to 50 recent simulation sessions for the current student.
+
+**Auth:** `STUDENT`
+
+### GET `/simulation/sessions/:id/result`
+
+Returns a simulation session summary plus saved answers for the current student. Result data is limited to fields persisted by simulation-service: `scenarioId`, `selectedOptionId`, `isCorrect`, and `answeredAt`.
+
+**Auth:** `STUDENT`
