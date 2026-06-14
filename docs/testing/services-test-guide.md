@@ -1,8 +1,23 @@
 # Services API Test Guide
 
-This is the master manual test guide for the backend services. Use it together with the per-service API specs in `docs/api/api-spec-*.md`.
+This is the master manual test guide for local/demo backend testing. Use it as the checklist, then open the per-service specs in `docs/api/api-spec-*.md` or Scalar when you need the full schema.
 
-For the interactive UI, open Scalar:
+## 1. Setup
+
+Start infra, migrate, seed, then run services:
+
+```powershell
+pnpm.cmd run infra:up
+pnpm.cmd run consul:seed:local
+pnpm.cmd run db:generate
+pnpm.cmd run db:deploy
+pnpm.cmd run db:seed
+pnpm.cmd run dev
+```
+
+If migrations drift in local demo DBs and you accept losing local data, reset the affected service DB, then seed again. Do not use reset on shared or production data.
+
+Open Scalar:
 
 ```text
 http://localhost:3009/docs
@@ -10,167 +25,252 @@ http://localhost:3009/docs
 
 Direct service docs:
 
-```text
-Identity:      http://localhost:3001/docs
-User:          http://localhost:3002/docs
-Exam:          http://localhost:3003/docs
-Course:        http://localhost:3004/docs
-Question:      http://localhost:3005/docs
-Notification:  http://localhost:3006/docs
-Analytics:     http://localhost:3007/docs
-Simulation:    http://localhost:3008/docs
-Media:         http://localhost:3010/docs
-Audit:         http://localhost:3011/docs
+| Service | Base URL | Scalar/Swagger |
+| --- | --- | --- |
+| identity-service | `http://localhost:3001` | `http://localhost:3001/docs` |
+| user-service | `http://localhost:3002` | `http://localhost:3002/docs` |
+| exam-service | `http://localhost:3003` | `http://localhost:3003/docs` |
+| course-service | `http://localhost:3004` | `http://localhost:3004/docs` |
+| question-service | `http://localhost:3005` | `http://localhost:3005/docs` |
+| notification-service | `http://localhost:3006` | `http://localhost:3006/docs` |
+| analytics-service | `http://localhost:3007` | `http://localhost:3007/docs` |
+| simulation-service | `http://localhost:3008` | `http://localhost:3008/docs` |
+| media-service | `http://localhost:3010` | `http://localhost:3010/docs` |
+| audit-service | `http://localhost:3011` | `http://localhost:3011/docs` |
+
+Kong public base is `http://localhost:8000`. In Scalar direct service mode use direct paths, for example `POST http://localhost:3001/login`. Through Kong use public paths such as `POST http://localhost:8000/auth/login`.
+
+## 2. Tokens
+
+Use seed accounts from `docs/testing/demo-seed-plan.md`, or create accounts through identity-service.
+
+Login in Scalar or curl:
+
+```http
+POST http://localhost:3001/login
+Content-Type: application/json
+
+{
+  "username": "student.b2@test.com",
+  "password": "Password@123"
+}
 ```
 
-## Setup
+Save `data.accessToken` as the bearer token. Repeat for admin, center manager, and instructor when testing role guards.
+
+Quick health check:
 
 ```powershell
-pnpm run infra:up
-pnpm run consul:seed:local
-pnpm run db:generate
-pnpm run db:deploy
-pnpm run db:seed
-pnpm run dev
+curl http://localhost:3001/health/ready
+curl http://localhost:3002/health/ready
+curl http://localhost:3003/health/ready
+curl http://localhost:3004/health/ready
+curl http://localhost:3005/health/ready
+curl http://localhost:3006/health/ready
+curl http://localhost:3007/health/ready
+curl http://localhost:3008/health/ready
+curl http://localhost:3010/health/ready
+curl http://localhost:3011/health/ready
 ```
 
-Use real Keycloak tokens in Scalar:
+## 3. Identity And Session Revocation
+
+Test normal auth:
+
+1. `POST /login` with username/password.
+2. `GET /private` with `Authorization: Bearer <accessToken>`.
+3. `POST /refresh` with `refreshToken`.
+4. `POST /logout` with both `Authorization` and `refreshToken`.
+5. Retry `GET /private` with the logged-out access token. Expected: `401`, token revoked.
+
+Password/session rules:
+
+| Action | Expected session behavior |
+| --- | --- |
+| `POST /logout` | Revokes the current refresh token and blacklists the current access token until expiry. Other devices stay logged in. |
+| `POST /forgot-password` | Sends/reset email flow only. It does not immediately revoke existing sessions. |
+| `POST /reset-password` | Admin/CENTER_MANAGER sets a new password and revokes all existing sessions for that user. |
+| `POST /change-password` | Current user changes password and all existing sessions for that user are revoked. Frontend should clear local tokens and redirect to login. |
+| `PATCH /admin/identity-users/:id/lock` | Lock revokes all sessions for that user. Unlock does not restore old tokens. |
+
+Two-device revocation test:
+
+1. Login the same user twice and keep `TOKEN_A` and `TOKEN_B`.
+2. Call `POST /change-password` using `TOKEN_A`.
+3. Call any protected endpoint using `TOKEN_A` and `TOKEN_B`.
+4. Expected: both old tokens fail with `401`.
+5. Login with the new password. Expected: new token works.
+
+Redis verification:
+
+```powershell
+docker exec -it luyen-thi-lai-xe-microservices-redis-1 redis-cli keys "auth:revoked-after:*"
+```
+
+Expected: a key exists for the user after change password, reset password, or lock.
+
+## 4. Media Direct Upload
+
+Production flow is hybrid: direct upload to Azure Blob for normal frontend usage, multipart server upload as fallback.
+
+Direct upload as frontend:
+
+1. Call backend init with JWT:
 
 ```http
-Authorization: Bearer <access_token>
-```
+POST http://localhost:3010/media/files/init
+Authorization: Bearer <token>
+Content-Type: application/json
 
-Do not send `x-user-id` from frontend or Scalar unless you are debugging an old local script. Services should resolve actor id from JWT `sub`.
-
-## Test Order
-
-Recommended order for full API verification:
-
-1. Identity and auth
-2. User profile and admin user management
-3. Media upload flow
-4. Question bank and practice APIs
-5. Exam template/session flow
-6. Course enrollment/progress flow
-7. Simulation flow
-8. Notification flow
-9. Analytics dashboards/progress
-10. Audit and observability checks
-
-## 1. Identity
-
-Scalar: `http://localhost:3001/docs`
-
-Smoke flow:
-
-1. `POST /auth/login`
-2. `POST /auth/refresh`
-3. `POST /auth/change-password`
-4. `POST /auth/forgot-password`
-5. Admin/center manager only: `POST /auth/reset-password`
-6. `POST /auth/logout`
-
-Notes:
-
-- `change-password` requires a logged-in user and verifies `currentPassword`.
-- `reset-password` is an admin/center-manager credential reset wrapper over Keycloak. It is not a public reset-token callback.
-- After `change-password`, all old tokens for that user should be rejected across protected services.
-- After admin `reset-password` or account lock, all old tokens for the target user should be rejected. Verify with a protected API in user-service, course-service, and media-service.
-- `forgot-password` only sends a reset email and should not revoke sessions immediately.
-
-## 2. User
-
-Scalar: `http://localhost:3002/docs`
-
-Core checks:
-
-1. `GET /users/me`
-2. `PATCH /users/me`
-3. `GET /admin/users`
-4. `GET /admin/users/:id`
-5. `PATCH /admin/users/:id`
-6. `PATCH /admin/users/:id/license-tier`
-7. `PATCH /admin/users/:id/lock`
-
-Document metadata flow:
-
-1. Upload or initialize/complete a file in media-service.
-2. Copy `mediaFileId`.
-3. Call:
-
-```http
-POST /admin/users/:id/documents
-```
-
-```json
 {
-  "type": "ID_CARD_FRONT",
-  "mediaFileId": "media-file-id",
+  "originalName": "avatar.png",
+  "mimeType": "image/png",
+  "fileSize": 12345
+}
+```
+
+2. Copy `data.uploadUrl`.
+3. PUT the file directly to Azure. Do not send `Authorization`.
+
+```javascript
+await fetch(uploadUrl, {
+  method: "PUT",
+  headers: {
+    "Content-Type": file.type,
+    "x-ms-blob-type": "BlockBlob"
+  },
+  body: file
+});
+```
+
+4. Confirm upload with backend:
+
+```http
+POST http://localhost:3010/media/files/{fileId}/complete
+Authorization: Bearer <token>
+```
+
+5. Attach `mediaFileId` to a business API, for example user document or course material.
+6. Render/download by calling:
+
+```http
+GET http://localhost:3010/media/files/{fileId}/url
+Authorization: Bearer <token>
+```
+
+Expected statuses:
+
+| Step | File status |
+| --- | --- |
+| init | `UNLINKED` |
+| complete | `UPLOADED` |
+| link event from user/course/question | `LINKED` |
+
+Fallback:
+
+```http
+POST http://localhost:3010/media/files
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+```
+
+Expected: still works for small/manual uploads.
+
+Azure CORS note: browser preflight for the PUT goes to Azure, not to media-service. If the frontend sees no `Access-Control-Allow-Origin` on the Azure URL, fix CORS on the Storage Account for the frontend origin.
+
+## 5. User Documents
+
+User-service stores document metadata only. Binary files stay in media-service/Azure.
+
+1. Upload through media flow and get `mediaFileId`.
+2. Attach document:
+
+```http
+POST http://localhost:3002/admin/users/{userId}/documents
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "type": "IDENTITY_CARD",
   "title": "CCCD mat truoc",
+  "mediaFileId": "{mediaFileId}",
   "status": "PENDING"
 }
 ```
 
-4. Verify:
+3. List documents:
 
 ```http
-GET /admin/users/:id/documents
+GET http://localhost:3002/admin/users/{userId}/documents
+Authorization: Bearer <admin_token>
 ```
 
-Expected: user-service stores metadata only; binary file stays in media-service/Azure.
+Expected: document row returns `type`, `title`, `mediaFileId`, `status`, timestamps.
 
-## 3. Media
+## 6. Course, Lessons, Schedules, Enrollment
 
-Scalar: `http://localhost:3010/docs`
+Admin/instructor course management:
 
-Small file fallback:
+```http
+POST /admin/courses
+GET /admin/courses
+GET /admin/courses/{id}
+PATCH /admin/courses/{id}
+PATCH /admin/courses/{id}/activate
+POST /admin/courses/{id}/lessons
+PATCH /admin/courses/{id}/lessons/{lessonId}
+DELETE /admin/courses/{id}/lessons/{lessonId}
+POST /admin/courses/{id}/materials
+POST /admin/courses/{id}/instructors
+DELETE /admin/courses/{id}/instructors/{userId}
+```
 
-1. `POST /media/files` with multipart form data.
-2. `GET /media/files/:id`
-3. `GET /media/files/:id/url`
+Schedule APIs for instructor dashboard:
 
-Direct Azure upload flow:
+```http
+GET /admin/courses/{id}/schedules
+POST /admin/courses/{id}/schedules
+PATCH /admin/courses/{id}/schedules/{scheduleId}
+DELETE /admin/courses/{id}/schedules/{scheduleId}
+```
 
-1. `POST /media/files/init`
-2. `PUT uploadUrl` directly to Azure Blob Storage.
-3. `POST /media/files/:id/complete`
-4. Attach `mediaFileId` to a business API.
-5. Render via `GET /media/files/:id/url`.
+Create schedule body:
 
-Important:
+```json
+{
+  "instructorId": "instructor-user-id",
+  "dayOfWeek": 1,
+  "startTime": "07:00",
+  "endTime": "09:00",
+  "room": "Phong 101",
+  "effectiveFrom": "2026-06-01",
+  "effectiveTo": null
+}
+```
 
-- Do not send JWT or `Authorization` when doing the direct `PUT uploadUrl` to Azure.
-- The Azure `PUT uploadUrl` step is not a backend API, so Scalar is mainly used for steps 1, 3, and 5.
+Student flow:
 
-## 4. Question
+```http
+GET /courses
+GET /courses/{courseId}
+GET /courses/{courseId}/lessons/{lessonId}
+POST /courses/{courseId}/enroll
+GET /enrollments
+GET /enrollments/{enrollmentId}
+POST /enrollments/{enrollmentId}/lessons/{lessonId}/complete
+POST /courses/{courseId}/unenroll
+```
 
-Scalar: `http://localhost:3005/docs`
+Re-enroll regression:
 
-Admin flow:
+1. Student enrolls in an active course.
+2. Student calls `POST /courses/{courseId}/unenroll`.
+3. Student calls `POST /courses/{courseId}/enroll` again.
+4. Expected: existing `DROPPED` enrollment is reactivated to `ACTIVE`, progress reset to `0`, no duplicate active enrollment.
 
-1. `GET /admin/questions/topics`
-2. `POST /admin/questions/topics`
-3. `POST /admin/questions`
-4. `GET /admin/questions`
-5. `PATCH /admin/questions/:id`
-6. `DELETE /admin/questions/:id`
-7. Internal/admin pool: `POST /admin/questions/pool`
+## 7. Question Seed, Practice, Reports
 
-Student practice flow:
-
-1. `GET /questions/topics`
-2. `GET /questions/practice`
-3. `POST /questions/:id/report`
-
-Safety check:
-
-`GET /questions/practice` must not return:
-
-- `options[].isCorrect`
-- `isCritical`
-- `explanation`
-
-Critical question seed verification:
+Seed expectations:
 
 ```sql
 SELECT count(*) FROM questions WHERE "isCritical" = true;
@@ -178,97 +278,166 @@ SELECT count(*) FROM questions WHERE "isCritical" = true;
 
 Expected: `60`.
 
-## 5. Exam
+Critical distribution by seeded topic ranges:
 
-Scalar: `http://localhost:3003/docs`
+| Topic | Expected critical count |
+| --- | ---: |
+| Topic 1 | 47 |
+| Topic 2 | 2 |
+| Topic 3 | 11 |
+| Topic 4 | 0 |
+| Topic 5 | 0 |
+| Topic 6 | 0 |
 
-Template flow:
+Student-safe practice APIs:
 
-1. `POST /admin/exams/templates`
-2. `GET /admin/exams/templates`
-3. `GET /admin/exams/templates/:id`
-4. `PATCH /admin/exams/templates/:id`
+```http
+GET http://localhost:3005/questions/topics
+Authorization: Bearer <token>
 
-Session flow:
+GET http://localhost:3005/questions/practice?licenseCategory=B2&page=1&size=10
+Authorization: Bearer <student_token>
 
-1. Login as student.
-2. `POST /exams/sessions`
-3. `GET /exams/sessions/:id`
-4. `PATCH /exams/sessions/:id/answers`
-5. `POST /exams/sessions/:id/submit`
-6. `GET /exams/sessions/:id/result`
+POST http://localhost:3005/questions/{questionId}/report
+Authorization: Bearer <student_token>
+Content-Type: application/json
 
-Template note:
+{
+  "reason": "WRONG_ANSWER",
+  "message": "Dap an/loi giai can kiem tra lai"
+}
+```
 
-If `criticalQuestions > 0`, `topicDistribution` must include at least one topic that has critical questions. In the seeded 600-question bank, critical questions only exist in seeded topic ranges 1, 2, and 3.
+Expected for `GET /questions/practice`: response must not expose `correctOptionId`, `options[].isCorrect`, or `isCritical`.
 
-## 6. Course
+## 8. Exam Template And Session Generation
 
-Scalar: `http://localhost:3004/docs`
+Template rules:
 
-Admin flow:
+- `sum(topicDistribution[].questionCount)` must equal `totalQuestions`.
+- If `criticalQuestions > 0`, distribution must include at least one topic with critical pool: topic 1, 2, or 3 in the current seed.
+- `maxCriticalMistakes` should stay `0` for official kill-question behavior.
 
-1. `POST /admin/courses`
-2. `POST /admin/courses/:id/lessons`
-3. `PATCH /admin/courses/:id/lessons/:lessonId`
-4. `POST /admin/courses/:id/materials`
-5. `POST /admin/courses/:id/instructors`
-6. `DELETE /admin/courses/:id/instructors/:userId`
-7. `POST /admin/courses/:id/schedules`
-8. `PATCH /admin/courses/:id/activate`
+B2 30-question example:
 
-Student flow:
+```json
+{
+  "name": "De thi B2 co ban",
+  "description": "De thi mo phong theo cau truc GPLX hang B2",
+  "licenseCategory": "B2",
+  "totalQuestions": 30,
+  "passingScore": 26,
+  "durationMinutes": 20,
+  "criticalQuestions": 1,
+  "maxCriticalMistakes": 0,
+  "shuffleQuestions": true,
+  "topicDistribution": [
+    { "topicId": "<topic-1-id>", "questionCount": 9 },
+    { "topicId": "<topic-2-id>", "questionCount": 1 },
+    { "topicId": "<topic-3-id>", "questionCount": 3 },
+    { "topicId": "<topic-4-id>", "questionCount": 8 },
+    { "topicId": "<topic-5-id>", "questionCount": 5 },
+    { "topicId": "<topic-6-id>", "questionCount": 4 }
+  ]
+}
+```
 
-1. `GET /courses`
-2. `GET /courses/:id`
-3. `GET /courses/:id/lessons/:lessonId`
-4. `POST /courses/:id/enroll`
-5. `GET /enrollments`
-6. `GET /enrollments/:id`
-7. `POST /enrollments/:id/lessons/:lessonId/complete`
-8. `POST /enrollments/:id/reset-progress`
-9. `POST /courses/:id/unenroll`
+Session test:
 
-Notes:
+```http
+POST http://localhost:3003/exams/sessions
+Authorization: Bearer <student_token>
+Content-Type: application/json
 
-- Separate lesson/material list endpoints are intentionally not required because `GET /courses/:id` and `GET /admin/courses/:id` already return `lessons` and `materials`.
-- Course schedules feed instructor dashboard analytics.
-- After `POST /courses/:id/unenroll`, calling `POST /courses/:id/enroll` again should work. The service reactivates the existing dropped enrollment because the database keeps one unique enrollment row per `courseId + studentId`.
+{
+  "templateId": "{templateId}"
+}
+```
 
-## 7. Simulation
+Expected: no `INSUFFICIENT_QUESTION_POOL` when question seed is present and the template distribution is valid.
 
-Scalar: `http://localhost:3008/docs`
+## 9. Analytics
 
-Simulation session flow:
+Student analytics:
 
-1. `GET /simulation/maneuvers`
-2. `GET /simulation/maneuver-errors`
-3. `POST /simulation/sessions`
-4. `PATCH /simulation/sessions/:id/answers`
-5. `POST /simulation/sessions/:id/submit`
-6. `GET /simulation/sessions`
-7. `GET /simulation/sessions/:id/result`
+```http
+GET http://localhost:3007/analytics/me/progress
+GET http://localhost:3007/analytics/me/weak-topics
+GET http://localhost:3007/analytics/me/study-streak
+Authorization: Bearer <student_token>
+```
 
-Practice 2D flow:
+Study-streak regression:
 
-1. `POST /simulation/practice2d/sessions`
-2. `POST /simulation/practice2d/sessions/:id/telemetry`
-3. `POST /simulation/practice2d/sessions/:id/end`
-4. `GET /simulation/practice2d/sessions/:id`
+1. Call `GET /analytics/me/study-streak` twice.
+2. Expected: both calls return `currentStreakDays`, `longestWindowDays`, and `lastActivityDate`.
+3. Expected: no `result.lastActivityAt.toISOString is not a function` error, including cache hit.
 
-## 8. Notification
+Cache check:
 
-Scalar: `http://localhost:3006/docs`
+```powershell
+docker exec -it luyen-thi-lai-xe-microservices-redis-1 redis-cli keys "analytics:progress:*"
+```
 
-User notification flow:
+After `POST /enrollments/{id}/reset-progress`, the student's analytics keys should be invalidated and rebuilt on next read.
 
-1. `GET /notifications/me`
-2. `PATCH /notifications/:id/read`
-3. `PATCH /notifications/mark-all-read`
-4. `GET /notifications/preferences/me`
-5. `PATCH /notifications/preferences/me`
+Admin dashboard:
 
-Preference body example:
+```http
+GET http://localhost:3007/admin/analytics/dashboard?month=2026-06
+Authorization: Bearer <admin_token>
+```
+
+Instructor dashboard:
+
+```http
+GET http://localhost:3007/analytics/instructor/dashboard?month=2026-06&weekStart=2026-06-08&date=2026-06-13
+Authorization: Bearer <instructor_token>
+
+GET http://localhost:3007/admin/analytics/instructors/{instructorId}/dashboard?month=2026-06&weekStart=2026-06-08&date=2026-06-13
+Authorization: Bearer <admin_token>
+```
+
+Expected instructor response sections:
+
+```text
+period
+summary.activeClassCount
+summary.totalStudents
+summary.passRate
+summary.teachingHoursThisMonth
+weeklyTeachingTrend
+topicAverages
+classProgress
+todaySchedule
+```
+
+Seed/projection checks:
+
+```sql
+SELECT count(*) FROM dashboard_user_projections;
+SELECT count(*) FROM dashboard_course_projections;
+SELECT count(*) FROM dashboard_exam_session_projections;
+SELECT count(*) FROM instructor_course_projections;
+SELECT count(*) FROM instructor_schedule_projections;
+SELECT count(*) FROM instructor_topic_attempt_projections;
+```
+
+Expected: all counts are greater than `0` after `pnpm.cmd run db:seed`.
+
+## 10. Notification
+
+Current user APIs:
+
+```http
+GET /notifications/me?page=1&size=20
+PATCH /notifications/{notificationId}/read
+PATCH /notifications/mark-all-read
+GET /notifications/preferences/me
+PATCH /notifications/preferences/me
+```
+
+Preference update body:
 
 ```json
 {
@@ -283,116 +452,129 @@ Preference body example:
 }
 ```
 
-Admin warning flow:
+Academic warning:
 
 ```http
 POST /admin/academic-warnings
+Authorization: Bearer <admin_or_instructor_token>
+Content-Type: application/json
+
+{
+  "studentIds": ["student-id"],
+  "deliveryChannels": ["IN_APP"],
+  "reason": "LOW_PROGRESS",
+  "severity": "MEDIUM",
+  "message": "Can cai thien tien do hoc tap"
+}
 ```
 
-Expected: request is accepted and delivery runs asynchronously.
+Expected: request returns `202 ACCEPTED`; notification delivery is asynchronous.
 
-## 9. Analytics
+## 11. Simulation
 
-Scalar: `http://localhost:3007/docs`
-
-Student endpoints:
-
-1. `GET /analytics/me/progress`
-2. `GET /analytics/me/weak-topics`
-3. `GET /analytics/me/study-streak`
-
-`GET /analytics/me/study-streak` should work on both cache miss and cache hit. Redis stores cached dates as JSON strings, so the endpoint normalizes `lastActivityAt` before returning `lastActivityDate`.
-
-Admin dashboard:
+Classic simulation:
 
 ```http
-GET /admin/analytics/dashboard?month=2026-06
+GET /simulation/maneuvers?licenseCategory=B2
+GET /simulation/maneuver-errors?licenseCategory=B2
+POST /simulation/sessions
+PATCH /simulation/sessions/{id}/answers
+POST /simulation/sessions/{id}/submit
+GET /simulation/sessions
+GET /simulation/sessions/{id}/result
 ```
 
-Instructor dashboard:
+Expected:
+
+- `GET /simulation/sessions` lists only the current student's sessions.
+- `GET /simulation/sessions/{id}/result` is owner-scoped.
+
+2D practice:
 
 ```http
-GET /analytics/instructor/dashboard?month=2026-06&weekStart=2026-06-08&date=2026-06-13
+POST /simulation/practice2d/sessions
+POST /simulation/practice2d/sessions/{id}/telemetry
+POST /simulation/practice2d/sessions/{id}/end
+GET /simulation/practice2d/sessions/{id}
 ```
 
-Admin view of instructor dashboard:
+Expected: unsupported client capabilities return `PRACTICE2D_UNSUPPORTED_CLIENT`; valid telemetry returns feedback/penalty summary.
+
+## 12. Audit And Observability
+
+Audit API:
 
 ```http
-GET /admin/analytics/instructors/:instructorId/dashboard?month=2026-06&weekStart=2026-06-08&date=2026-06-13
+GET http://localhost:3011/admin/audit-logs
+Authorization: Bearer <admin_token>
 ```
 
-If dashboard data looks empty, verify projections:
+Expected:
 
-```sql
-SELECT count(*) FROM dashboard_user_projections;
-SELECT count(*) FROM dashboard_course_projections;
-SELECT count(*) FROM instructor_course_projections;
-SELECT count(*) FROM instructor_schedule_projections;
-SELECT count(*) FROM instructor_topic_attempt_projections;
-```
+- Student token gets `403`.
+- Admin or center manager can list audit records.
+- Mutation endpoints such as course create/update, enrollment reset, exam template create/update/delete, password reset/change, and user lock produce audit events where implemented.
 
-Expected after `pnpm run db:seed`: counts are greater than zero.
+Access logging:
 
-## 10. Audit
+1. Call any service endpoint.
+2. Verify response has `x-correlation-id`.
+3. Search service logs or Kibana by correlation id.
+4. Expected: no raw password, token, storage key, or Authorization header in logs.
 
-Scalar: `http://localhost:3011/docs`
+## 13. DB Verify Commands
 
-Checks:
-
-1. Perform an audited mutation, for example:
-   - `PATCH /admin/users/:id/license-tier`
-   - `POST /admin/courses`
-   - `PATCH /admin/courses/:id/activate`
-   - `POST /admin/exams/templates`
-2. Query:
-
-```http
-GET /admin/audit-logs
-```
-
-3. Filter by `serviceName`, `action`, or `resourceId`.
-
-Producer outbox checks:
-
-```sql
-SELECT payload->>'action' AS action, status, attempts, "publishedAt", "lastError"
-FROM outbox_messages
-ORDER BY "createdAt" DESC
-LIMIT 10;
-```
-
-## Scalar Tips
-
-- Use the direct service Scalar URL when testing a single service.
-- Use docs-service Scalar (`http://localhost:3009/docs`) when you want one place to browse all services.
-- Use Kong paths when testing frontend-equivalent routing. Example:
-
-```text
-Direct: /questions/practice
-Kong:   /question-service/questions/practice
-```
-
-- Always set `Authorization: Bearer <token>` for protected endpoints.
-- For direct Azure Blob `PUT uploadUrl`, do not send `Authorization`.
-
-## Regression Checklist
-
-Run this after migrations and seed:
+Use host ports from the local Docker setup:
 
 ```powershell
-pnpm run db:generate
-pnpm run db:deploy
-pnpm run db:seed
-pnpm run smoke
+psql "postgresql://user:password@localhost:5433/user_db"
+psql "postgresql://user:password@localhost:5434/exam_db"
+psql "postgresql://user:password@localhost:5435/course_db"
+psql "postgresql://user:password@localhost:5436/question_db"
+psql "postgresql://user:password@localhost:5438/analytics_db"
+psql "postgresql://user:password@localhost:5441/audit_db"
 ```
 
-Then manually verify:
+Common checks:
 
-- Login/refresh/logout still works.
-- Media direct upload completes and signed URL renders.
-- Question practice does not leak answers.
-- Exam generation works with seeded critical questions.
-- Course enrollment/progress flow works.
-- Notification preferences persist.
-- Analytics student/admin/instructor dashboards return non-empty seeded demo data.
-- Audit logs appear for audited mutations.
+```sql
+-- question_db
+SELECT count(*) FROM questions;
+SELECT count(*) FROM questions WHERE "isCritical" = true;
+
+-- course_db
+SELECT count(*) FROM course_schedules;
+SELECT "studentId", "courseId", status, progress FROM course_enrollments LIMIT 10;
+
+-- analytics_db
+SELECT count(*) FROM instructor_schedule_projections;
+SELECT count(*) FROM instructor_topic_attempt_projections;
+
+-- user_db
+SELECT count(*) FROM user_documents;
+```
+
+## 14. Regression Checklist
+
+Before considering a branch ready:
+
+```powershell
+pnpm.cmd --filter @repo/common run build
+pnpm.cmd exec turbo run check-types
+pnpm.cmd exec turbo run test
+```
+
+Manual smoke checklist:
+
+- Login, refresh, logout work.
+- Change password/reset password/lock revoke old tokens across services.
+- Media direct upload completes and `GET /media/files/{id}/url` renders.
+- User document can attach a `mediaFileId`.
+- Student can unenroll then enroll the same course again.
+- `GET /analytics/me/study-streak` works on cache miss and cache hit.
+- Question practice payload does not leak answers or `isCritical`.
+- Exam template distribution sum equals `totalQuestions`.
+- B2 session generation no longer fails with `INSUFFICIENT_QUESTION_POOL` after question seed.
+- Admin dashboard and instructor dashboard return non-empty seeded demo data.
+- Notification preferences can be read/updated and mark-all-read works.
+- Simulation session history/result are owner-scoped.

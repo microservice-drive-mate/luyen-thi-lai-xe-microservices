@@ -1,138 +1,138 @@
 ﻿
 <!-- Merged from DEV-WORKFLOW-ELK.md -->
-# Quy trÃ¬nh lÃ m viá»‡c vá»›i ELK Stack cho Developer
+# Quy trình làm việc với ELK Stack cho Developer
 
-TÃ i liá»‡u nÃ y hÆ°á»›ng dáº«n chi tiáº¿t cÃ¡ch Ä‘á»™i ngÅ© phÃ¡t triá»ƒn (Dev Team) sá»­ dá»¥ng há»‡ thá»‘ng ELK Stack Ä‘á»ƒ theo dÃµi, debug vÃ  quáº£n lÃ½ log hiá»‡u quáº£ trong quÃ¡ trÃ¬nh phÃ¡t triá»ƒn Microservices.
+Tài liệu này hướng dẫn chi tiết cách đội ngũ phát triển (Dev Team) sử dụng hệ thống ELK Stack để theo dõi, debug và quản lý log hiệu quả trong quá trình phát triển Microservices.
 
 ---
 
-## 1. Äá»‹a chá»‰ truy cáº­p há»‡ thá»‘ng
+## 1. Địa chỉ truy cập hệ thống
 
-Há»‡ thá»‘ng Logging táº­p trung Ä‘Æ°á»£c quáº£n lÃ½ qua giao diá»‡n **Kibana**:
+Hệ thống Logging tập trung được quản lý qua giao diện **Kibana**:
 
 - **URL**: [http://localhost:5601](http://localhost:5601)
-- **Menu chÃ­nh**: Nháº¥n biá»ƒu tÆ°á»£ng 3 gáº¡ch ngang (gÃ³c trÃªn bÃªn trÃ¡i) -> **Analytics** -> **Discover**. ÄÃ¢y lÃ  nÆ¡i báº¡n sáº½ dÃ nh 90% thá»i gian Ä‘á»ƒ xem log.
+- **Menu chính**: Nhấn biểu tượng 3 gạch ngang (góc trên bên trái) -> **Analytics** -> **Discover**. Đây là nơi bạn sẽ dành 90% thời gian để xem log.
 
 ---
 
-## 2. TÃ¬m kiáº¿m vÃ  Lá»c Log (KQL - Kibana Query Language)
+## 2. Tìm kiếm và Lọc Log (KQL - Kibana Query Language)
 
-Táº¡i Ã´ tÃ¬m kiáº¿m á»Ÿ trÃªn cÃ¹ng, báº¡n hÃ£y sá»­ dá»¥ng cÃ¡c cÃ¢u lá»‡nh sau Ä‘á»ƒ lá»c dá»¯ liá»‡u nhanh chÃ³ng thay vÃ¬ Ä‘á»c báº±ng máº¯t:
+Tại ô tìm kiếm ở trên cùng, bạn hãy sử dụng các câu lệnh sau để lọc dữ liệu nhanh chóng thay vì đọc bằng mắt:
 
-### CÃ¡c vÃ­ dá»¥ tÃ¬m kiáº¿m thÃ´ng dá»¥ng:
+### Các ví dụ tìm kiếm thông dụng:
 
-| Má»¥c Ä‘Ã­ch                         | CÃ¢u lá»‡nh KQL                                             |
+| Mục đích                         | Câu lệnh KQL                                             |
 | :------------------------------- | :------------------------------------------------------- |
-| **Lá»c theo Service**             | `context : "Identity controller"`                        |
-| **Lá»c theo má»©c Ä‘á»™ (Level)**      | `level : "error"` hoáº·c `level : "warn"`                  |
-| **TÃ¬m lá»—i trong Service cá»¥ thá»ƒ** | `level : "error" AND context : "Identity controller"`    |
-| **TÃ¬m theo ná»™i dung tin nháº¯n**   | `message : "login"` (tÃ¬m cÃ¡c log cÃ³ chá»©a chá»¯ login)      |
-| **TÃ¬m theo dá»¯ liá»‡u cáº¥u trÃºc**    | `userId : 123` (Náº¿u báº¡n ghi log dáº¡ng object chá»©a userId) |
+| **Lọc theo Service**             | `context : "Identity controller"`                        |
+| **Lọc theo mức độ (Level)**      | `level : "error"` hoặc `level : "warn"`                  |
+| **Tìm lỗi trong Service cụ thể** | `level : "error" AND context : "Identity controller"`    |
+| **Tìm theo nội dung tin nhắn**   | `message : "login"` (tìm các log có chứa chữ login)      |
+| **Tìm theo dữ liệu cấu trúc**    | `userId : 123` (Nếu bạn ghi log dạng object chứa userId) |
 
-> **Máº¹o**: Sá»­ dá»¥ng dáº¥u `*` Ä‘á»ƒ tÃ¬m kiáº¿m tÆ°Æ¡ng Ä‘á»‘i, vÃ­ dá»¥ `message : *auth*` sáº½ tÃ¬m táº¥t cáº£ log cÃ³ tá»« "auth".
+> **Mẹo**: Sử dụng dấu `*` để tìm kiếm tương đối, ví dụ `message : *auth*` sẽ tìm tất cả log có từ "auth".
 
 ---
 
-## 3. Quy trÃ¬nh Debug lá»—i (Workflow)
+## 3. Quy trình Debug lỗi (Workflow)
 
-Khi má»™t tÃ­nh nÄƒng gáº·p lá»—i hoáº·c báº¡n muá»‘n kiá»ƒm tra luá»“ng dá»¯ liá»‡u, hÃ£y lÃ m theo cÃ¡c bÆ°á»›c sau:
+Khi một tính năng gặp lỗi hoặc bạn muốn kiểm tra luồng dữ liệu, hãy làm theo các bước sau:
 
-### BÆ°á»›c 1: Ghi log cÃ³ cáº¥u trÃºc trong Code
+### Bước 1: Ghi log có cấu trúc trong Code
 
-Thay vÃ¬ ghi log dáº¡ng text thuáº§n tÃºy, hÃ£y truyá»n thÃªm má»™t Object chá»©a cÃ¡c thÃ´ng tin quan trá»ng (ID, Request body, v.v.).
+Thay vì ghi log dạng text thuần túy, hãy truyền thêm một Object chứa các thông tin quan trọng (ID, Request body, v.v.).
 
 ```typescript
 this.logger.error({
-  message: "Lá»—i khi xá»­ lÃ½ Ä‘Äƒng nháº­p",
+  message: "Lỗi khi xử lý đăng nhập",
   userId: user.id,
   ip: request.ip,
   errorDetail: error.message,
 });
 ```
 
-### BÆ°á»›c 2: Thá»±c hiá»‡n hÃ nh Ä‘á»™ng trÃªn App
+### Bước 2: Thực hiện hành động trên App
 
-Cháº¡y API hoáº·c thao tÃ¡c trÃªn UI Ä‘á»ƒ kÃ­ch hoáº¡t dÃ²ng log Ä‘Ã³.
+Chạy API hoặc thao tác trên UI để kích hoạt dòng log đó.
 
-### BÆ°á»›c 3: Kiá»ƒm tra trÃªn Kibana Discover
+### Bước 3: Kiểm tra trên Kibana Discover
 
-- Nháº¥n **Refresh** (gÃ³c trÃªn bÃªn pháº£i).
-- TÃ¬m dÃ²ng log má»›i nháº¥t. Nháº¥n vÃ o biá»ƒu tÆ°á»£ng **má»Ÿ rá»™ng (>)** á»Ÿ Ä‘áº§u dÃ²ng log Ä‘á»ƒ xem toÃ n bá»™ dá»¯ liá»‡u dÆ°á»›i dáº¡ng JSON.
-- Kibana sáº½ tá»± Ä‘á»™ng tÃ¡ch `userId`, `ip`, `errorDetail` thÃ nh cÃ¡c trÆ°á»ng riÃªng biá»‡t Ä‘á»ƒ báº¡n dá»… nhÃ¬n.
-
----
-
-## 4. CÃ¡c quy táº¯c chung cho Team (Standardization)
-
-Äá»ƒ há»‡ thá»‘ng log thá»±c sá»± há»¯u Ã­ch, toÃ n bá»™ team cáº§n thá»‘ng nháº¥t cÃ¡c quy táº¯c sau:
-
-1. **Sá»­ dá»¥ng Logger chung**: Tuyá»‡t Ä‘á»‘i khÃ´ng dÃ¹ng `console.log()`. HÃ£y sá»­ dá»¥ng `private readonly logger = new Logger(ContextName.name)` cá»§a NestJS.
-2. **Chá»n Ä‘Ãºng Log Level**:
-   - `Error`: Há»‡ thá»‘ng gáº·p sá»± cá»‘ khÃ´ng thá»ƒ tiáº¿p tá»¥c (VD: Máº¥t káº¿t ná»‘i DB).
-   - `Warn`: Sá»± cá»‘ nháº¹, há»‡ thá»‘ng váº«n cháº¡y nhÆ°ng cáº§n lÆ°u Ã½ (VD: Sai máº­t kháº©u quÃ¡ nhiá»u láº§n).
-   - `Log/Info`: CÃ¡c sá»± kiá»‡n bÃ¬nh thÆ°á»ng (VD: Khá»Ÿi Ä‘á»™ng service thÃ nh cÃ´ng).
-   - `Debug`: CÃ¡c thÃ´ng tin chi tiáº¿t phá»¥c vá»¥ quÃ¡ trÃ¬nh phÃ¡t triá»ƒn (VD: Request payload).
-3. **Log Object thay vÃ¬ String**: ELK máº¡nh nháº¥t á»Ÿ kháº£ nÄƒng phÃ¢n tÃ­ch dá»¯ liá»‡u cáº¥u trÃºc. HÃ£y luÃ´n cá»‘ gáº¯ng log dÆ°á»›i dáº¡ng `{ message: string, data: object }`.
+- Nhấn **Refresh** (góc trên bên phải).
+- Tìm dòng log mới nhất. Nhấn vào biểu tượng **mở rộng (>)** ở đầu dòng log để xem toàn bộ dữ liệu dưới dạng JSON.
+- Kibana sẽ tự động tách `userId`, `ip`, `errorDetail` thành các trường riêng biệt để bạn dễ nhìn.
 
 ---
 
-## 5. Sá»­ dá»¥ng Dashboard (GiÃ¡m sÃ¡t tá»•ng quan)
+## 4. Các quy tắc chung cho Team (Standardization)
 
-NgoÃ i viá»‡c xem log chi tiáº¿t, báº¡n cÃ³ thá»ƒ vÃ o má»¥c **Dashboard** Ä‘á»ƒ:
+Để hệ thống log thực sự hữu ích, toàn bộ team cần thống nhất các quy tắc sau:
 
-- Theo dÃµi biá»ƒu Ä‘á»“ sá»‘ lÆ°á»£ng Request theo thá»i gian.
-- Xem tá»· lá»‡ pháº§n trÄƒm cÃ¡c lá»—i (Error vs Info).
-- Thá»‘ng kÃª cÃ¡c API bá»‹ gá»i lá»—i nhiá»u nháº¥t.
-
----
-
-## 6. LÆ°u Ã½ vá» tÃ i nguyÃªn (Resource)
-
-ELK Stack (Ä‘áº·c biá»‡t lÃ  Elasticsearch) tiÃªu tá»‘n khÃ¡ nhiá»u RAM.
-
-- **Náº¿u mÃ¡y bá»‹ lag**: HÃ£y táº¡m dá»«ng ELK báº±ng lá»‡nh `docker-compose stop elasticsearch logstash kibana`.
-- **Dá»n dáº¹p dá»¯ liá»‡u**: Äá»‹nh ká»³, Elasticsearch sáº½ táº¡o nhiá»u Index hÃ ng ngÃ y. Náº¿u á»• cá»©ng bá»‹ Ä‘áº§y, báº¡n cÃ³ thá»ƒ vÃ o **Stack Management** > **Index Management** Ä‘á»ƒ xÃ³a cÃ¡c index cÅ©.
+1. **Sử dụng Logger chung**: Tuyệt đối không dùng `console.log()`. Hãy sử dụng `private readonly logger = new Logger(ContextName.name)` của NestJS.
+2. **Chọn đúng Log Level**:
+   - `Error`: Hệ thống gặp sự cố không thể tiếp tục (VD: Mất kết nối DB).
+   - `Warn`: Sự cố nhẹ, hệ thống vẫn chạy nhưng cần lưu ý (VD: Sai mật khẩu quá nhiều lần).
+   - `Log/Info`: Các sự kiện bình thường (VD: Khởi động service thành công).
+   - `Debug`: Các thông tin chi tiết phục vụ quá trình phát triển (VD: Request payload).
+3. **Log Object thay vì String**: ELK mạnh nhất ở khả năng phân tích dữ liệu cấu trúc. Hãy luôn cố gắng log dưới dạng `{ message: string, data: object }`.
 
 ---
 
-_TÃ i liá»‡u nÃ y Ä‘Æ°á»£c táº¡o tá»± Ä‘á»™ng Ä‘á»ƒ há»— trá»£ quy trÃ¬nh phÃ¡t triá»ƒn dá»± Ã¡n._
+## 5. Sử dụng Dashboard (Giám sát tổng quan)
+
+Ngoài việc xem log chi tiết, bạn có thể vào mục **Dashboard** để:
+
+- Theo dõi biểu đồ số lượng Request theo thời gian.
+- Xem tỷ lệ phần trăm các lỗi (Error vs Info).
+- Thống kê các API bị gọi lỗi nhiều nhất.
+
+---
+
+## 6. Lưu ý về tài nguyên (Resource)
+
+ELK Stack (đặc biệt là Elasticsearch) tiêu tốn khá nhiều RAM.
+
+- **Nếu máy bị lag**: Hãy tạm dừng ELK bằng lệnh `docker-compose stop elasticsearch logstash kibana`.
+- **Dọn dẹp dữ liệu**: Định kỳ, Elasticsearch sẽ tạo nhiều Index hàng ngày. Nếu ổ cứng bị đầy, bạn có thể vào **Stack Management** > **Index Management** để xóa các index cũ.
+
+---
+
+_Tài liệu này được tạo tự động để hỗ trợ quy trình phát triển dự án._
 
 
 
 <!-- Merged from docs/devops/elk-logging-guide.md -->
-# Observability - Logging, ELK, Correlation ID, Metrics vÃ  Alerting
+# Observability - Logging, ELK, Correlation ID, Metrics và Alerting
 
-TÃ i liá»‡u nÃ y mÃ´ táº£ pháº§n logging táº­p trung báº±ng ELK, truy váº¿t request báº±ng Correlation ID, thu tháº­p metrics báº±ng Prometheus/Grafana, route cáº£nh bÃ¡o báº±ng Alertmanager vÃ  smoke test/runbook váº­n hÃ nh.
+Tài liệu này mô tả phần logging tập trung bằng ELK, truy vết request bằng Correlation ID, thu thập metrics bằng Prometheus/Grafana, route cảnh báo bằng Alertmanager và smoke test/runbook vận hành.
 
-## Má»¥c tiÃªu
+## Mục tiêu
 
-- CÃ¡c NestJS service dÃ¹ng `AppLoggerModule` tá»« `@repo/common`.
-- Log Ä‘Æ°á»£c enrich tá»‘i thiá»ƒu báº±ng `serviceName`, `environment`, `logType`, `timestamp`.
-- Access log cÃ³ thÃªm `correlationId`, `method`, `path`, `statusCode`, `latencyMs`, `actorId`, `ipAddress`, `userAgent`.
-- Logstash nháº­n log qua HTTP `5044`, parse JSON vÃ  Ä‘áº©y vÃ o Elasticsearch index `microservices-logs-*`.
-- Kibana dÃ¹ng Ä‘á»ƒ tÃ¬m log theo service, level, `logType` hoáº·c `correlationId`.
-- Kong nháº­n hoáº·c tá»± táº¡o `x-correlation-id`, forward xuá»‘ng service vÃ  echo láº¡i response.
-- Correlation ID Ä‘Æ°á»£c giá»¯ trong request context báº±ng `AsyncLocalStorage`, tá»± Ä‘i vÃ o application log vÃ  RabbitMQ event payload.
-- Má»—i service expose endpoint `/metrics` theo Ä‘á»‹nh dáº¡ng Prometheus.
-- Prometheus scrape CPU, RAM, request rate, tá»· lá»‡ lá»—i vÃ  latency tá»« cÃ¡c service.
-- Grafana tá»± provision datasource Prometheus vÃ  dashboard `Microservices Observability`.
-- Prometheus rule cáº£nh bÃ¡o khi service down, tá»· lá»‡ lá»—i 5xx cao, latency cao, CPU/RAM cao.
-- Alertmanager nháº­n cáº£nh bÃ¡o tá»« Prometheus, gom nhÃ³m vÃ  route tá»›i webhook váº­n hÃ nh.
-- CÃ³ script `npm run observability:smoke` Ä‘á»ƒ kiá»ƒm tra nhanh Prometheus, Alertmanager, Grafana, Elasticsearch, Kibana vÃ  endpoint metrics.
+- Các NestJS service dùng `AppLoggerModule` từ `@repo/common`.
+- Log được enrich tối thiểu bằng `serviceName`, `environment`, `logType`, `timestamp`.
+- Access log có thêm `correlationId`, `method`, `path`, `statusCode`, `latencyMs`, `actorId`, `ipAddress`, `userAgent`.
+- Logstash nhận log qua HTTP `5044`, parse JSON và đẩy vào Elasticsearch index `microservices-logs-*`.
+- Kibana dùng để tìm log theo service, level, `logType` hoặc `correlationId`.
+- Kong nhận hoặc tự tạo `x-correlation-id`, forward xuống service và echo lại response.
+- Correlation ID được giữ trong request context bằng `AsyncLocalStorage`, tự đi vào application log và RabbitMQ event payload.
+- Mỗi service expose endpoint `/metrics` theo định dạng Prometheus.
+- Prometheus scrape CPU, RAM, request rate, tỷ lệ lỗi và latency từ các service.
+- Grafana tự provision datasource Prometheus và dashboard `Microservices Observability`.
+- Prometheus rule cảnh báo khi service down, tỷ lệ lỗi 5xx cao, latency cao, CPU/RAM cao.
+- Alertmanager nhận cảnh báo từ Prometheus, gom nhóm và route tới webhook vận hành.
+- Có script `npm run observability:smoke` để kiểm tra nhanh Prometheus, Alertmanager, Grafana, Elasticsearch, Kibana và endpoint metrics.
 
-## ThÃ nh pháº§n
+## Thành phần
 
-| ThÃ nh pháº§n | Vai trÃ² | URL local |
+| Thành phần | Vai trò | URL local |
 | --- | --- | --- |
 | `AppLoggerModule` | Winston logger chung cho service | N/A |
-| `Logstash` | Nháº­n JSON log qua HTTP vÃ  forward sang Elasticsearch | `http://localhost:5044` |
-| `Elasticsearch` | LÆ°u log táº­p trung | `http://localhost:9200` |
-| `Kibana` | Truy váº¥n vÃ  visualize log | `http://localhost:5601` |
-| `Prometheus` | Thu tháº­p metrics tá»« `/metrics` cá»§a service | `http://localhost:9090` |
-| `Alertmanager` | Gom nhÃ³m, chá»‘ng trÃ¹ng láº·p vÃ  route cáº£nh bÃ¡o | `http://localhost:9093` |
-| `Grafana` | Dashboard metrics vÃ  tráº¡ng thÃ¡i cáº£nh bÃ¡o | `http://localhost:30000` |
+| `Logstash` | Nhận JSON log qua HTTP và forward sang Elasticsearch | `http://localhost:5044` |
+| `Elasticsearch` | Lưu log tập trung | `http://localhost:9200` |
+| `Kibana` | Truy vấn và visualize log | `http://localhost:5601` |
+| `Prometheus` | Thu thập metrics từ `/metrics` của service | `http://localhost:9090` |
+| `Alertmanager` | Gom nhóm, chống trùng lặp và route cảnh báo | `http://localhost:9093` |
+| `Grafana` | Dashboard metrics và trạng thái cảnh báo | `http://localhost:30000` |
 
-## Luá»“ng log
+## Luồng log
 
 ```text
 NestJS service
@@ -142,7 +142,7 @@ NestJS service
   -> Kibana Discover / Dashboard
 ```
 
-## Luá»“ng Correlation ID
+## Luồng Correlation ID
 
 ```text
 Client
@@ -152,40 +152,40 @@ Client
   -> AsyncLocalStorage context
   -> application log + access log + audit event
   -> RabbitMQ event payload correlationId
-  -> downstream service log cÃ¹ng correlationId
+  -> downstream service log cùng correlationId
 ```
 
-Quy táº¯c:
+Quy tắc:
 
-- Náº¿u client gá»­i `x-correlation-id`, há»‡ thá»‘ng giá»¯ nguyÃªn ID Ä‘Ã³.
-- Náº¿u client khÃ´ng gá»­i, Kong táº¡o ID má»›i vÃ  service fallback tá»± táº¡o ID náº¿u request khÃ´ng Ä‘i qua Kong.
-- Response luÃ´n cÃ³ header `x-correlation-id`.
-- Log trong cÃ¹ng HTTP request hoáº·c message handler cÃ³ cÃ¹ng `correlationId`.
-- Event publish qua RabbitMQ Ä‘Æ°á»£c enrich thÃªm field `correlationId` Ä‘á»ƒ service nháº­n cÃ³ thá»ƒ tiáº¿p tá»¥c trace.
+- Nếu client gửi `x-correlation-id`, hệ thống giữ nguyên ID đó.
+- Nếu client không gửi, Kong tạo ID mới và service fallback tự tạo ID nếu request không đi qua Kong.
+- Response luôn có header `x-correlation-id`.
+- Log trong cùng HTTP request hoặc message handler có cùng `correlationId`.
+- Event publish qua RabbitMQ được enrich thêm field `correlationId` để service nhận có thể tiếp tục trace.
 
-## Luá»“ng metrics
+## Luồng metrics
 
 ```text
 NestJS service
   -> MetricsModule / prom-client
   -> GET /metrics
-  -> Prometheus scrape má»—i 15 giÃ¢y
+  -> Prometheus scrape mỗi 15 giây
   -> Prometheus alert rules
   -> Alertmanager notification routing
   -> Grafana dashboard / Alertmanager UI
 ```
 
-Metrics chÃ­nh:
+Metrics chính:
 
-- `http_requests_total`: tá»•ng sá»‘ HTTP request theo `service`, `method`, `route`, `status_code`, `status_class`.
-- `http_request_duration_seconds`: histogram latency HTTP Ä‘á»ƒ tÃ­nh p95/p99.
+- `http_requests_total`: tổng số HTTP request theo `service`, `method`, `route`, `status_code`, `status_class`.
+- `http_request_duration_seconds`: histogram latency HTTP để tính p95/p99.
 - `nodejs_process_cpu_seconds_total`: CPU process Node.js.
 - `nodejs_process_resident_memory_bytes`: RAM process Node.js.
-- `up`: tráº¡ng thÃ¡i Prometheus scrape target.
+- `up`: trạng thái Prometheus scrape target.
 
-Endpoint `/metrics` khÃ´ng bá»‹ wrap bá»Ÿi `ApiResponseInterceptor` vÃ¬ Prometheus cáº§n plain text.
+Endpoint `/metrics` không bị wrap bởi `ApiResponseInterceptor` vì Prometheus cần plain text.
 
-## Cháº¡y local
+## Chạy local
 
 Hybrid mode:
 
@@ -194,7 +194,7 @@ npm.cmd run infra:up
 npm.cmd run dev
 ```
 
-`scripts/dev.ts` tá»± set:
+`scripts/dev.ts` tự set:
 
 ```text
 LOGSTASH_HOST=127.0.0.1
@@ -208,7 +208,7 @@ Full Docker mode:
 npm.cmd run docker:up
 ```
 
-CÃ¡c service cháº¡y trong Docker dÃ¹ng `LOGSTASH_HOST=logstash`.
+Các service chạy trong Docker dùng `LOGSTASH_HOST=logstash`.
 
 Prometheus/Grafana:
 
@@ -216,43 +216,43 @@ Prometheus/Grafana:
 Prometheus: http://localhost:9090
 Alertmanager: http://localhost:9093
 Grafana: http://localhost:30000
-Grafana máº·c Ä‘á»‹nh local: admin / admin
+Grafana mặc định local: admin / admin
 ```
 
 ## Verify nhanh
 
-Gá»­i má»™t request qua Kong:
+Gửi một request qua Kong:
 
 ```powershell
 $cid = "demo-observability-" + [guid]::NewGuid().ToString()
 curl.exe -H "x-correlation-id: $cid" http://localhost:8000/user-service/health/live
 ```
 
-Kiá»ƒm tra Elasticsearch:
+Kiểm tra Elasticsearch:
 
 ```powershell
 curl.exe "http://localhost:9200/microservices-logs-*/_search?q=correlationId:$cid&pretty"
 ```
 
-Má»Ÿ Kibana:
+Mở Kibana:
 
 ```text
 http://localhost:5601
 ```
 
-Táº¡o data view:
+Tạo data view:
 
 ```text
 microservices-logs-*
 ```
 
-TrÆ°á»ng thá»i gian:
+Trường thời gian:
 
 ```text
 @timestamp
 ```
 
-## Query há»¯u Ã­ch trong Kibana
+## Query hữu ích trong Kibana
 
 ```text
 serviceName: "user-service"
@@ -268,7 +268,7 @@ correlationId: "demo-observability-*"
 
 ## Verify Correlation ID
 
-Case 1: Client tá»± truyá»n Correlation ID.
+Case 1: Client tự truyền Correlation ID.
 
 ```powershell
 $cid = "correlation-" + [guid]::NewGuid().ToString()
@@ -276,86 +276,86 @@ curl.exe -i -H "x-correlation-id: $cid" http://localhost:8000/user-service/healt
 curl.exe "http://localhost:9200/microservices-logs-*/_search?q=correlationId:$cid&pretty"
 ```
 
-Ká»³ vá»ng:
+Kỳ vọng:
 
-- Response header cÃ³ `x-correlation-id` Ä‘Ãºng báº±ng `$cid`.
-- Elasticsearch cÃ³ access log vá»›i `correlationId=$cid`.
+- Response header có `x-correlation-id` đúng bằng `$cid`.
+- Elasticsearch có access log với `correlationId=$cid`.
 
-Case 2: Client khÃ´ng truyá»n Correlation ID.
+Case 2: Client không truyền Correlation ID.
 
 ```powershell
 curl.exe -i http://localhost:8000/user-service/health/live
 ```
 
-Ká»³ vá»ng:
+Kỳ vọng:
 
-- Kong hoáº·c service tá»± táº¡o `x-correlation-id`.
-- DÃ¹ng giÃ¡ trá»‹ header nÃ y Ä‘á»ƒ query trong Kibana/Elasticsearch.
+- Kong hoặc service tự tạo `x-correlation-id`.
+- Dùng giá trị header này để query trong Kibana/Elasticsearch.
 
-Case 3: Request táº¡o event RabbitMQ.
+Case 3: Request tạo event RabbitMQ.
 
 ```powershell
-# Gá»i má»™t API cÃ³ publish domain event, vÃ­ dá»¥ luá»“ng identity/user/course tÃ¹y dá»¯ liá»‡u local.
-# Sau Ä‘Ã³ query cÃ¹ng correlationId trong log cá»§a service publish vÃ  service consume.
+# Gọi một API có publish domain event, ví dụ luồng identity/user/course tùy dữ liệu local.
+# Sau đó query cùng correlationId trong log của service publish và service consume.
 ```
 
-Ká»³ vá»ng:
+Kỳ vọng:
 
-- Service publish log cÃ³ `correlationId`.
-- Service consume message cÅ©ng log cÃ¹ng `correlationId`.
+- Service publish log có `correlationId`.
+- Service consume message cũng log cùng `correlationId`.
 
 ## Verify Metrics
 
-Kiá»ƒm tra metrics endpoint cá»§a má»™t service:
+Kiểm tra metrics endpoint của một service:
 
 ```powershell
 curl.exe http://localhost:3002/metrics
 ```
 
-Ká»³ vá»ng:
+Kỳ vọng:
 
-- Response lÃ  Prometheus text format, khÃ´ng pháº£i JSON `{ success, code, data }`.
-- CÃ³ metric `http_requests_total`, `http_request_duration_seconds`, `nodejs_process_resident_memory_bytes`.
+- Response là Prometheus text format, không phải JSON `{ success, code, data }`.
+- Có metric `http_requests_total`, `http_request_duration_seconds`, `nodejs_process_resident_memory_bytes`.
 
-Kiá»ƒm tra Prometheus targets:
+Kiểm tra Prometheus targets:
 
 ```text
 http://localhost:9090/targets
 ```
 
-Ká»³ vá»ng:
+Kỳ vọng:
 
-- Hybrid dev mode dÃ¹ng targets `host.docker.internal:3001..3011`.
-- Full Docker/deploy dÃ¹ng targets `identity-service:3000`, `user-service:3000`, ...
-- Target cá»§a service Ä‘ang cháº¡y cÃ³ tráº¡ng thÃ¡i `UP`.
+- Hybrid dev mode dùng targets `host.docker.internal:3001..3011`.
+- Full Docker/deploy dùng targets `identity-service:3000`, `user-service:3000`, ...
+- Target của service đang chạy có trạng thái `UP`.
 
-Kiá»ƒm tra Prometheus alert rules:
+Kiểm tra Prometheus alert rules:
 
 ```text
 http://localhost:9090/alerts
 ```
 
-CÃ¡c rule Ä‘Ã£ cáº¥u hÃ¬nh:
+Các rule đã cấu hình:
 
-- `ServiceMetricsEndpointDown`: Prometheus khÃ´ng scrape Ä‘Æ°á»£c service quÃ¡ 2 phÃºt.
-- `HighHttp5xxRate`: tá»· lá»‡ HTTP 5xx cá»§a service vÆ°á»£t 5% trong 5 phÃºt.
-- `HighHttpLatencyP95`: p95 latency vÆ°á»£t 1 giÃ¢y trong 5 phÃºt.
-- `HighNodeMemoryUsage`: process memory vÆ°á»£t 80% host memory trong 5 phÃºt.
-- `HighNodeCpuUsage`: CPU process vÆ°á»£t 80% má»™t core trong 5 phÃºt.
+- `ServiceMetricsEndpointDown`: Prometheus không scrape được service quá 2 phút.
+- `HighHttp5xxRate`: tỷ lệ HTTP 5xx của service vượt 5% trong 5 phút.
+- `HighHttpLatencyP95`: p95 latency vượt 1 giây trong 5 phút.
+- `HighNodeMemoryUsage`: process memory vượt 80% host memory trong 5 phút.
+- `HighNodeCpuUsage`: CPU process vượt 80% một core trong 5 phút.
 
-Má»Ÿ Grafana:
+Mở Grafana:
 
 ```text
 http://localhost:30000
 ```
 
-Dashboard Ä‘Æ°á»£c provision sáºµn:
+Dashboard được provision sẵn:
 
 ```text
 Microservices / Microservices Observability
 ```
 
-CÃ¡c panel chÃ­nh:
+Các panel chính:
 
 - Services Up
 - Request Rate
@@ -367,53 +367,53 @@ CÃ¡c panel chÃ­nh:
 
 ## Verify Alerting
 
-Kiá»ƒm tra Prometheus Ä‘Ã£ káº¿t ná»‘i Alertmanager:
+Kiểm tra Prometheus đã kết nối Alertmanager:
 
 ```text
 http://localhost:9090/status
 ```
 
-Kiá»ƒm tra Alertmanager:
+Kiểm tra Alertmanager:
 
 ```text
 http://localhost:9093
 ```
 
-Ká»³ vá»ng:
+Kỳ vọng:
 
-- Alertmanager UI má»Ÿ Ä‘Æ°á»£c.
-- Prometheus cÃ³ alertmanager target `alertmanager:9093`.
-- Cáº£nh bÃ¡o firing trong Prometheus Ä‘Æ°á»£c gá»­i sang Alertmanager.
+- Alertmanager UI mở được.
+- Prometheus có alertmanager target `alertmanager:9093`.
+- Cảnh báo firing trong Prometheus được gửi sang Alertmanager.
 
-File cáº¥u hÃ¬nh:
+File cấu hình:
 
-- `docker/prometheus/alerts.yml`: rule cáº£nh bÃ¡o.
-- `docker/alertmanager/alertmanager.yml`: gom nhÃ³m, inhibit warning khi cÃ³ critical cÃ¹ng service vÃ  route tá»›i webhook.
+- `docker/prometheus/alerts.yml`: rule cảnh báo.
+- `docker/alertmanager/alertmanager.yml`: gom nhóm, inhibit warning khi có critical cùng service và route tới webhook.
 
-Webhook local máº·c Ä‘á»‹nh:
+Webhook local mặc định:
 
 ```text
 http://host.docker.internal:9099/alertmanager
 ```
 
-Khi triá»ƒn khai tháº­t, thay webhook nÃ y báº±ng Slack/Discord/Teams hoáº·c webhook ná»™i bá»™ cá»§a team.
+Khi triển khai thật, thay webhook này bằng Slack/Discord/Teams hoặc webhook nội bộ của team.
 
-## Verify Smoke Test vÃ  Runbook
+## Verify Smoke Test và Runbook
 
-Cháº¡y smoke test cho stack quan sÃ¡t:
+Chạy smoke test cho stack quan sát:
 
 ```powershell
 npm.cmd run observability:smoke
 ```
 
-Kiá»ƒm tra thÃªm metrics endpoint cá»§a service:
+Kiểm tra thêm metrics endpoint của service:
 
 ```powershell
 $env:OBS_SERVICE_METRICS_URLS = "http://localhost:3002/metrics,http://localhost:3004/metrics"
 npm.cmd run observability:smoke
 ```
 
-Runbook xá»­ lÃ½ sá»± cá»‘ náº±m á»Ÿ:
+Runbook xử lý sự cố nằm ở:
 
 ```text
 docs/devops/observability-runbook.md
@@ -421,7 +421,7 @@ docs/devops/observability-runbook.md
 
 ## Deploy staging/production
 
-`docker-compose.deploy.yml` Ä‘Ã£ cÃ³:
+`docker-compose.deploy.yml` đã có:
 
 - `elasticsearch`
 - `logstash`
@@ -433,9 +433,9 @@ docs/devops/observability-runbook.md
 - volume `prometheus_data`
 - volume `alertmanager_data`
 - volume `grafana_data`
-- biáº¿n logging dÃ¹ng chung cho service: `LOGSTASH_HOST=logstash`, `LOGSTASH_PORT=5044`, `LOG_CONSOLE_FORMAT=json`
+- biến logging dùng chung cho service: `LOGSTASH_HOST=logstash`, `LOGSTASH_PORT=5044`, `LOG_CONSOLE_FORMAT=json`
 
-CÃ¡c file env máº«u cÃ³ thá»ƒ chá»‰nh port public:
+Các file env mẫu có thể chỉnh port public:
 
 ```text
 ELASTICSEARCH_PORT=9200
@@ -449,52 +449,52 @@ GRAFANA_ADMIN_PASSWORD=change-me
 ES_JAVA_OPTS=-Xms512m -Xmx512m
 ```
 
-Trong production tháº­t, nÃªn giá»›i háº¡n public access tá»›i Elasticsearch, Logstash vÃ  Kibana báº±ng firewall/VPN/reverse proxy cÃ³ auth.
-Vá»›i Grafana/Prometheus cÅ©ng nÃªn giá»›i háº¡n public access tÆ°Æ¡ng tá»±; Ã­t nháº¥t Ä‘á»•i `GRAFANA_ADMIN_PASSWORD` trong file env tháº­t.
+Trong production thật, nên giới hạn public access tới Elasticsearch, Logstash và Kibana bằng firewall/VPN/reverse proxy có auth.
+Với Grafana/Prometheus cũng nên giới hạn public access tương tự; ít nhất đổi `GRAFANA_ADMIN_PASSWORD` trong file env thật.
 
-## Checklist Logging vÃ  ELK
+## Checklist Logging và ELK
 
-- `npm run infra:up` hoáº·c `npm run docker:up` khá»Ÿi Ä‘á»™ng Ä‘Æ°á»£c Elasticsearch, Logstash, Kibana.
-- Service gá»­i log JSON sang Logstash.
-- Elasticsearch cÃ³ index `microservices-logs-*`.
-- Kibana query Ä‘Æ°á»£c log theo `serviceName`.
-- Access log query Ä‘Æ°á»£c theo `correlationId`.
-- Deploy compose cÃ³ ELK vÃ  app services cÃ³ biáº¿n `LOGSTASH_HOST`.
+- `npm run infra:up` hoặc `npm run docker:up` khởi động được Elasticsearch, Logstash, Kibana.
+- Service gửi log JSON sang Logstash.
+- Elasticsearch có index `microservices-logs-*`.
+- Kibana query được log theo `serviceName`.
+- Access log query được theo `correlationId`.
+- Deploy compose có ELK và app services có biến `LOGSTASH_HOST`.
 
 ## Checklist Correlation ID
 
-- Kong config cÃ³ `correlation-id` plugin dÃ¹ng header `x-correlation-id`.
-- CORS cho phÃ©p request header vÃ  expose response header `x-correlation-id`.
-- `CorrelationIdMiddleware` gáº¯n ID vÃ o HTTP request/response.
-- `CorrelationIdInterceptor` táº¡o context cho HTTP vÃ  RabbitMQ message handlers.
-- `AppLoggerModule` tá»± enrich application log báº±ng correlation ID hiá»‡n táº¡i.
-- RabbitMQ event publisher enrich payload báº±ng `correlationId`.
-- Audit event fallback láº¥y correlation ID tá»« request context.
+- Kong config có `correlation-id` plugin dùng header `x-correlation-id`.
+- CORS cho phép request header và expose response header `x-correlation-id`.
+- `CorrelationIdMiddleware` gắn ID vào HTTP request/response.
+- `CorrelationIdInterceptor` tạo context cho HTTP và RabbitMQ message handlers.
+- `AppLoggerModule` tự enrich application log bằng correlation ID hiện tại.
+- RabbitMQ event publisher enrich payload bằng `correlationId`.
+- Audit event fallback lấy correlation ID từ request context.
 
-## Checklist Metrics vÃ  Dashboard
+## Checklist Metrics và Dashboard
 
-- `MetricsModule` Ä‘Æ°á»£c dÃ¹ng chung tá»« `@repo/common`.
-- Táº¥t cáº£ service expose endpoint `/metrics`.
-- `ApiResponseInterceptor` bá» qua `/metrics` Ä‘á»ƒ giá»¯ Prometheus text format.
-- Prometheus scrape Ä‘Æ°á»£c service metrics á»Ÿ hybrid mode vÃ  full Docker/deploy mode.
-- Prometheus cÃ³ alert rules cho service down, 5xx cao, latency cao, RAM cao, CPU cao.
-- Grafana tá»± provision Prometheus datasource.
-- Grafana tá»± provision dashboard `Microservices Observability`.
-- Deploy script upload Prometheus/Grafana config lÃªn server.
+- `MetricsModule` được dùng chung từ `@repo/common`.
+- Tất cả service expose endpoint `/metrics`.
+- `ApiResponseInterceptor` bỏ qua `/metrics` để giữ Prometheus text format.
+- Prometheus scrape được service metrics ở hybrid mode và full Docker/deploy mode.
+- Prometheus có alert rules cho service down, 5xx cao, latency cao, RAM cao, CPU cao.
+- Grafana tự provision Prometheus datasource.
+- Grafana tự provision dashboard `Microservices Observability`.
+- Deploy script upload Prometheus/Grafana config lên server.
 
 ## Checklist Alerting
 
-- Prometheus cÃ³ cáº¥u hÃ¬nh `alerting.alertmanagers`.
-- `alertmanager` cháº¡y trong hybrid, full Docker vÃ  deploy compose.
+- Prometheus có cấu hình `alerting.alertmanagers`.
+- `alertmanager` chạy trong hybrid, full Docker và deploy compose.
 - Deploy script upload `docker/alertmanager/alertmanager.yml`.
-- File env máº«u cÃ³ `ALERTMANAGER_PORT`.
-- Alertmanager cÃ³ route máº·c Ä‘á»‹nh vÃ  inhibit rule cÆ¡ báº£n Ä‘á»ƒ giáº£m nhiá»…u cáº£nh bÃ¡o.
+- File env mẫu có `ALERTMANAGER_PORT`.
+- Alertmanager có route mặc định và inhibit rule cơ bản để giảm nhiễu cảnh báo.
 
-## Checklist Smoke Test vÃ  Runbook
+## Checklist Smoke Test và Runbook
 
-- CÃ³ script `npm run observability:smoke`.
-- Smoke test kiá»ƒm tra Prometheus ready, alert rules, Alertmanager ready, Grafana health, Elasticsearch health vÃ  Kibana status.
-- Smoke test há»— trá»£ kiá»ƒm tra thÃªm URL `/metrics` qua biáº¿n `OBS_SERVICE_METRICS_URLS`.
-- CÃ³ runbook `docs/devops/observability-runbook.md` cho service down, 5xx cao, latency cao, CPU/RAM cao.
+- Có script `npm run observability:smoke`.
+- Smoke test kiểm tra Prometheus ready, alert rules, Alertmanager ready, Grafana health, Elasticsearch health và Kibana status.
+- Smoke test hỗ trợ kiểm tra thêm URL `/metrics` qua biến `OBS_SERVICE_METRICS_URLS`.
+- Có runbook `docs/devops/observability-runbook.md` cho service down, 5xx cao, latency cao, CPU/RAM cao.
 
 

@@ -1,18 +1,18 @@
 ﻿
 <!-- Merged from docs/devops/incident-management-process.md -->
-# Runbook xá»­ lÃ½ sá»± cá»‘
+# Runbook xử lý sự cố
 
-TÃ i liá»‡u nÃ y ghi cÃ¡c bÆ°á»›c xá»­ lÃ½ khi há»‡ thá»‘ng gáº·p sá»± cá»‘ váº­n hÃ nh.
+Tài liệu này ghi các bước xử lý khi hệ thống gặp sự cố vận hành.
 
-## NguyÃªn táº¯c chung
+## Nguyên tắc chung
 
-- XÃ¡c Ä‘á»‹nh pháº¡m vi áº£nh hÆ°á»Ÿng trÆ°á»›c khi restart hÃ ng loáº¡t.
-- Láº¥y `correlationId` tá»« response/log náº¿u lá»—i phÃ¡t sinh tá»« má»™t request cá»¥ thá»ƒ.
-- Kiá»ƒm tra health endpoint, container status, logs vÃ  metrics trÆ°á»›c khi thay Ä‘á»•i cáº¥u hÃ¬nh.
-- KhÃ´ng xÃ³a backup, DLQ hoáº·c log khi chÆ°a Ä‘iá»u tra xong.
-- Sau má»—i thao tÃ¡c kháº¯c phá»¥c, luÃ´n verify láº¡i báº±ng health check hoáº·c smoke test.
+- Xác định phạm vi ảnh hưởng trước khi restart hàng loạt.
+- Lấy `correlationId` từ response/log nếu lỗi phát sinh từ một request cụ thể.
+- Kiểm tra health endpoint, container status, logs và metrics trước khi thay đổi cấu hình.
+- Không xóa backup, DLQ hoặc log khi chưa điều tra xong.
+- Sau mỗi thao tác khắc phục, luôn verify lại bằng health check hoặc smoke test.
 
-## Lá»‡nh kiá»ƒm tra nhanh
+## Lệnh kiểm tra nhanh
 
 ```bash
 docker compose ps
@@ -23,15 +23,15 @@ npm run observability:smoke
 npm run rabbitmq:smoke
 ```
 
-## Service container bá»‹ sáº­p
+## Service container bị sập
 
-Dáº¥u hiá»‡u:
+Dấu hiệu:
 
-- `docker compose ps` tháº¥y service `Exited` hoáº·c restart liÃªn tá»¥c.
+- `docker compose ps` thấy service `Exited` hoặc restart liên tục.
 - Prometheus alert `ServiceMetricsEndpointDown`.
-- Kong tráº£ `502` hoáº·c `503`.
+- Kong trả `502` hoặc `503`.
 
-Xá»­ lÃ½:
+Xử lý:
 
 1. Xem log service:
 
@@ -39,8 +39,8 @@ Xá»­ lÃ½:
 docker compose logs --tail=200 <service>
 ```
 
-2. Kiá»ƒm tra phá»¥ thuá»™c chÃ­nh: DB, RabbitMQ, Consul, Keycloak.
-3. Náº¿u lá»—i do config, kiá»ƒm tra Consul key vÃ  biáº¿n mÃ´i trÆ°á»ng deploy.
+2. Kiểm tra phụ thuộc chính: DB, RabbitMQ, Consul, Keycloak.
+3. Nếu lỗi do config, kiểm tra Consul key và biến môi trường deploy.
 4. Restart service:
 
 ```bash
@@ -54,57 +54,57 @@ curl http://localhost:<port>/health/live
 curl http://localhost:<port>/health/ready
 ```
 
-## PostgreSQL bá»‹ sáº­p
+## PostgreSQL bị sập
 
-Dáº¥u hiá»‡u:
+Dấu hiệu:
 
-- Service log cÃ³ lá»—i connection refused hoáº·c timeout tá»›i DB.
-- Health check DB khÃ´ng healthy.
+- Service log có lỗi connection refused hoặc timeout tới DB.
+- Health check DB không healthy.
 
-Xá»­ lÃ½:
+Xử lý:
 
-1. Kiá»ƒm tra DB container:
+1. Kiểm tra DB container:
 
 ```bash
 docker compose ps db-user
 docker compose logs --tail=200 db-user
 ```
 
-2. Restart DB náº¿u container lá»—i:
+2. Restart DB nếu container lỗi:
 
 ```bash
 docker compose restart db-user
 ```
 
-3. Náº¿u volume há»ng hoáº·c máº¥t dá»¯ liá»‡u, dÃ¹ng backup gáº§n nháº¥t trong:
+3. Nếu volume hỏng hoặc mất dữ liệu, dùng backup gần nhất trong:
 
 ```text
 backups/postgres/<env>/<timestamp>/
 ```
 
-4. TrÆ°á»›c khi restore production, test file backup:
+4. Trước khi restore production, test file backup:
 
 ```bash
 RESTORE_TEST_BACKUP_FILE=<file.dump> npm run db:restore:test
 ```
 
-5. Sau restore, cháº¡y migration deploy náº¿u cáº§n:
+5. Sau restore, chạy migration deploy nếu cần:
 
 ```bash
 npm run db:deploy
 ```
 
-## Keycloak bá»‹ sáº­p
+## Keycloak bị sập
 
-Dáº¥u hiá»‡u:
+Dấu hiệu:
 
 - Login/token refresh fail.
-- Services bÃ¡o lá»—i validate JWT hoáº·c khÃ´ng gá»i Ä‘Æ°á»£c Keycloak.
-- `keycloak` container restart liÃªn tá»¥c.
+- Services báo lỗi validate JWT hoặc không gọi được Keycloak.
+- `keycloak` container restart liên tục.
 
-Xá»­ lÃ½:
+Xử lý:
 
-1. Kiá»ƒm tra Keycloak vÃ  DB:
+1. Kiểm tra Keycloak và DB:
 
 ```bash
 docker compose logs --tail=200 keycloak
@@ -117,87 +117,87 @@ docker compose logs --tail=200 db-keycloak
 curl http://localhost:8080/realms/luyen-thi-lai-xe-realm/.well-known/openid-configuration
 ```
 
-3. Náº¿u DB Keycloak lá»—i, dÃ¹ng backup `keycloak_*.dump`.
-4. Náº¿u cáº¥u hÃ¬nh realm bá»‹ sai, so sÃ¡nh vá»›i export:
+3. Nếu DB Keycloak lỗi, dùng backup `keycloak_*.dump`.
+4. Nếu cấu hình realm bị sai, so sánh với export:
 
 ```text
 backups/keycloak/<env>/<timestamp>/realm.json
 ```
 
-5. Sau khi khÃ´i phá»¥c, test login vÃ  gá»i API qua Kong.
+5. Sau khi khôi phục, test login và gọi API qua Kong.
 
-## RabbitMQ bá»‹ ngháº½n hoáº·c DLQ tÄƒng
+## RabbitMQ bị nghẽn hoặc DLQ tăng
 
-Dáº¥u hiá»‡u:
+Dấu hiệu:
 
 - Alert `RabbitMqDlqHasMessages`, `RabbitMqRetryBacklogHigh`.
-- Queue `.retry.*` hoáº·c `.dlq` tÄƒng trong Grafana.
-- Eventual consistency bá»‹ trá»….
+- Queue `.retry.*` hoặc `.dlq` tăng trong Grafana.
+- Eventual consistency bị trễ.
 
-Xá»­ lÃ½:
+Xử lý:
 
-1. Má»Ÿ RabbitMQ UI:
+1. Mở RabbitMQ UI:
 
 ```text
 http://localhost:15672
 ```
 
-2. Kiá»ƒm tra queue chÃ­nh, `.retry.*`, `.dlq`.
+2. Kiểm tra queue chính, `.retry.*`, `.dlq`.
 3. Xem message headers: `x-last-error`, `x-retry-count`, `x-correlation-id`.
-4. TÃ¬m log cÃ¹ng `correlationId` trong Kibana.
-5. Sá»­a lá»—i code/config/data trÆ°á»›c khi replay.
-6. Replay message tá»« DLQ vá» queue chÃ­nh náº¿u Ä‘Ã£ xá»­ lÃ½ nguyÃªn nhÃ¢n gá»‘c.
-7. KhÃ´ng purge DLQ náº¿u chÆ°a lÆ°u báº±ng chá»©ng sá»± cá»‘.
+4. Tìm log cùng `correlationId` trong Kibana.
+5. Sửa lỗi code/config/data trước khi replay.
+6. Replay message từ DLQ về queue chính nếu đã xử lý nguyên nhân gốc.
+7. Không purge DLQ nếu chưa lưu bằng chứng sự cố.
 
-## Consul bá»‹ sáº­p hoáº·c config sai
+## Consul bị sập hoặc config sai
 
-Dáº¥u hiá»‡u:
+Dấu hiệu:
 
-- Service khÃ´ng load Ä‘Æ°á»£c config.
-- Service dÃ¹ng fallback env/default khÃ´ng Ä‘Ãºng.
-- Consul UI khÃ´ng truy cáº­p Ä‘Æ°á»£c.
+- Service không load được config.
+- Service dùng fallback env/default không đúng.
+- Consul UI không truy cập được.
 
-Xá»­ lÃ½:
+Xử lý:
 
-1. Kiá»ƒm tra Consul:
+1. Kiểm tra Consul:
 
 ```bash
 docker compose logs --tail=200 consul
 curl http://localhost:8500/v1/status/leader
 ```
 
-2. Seed láº¡i config local náº¿u cáº§n:
+2. Seed lại config local nếu cần:
 
 ```bash
 npm run consul:seed:local
 ```
 
-3. Kiá»ƒm tra key:
+3. Kiểm tra key:
 
 ```bash
 npm run consul:list
 npm run consul:get <key>
 ```
 
-4. Restart service sau khi sá»­a config.
+4. Restart service sau khi sửa config.
 
-## Kong/API Gateway lá»—i
+## Kong/API Gateway lỗi
 
-Dáº¥u hiá»‡u:
+Dấu hiệu:
 
-- Client khÃ´ng truy cáº­p Ä‘Æ°á»£c API qua `8000`.
-- Kong tráº£ `404`, `502`, `503`.
+- Client không truy cập được API qua `8000`.
+- Kong trả `404`, `502`, `503`.
 
-Xá»­ lÃ½:
+Xử lý:
 
-1. Kiá»ƒm tra Kong:
+1. Kiểm tra Kong:
 
 ```bash
 docker compose logs --tail=200 kong
 docker compose logs --tail=200 kong-dev
 ```
 
-2. Kiá»ƒm tra declarative config:
+2. Kiểm tra declarative config:
 
 ```text
 kong/kong.yaml
@@ -210,26 +210,26 @@ kong/kong.dev.yaml
 docker compose restart kong
 ```
 
-4. Verify route báº±ng API health endpoint qua gateway.
+4. Verify route bằng API health endpoint qua gateway.
 
-## Observability stack lá»—i
+## Observability stack lỗi
 
-Dáº¥u hiá»‡u:
+Dấu hiệu:
 
-- KhÃ´ng tháº¥y log trong Kibana.
+- Không thấy log trong Kibana.
 - Prometheus target down.
-- Grafana khÃ´ng hiá»‡n dashboard.
-- Alertmanager khÃ´ng nháº­n alert.
+- Grafana không hiện dashboard.
+- Alertmanager không nhận alert.
 
-Xá»­ lÃ½:
+Xử lý:
 
-1. Cháº¡y smoke test:
+1. Chạy smoke test:
 
 ```bash
 npm run observability:smoke
 ```
 
-2. Kiá»ƒm tra logs:
+2. Kiểm tra logs:
 
 ```bash
 docker compose logs --tail=200 prometheus
@@ -250,169 +250,169 @@ http://localhost:9090/targets
 http://localhost:5601
 ```
 
-## Backup job lá»—i
+## Backup job lỗi
 
-Dáº¥u hiá»‡u:
+Dấu hiệu:
 
-- KhÃ´ng cÃ³ folder má»›i trong `backups/postgres` hoáº·c `backups/keycloak`.
-- `postgres-backup` hoáº·c `keycloak-backup` restart liÃªn tá»¥c.
+- Không có folder mới trong `backups/postgres` hoặc `backups/keycloak`.
+- `postgres-backup` hoặc `keycloak-backup` restart liên tục.
 
-Xá»­ lÃ½:
+Xử lý:
 
-1. Kiá»ƒm tra logs:
+1. Kiểm tra logs:
 
 ```bash
 docker compose logs --tail=200 postgres-backup
 docker compose logs --tail=200 keycloak-backup
 ```
 
-2. Cháº¡y one-shot Ä‘á»ƒ tÃ¡i hiá»‡n lá»—i:
+2. Chạy one-shot để tái hiện lỗi:
 
 ```bash
 npm run db:backup:once
 npm run keycloak:backup:once
 ```
 
-3. Kiá»ƒm tra quyá»n ghi thÆ° má»¥c `backups/`.
-4. Kiá»ƒm tra DB/Keycloak health.
-5. Sau khi cÃ³ backup má»›i, test restore:
+3. Kiểm tra quyền ghi thư mục `backups/`.
+4. Kiểm tra DB/Keycloak health.
+5. Sau khi có backup mới, test restore:
 
 ```bash
 npm run db:restore:test
 ```
 
-## Checklist sau sá»± cá»‘
+## Checklist sau sự cố
 
-- Ghi láº¡i thá»i Ä‘iá»ƒm báº¯t Ä‘áº§u/káº¿t thÃºc sá»± cá»‘.
-- Ghi root cause hoáº·c giáº£ thuyáº¿t root cause.
-- Ghi service bá»‹ áº£nh hÆ°á»Ÿng vÃ  má»©c Ä‘á»™ áº£nh hÆ°á»Ÿng.
-- Ghi cÃ¡c lá»‡nh Ä‘Ã£ cháº¡y Ä‘á»ƒ kháº¯c phá»¥c.
-- Ghi backup file náº¿u cÃ³ restore.
-- Ghi `correlationId` hoáº·c alert name liÃªn quan.
-- Táº¡o task follow-up náº¿u cáº§n sá»­a code/config lÃ¢u dÃ i.
+- Ghi lại thời điểm bắt đầu/kết thúc sự cố.
+- Ghi root cause hoặc giả thuyết root cause.
+- Ghi service bị ảnh hưởng và mức độ ảnh hưởng.
+- Ghi các lệnh đã chạy để khắc phục.
+- Ghi backup file nếu có restore.
+- Ghi `correlationId` hoặc alert name liên quan.
+- Tạo task follow-up nếu cần sửa code/config lâu dài.
 
 
 
 <!-- Merged from docs/devops/incident-management-process.md -->
-# Quy trÃ¬nh Incident vÃ  Postmortem
+# Quy trình Incident và Postmortem
 
-TÃ i liá»‡u nÃ y chuáº©n hÃ³a quy trÃ¬nh ghi nháº­n sá»± cá»‘ Ä‘á»ƒ bÃ¡o cÃ¡o DORA tÃ­nh Ä‘Æ°á»£c **MTTR** vÃ  **Change Failure Rate** Ä‘Ã¡ng tin hÆ¡n.
+Tài liệu này chuẩn hóa quy trình ghi nhận sự cố để báo cáo DORA tính được **MTTR** và **Change Failure Rate** đáng tin hơn.
 
-Dá»± Ã¡n Ä‘Ã£ cÃ³ script táº¡o DORA report. Quy trÃ¬nh incident/postmortem bá»• sung váº­n hÃ nh:
+Dự án đã có script tạo DORA report. Quy trình incident/postmortem bổ sung vận hành:
 
-- Khi nÃ o pháº£i táº¡o incident.
-- CÃ¡ch phÃ¢n loáº¡i severity.
-- Label chuáº©n Ä‘á»ƒ DORA script hiá»ƒu dá»¯ liá»‡u.
-- Khi nÃ o báº¯t buá»™c postmortem.
-- Checklist xá»­ lÃ½ vÃ  Ä‘Ã³ng incident.
+- Khi nào phải tạo incident.
+- Cách phân loại severity.
+- Label chuẩn để DORA script hiểu dữ liệu.
+- Khi nào bắt buộc postmortem.
+- Checklist xử lý và đóng incident.
 
-## 1. Khi nÃ o táº¡o incident
+## 1. Khi nào tạo incident
 
-Táº¡o GitHub issue báº±ng template `Incident report` khi cÃ³ má»™t trong cÃ¡c trÆ°á»ng há»£p sau:
+Tạo GitHub issue bằng template `Incident report` khi có một trong các trường hợp sau:
 
-- Production hoáº·c staging khÃ´ng truy cáº­p Ä‘Æ°á»£c qua Kong/Ingress.
-- Health check, smoke test hoáº·c rollout fail sau deploy.
-- Tá»· lá»‡ lá»—i 5xx tÄƒng báº¥t thÆ°á»ng.
-- Latency tÄƒng cao lÃ m áº£nh hÆ°á»Ÿng tráº£i nghiá»‡m ngÆ°á»i dÃ¹ng.
-- RabbitMQ retry/DLQ backlog tÄƒng vÃ  khÃ´ng tá»± há»“i phá»¥c.
-- Database, Keycloak, Consul, Redis hoáº·c RabbitMQ lá»—i lÃ m service chÃ­nh khÃ´ng hoáº¡t Ä‘á»™ng.
-- NgÆ°á»i dÃ¹ng hoáº·c giáº£ng viÃªn demo bÃ¡o lá»—i áº£nh hÆ°á»Ÿng luá»“ng chÃ­nh.
+- Production hoặc staging không truy cập được qua Kong/Ingress.
+- Health check, smoke test hoặc rollout fail sau deploy.
+- Tỷ lệ lỗi 5xx tăng bất thường.
+- Latency tăng cao làm ảnh hưởng trải nghiệm người dùng.
+- RabbitMQ retry/DLQ backlog tăng và không tự hồi phục.
+- Database, Keycloak, Consul, Redis hoặc RabbitMQ lỗi làm service chính không hoạt động.
+- Người dùng hoặc giảng viên demo báo lỗi ảnh hưởng luồng chính.
 
-KhÃ´ng cáº§n táº¡o incident cho lá»—i local cÃ¡ nhÃ¢n, lá»—i format/lint trong PR hoáº·c pipeline fail trÆ°á»›c khi deploy náº¿u khÃ´ng áº£nh hÆ°á»Ÿng staging/production.
+Không cần tạo incident cho lỗi local cá nhân, lỗi format/lint trong PR hoặc pipeline fail trước khi deploy nếu không ảnh hưởng staging/production.
 
-## 2. Severity chuáº©n
+## 2. Severity chuẩn
 
-| Severity | Khi dÃ¹ng | VÃ­ dá»¥ |
+| Severity | Khi dùng | Ví dụ |
 | --- | --- | --- |
-| `sev1` | Há»‡ thá»‘ng ngá»«ng phá»¥c vá»¥ hoáº·c máº¥t dá»¯ liá»‡u | Kong/GKE ingress down, user khÃ´ng thá»ƒ Ä‘Äƒng nháº­p toÃ n há»‡ thá»‘ng |
-| `sev2` | Chá»©c nÄƒng chÃ­nh lá»—i, áº£nh hÆ°á»Ÿng nhiá»u user | KhÃ´ng ná»™p Ä‘Æ°á»£c bÃ i thi, exam-service lá»—i 5xx diá»‡n rá»™ng |
-| `sev3` | Lá»—i cá»¥c bá»™ hoáº·c cÃ³ workaround | Má»™t endpoint admin lá»—i, retry queue tÄƒng nhÆ°ng há»‡ thá»‘ng váº«n phá»¥c vá»¥ |
-| `sev4` | Cáº£nh bÃ¡o hoáº·c lá»—i nhá» | Alert warning, dashboard thiáº¿u panel, log format chÆ°a chuáº©n |
+| `sev1` | Hệ thống ngừng phục vụ hoặc mất dữ liệu | Kong/GKE ingress down, user không thể đăng nhập toàn hệ thống |
+| `sev2` | Chức năng chính lỗi, ảnh hưởng nhiều user | Không nộp được bài thi, exam-service lỗi 5xx diện rộng |
+| `sev3` | Lỗi cục bộ hoặc có workaround | Một endpoint admin lỗi, retry queue tăng nhưng hệ thống vẫn phục vụ |
+| `sev4` | Cảnh báo hoặc lỗi nhỏ | Alert warning, dashboard thiếu panel, log format chưa chuẩn |
 
-Quy táº¯c:
+Quy tắc:
 
-- `sev1` vÃ  `sev2` báº¯t buá»™c cÃ³ postmortem.
-- `sev3` nÃªn cÃ³ postmortem náº¿u láº·p láº¡i nhiá»u láº§n hoáº·c liÃªn quan deploy.
-- `sev4` chá»‰ cáº§n ghi chÃº trong incident náº¿u khÃ´ng cÃ³ áº£nh hÆ°á»Ÿng tháº­t.
+- `sev1` và `sev2` bắt buộc có postmortem.
+- `sev3` nên có postmortem nếu lặp lại nhiều lần hoặc liên quan deploy.
+- `sev4` chỉ cần ghi chú trong incident nếu không có ảnh hưởng thật.
 
-## 3. Label chuáº©n
+## 3. Label chuẩn
 
-| Label | Ã nghÄ©a |
+| Label | Ý nghĩa |
 | --- | --- |
-| `incident` | Issue lÃ  incident, Ä‘Æ°á»£c dÃ¹ng Ä‘á»ƒ tÃ­nh MTTR |
-| `postmortem` | Issue lÃ  postmortem sau incident |
-| `production` | Incident xáº£y ra á»Ÿ production |
-| `staging` | Incident xáº£y ra á»Ÿ staging |
-| `local` | Incident tÃ¡i hiá»‡n á»Ÿ local/dev |
-| `sev1` | Sá»± cá»‘ nghiÃªm trá»ng nháº¥t |
-| `sev2` | Sá»± cá»‘ áº£nh hÆ°á»Ÿng chá»©c nÄƒng chÃ­nh |
-| `sev3` | Sá»± cá»‘ cá»¥c bá»™/cÃ³ workaround |
-| `sev4` | Cáº£nh bÃ¡o/lá»—i nhá» |
-| `change-failure` | Deploy thÃ nh cÃ´ng nhÆ°ng gÃ¢y lá»—i runtime |
+| `incident` | Issue là incident, được dùng để tính MTTR |
+| `postmortem` | Issue là postmortem sau incident |
+| `production` | Incident xảy ra ở production |
+| `staging` | Incident xảy ra ở staging |
+| `local` | Incident tái hiện ở local/dev |
+| `sev1` | Sự cố nghiêm trọng nhất |
+| `sev2` | Sự cố ảnh hưởng chức năng chính |
+| `sev3` | Sự cố cục bộ/có workaround |
+| `sev4` | Cảnh báo/lỗi nhỏ |
+| `change-failure` | Deploy thành công nhưng gây lỗi runtime |
 | `deploy-failure` | Deploy/smoke/health check fail |
-| `rollback` | Cáº§n rollback hoáº·c redeploy vá» tag cÅ© |
-| `needs-postmortem` | Incident cáº§n postmortem |
+| `rollback` | Cần rollback hoặc redeploy về tag cũ |
+| `needs-postmortem` | Incident cần postmortem |
 
-Workflow `.github/workflows/incident-labeler.yml` sáº½ tá»± thÃªm pháº§n lá»›n label dá»±a trÃªn ná»™i dung issue form. Náº¿u workflow khÃ´ng cháº¡y, ngÆ°á»i táº¡o issue gáº¯n label thá»§ cÃ´ng theo báº£ng trÃªn.
+Workflow `.github/workflows/incident-labeler.yml` sẽ tự thêm phần lớn label dựa trên nội dung issue form. Nếu workflow không chạy, người tạo issue gắn label thủ công theo bảng trên.
 
-## 4. Quy trÃ¬nh xá»­ lÃ½ incident
+## 4. Quy trình xử lý incident
 
-1. Táº¡o issue báº±ng template `Incident report`.
-2. Chá»n Ä‘Ãºng mÃ´i trÆ°á»ng vÃ  severity.
-3. Äiá»n thá»i Ä‘iá»ƒm phÃ¡t hiá»‡n theo ISO 8601 náº¿u cÃ³ thá»ƒ.
-4. Náº¿u liÃªn quan deploy, Ä‘iá»n Git SHA, image tag, workflow URL hoáº·c Jenkins build URL.
-5. Náº¿u lá»—i do deploy, tick cÃ¡c checkbox tÆ°Æ¡ng á»©ng:
-   - Sá»± cá»‘ do deploy má»›i gÃ¢y ra.
-   - Cáº§n rollback hoáº·c redeploy vá» tag cÅ©.
-   - Smoke test hoáº·c health check fail sau deploy.
-6. Xá»­ lÃ½ theo runbook:
+1. Tạo issue bằng template `Incident report`.
+2. Chọn đúng môi trường và severity.
+3. Điền thời điểm phát hiện theo ISO 8601 nếu có thể.
+4. Nếu liên quan deploy, điền Git SHA, image tag, workflow URL hoặc Jenkins build URL.
+5. Nếu lỗi do deploy, tick các checkbox tương ứng:
+   - Sự cố do deploy mới gây ra.
+   - Cần rollback hoặc redeploy về tag cũ.
+   - Smoke test hoặc health check fail sau deploy.
+6. Xử lý theo runbook:
    - `docs/devops/incident-management-process.md`
    - `docs/devops/observability-runbook.md`
-7. Khi há»‡ thá»‘ng Ä‘Ã£ khÃ´i phá»¥c, cáº­p nháº­t pháº§n mitigation/evidence náº¿u cáº§n.
-8. ÄÃ³ng issue incident ngay khi dá»‹ch vá»¥ Ä‘Ã£ phá»¥c há»“i.
-9. Náº¿u lÃ  `sev1` hoáº·c `sev2`, táº¡o issue `Postmortem`.
-10. Cháº¡y láº¡i DORA report:
+7. Khi hệ thống đã khôi phục, cập nhật phần mitigation/evidence nếu cần.
+8. Đóng issue incident ngay khi dịch vụ đã phục hồi.
+9. Nếu là `sev1` hoặc `sev2`, tạo issue `Postmortem`.
+10. Chạy lại DORA report:
 
 ```bash
 npm run dora:report
 ```
 
-## 5. Quy trÃ¬nh postmortem
+## 5. Quy trình postmortem
 
-Postmortem khÃ´ng dÃ¹ng Ä‘á»ƒ Ä‘á»• lá»—i cÃ¡ nhÃ¢n. Má»¥c tiÃªu lÃ  há»c tá»« incident vÃ  giáº£m kháº£ nÄƒng láº·p láº¡i.
+Postmortem không dùng để đổ lỗi cá nhân. Mục tiêu là học từ incident và giảm khả năng lặp lại.
 
-Postmortem cáº§n cÃ³:
+Postmortem cần có:
 
-- Incident liÃªn quan.
-- Timeline báº¯t Ä‘áº§u - phÃ¡t hiá»‡n - khÃ´i phá»¥c.
-- NguyÃªn nhÃ¢n gá»‘c.
-- Äiá»u Ä‘Ã£ lÃ m tá»‘t.
-- Äiá»u chÆ°a tá»‘t.
-- Action items cÃ³ owner vÃ  deadline.
-- Ghi chÃº DORA: incident cÃ³ tÃ­nh vÃ o MTTR/CFR khÃ´ng, cÃ³ rollback khÃ´ng.
+- Incident liên quan.
+- Timeline bắt đầu - phát hiện - khôi phục.
+- Nguyên nhân gốc.
+- Điều đã làm tốt.
+- Điều chưa tốt.
+- Action items có owner và deadline.
+- Ghi chú DORA: incident có tính vào MTTR/CFR không, có rollback không.
 
-Checklist trÆ°á»›c khi Ä‘Ã³ng postmortem:
+Checklist trước khi đóng postmortem:
 
-- [ ] Root cause rÃµ rÃ ng.
-- [ ] Action items cÃ³ owner.
-- [ ] Action items cÃ³ deadline.
-- [ ] Náº¿u do deploy, incident Ä‘Ã£ cÃ³ label `change-failure` hoáº·c `rollback`.
-- [ ] Náº¿u do smoke/health fail, incident Ä‘Ã£ cÃ³ label `deploy-failure`.
-- [ ] Runbook hoáº·c smoke test Ä‘Æ°á»£c cáº­p nháº­t náº¿u thiáº¿u.
+- [ ] Root cause rõ ràng.
+- [ ] Action items có owner.
+- [ ] Action items có deadline.
+- [ ] Nếu do deploy, incident đã có label `change-failure` hoặc `rollback`.
+- [ ] Nếu do smoke/health fail, incident đã có label `deploy-failure`.
+- [ ] Runbook hoặc smoke test được cập nhật nếu thiếu.
 
-## 6. CÃ¡ch DORA script dÃ¹ng dá»¯ liá»‡u nÃ y
+## 6. Cách DORA script dùng dữ liệu này
 
-Script `scripts/devops-dora-report.ts` Ä‘á»c GitHub issues cÃ³ label `incident`.
+Script `scripts/devops-dora-report.ts` đọc GitHub issues có label `incident`.
 
 - MTTR = `closed_at - created_at`.
-- MÃ´i trÆ°á»ng Ä‘Æ°á»£c suy ra tá»« label `production`, `staging` hoáº·c `local`.
-- Severity Ä‘Æ°á»£c suy ra tá»« label `sev1`, `sev2`, `sev3`, `sev4`.
-- Change Failure Rate tÄƒng khi issue cÃ³ label `change-failure`, `deploy-failure` hoáº·c `rollback`.
+- Môi trường được suy ra từ label `production`, `staging` hoặc `local`.
+- Severity được suy ra từ label `sev1`, `sev2`, `sev3`, `sev4`.
+- Change Failure Rate tăng khi issue có label `change-failure`, `deploy-failure` hoặc `rollback`.
 
-Náº¿u incident chÆ°a Ä‘Ã³ng, script váº«n liá»‡t kÃª nhÆ°ng chÆ°a tÃ­nh vÃ o MTTR trung bÃ¬nh.
+Nếu incident chưa đóng, script vẫn liệt kê nhưng chưa tính vào MTTR trung bình.
 
-## 7. CÃ¢u nÃ³i demo
+## 7. Câu nói demo
 
-> Quy trÃ¬nh incident/postmortem giÃºp biáº¿n incident thÃ nh dá»¯ liá»‡u Ä‘o lÆ°á»ng. Khi cÃ³ sá»± cá»‘, nhÃ³m táº¡o issue theo template, workflow tá»± gáº¯n label mÃ´i trÆ°á»ng/severity/change-failure. Khi issue Ä‘Ã³ng, DORA report tÃ­nh Ä‘Æ°á»£c MTTR. Náº¿u incident liÃªn quan deploy hoáº·c rollback, report cÅ©ng pháº£n Ã¡nh vÃ o Change Failure Rate.
+> Quy trình incident/postmortem giúp biến incident thành dữ liệu đo lường. Khi có sự cố, nhóm tạo issue theo template, workflow tự gắn label môi trường/severity/change-failure. Khi issue đóng, DORA report tính được MTTR. Nếu incident liên quan deploy hoặc rollback, report cũng phản ánh vào Change Failure Rate.
 
 

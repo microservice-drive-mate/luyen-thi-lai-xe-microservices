@@ -143,42 +143,42 @@ Business rules:
 
 
 <!-- Merged from docs/requirements/use-case-implementation-summary.md -->
-# DriveMate - Summary 10 Use Case ChÃ­nh Äá»ƒ Present
+# DriveMate - Summary 10 Use Case Chính Để Present
 
-TÃ i liá»‡u nÃ y tÃ³m táº¯t theo chuá»—i: **SRS flow/business rule -> codebase -> ASR -> ADD -> SAD -> design pattern**. Trá»ng tÃ¢m Æ°u tiÃªn **Availability** nhÆ°ng váº«n giáº£i thÃ­ch Security, Reliability, Performance, Data Integrity vÃ  Modifiability khi liÃªn quan.
+Tài liệu này tóm tắt theo chuỗi: **SRS flow/business rule -> codebase -> ASR -> ADD -> SAD -> design pattern**. Trọng tâm ưu tiên **Availability** nhưng vẫn giải thích Security, Reliability, Performance, Data Integrity và Modifiability khi liên quan.
 
-## 0. Khung Kiáº¿n TrÃºc NÃ³i TrÆ°á»›c Khi VÃ o Use Case
+## 0. Khung Kiến Trúc Nói Trước Khi Vào Use Case
 
-DriveMate lÃ  monorepo microservices NestJS. Má»—i bounded context náº±m trong má»™t service riÃªng: `identity-service`, `user-service`, `course-service`, `exam-service`, `question-service`, `analytics-service`, `simulation-service`, `notification-service`, `media-service`, `audit-service`, `docs-service`. Kiáº¿n trÃºc trong ADD/SAD Ä‘i theo **4+1 View Model**:
+DriveMate là monorepo microservices NestJS. Mỗi bounded context nằm trong một service riêng: `identity-service`, `user-service`, `course-service`, `exam-service`, `question-service`, `analytics-service`, `simulation-service`, `notification-service`, `media-service`, `audit-service`, `docs-service`. Kiến trúc trong ADD/SAD đi theo **4+1 View Model**:
 
-- **Logical View:** cÃ¡c service tÃ¡ch theo domain; Kong lÃ m API Gateway; Keycloak lÃ m identity provider; RabbitMQ lÃ m event bus; Redis dÃ¹ng cho token blacklist vÃ  cache má»™t sá»‘ luá»“ng Ä‘á»c.
-- **Implementation View:** Turborepo monorepo, NestJS, Prisma per-service, DDD/Clean Architecture. Code chia thÃ nh `presentation`, `application`, `domain`, `infrastructure`.
-- **Deployment View:** Docker Compose cho dev, Kubernetes/HPA lÃ  target production. Service stateless nÃªn scale ngang Ä‘Æ°á»£c.
-- **Data View:** database-per-service trÃªn PostgreSQL; khÃ´ng JOIN chÃ©o database; trao Ä‘á»•i liÃªn service qua REST hoáº·c RabbitMQ.
+- **Logical View:** các service tách theo domain; Kong làm API Gateway; Keycloak làm identity provider; RabbitMQ làm event bus; Redis dùng cho token blacklist và cache một số luồng đọc.
+- **Implementation View:** Turborepo monorepo, NestJS, Prisma per-service, DDD/Clean Architecture. Code chia thành `presentation`, `application`, `domain`, `infrastructure`.
+- **Deployment View:** Docker Compose cho dev, Kubernetes/HPA là target production. Service stateless nên scale ngang được.
+- **Data View:** database-per-service trên PostgreSQL; không JOIN chéo database; trao đổi liên service qua REST hoặc RabbitMQ.
 - **Process/Data Flow View trong SAD:** login qua Keycloak, start/submit exam, dashboard progress, notification async, course cache, simulation realtime.
 
-Availability evidence toÃ n há»‡ thá»‘ng:
+Availability evidence toàn hệ thống:
 
-- **ASR-AV-01:** má»i service dÃ¹ng `HealthModule.register(...)`; endpoint `/health/live`, `/health/ready` náº±m á»Ÿ `packages/common/src/health/health.controller.ts`.
-- **ASR-AV-03:** má»i service dÃ¹ng `MetricsModule.register(...)`; `/metrics` vÃ  RED metrics náº±m á»Ÿ `packages/common/src/metrics`.
-- **ASR-AV-04:** gá»i HTTP liÃªn service dÃ¹ng `resilientFetch()` cÃ³ timeout, retry, exponential backoff, circuit breaker táº¡i `packages/common/src/http/resilient-http-client.ts`.
-- **ASR-AV-06:** course dÃ¹ng Redis cache vá»›i `safeExec()` fallback DB; analytics dÃ¹ng projection/read model Ä‘á»ƒ giáº£m phá»¥ thuá»™c truy váº¥n raw log.
+- **ASR-AV-01:** mọi service dùng `HealthModule.register(...)`; endpoint `/health/live`, `/health/ready` nằm ở `packages/common/src/health/health.controller.ts`.
+- **ASR-AV-03:** mọi service dùng `MetricsModule.register(...)`; `/metrics` và RED metrics nằm ở `packages/common/src/metrics`.
+- **ASR-AV-04:** gọi HTTP liên service dùng `resilientFetch()` có timeout, retry, exponential backoff, circuit breaker tại `packages/common/src/http/resilient-http-client.ts`.
+- **ASR-AV-06:** course dùng Redis cache với `safeExec()` fallback DB; analytics dùng projection/read model để giảm phụ thuộc truy vấn raw log.
 
-> Ghi chÃº khi tháº§y há»i gap: `SAD.docx` cÃ²n Ä‘oáº¡n cÅ© nÃ³i course cache lÃ  NestJS in-memory, nhÆ°ng `ASR.xlsx`, `SRS-ASR-MAPPING-SUMMARY.md` vÃ  code hiá»‡n táº¡i dÃ¹ng Redis TTL 600s. ÄÃ¢y lÃ  gap tÃ i liá»‡u SAD cáº§n update, khÃ´ng pháº£i gap implementation.
+> Ghi chú khi thầy hỏi gap: `SAD.docx` còn đoạn cũ nói course cache là NestJS in-memory, nhưng `ASR.xlsx`, `SRS-ASR-MAPPING-SUMMARY.md` và code hiện tại dùng Redis TTL 600s. Đây là gap tài liệu SAD cần update, không phải gap implementation.
 
 ---
 
 ## 1. UC01 - Login
 
-**SRS flow vÃ  business rule.** NgÆ°á»i dÃ¹ng nháº­p email/password, há»‡ thá»‘ng validate required fields vÃ  email format, load account theo email, kiá»ƒm tra account lock, verify password, reset failed counter náº¿u thÃ nh cÃ´ng, sinh JWT vÃ  redirect theo role. Náº¿u sai credential thÃ¬ tÄƒng failed counter; vÆ°á»£t threshold thÃ¬ lock account. Business rules chÃ­nh: BR01 input validation, BR02 account lock check, BR03 credential verification, BR04 brute-force protection, BR05 success response.
+**SRS flow và business rule.** Người dùng nhập email/password, hệ thống validate required fields và email format, load account theo email, kiểm tra account lock, verify password, reset failed counter nếu thành công, sinh JWT và redirect theo role. Nếu sai credential thì tăng failed counter; vượt threshold thì lock account. Business rules chính: BR01 input validation, BR02 account lock check, BR03 credential verification, BR04 brute-force protection, BR05 success response.
 
-**Vá»‹ trÃ­ code.**
+**Vị trí code.**
 
-- `apps/identity-service/src/application/use-cases/login/login.use-case.ts`: `LoginUseCase` gá»i `identityProvider.login(username, password)`.
-- `apps/identity-service/src/infrastructure/keycloak-admin/keycloak-admin.service.ts`: adapter gá»i Keycloak token endpoint/admin API.
-- `apps/identity-service/src/infrastructure/guards/jwt-auth.guard.ts`: validate JWT cho protected route, cache public key vÃ  láº¥y Keycloak realm metadata báº±ng `resilientFetch`.
+- `apps/identity-service/src/application/use-cases/login/login.use-case.ts`: `LoginUseCase` gọi `identityProvider.login(username, password)`.
+- `apps/identity-service/src/infrastructure/keycloak-admin/keycloak-admin.service.ts`: adapter gọi Keycloak token endpoint/admin API.
+- `apps/identity-service/src/infrastructure/guards/jwt-auth.guard.ts`: validate JWT cho protected route, cache public key và lấy Keycloak realm metadata bằng `resilientFetch`.
 
-Code máº«u:
+Code mẫu:
 
 ```ts
 // login.use-case.ts
@@ -199,43 +199,43 @@ const response = await resilientFetch(url, {}, {
 
 **Mapping sang ASR.**
 
-- **ASR-SEC-01:** stateless authentication, password hashing vÃ  brute-force lockout Ä‘Æ°á»£c delegate cho Keycloak. Code khÃ´ng tá»± hash password nhÆ° SRS mÃ´ táº£ á»Ÿ má»©c business, mÃ  Ä‘á»ƒ Keycloak xá»­ lÃ½ Ä‘Ãºng ranh giá»›i kiáº¿n trÃºc.
-- **ASR-PERF-01:** login P95 <= 300ms trong Ä‘iá»u kiá»‡n peak bÃ¬nh thÆ°á»ng; `identity-service` stateless vÃ  cÃ³ thá»ƒ scale Ä‘á»™c láº­p.
-- **ASR-AV-04:** láº¥y public key Keycloak dÃ¹ng `resilientFetch`, cÃ³ timeout/retry/circuit breaker. Náº¿u Keycloak cháº­m, request fail cÃ³ kiá»ƒm soÃ¡t thay vÃ¬ treo thread.
-- **ASR-AV-01/03:** identity-service cÃ³ health/metrics chung nhÆ° cÃ¡c service khÃ¡c.
+- **ASR-SEC-01:** stateless authentication, password hashing và brute-force lockout được delegate cho Keycloak. Code không tự hash password như SRS mô tả ở mức business, mà để Keycloak xử lý đúng ranh giới kiến trúc.
+- **ASR-PERF-01:** login P95 <= 300ms trong điều kiện peak bình thường; `identity-service` stateless và có thể scale độc lập.
+- **ASR-AV-04:** lấy public key Keycloak dùng `resilientFetch`, có timeout/retry/circuit breaker. Nếu Keycloak chậm, request fail có kiểm soát thay vì treo thread.
+- **ASR-AV-01/03:** identity-service có health/metrics chung như các service khác.
 
 **Design pattern.**
 
-- **Adapter:** `IdentityProviderPort` che giáº¥u chi tiáº¿t Keycloak. Use case chá»‰ biáº¿t interface, khÃ´ng biáº¿t HTTP endpoint cá»¥ thá»ƒ.
-- **Chain of Responsibility:** request Ä‘i qua Kong/JWT guard/token blacklist/role guard. Má»—i guard chá»‹u má»™t trÃ¡ch nhiá»‡m.
-- **Circuit Breaker + Retry:** náº±m trong shared `resilientFetch`, Ã¡p dá»¥ng cho dependency Keycloak.
+- **Adapter:** `IdentityProviderPort` che giấu chi tiết Keycloak. Use case chỉ biết interface, không biết HTTP endpoint cụ thể.
+- **Chain of Responsibility:** request đi qua Kong/JWT guard/token blacklist/role guard. Mỗi guard chịu một trách nhiệm.
+- **Circuit Breaker + Retry:** nằm trong shared `resilientFetch`, áp dụng cho dependency Keycloak.
 
 **Mapping sang ADD.**
 
-- ADD Â§2.1.1 / Table ASR-SEC-01: xÃ¡c thá»±c stateless, credential policy qua Keycloak.
-- ADD Â§2.2.1 / ASR-PERF-01: identity service scale Ä‘á»™c láº­p.
-- ADD Â§2.7.2 / ASR-AV-04: HTTP resilience cho downstream dependency.
-- ADD Â§3.1 Logical View: Kong validate JWT, identity-service tÃ­ch há»£p Keycloak.
+- ADD §2.1.1 / Table ASR-SEC-01: xác thực stateless, credential policy qua Keycloak.
+- ADD §2.2.1 / ASR-PERF-01: identity service scale độc lập.
+- ADD §2.7.2 / ASR-AV-04: HTTP resilience cho downstream dependency.
+- ADD §3.1 Logical View: Kong validate JWT, identity-service tích hợp Keycloak.
 
 **Mapping sang SAD.**
 
-- SAD Â§5.2.1 mÃ´ táº£ data flow login: Client -> Kong -> identity-service -> Keycloak -> tráº£ JWT.
-- SAD Â§6.3.1 mÃ´ táº£ Authentication & Session Management, access token ngáº¯n háº¡n 15-30 phÃºt, Keycloak quáº£n lÃ½ brute force.
-- SAD Â§3.3.1 vÃ  Â§3.3.2 giáº£i thÃ­ch scale Ä‘á»™c láº­p vÃ  fault isolation.
+- SAD §5.2.1 mô tả data flow login: Client -> Kong -> identity-service -> Keycloak -> trả JWT.
+- SAD §6.3.1 mô tả Authentication & Session Management, access token ngắn hạn 15-30 phút, Keycloak quản lý brute force.
+- SAD §3.3.1 và §3.3.2 giải thích scale độc lập và fault isolation.
 
 ---
 
 ## 2. UC02 - Forgot Password
 
-**SRS flow vÃ  business rule.** NgÆ°á»i dÃ¹ng nháº­p email á»Ÿ mÃ n hÃ¬nh login; há»‡ thá»‘ng validate email, tÃ¬m account, táº¡o reset token, set expiration, gá»­i link email; ngÆ°á»i dÃ¹ng má»Ÿ link, token Ä‘Æ°á»£c validate, nháº­p password má»›i, password policy pass thÃ¬ update password vÃ  mark token used. BR chÃ­nh: BR01 email validation, BR02 account lookup, BR03 token generation, BR04 token validation/password policy, BR05 success response.
+**SRS flow và business rule.** Người dùng nhập email ở màn hình login; hệ thống validate email, tìm account, tạo reset token, set expiration, gửi link email; người dùng mở link, token được validate, nhập password mới, password policy pass thì update password và mark token used. BR chính: BR01 email validation, BR02 account lookup, BR03 token generation, BR04 token validation/password policy, BR05 success response.
 
-**Vá»‹ trÃ­ code.**
+**Vị trí code.**
 
 - `apps/identity-service/src/application/use-cases/forgot-password/forgot-password.use-case.ts`
 - `apps/identity-service/src/infrastructure/keycloak-admin/keycloak-admin.service.ts`
 - DTO: `apps/identity-service/src/presentation/dtos/forgot-password.request.dto.ts`
 
-Code máº«u:
+Code mẫu:
 
 ```ts
 const normalizedEmail = command.email.trim().toLowerCase();
@@ -253,41 +253,41 @@ return response;
 
 **Mapping sang ASR.**
 
-- **ASR-SEC-02:** reset token single-use, expires within 15 minutes, password policy do Keycloak quáº£n lÃ½.
-- **Availability/Security note:** code tráº£ response generic ká»ƒ cáº£ email khÃ´ng tá»“n táº¡i hoáº·c disabled. Äiá»ƒm nÃ y khÃ¡c SRS activity cÅ© ghi HTTP 404, nhÆ°ng tá»‘t hÆ¡n vá» security vÃ¬ chá»‘ng user enumeration. Khi present nÃªn nÃ³i: â€œSRS mÃ´ táº£ lookup failure; implementation intentionally masks account existence while still satisfying ASR-SEC-02.â€
-- **ASR-AV-04:** náº¿u Keycloak admin API cháº­m/lá»—i, adapter/provider cÃ³ thá»ƒ Ã¡p dá»¥ng timeout/retry theo háº¡ táº§ng chung.
+- **ASR-SEC-02:** reset token single-use, expires within 15 minutes, password policy do Keycloak quản lý.
+- **Availability/Security note:** code trả response generic kể cả email không tồn tại hoặc disabled. Điểm này khác SRS activity cũ ghi HTTP 404, nhưng tốt hơn về security vì chống user enumeration. Khi present nên nói: “SRS mô tả lookup failure; implementation intentionally masks account existence while still satisfying ASR-SEC-02.”
+- **ASR-AV-04:** nếu Keycloak admin API chậm/lỗi, adapter/provider có thể áp dụng timeout/retry theo hạ tầng chung.
 
 **Design pattern.**
 
-- **Delegation / Adapter:** use case delegate toÃ n bá»™ token lifecycle vÃ  email reset cho Keycloak qua `IdentityProviderPort`.
-- **Facade:** `ForgotPasswordUseCase` cung cáº¥p API Ä‘Æ¡n giáº£n cho presentation layer, che giáº¥u nhiá»u bÆ°á»›c cá»§a Keycloak.
+- **Delegation / Adapter:** use case delegate toàn bộ token lifecycle và email reset cho Keycloak qua `IdentityProviderPort`.
+- **Facade:** `ForgotPasswordUseCase` cung cấp API đơn giản cho presentation layer, che giấu nhiều bước của Keycloak.
 
 **Mapping sang ADD.**
 
-- ADD Â§2.1.1.2 ASR-SEC-02: password reset security.
-- ADD Â§3.1 Logical View: identity-service lÃ  wrapper cho Keycloak admin API.
-- ADD Â§3.2 Implementation View: application layer gá»i port, infrastructure layer implement báº±ng Keycloak.
+- ADD §2.1.1.2 ASR-SEC-02: password reset security.
+- ADD §3.1 Logical View: identity-service là wrapper cho Keycloak admin API.
+- ADD §3.2 Implementation View: application layer gọi port, infrastructure layer implement bằng Keycloak.
 
 **Mapping sang SAD.**
 
-- SAD Â§3.2.2 Keycloak: built-in Forgot Password flow, SMTP/email dispatch.
-- SAD Â§6.3.1: Password Reset via Keycloak, identity-service khÃ´ng tá»± lÆ°u reset token.
-- SAD Â§5.1.2: Keycloak nháº­n password-reset request vÃ  admin API calls.
+- SAD §3.2.2 Keycloak: built-in Forgot Password flow, SMTP/email dispatch.
+- SAD §6.3.1: Password Reset via Keycloak, identity-service không tự lưu reset token.
+- SAD §5.1.2: Keycloak nhận password-reset request và admin API calls.
 
 ---
 
 ## 3. UC03 - Create User Account
 
-**SRS flow vÃ  business rule.** Admin/Manager fill form, validate JWT, check RBAC, validate `fullName`, `email`, `role`, `temporaryPassword`, check duplicate email, táº¡o account active, gá»­i credential email, tráº£ HTTP 201. Business rules: BR01 validation, BR02 RBAC, BR03 uniqueness, BR04 account creation transaction, BR05 success response.
+**SRS flow và business rule.** Admin/Manager fill form, validate JWT, check RBAC, validate `fullName`, `email`, `role`, `temporaryPassword`, check duplicate email, tạo account active, gửi credential email, trả HTTP 201. Business rules: BR01 validation, BR02 RBAC, BR03 uniqueness, BR04 account creation transaction, BR05 success response.
 
-**Vá»‹ trÃ­ code.**
+**Vị trí code.**
 
 - DTO validation: `apps/identity-service/src/presentation/dtos/create-user.request.dto.ts`
 - Use case: `apps/identity-service/src/application/use-cases/create-identity-user/create-identity-user.use-case.ts`
 - Aggregate: `apps/identity-service/src/domain/aggregates/identity-user/identity-user.aggregate.ts`
 - Repository: `apps/identity-service/src/infrastructure/persistence/prisma/prisma-identity-user.repository.ts`
 
-Code máº«u:
+Code mẫu:
 
 ```ts
 // create-user.request.dto.ts
@@ -322,41 +322,41 @@ await this.publishEvents(user);
 
 **Mapping sang ASR.**
 
-- **ASR-SEC-04:** email unique vÃ  role assignment qua RBAC táº­p trung. Keycloak giá»¯ role; service khÃ´ng hardcode policy phÃ¢n quyá»n ráº£i rÃ¡c.
-- **ASR-AV-05 liÃªn quan má»™t pháº§n:** táº¡o user cÃ³ domain events/audit publish; tuy nhiÃªn cáº§n phÃ¢n biá»‡t event publish trong identity hiá»‡n khÃ´ng nháº¥t thiáº¿t lÃ  transactional outbox cho má»i event. Náº¿u tháº§y há»i â€œatomic giá»¯a Keycloak vÃ  DB khÃ´ng?â€, cÃ¢u tráº£ lá»i Ä‘Ãºng lÃ  Ä‘Ã¢y lÃ  distributed workflow, khÃ´ng pháº£i single DB transaction; há»‡ thá»‘ng giáº£m rá»§i ro báº±ng sync/eventual consistency.
-- **ASR-AV-01/03:** cÃ³ health/metrics Ä‘á»ƒ detect lá»—i identity-service.
+- **ASR-SEC-04:** email unique và role assignment qua RBAC tập trung. Keycloak giữ role; service không hardcode policy phân quyền rải rác.
+- **ASR-AV-05 liên quan một phần:** tạo user có domain events/audit publish; tuy nhiên cần phân biệt event publish trong identity hiện không nhất thiết là transactional outbox cho mọi event. Nếu thầy hỏi “atomic giữa Keycloak và DB không?”, câu trả lời đúng là đây là distributed workflow, không phải single DB transaction; hệ thống giảm rủi ro bằng sync/eventual consistency.
+- **ASR-AV-01/03:** có health/metrics để detect lỗi identity-service.
 
 **Design pattern.**
 
-- **Decorator:** `class-validator` decorators trÃªn DTO enforce input validation.
-- **Factory Method:** `IdentityUser.create(...)` táº¡o aggregate vÃ  enforce invariant domain.
-- **Observer/Event-driven:** aggregate phÃ¡t domain event, use case publish Ä‘á»ƒ user-service/analytics Ä‘á»“ng bá»™ ngá»¯ cáº£nh.
+- **Decorator:** `class-validator` decorators trên DTO enforce input validation.
+- **Factory Method:** `IdentityUser.create(...)` tạo aggregate và enforce invariant domain.
+- **Observer/Event-driven:** aggregate phát domain event, use case publish để user-service/analytics đồng bộ ngữ cảnh.
 
 **Mapping sang ADD.**
 
-- ADD Â§2.1.2.1 ASR-SEC-04: RBAC táº­p trung.
-- ADD Â§3.2 Implementation View: NestJS DTO validation, DDD aggregate, repository.
-- ADD Â§3.4 Data View/Event Bus: identity event lan truyá»n sang service khÃ¡c qua RabbitMQ.
+- ADD §2.1.2.1 ASR-SEC-04: RBAC tập trung.
+- ADD §3.2 Implementation View: NestJS DTO validation, DDD aggregate, repository.
+- ADD §3.4 Data View/Event Bus: identity event lan truyền sang service khác qua RabbitMQ.
 
 **Mapping sang SAD.**
 
-- SAD Â§3.2.3 identity-service: wrapper Keycloak, identity_db lÆ°u cache IdentityUser.
-- SAD Â§3.2.4 user-service: consume identity event Ä‘á»ƒ táº¡o/sync profile.
-- SAD Â§6.3.2 Authorization & Access Control: role do Keycloak realm quáº£n lÃ½.
+- SAD §3.2.3 identity-service: wrapper Keycloak, identity_db lưu cache IdentityUser.
+- SAD §3.2.4 user-service: consume identity event để tạo/sync profile.
+- SAD §6.3.2 Authorization & Access Control: role do Keycloak realm quản lý.
 
 ---
 
 ## 4. UC06 - Assign License Categories To Students
 
-**SRS flow vÃ  business rule.** Admin/Manager chá»n student, chá»n license tier, validate JWT/RBAC, query student, validate tier active, update `student.licenseTierId`, ghi audit `{changedBy, oldValue, newValue, changedAt}`, persist vÃ  tráº£ HTTP 200. BR chÃ­nh: JWT/RBAC, student existence, license tier validation, assignment update and audit.
+**SRS flow và business rule.** Admin/Manager chọn student, chọn license tier, validate JWT/RBAC, query student, validate tier active, update `student.licenseTierId`, ghi audit `{changedBy, oldValue, newValue, changedAt}`, persist và trả HTTP 200. BR chính: JWT/RBAC, student existence, license tier validation, assignment update and audit.
 
-**Vá»‹ trÃ­ code.**
+**Vị trí code.**
 
 - Use case: `apps/user-service/src/application/use-cases/assign-license-tier/assign-license-tier.use-case.ts`
 - Aggregate: `apps/user-service/src/domain/aggregates/user-profile/user-profile.aggregate.ts`
 - Repository transaction: `apps/user-service/src/infrastructure/persistence/prisma/prisma-user-profile.repository.ts`
 
-Code máº«u:
+Code mẫu:
 
 ```ts
 const profile = await this.userProfileRepository.findById(command.studentId);
@@ -381,41 +381,41 @@ await this.prisma.$transaction(async (tx) => {
 
 **Mapping sang ASR.**
 
-- **ASR-DI-05:** má»™t há»c viÃªn chá»‰ cÃ³ má»™t license tier active; switch tier vÃ  audit Ä‘Æ°á»£c ghi atomically trong `user_db`.
-- **ASR-MOD-02:** license tier lÃ  data/config, trÃ¡nh hardcode logic theo string á»Ÿ business flow.
-- **ASR-AV-05:** `user-service` ghi business mutation + audit outbox trong cÃ¹ng PostgreSQL transaction. Náº¿u audit-service/RabbitMQ táº¡m lá»—i, message váº«n pending Ä‘á»ƒ relay sau.
+- **ASR-DI-05:** một học viên chỉ có một license tier active; switch tier và audit được ghi atomically trong `user_db`.
+- **ASR-MOD-02:** license tier là data/config, tránh hardcode logic theo string ở business flow.
+- **ASR-AV-05:** `user-service` ghi business mutation + audit outbox trong cùng PostgreSQL transaction. Nếu audit-service/RabbitMQ tạm lỗi, message vẫn pending để relay sau.
 
 **Design pattern.**
 
-- **Aggregate Root:** `UserProfile` giá»¯ invariant `studentDetail/licenseTier`.
-- **Transactional Outbox:** audit event ghi vÃ o `outboxMessage` trong cÃ¹ng transaction vá»›i profile/studentDetail.
-- **Repository:** application layer khÃ´ng biáº¿t Prisma details.
+- **Aggregate Root:** `UserProfile` giữ invariant `studentDetail/licenseTier`.
+- **Transactional Outbox:** audit event ghi vào `outboxMessage` trong cùng transaction với profile/studentDetail.
+- **Repository:** application layer không biết Prisma details.
 
 **Mapping sang ADD.**
 
-- ADD Â§2.4.1.4 ASR-DI-05: one active license per student.
-- ADD Â§2.7.3 ASR-AV-05: transactional recovery/outbox.
-- ADD Â§3.4 Data View: database-per-service, audit event khÃ´ng JOIN chÃ©o service.
+- ADD §2.4.1.4 ASR-DI-05: one active license per student.
+- ADD §2.7.3 ASR-AV-05: transactional recovery/outbox.
+- ADD §3.4 Data View: database-per-service, audit event không JOIN chéo service.
 
 **Mapping sang SAD.**
 
-- SAD Â§3.2.4 user-service: license tier config, audit write.
-- SAD Â§3.3.4 Data Sovereignty: user-service giá»¯ consistency contract riÃªng cho profile/license.
-- SAD Â§4.2 Technical Constraints: data integrity rules vÃ  audit logging.
+- SAD §3.2.4 user-service: license tier config, audit write.
+- SAD §3.3.4 Data Sovereignty: user-service giữ consistency contract riêng cho profile/license.
+- SAD §4.2 Technical Constraints: data integrity rules và audit logging.
 
 ---
 
 ## 5. UC07 - View Detailed Course List
 
-**SRS flow vÃ  business rule.** User má»Ÿ Course List, há»‡ thá»‘ng validate JWT, láº¥y licenseCategory tá»« token/profile, resolve cache key `[licenseCategory,page,size]`, náº¿u cache hit tráº£ paginated result; náº¿u miss query DB vá»›i filter license + pagination, populate cache, tráº£ list/detail. BR chÃ­nh: authentication, license-based filtering, cache-aside query, search/pagination, detail response.
+**SRS flow và business rule.** User mở Course List, hệ thống validate JWT, lấy licenseCategory từ token/profile, resolve cache key `[licenseCategory,page,size]`, nếu cache hit trả paginated result; nếu miss query DB với filter license + pagination, populate cache, trả list/detail. BR chính: authentication, license-based filtering, cache-aside query, search/pagination, detail response.
 
-**Vá»‹ trÃ­ code.**
+**Vị trí code.**
 
 - Use case: `apps/course-service/src/application/use-cases/list-courses/list-courses.use-case.ts`
 - Cache port: `apps/course-service/src/application/ports/course-cache.port.ts`
 - Redis implementation: `apps/course-service/src/infrastructure/cache/redis-course-cache.service.ts`
 
-Code máº«u:
+Code mẫu:
 
 ```ts
 const cached = await this.courseCache.getCourseList(cacheKey);
@@ -443,41 +443,41 @@ private async safeExec<T>(operation: () => Promise<T>, fallback?: T): Promise<T>
 **Mapping sang ASR.**
 
 - **ASR-PERF-05:** cache hit < 50ms, cache miss fallback DB < 300ms, TTL 600s, invalidation khi course update/delete.
-- **ASR-AV-06:** partial degradation. Redis down khÃ´ng lÃ m request cháº¿t; `safeExec(..., null)` biáº¿n thÃ nh cache miss vÃ  DB fallback.
-- **ASR-AV-01/03:** course-service cÃ³ `/health/ready` vÃ  `/metrics` Ä‘á»ƒ phÃ¡t hiá»‡n Redis/DB degradation.
+- **ASR-AV-06:** partial degradation. Redis down không làm request chết; `safeExec(..., null)` biến thành cache miss và DB fallback.
+- **ASR-AV-01/03:** course-service có `/health/ready` và `/metrics` để phát hiện Redis/DB degradation.
 
 **Design pattern.**
 
-- **Strategy:** `CourseCachePort` lÃ  abstraction; Redis lÃ  concrete strategy, cÃ³ thá»ƒ thay báº±ng in-memory/no-cache mÃ  use case khÃ´ng Ä‘á»•i.
-- **Cache-Aside:** app tá»± check cache, miss thÃ¬ query DB, set cache.
-- **Guard Clause/Repository:** query luÃ´n cÃ³ pagination, trÃ¡nh unbounded read.
+- **Strategy:** `CourseCachePort` là abstraction; Redis là concrete strategy, có thể thay bằng in-memory/no-cache mà use case không đổi.
+- **Cache-Aside:** app tự check cache, miss thì query DB, set cache.
+- **Guard Clause/Repository:** query luôn có pagination, tránh unbounded read.
 
 **Mapping sang ADD.**
 
-- ADD Â§2.2.2.2 ASR-PERF-05: course cache TTL 5-10 min.
-- ADD Â§2.7.4 ASR-AV-06: cache-backed read model/partial degradation.
-- ADD Â§3.1 Logical View vÃ  Â§3.2 Implementation View: `course-service` lÃ  service riÃªng, cÃ³ repository/cache adapter.
+- ADD §2.2.2.2 ASR-PERF-05: course cache TTL 5-10 min.
+- ADD §2.7.4 ASR-AV-06: cache-backed read model/partial degradation.
+- ADD §3.1 Logical View và §3.2 Implementation View: `course-service` là service riêng, có repository/cache adapter.
 
 **Mapping sang SAD.**
 
-- SAD Â§5.2.5 mÃ´ táº£ Course Detail Read with Cache.
-- SAD Â§7.1.1 mÃ´ táº£ course detail cache performance.
-- **Doc gap:** SAD hiá»‡n ghi in-memory CacheManager/no Redis, trong khi code vÃ  ASR hiá»‡n dÃ¹ng Redis. Khi present nÃªn nÃ³i: â€œSAD báº£n hiá»‡n táº¡i cáº§n cáº­p nháº­t theo quyáº¿t Ä‘á»‹nh má»›i: Redis tá»‘t hÆ¡n in-memory vÃ¬ cross-instance consistency, pattern invalidation, restart-safe.â€
+- SAD §5.2.5 mô tả Course Detail Read with Cache.
+- SAD §7.1.1 mô tả course detail cache performance.
+- **Doc gap:** SAD hiện ghi in-memory CacheManager/no Redis, trong khi code và ASR hiện dùng Redis. Khi present nên nói: “SAD bản hiện tại cần cập nhật theo quyết định mới: Redis tốt hơn in-memory vì cross-instance consistency, pattern invalidation, restart-safe.”
 
 ---
 
 ## 6. UC11 - Take Theory Exam / Start Exam
 
-**SRS flow vÃ  business rule.** Student click start exam, há»‡ thá»‘ng validate JWT, check permission, validate `templateId/licenseTierId`, load student profile + exam template + config, generate randomized question set, create attempt record, init server timer, persist attempt, serialize questions khÃ´ng cÃ³ Ä‘Ã¡p Ã¡n, tráº£ HTTP 201. BR chÃ­nh: auth/permission, payload validation, resource existence, question generation, attempt persistence, answer confidentiality.
+**SRS flow và business rule.** Student click start exam, hệ thống validate JWT, check permission, validate `templateId/licenseTierId`, load student profile + exam template + config, generate randomized question set, create attempt record, init server timer, persist attempt, serialize questions không có đáp án, trả HTTP 201. BR chính: auth/permission, payload validation, resource existence, question generation, attempt persistence, answer confidentiality.
 
-**Vá»‹ trÃ­ code.**
+**Vị trí code.**
 
 - Use case: `apps/exam-service/src/application/use-cases/start-session/start-session.use-case.ts`
 - Aggregate: `apps/exam-service/src/domain/aggregates/exam-session/exam-session.aggregate.ts`
 - Adapter: `apps/exam-service/src/infrastructure/http/http-question-pool.client.ts`
 - Mapper/result DTO: `apps/exam-service/src/application/use-cases/shared/exam-session.result.ts`
 
-Code máº«u:
+Code mẫu:
 
 ```ts
 const profile = await this.userProfileClient.getCurrentStudentProfile(command.accessToken);
@@ -514,45 +514,45 @@ expiresAt,
 
 **Mapping sang ASR.**
 
-- **ASR-PERF-12:** question selection pháº£i dÃ¹ng indexed queries, khÃ´ng full-table scan; call sang question-service qua adapter.
-- **ASR-DI-08:** exam config snapshot (`templateNameSnapshot`, `version`, `topicDistributionSnapshot`, `durationMinutesSnapshot`) Ä‘Ã³ng bÄƒng cáº¥u hÃ¬nh lÃºc generate.
-- **ASR-DI-09:** exact question count per topic; thiáº¿u pool thÃ¬ throw `InsufficientQuestionPoolException`.
+- **ASR-PERF-12:** question selection phải dùng indexed queries, không full-table scan; call sang question-service qua adapter.
+- **ASR-DI-08:** exam config snapshot (`templateNameSnapshot`, `version`, `topicDistributionSnapshot`, `durationMinutesSnapshot`) đóng băng cấu hình lúc generate.
+- **ASR-DI-09:** exact question count per topic; thiếu pool thì throw `InsufficientQuestionPoolException`.
 - **ASR-REL-02:** server authoritative timer; `startedAt/expiresAt` do server set.
-- **ASR-AV-04:** `HttpQuestionPoolClient` dÃ¹ng `resilientFetch` vá»›i timeout khi gá»i question-service. Náº¿u question-service fail, exam-service fail nhanh cÃ³ kiá»ƒm soÃ¡t.
+- **ASR-AV-04:** `HttpQuestionPoolClient` dùng `resilientFetch` với timeout khi gọi question-service. Nếu question-service fail, exam-service fail nhanh có kiểm soát.
 
 **Design pattern.**
 
-- **Factory Method:** `ExamSession.create()` táº¡o session há»£p lá»‡, set timer vÃ  initial state.
-- **Adapter:** `HttpQuestionPoolClient extends QuestionPoolClient`, chuyá»ƒn HTTP envelope thÃ nh domain pool items.
-- **Snapshot/Immutability Pattern:** session lÆ°u config snapshot, lá»‹ch sá»­ thi khÃ´ng bá»‹ thay Ä‘á»•i khi admin chá»‰nh template sau nÃ y.
-- **Circuit Breaker:** shared `resilientFetch` báº£o vá»‡ call `exam-service -> question-service`.
+- **Factory Method:** `ExamSession.create()` tạo session hợp lệ, set timer và initial state.
+- **Adapter:** `HttpQuestionPoolClient extends QuestionPoolClient`, chuyển HTTP envelope thành domain pool items.
+- **Snapshot/Immutability Pattern:** session lưu config snapshot, lịch sử thi không bị thay đổi khi admin chỉnh template sau này.
+- **Circuit Breaker:** shared `resilientFetch` bảo vệ call `exam-service -> question-service`.
 
 **Mapping sang ADD.**
 
-- ADD Â§2.2.4.2 ASR-PERF-12: exam generation latency.
-- ADD Â§2.4.1.7 ASR-DI-09 vÃ  Â§2.4.2.2 ASR-DI-08: structural correctness + config snapshot.
-- ADD Â§2.7.2 ASR-AV-04: service-level timeout/retry/circuit breaker.
-- ADD Â§3.5/Process View: start exam lÃ  flow Ä‘á»“ng bá»™, nhÆ°ng dependency Ä‘Æ°á»£c resilient.
+- ADD §2.2.4.2 ASR-PERF-12: exam generation latency.
+- ADD §2.4.1.7 ASR-DI-09 và §2.4.2.2 ASR-DI-08: structural correctness + config snapshot.
+- ADD §2.7.2 ASR-AV-04: service-level timeout/retry/circuit breaker.
+- ADD §3.5/Process View: start exam là flow đồng bộ, nhưng dependency được resilient.
 
 **Mapping sang SAD.**
 
-- SAD Â§5.2.2 Start & Submit Exam: start exam load active config, snapshot vÃ o `ExamSession`, gá»i question-service, tráº£ question text + options only.
-- SAD Â§3.2.5 exam-service: exam templates, sessions, atomic scoring, config snapshots.
-- SAD Â§6.3.3 Exam Content Integrity: correct answer khÃ´ng Ä‘Æ°á»£c gá»­i ra client.
+- SAD §5.2.2 Start & Submit Exam: start exam load active config, snapshot vào `ExamSession`, gọi question-service, trả question text + options only.
+- SAD §3.2.5 exam-service: exam templates, sessions, atomic scoring, config snapshots.
+- SAD §6.3.3 Exam Content Integrity: correct answer không được gửi ra client.
 
 ---
 
 ## 7. UC12 - Manage Exam Session / Auto-Save Answer
 
-**SRS flow vÃ  business rule.** Student tráº£ lá»i/bookmark/autosave; há»‡ thá»‘ng validate JWT, check permission, validate attemptId/questionId/eventType/status, load attempt/question/timer metadata, upsert answer/bookmark, update remaining time, persist session state, tráº£ HTTP 200. BR chÃ­nh: auth, request validation, context existence, idempotent save, timer state.
+**SRS flow và business rule.** Student trả lời/bookmark/autosave; hệ thống validate JWT, check permission, validate attemptId/questionId/eventType/status, load attempt/question/timer metadata, upsert answer/bookmark, update remaining time, persist session state, trả HTTP 200. BR chính: auth, request validation, context existence, idempotent save, timer state.
 
-**Vá»‹ trÃ­ code.**
+**Vị trí code.**
 
 - Use case: `apps/exam-service/src/application/use-cases/save-answer/save-answer.use-case.ts`
 - Aggregate method: `ExamSession.saveAnswer(...)`
 - Repository upsert: `apps/exam-service/src/infrastructure/persistence/prisma/prisma-exam-session.repository.ts`
 
-Code máº«u:
+Code mẫu:
 
 ```ts
 const session = await this.sessionRepository.findById(command.sessionId);
@@ -591,43 +591,43 @@ await tx.examSessionQuestion.upsert({
 
 **Mapping sang ASR.**
 
-- **ASR-REL-03:** save operation idempotent; gá»­i láº¡i cÃ¹ng answer khÃ´ng táº¡o duplicate vÃ¬ repository dÃ¹ng `upsert`.
-- **ASR-REL-02:** auto-save váº«n check expiry server-side; expired thÃ¬ finalize trÆ°á»›c.
-- **ASR-UX-05:** pháº§n offline buffering lÃ  client-side; backend há»— trá»£ báº±ng idempotent sync.
-- **ASR-AV-06:** session state á»Ÿ DB, khÃ´ng phá»¥ thuá»™c instance memory; request cÃ³ thá»ƒ route tá»›i replica service khÃ¡c.
+- **ASR-REL-03:** save operation idempotent; gửi lại cùng answer không tạo duplicate vì repository dùng `upsert`.
+- **ASR-REL-02:** auto-save vẫn check expiry server-side; expired thì finalize trước.
+- **ASR-UX-05:** phần offline buffering là client-side; backend hỗ trợ bằng idempotent sync.
+- **ASR-AV-06:** session state ở DB, không phụ thuộc instance memory; request có thể route tới replica service khác.
 
 **Design pattern.**
 
-- **Aggregate Root:** invariant `IN_PROGRESS`, `not expired`, owner check náº±m trong domain.
-- **Idempotent Write:** `upsert` Ä‘áº£m báº£o retry/duplicate submit cÃ¹ng state khÃ´ng táº¡o row má»›i.
-- **Repository:** transaction persistence náº±m trong infrastructure.
+- **Aggregate Root:** invariant `IN_PROGRESS`, `not expired`, owner check nằm trong domain.
+- **Idempotent Write:** `upsert` đảm bảo retry/duplicate submit cùng state không tạo row mới.
+- **Repository:** transaction persistence nằm trong infrastructure.
 
 **Mapping sang ADD.**
 
-- ADD Â§2.3.2.2 ASR-REL-03: idempotent auto-save + offline sync.
-- ADD Â§2.3.1.1 ASR-REL-02: server authoritative timer.
-- ADD Â§3.4 Data View: in-progress session state persisted to `exam_db`, khÃ´ng giá»¯ trong memory.
+- ADD §2.3.2.2 ASR-REL-03: idempotent auto-save + offline sync.
+- ADD §2.3.1.1 ASR-REL-02: server authoritative timer.
+- ADD §3.4 Data View: in-progress session state persisted to `exam_db`, không giữ trong memory.
 
 **Mapping sang SAD.**
 
-- SAD Â§5.2.2 step auto-save: PATCH answers every 5-10s, idempotent, offline buffer sync on reconnect.
-- SAD Â§4.3 Design Principles: idempotent write, stateless services.
-- SAD Â§3.3.2 Availability Boundaries: exam-service khÃ´ng phá»¥ thuá»™c analytics/notification Ä‘á»ƒ autosave.
+- SAD §5.2.2 step auto-save: PATCH answers every 5-10s, idempotent, offline buffer sync on reconnect.
+- SAD §4.3 Design Principles: idempotent write, stateless services.
+- SAD §3.3.2 Availability Boundaries: exam-service không phụ thuộc analytics/notification để autosave.
 
 ---
 
 ## 8. UC13/UC14 - Submit & Grade Exam
 
-**SRS flow vÃ  business rule.** UC13 student confirm submit; há»‡ thá»‘ng validate JWT/permission, validate attempt status/anti-double-submit, load active attempt and answer snapshot, lock answers/finalize attempt, trigger grading, tráº£ confirmation/result. UC14 grading workflow load answers + answer key + fatal questions, compute score/pass threshold, apply fatal question override, persist final grade, tráº£ HTTP 200.
+**SRS flow và business rule.** UC13 student confirm submit; hệ thống validate JWT/permission, validate attempt status/anti-double-submit, load active attempt and answer snapshot, lock answers/finalize attempt, trigger grading, trả confirmation/result. UC14 grading workflow load answers + answer key + fatal questions, compute score/pass threshold, apply fatal question override, persist final grade, trả HTTP 200.
 
-**Vá»‹ trÃ­ code.**
+**Vị trí code.**
 
 - Use case: `apps/exam-service/src/application/use-cases/submit-session/submit-session.use-case.ts`
 - Domain grading: `apps/exam-service/src/domain/aggregates/exam-session/exam-session.aggregate.ts`
 - Repository transaction: `apps/exam-service/src/infrastructure/persistence/prisma/prisma-exam-session.repository.ts`
 - Event publisher: `apps/exam-service/src/infrastructure/messaging/rabbitmq-event-publisher.service.ts`
 
-Code máº«u:
+Code mẫu:
 
 ```ts
 if (session.status !== ExamSessionStatus.IN_PROGRESS) {
@@ -657,45 +657,45 @@ this.addDomainEvent(new ExamSessionCompletedEvent(...));
 
 **Mapping sang ASR.**
 
-- **ASR-DI-01:** client chá»‰ gá»­i selected answer; scoring server-side.
-- **ASR-DI-02:** fatal/critical question Ä‘Æ°á»£c xá»­ lÃ½ trong domain, khÃ´ng expose cho client trong lÃºc lÃ m bÃ i.
-- **ASR-REL-04:** submit, grade, result write cáº§n atomic. Code hiá»‡n lÆ°u `examSession` vÃ  `examSessionQuestion` trong má»™t Prisma transaction trong repository, nÃªn pháº§n DB persistence cá»§a result lÃ  atomic.
-- **ASR-DI-07 vÃ  ASR-AV-05:** tÃ i liá»‡u ASR/ADD/SAD yÃªu cáº§u `ExamCompleted` Ä‘Æ°á»£c ghi outbox cÃ¹ng transaction. **Code hiá»‡n táº¡i chÆ°a lÃ m Ä‘Ãºng Ä‘iá»ƒm nÃ y cho business event exam completion**: `sessionRepository.save(session)` commit xong, rá»“i `eventPublisher.publishAll(events)` publish RabbitMQ sau Ä‘Ã³. Náº¿u broker lá»—i á»Ÿ Ä‘Ãºng thá»i Ä‘iá»ƒm nÃ y, DB result Ä‘Ã£ commit nhÆ°ng event analytics cÃ³ thá»ƒ khÃ´ng Ä‘Æ°á»£c outbox retry. ÄÃ¢y lÃ  gap implementation so vá»›i ASR-DI-07/AV-05. Audit outbox cÃ³ tá»“n táº¡i trong exam-service nhÆ°ng khÃ´ng Ã¡p dá»¥ng cho `ExamSessionCompletedEvent`.
+- **ASR-DI-01:** client chỉ gửi selected answer; scoring server-side.
+- **ASR-DI-02:** fatal/critical question được xử lý trong domain, không expose cho client trong lúc làm bài.
+- **ASR-REL-04:** submit, grade, result write cần atomic. Code hiện lưu `examSession` và `examSessionQuestion` trong một Prisma transaction trong repository, nên phần DB persistence của result là atomic.
+- **ASR-DI-07 và ASR-AV-05:** tài liệu ASR/ADD/SAD yêu cầu `ExamCompleted` được ghi outbox cùng transaction. **Code hiện tại chưa làm đúng điểm này cho business event exam completion**: `sessionRepository.save(session)` commit xong, rồi `eventPublisher.publishAll(events)` publish RabbitMQ sau đó. Nếu broker lỗi ở đúng thời điểm này, DB result đã commit nhưng event analytics có thể không được outbox retry. Đây là gap implementation so với ASR-DI-07/AV-05. Audit outbox có tồn tại trong exam-service nhưng không áp dụng cho `ExamSessionCompletedEvent`.
 
 **Design pattern.**
 
-- **Aggregate Root + Domain Event/Observer:** grading náº±m trong `ExamSession.grade()`, sau Ä‘Ã³ add `ExamSessionCompleted/Passed/FailedEvent`.
-- **Rule Engine Ä‘Æ¡n giáº£n:** pass/fail dá»±a trÃªn score + critical mistakes.
-- **Transactional Repository:** Prisma `$transaction` bá»c save session/questions.
-- **Transactional Outbox intended pattern:** tÃ i liá»‡u yÃªu cáº§u, nhÆ°ng code business event cáº§n bá»• sung Ä‘á»ƒ Ä‘áº¡t Ä‘á»§.
+- **Aggregate Root + Domain Event/Observer:** grading nằm trong `ExamSession.grade()`, sau đó add `ExamSessionCompleted/Passed/FailedEvent`.
+- **Rule Engine đơn giản:** pass/fail dựa trên score + critical mistakes.
+- **Transactional Repository:** Prisma `$transaction` bọc save session/questions.
+- **Transactional Outbox intended pattern:** tài liệu yêu cầu, nhưng code business event cần bổ sung để đạt đủ.
 
 **Mapping sang ADD.**
 
-- ADD Â§2.3.3.1 ASR-REL-04: reliable atomic submit.
-- ADD Â§2.4.2.1 ASR-DI-01: immutable result.
-- ADD Â§2.4.1.6 ASR-DI-07 vÃ  Â§2.7.3 ASR-AV-05: transactional outbox cho ExamCompleted.
-- Khi present, náº¿u khÃ´ng muá»‘n bá»‹ báº¯t lá»—i, nÃ³i rÃµ: â€œDesign decision trong ADD lÃ  outbox; code hiá»‡n Ä‘Ã£ atomic DB result, nhÆ°ng business event outbox cáº§n hoÃ n thiá»‡n Ä‘á»ƒ full compliance.â€
+- ADD §2.3.3.1 ASR-REL-04: reliable atomic submit.
+- ADD §2.4.2.1 ASR-DI-01: immutable result.
+- ADD §2.4.1.6 ASR-DI-07 và §2.7.3 ASR-AV-05: transactional outbox cho ExamCompleted.
+- Khi present, nếu không muốn bị bắt lỗi, nói rõ: “Design decision trong ADD là outbox; code hiện đã atomic DB result, nhưng business event outbox cần hoàn thiện để full compliance.”
 
 **Mapping sang SAD.**
 
-- SAD Â§5.2.2 mÃ´ táº£ Start & Submit Exam: single PostgreSQL transaction vÃ  outbox publisher.
-- SAD Â§6.3.3 Exam Content Integrity: correct answers khÃ´ng leak.
-- SAD Â§7.1.3 note on exam grading: synchronous grading trong transaction Ä‘á»ƒ tráº£ result ngay.
+- SAD §5.2.2 mô tả Start & Submit Exam: single PostgreSQL transaction và outbox publisher.
+- SAD §6.3.3 Exam Content Integrity: correct answers không leak.
+- SAD §7.1.3 note on exam grading: synchronous grading trong transaction để trả result ngay.
 
 ---
 
 ## 9. UC26/UC34 - View Learning Progress Dashboard
 
-**SRS flow vÃ  business rule.** Student má»Ÿ My Progress; há»‡ thá»‘ng validate JWT, check Student role, extract studentId tá»« claims, cache-first query progress, náº¿u miss query DB/projection, cache metrics, project payload gá»“m completion%, pass-rate, weak topics, enforce strict scope studentId match, tráº£ HTTP 200.
+**SRS flow và business rule.** Student mở My Progress; hệ thống validate JWT, check Student role, extract studentId từ claims, cache-first query progress, nếu miss query DB/projection, cache metrics, project payload gồm completion%, pass-rate, weak topics, enforce strict scope studentId match, trả HTTP 200.
 
-**Vá»‹ trÃ­ code.**
+**Vị trí code.**
 
 - Consumer event: `apps/analytics-service/src/presentation/messaging/messaging.controller.ts`
 - Projection update: `apps/analytics-service/src/application/use-cases/record-events/record-events.use-case.ts`
 - Read use case: `apps/analytics-service/src/application/use-cases/get-progress/get-progress.use-case.ts`
 - Repository: `apps/analytics-service/src/infrastructure/persistence/prisma/prisma-learning-progress.repository.ts`
 
-Code máº«u:
+Code mẫu:
 
 ```ts
 // messaging.controller.ts
@@ -719,42 +719,42 @@ return dashboard;
 
 **Mapping sang ASR.**
 
-- **ASR-PERF-04:** dashboard láº¥y tá»« pre-computed/projection table, khÃ´ng real-time aggregate raw log.
-- **ASR-PERF-07:** chart data tá»« aggregated data, response má»¥c tiÃªu < 200ms.
-- **ASR-AV-06:** projected read model giáº£m Ã¡p lá»±c lÃªn exam_db; náº¿u analytics lag, exam flow váº«n cháº¡y, dashboard eventual consistent.
-- **ASR-AV-05/DI-07:** lÃ½ tÆ°á»Ÿng lÃ  exam-service outbox -> RabbitMQ -> analytics idempotent. Code analytics consumer cÃ³ handler vÃ  cache invalidation, nhÆ°ng full guarantee phá»¥ thuá»™c viá»‡c exam-service bá»• sung outbox nhÆ° gap á»Ÿ UC13/14.
+- **ASR-PERF-04:** dashboard lấy từ pre-computed/projection table, không real-time aggregate raw log.
+- **ASR-PERF-07:** chart data từ aggregated data, response mục tiêu < 200ms.
+- **ASR-AV-06:** projected read model giảm áp lực lên exam_db; nếu analytics lag, exam flow vẫn chạy, dashboard eventual consistent.
+- **ASR-AV-05/DI-07:** lý tưởng là exam-service outbox -> RabbitMQ -> analytics idempotent. Code analytics consumer có handler và cache invalidation, nhưng full guarantee phụ thuộc việc exam-service bổ sung outbox như gap ở UC13/14.
 
 **Design pattern.**
 
-- **CQRS:** write model á»Ÿ `exam-service/course-service`, read projection á»Ÿ `analytics-service`.
-- **Pub-Sub:** analytics consume events nhÆ° `exam.session.completed`, `course.enrollment.progress-reset`.
-- **Cache-Aside / Projection Cache:** `GetProgressUseCase` Ä‘á»c cache trÆ°á»›c, miss thÃ¬ query projection.
+- **CQRS:** write model ở `exam-service/course-service`, read projection ở `analytics-service`.
+- **Pub-Sub:** analytics consume events như `exam.session.completed`, `course.enrollment.progress-reset`.
+- **Cache-Aside / Projection Cache:** `GetProgressUseCase` đọc cache trước, miss thì query projection.
 
 **Mapping sang ADD.**
 
-- ADD Â§2.2.2.1 ASR-PERF-04: progress statistics from pre-aggregated table.
-- ADD Â§2.2.2.3 ASR-PERF-07: chart from aggregated data.
-- ADD Â§2.7.4 ASR-AV-06: cache-backed/projected read models.
-- ADD Â§3.1 Logical View: analytics-service chá»‹u trÃ¡ch nhiá»‡m progress stats/SRS.
+- ADD §2.2.2.1 ASR-PERF-04: progress statistics from pre-aggregated table.
+- ADD §2.2.2.3 ASR-PERF-07: chart from aggregated data.
+- ADD §2.7.4 ASR-AV-06: cache-backed/projected read models.
+- ADD §3.1 Logical View: analytics-service chịu trách nhiệm progress stats/SRS.
 
 **Mapping sang SAD.**
 
-- SAD Â§5.2.3 Progress Dashboard Load: Client -> Kong -> analytics-service -> indexed lookup on progress_stat -> return metrics.
-- SAD Â§3.2.9 analytics-service: progress queries hit pre-aggregated table, no raw log aggregation.
-- SAD Â§7.1.2: progress dashboard P95 < 200ms báº±ng indexed lookup.
+- SAD §5.2.3 Progress Dashboard Load: Client -> Kong -> analytics-service -> indexed lookup on progress_stat -> return metrics.
+- SAD §3.2.9 analytics-service: progress queries hit pre-aggregated table, no raw log aggregation.
+- SAD §7.1.2: progress dashboard P95 < 200ms bằng indexed lookup.
 
 ---
 
 ## 10. UC35/UC36 - 2D Driving Practice & Realtime Error Feedback
 
-**SRS/mapping flow vÃ  business rule.** Student báº¯t Ä‘áº§u practice 2D, há»‡ thá»‘ng validate JWT/student role/license tier/capability, táº¡o session. Trong session, client gá»­i telemetry nhÆ° speed, lane offset, collision. Server kiá»ƒm tra tráº¡ng thÃ¡i session, owner, ingest telemetry, detect lá»—i, tráº£ feedback `{errorCode, severity, penalty, message, hint}` Ä‘á»ƒ client render cáº£nh bÃ¡o. BR chÃ­nh: authorization, capability validation, server-side feedback, fatal/warning mapping, session end summary.
+**SRS/mapping flow và business rule.** Student bắt đầu practice 2D, hệ thống validate JWT/student role/license tier/capability, tạo session. Trong session, client gửi telemetry như speed, lane offset, collision. Server kiểm tra trạng thái session, owner, ingest telemetry, detect lỗi, trả feedback `{errorCode, severity, penalty, message, hint}` để client render cảnh báo. BR chính: authorization, capability validation, server-side feedback, fatal/warning mapping, session end summary.
 
-**Vá»‹ trÃ­ code.**
+**Vị trí code.**
 
 - Use cases: `apps/simulation-service/src/application/use-cases/practice2d/practice2d.use-cases.ts`
 - Aggregate/FSM: `apps/simulation-service/src/domain/aggregates/practice2d/practice2d-session.aggregate.ts`
 
-Code máº«u:
+Code mẫu:
 
 ```ts
 // use case
@@ -787,47 +787,47 @@ if (typeof input.laneOffset === 'number' && Math.abs(input.laneOffset) > 1) {
 
 **Mapping sang ASR.**
 
-- **ASR-UX-02:** server xÃ¡c Ä‘á»‹nh lá»—i vÃ  tráº£ action response; client chá»‰ render alert, khÃ´ng tá»± tÃ­nh luáº­t. Target hiá»ƒn thá»‹ <= 300ms sau khi nháº­n response.
-- **ASR-MOD-03:** map/scenario config Ä‘á»c runtime; thÃªm map má»›i báº±ng config, khÃ´ng release app má»›i.
-- **ASR-AV-06:** simulation session persist vÃ o DB; service stateless scale Ä‘Æ°á»£c. Static error definitions/scenario cÃ³ thá»ƒ cache; lá»—i analytics/notification khÃ´ng áº£nh hÆ°á»Ÿng practice.
-- **ASR-AV-01/03:** simulation-service cÃ³ health/metrics, giÃºp detect realtime service degradation.
+- **ASR-UX-02:** server xác định lỗi và trả action response; client chỉ render alert, không tự tính luật. Target hiển thị <= 300ms sau khi nhận response.
+- **ASR-MOD-03:** map/scenario config đọc runtime; thêm map mới bằng config, không release app mới.
+- **ASR-AV-06:** simulation session persist vào DB; service stateless scale được. Static error definitions/scenario có thể cache; lỗi analytics/notification không ảnh hưởng practice.
+- **ASR-AV-01/03:** simulation-service có health/metrics, giúp detect realtime service degradation.
 
 **Design pattern.**
 
-- **Finite State Machine (FSM):** session chá»‰ nháº­n telemetry khi `IN_PROGRESS`; `end()` chuyá»ƒn sang `COMPLETED/ABANDONED`.
-- **Factory Method:** `Practice2dSession.create()` validate capability trÆ°á»›c khi táº¡o session.
-- **Observer/Domain Event:** khi end session khÃ´ng abandoned, aggregate add `Practice2dSessionCompletedEvent`.
+- **Finite State Machine (FSM):** session chỉ nhận telemetry khi `IN_PROGRESS`; `end()` chuyển sang `COMPLETED/ABANDONED`.
+- **Factory Method:** `Practice2dSession.create()` validate capability trước khi tạo session.
+- **Observer/Domain Event:** khi end session không abandoned, aggregate add `Practice2dSessionCompletedEvent`.
 
 **Mapping sang ADD.**
 
-- ADD Â§2.5.2.1 ASR-MOD-03: runtime map configurability.
-- ADD Â§2.6.1.2 ASR-UX-02: instant road-map error alert.
-- ADD Â§3.1 Logical View: simulation-service quáº£n lÃ½ driving scenarios/server FSM.
+- ADD §2.5.2.1 ASR-MOD-03: runtime map configurability.
+- ADD §2.6.1.2 ASR-UX-02: instant road-map error alert.
+- ADD §3.1 Logical View: simulation-service quản lý driving scenarios/server FSM.
 
 **Mapping sang SAD.**
 
-- SAD Â§3.2.8 simulation-service: map types loaded from JSON configs, realtime via WebSocket/Socket.IO, server computes feedback.
-- SAD Â§5.1.8: simulation-service inputs/outputs/storage.
-- SAD Â§6.3.4 API & Service Protection: WSS/TLS, JWT/RBAC á»Ÿ WebSocket handshake.
+- SAD §3.2.8 simulation-service: map types loaded from JSON configs, realtime via WebSocket/Socket.IO, server computes feedback.
+- SAD §5.1.8: simulation-service inputs/outputs/storage.
+- SAD §6.3.4 API & Service Protection: WSS/TLS, JWT/RBAC ở WebSocket handshake.
 
 ---
 
-## 11. CÃ¡c CÃ¢u Tráº£ Lá»i Nhanh Khi Tháº§y Há»i Availability
+## 11. Các Câu Trả Lời Nhanh Khi Thầy Hỏi Availability
 
-1. **Náº¿u má»™t service cháº¿t thÃ¬ sao?**`/health/live` vÃ  `/health/ready` cho Docker/Kubernetes biáº¿t service process/dependency status. Docker Compose dÃ¹ng healthcheck/restart, Kubernetes dÃ¹ng liveness/readiness probe Ä‘á»ƒ remove pod khá»i traffic vÃ  restart.
-2. **Náº¿u question-service cháº­m lÃºc start exam thÃ¬ sao?**`exam-service` gá»i `question-service` qua `HttpQuestionPoolClient`, bÃªn trong dÃ¹ng `resilientFetch`: timeout, retry transient lá»—i, circuit breaker open Ä‘á»ƒ fail-fast. KhÃ´ng giá»¯ thread treo vÃ´ háº¡n.
-3. **Náº¿u Redis cache course cháº¿t thÃ¬ sao?**`RedisCourseCacheService.safeExec()` catch lá»—i vÃ  fallback `null`, use case query DB nhÆ° cache miss. Há»‡ thá»‘ng degrade vá» latency DB nhÆ°ng khÃ´ng crash.
-4. **Náº¿u analytics-service backlog thÃ¬ cÃ³ áº£nh hÆ°á»Ÿng submit exam khÃ´ng?**Theo kiáº¿n trÃºc, khÃ´ng. Exam result commit trong `exam_db`; analytics lÃ  consumer eventual consistency. Tuy nhiÃªn code cáº§n outbox cho `ExamCompleted` Ä‘á»ƒ Ä‘áº£m báº£o event khÃ´ng máº¥t khi RabbitMQ lá»—i.
-5. **Náº¿u notification-service lá»—i thÃ¬ há»c viÃªn cÃ³ ná»™p bÃ i Ä‘Æ°á»£c khÃ´ng?**CÃ³. Notification lÃ  async qua RabbitMQ/DLQ, khÃ´ng náº±m trÃªn critical path cá»§a exam submission.
-6. **Há»‡ thá»‘ng cÃ³ quan sÃ¡t lá»—i production khÃ´ng?**
-   CÃ³ `/metrics` Prometheus, correlation-id, access log/ELK, smoke script kiá»ƒm tra `/health/live` vÃ  `/health/ready` qua Kong.
+1. **Nếu một service chết thì sao?**`/health/live` và `/health/ready` cho Docker/Kubernetes biết service process/dependency status. Docker Compose dùng healthcheck/restart, Kubernetes dùng liveness/readiness probe để remove pod khỏi traffic và restart.
+2. **Nếu question-service chậm lúc start exam thì sao?**`exam-service` gọi `question-service` qua `HttpQuestionPoolClient`, bên trong dùng `resilientFetch`: timeout, retry transient lỗi, circuit breaker open để fail-fast. Không giữ thread treo vô hạn.
+3. **Nếu Redis cache course chết thì sao?**`RedisCourseCacheService.safeExec()` catch lỗi và fallback `null`, use case query DB như cache miss. Hệ thống degrade về latency DB nhưng không crash.
+4. **Nếu analytics-service backlog thì có ảnh hưởng submit exam không?**Theo kiến trúc, không. Exam result commit trong `exam_db`; analytics là consumer eventual consistency. Tuy nhiên code cần outbox cho `ExamCompleted` để đảm bảo event không mất khi RabbitMQ lỗi.
+5. **Nếu notification-service lỗi thì học viên có nộp bài được không?**Có. Notification là async qua RabbitMQ/DLQ, không nằm trên critical path của exam submission.
+6. **Hệ thống có quan sát lỗi production không?**
+   Có `/metrics` Prometheus, correlation-id, access log/ELK, smoke script kiểm tra `/health/live` và `/health/ready` qua Kong.
 
 ---
 
-## 12. Äiá»ƒm Cáº§n Nhá»› Khi TrÃ¬nh BÃ y Gap
+## 12. Điểm Cần Nhớ Khi Trình Bày Gap
 
-- **Gap 1 - SAD course cache stale:** SAD nÃ³i in-memory cache, nhÆ°ng code/ASR dÃ¹ng Redis TTL 600s. CÃ¢u tráº£ lá»i: Redis lÃ  quyáº¿t Ä‘á»‹nh má»›i tá»‘t hÆ¡n cho multi-replica; SAD cáº§n update Ä‘á»ƒ Ä‘á»“ng bá»™.
-- **Gap 2 - ExamCompleted transactional outbox:** ASR/SAD yÃªu cáº§u ExamCompleted event ghi outbox cÃ¹ng transaction vá»›i completed session. Code hiá»‡n publish RabbitMQ sau transaction. CÃ¢u tráº£ lá»i: pháº§n grading/result DB Ä‘Ã£ atomic; Ä‘á»ƒ full compliance vá»›i ASR-DI-07/AV-05 cáº§n Ä‘Æ°a domain event vÃ o outbox trong `PrismaExamSessionRepository.save()` rá»“i relay background.
-- **Gap 3 - Forgot password SRS 404 vs implementation generic response:** code cá»‘ tÃ¬nh khÃ´ng tráº£ 404 Ä‘á»ƒ chá»‘ng user enumeration. ÄÃ¢y lÃ  security improvement so vá»›i flow cÅ©, váº«n phÃ¹ há»£p ASR-SEC-02.
+- **Gap 1 - SAD course cache stale:** SAD nói in-memory cache, nhưng code/ASR dùng Redis TTL 600s. Câu trả lời: Redis là quyết định mới tốt hơn cho multi-replica; SAD cần update để đồng bộ.
+- **Gap 2 - ExamCompleted transactional outbox:** ASR/SAD yêu cầu ExamCompleted event ghi outbox cùng transaction với completed session. Code hiện publish RabbitMQ sau transaction. Câu trả lời: phần grading/result DB đã atomic; để full compliance với ASR-DI-07/AV-05 cần đưa domain event vào outbox trong `PrismaExamSessionRepository.save()` rồi relay background.
+- **Gap 3 - Forgot password SRS 404 vs implementation generic response:** code cố tình không trả 404 để chống user enumeration. Đây là security improvement so với flow cũ, vẫn phù hợp ASR-SEC-02.
 
 
