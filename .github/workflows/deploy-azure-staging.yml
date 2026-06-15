@@ -1,0 +1,460 @@
+name: Deploy Azure AKS Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Immutable image tag to deploy, usually a Git SHA built by Main Image Release"
+        required: true
+        type: string
+      install_nginx_ingress:
+        description: "Install or upgrade ingress-nginx before deploying the app"
+        required: true
+        type: boolean
+        default: true
+      confirm_staging:
+        description: "Confirm this deploy targets Azure staging"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+  packages: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  deploy-azure-staging:
+    name: Deploy Azure AKS Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    if: inputs.confirm_staging == true
+    environment:
+      name: staging
+    concurrency:
+      group: deploy-azure-staging
+      cancel-in-progress: false
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_AKS_RESOURCE_GROUP: ${{ vars.AZURE_AKS_RESOURCE_GROUP }}
+      AZURE_AKS_CLUSTER_NAME: ${{ vars.AZURE_AKS_CLUSTER_NAME }}
+      API_HOST: ${{ vars.STAGING_API_HOST }}
+      AUTH_HOST: ${{ vars.STAGING_AUTH_HOST }}
+      FRONTEND_ORIGIN: ${{ vars.STAGING_FRONTEND_ORIGIN }}
+      API_SCHEME: ${{ vars.STAGING_API_SCHEME }}
+      STAGING_SEED_ENABLED: ${{ vars.STAGING_SEED_ENABLED }}
+      GHCR_PULL_USERNAME: ${{ secrets.GHCR_PULL_USERNAME }}
+      GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+      POSTGRES_PASSWORD: ${{ secrets.STAGING_POSTGRES_PASSWORD }}
+      RABBITMQ_DEFAULT_PASS: ${{ secrets.STAGING_RABBITMQ_PASSWORD }}
+      RABBITMQ_ERLANG_COOKIE: ${{ secrets.STAGING_RABBITMQ_ERLANG_COOKIE }}
+      KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.STAGING_KEYCLOAK_ADMIN_PASSWORD }}
+      KEYCLOAK_CLIENT_SECRET: ${{ secrets.STAGING_KEYCLOAK_CLIENT_SECRET }}
+      STORAGE_ACCOUNT_NAME: ${{ secrets.STAGING_STORAGE_ACCOUNT_NAME }}
+      STORAGE_ACCOUNT_KEY: ${{ secrets.STAGING_STORAGE_ACCOUNT_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mark deployment start
+        shell: bash
+        run: echo "DEPLOYMENT_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+
+      - uses: azure/setup-helm@v4
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate deployment inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_vars=(
+            IMAGE_TAG
+            AZURE_AKS_RESOURCE_GROUP
+            AZURE_AKS_CLUSTER_NAME
+            API_HOST
+            AUTH_HOST
+            FRONTEND_ORIGIN
+            GHCR_PULL_USERNAME
+            GHCR_PULL_TOKEN
+            POSTGRES_PASSWORD
+            RABBITMQ_DEFAULT_PASS
+            RABBITMQ_ERLANG_COOKIE
+            KEYCLOAK_ADMIN_PASSWORD
+            KEYCLOAK_CLIENT_SECRET
+            STORAGE_ACCOUNT_NAME
+            STORAGE_ACCOUNT_KEY
+          )
+
+          for var_name in "${required_vars[@]}"; do
+            if [[ -z "${!var_name:-}" ]]; then
+              echo "Missing required value: ${var_name}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Configure AKS credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          az aks get-credentials \
+            --resource-group "$AZURE_AKS_RESOURCE_GROUP" \
+            --name "$AZURE_AKS_CLUSTER_NAME" \
+            --overwrite-existing
+          kubectl cluster-info
+          kubectl get nodes -o wide
+
+      - name: Install ingress-nginx
+        if: inputs.install_nginx_ingress == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set-string controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"=/healthz \
+            --wait \
+            --timeout 10m
+          kubectl get svc -n ingress-nginx
+
+      - name: Render Helm values
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HELM_VALUES_FILE="$RUNNER_TEMP/azure-staging-values.json"
+          API_SCHEME="${API_SCHEME:-http}"
+          GATEWAY_PUBLIC_URL="${API_SCHEME}://${API_HOST}"
+          KEYCLOAK_PUBLIC_URL="${API_SCHEME}://${AUTH_HOST}"
+          export API_SCHEME GATEWAY_PUBLIC_URL KEYCLOAK_PUBLIC_URL
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const env = process.env;
+          const origins = [
+            env.FRONTEND_ORIGIN,
+            env.GATEWAY_PUBLIC_URL,
+            env.KEYCLOAK_PUBLIC_URL,
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'http://localhost:5174',
+          ].flatMap((value) => String(value || '').split(','))
+            .map((value) => value.trim())
+            .filter(Boolean);
+
+          const values = {
+            global: {
+              imageTag: env.IMAGE_TAG,
+              imageRegistry: `ghcr.io/${{ github.repository_owner }}`,
+              nodeEnv: 'staging',
+              storageClassName: 'managed-csi',
+            },
+            imagePullSecret: {
+              enabled: true,
+              username: env.GHCR_PULL_USERNAME,
+              token: env.GHCR_PULL_TOKEN,
+            },
+            ingress: {
+              className: 'nginx',
+              apiHost: env.API_HOST,
+              authHost: env.AUTH_HOST,
+              annotations: {
+                'nginx.ingress.kubernetes.io/proxy-body-size': '100m',
+              },
+              tls: {
+                enabled: env.API_SCHEME === 'https',
+                secretName: 'luyen-thi-lai-xe-tls',
+              },
+            },
+            config: {
+              frontendOrigin: env.FRONTEND_ORIGIN,
+              gatewayPublicUrl: env.GATEWAY_PUBLIC_URL,
+              keycloakPublicUrl: env.KEYCLOAK_PUBLIC_URL,
+              corsOrigins: [...new Set(origins)],
+            },
+            tracing: {
+              enabled: false,
+            },
+            appDefaults: {
+              replicaCount: 1,
+              resources: {
+                requests: { cpu: '50m', memory: '128Mi' },
+                limits: { cpu: '500m', memory: '512Mi' },
+              },
+              hpa: { enabled: false },
+            },
+            seed: {
+              enabled: String(env.STAGING_SEED_ENABLED || '').toLowerCase() === 'true',
+              resources: {
+                requests: { cpu: '100m', memory: '256Mi' },
+                limits: { cpu: '500m', memory: '768Mi' },
+              },
+            },
+            secrets: {
+              postgresPassword: env.POSTGRES_PASSWORD,
+              rabbitmqPassword: env.RABBITMQ_DEFAULT_PASS,
+              rabbitmqErlangCookie: env.RABBITMQ_ERLANG_COOKIE,
+              keycloakAdminPassword: env.KEYCLOAK_ADMIN_PASSWORD,
+              keycloakClientSecret: env.KEYCLOAK_CLIENT_SECRET,
+              storageAccountName: env.STORAGE_ACCOUNT_NAME,
+              storageAccountKey: env.STORAGE_ACCOUNT_KEY,
+              storageContainerName: 'media',
+            },
+            postgres: {
+              storage: '8Gi',
+              resources: {
+                requests: { cpu: '250m', memory: '512Mi' },
+                limits: { cpu: '1', memory: '2Gi' },
+              },
+            },
+            rabbitmq: {
+              storage: '1Gi',
+              resources: {
+                requests: { cpu: '100m', memory: '256Mi' },
+                limits: { cpu: '500m', memory: '768Mi' },
+              },
+            },
+            redis: {
+              storage: '1Gi',
+              resources: {
+                requests: { cpu: '50m', memory: '128Mi' },
+                limits: { cpu: '250m', memory: '256Mi' },
+              },
+            },
+            consul: {
+              storage: '1Gi',
+              resources: {
+                requests: { cpu: '50m', memory: '128Mi' },
+                limits: { cpu: '250m', memory: '256Mi' },
+              },
+            },
+            keycloak: {
+              replicas: 1,
+              resources: {
+                requests: { cpu: '250m', memory: '512Mi' },
+                limits: { cpu: '1', memory: '1Gi' },
+              },
+            },
+            kong: {
+              replicas: 1,
+              resources: {
+                requests: { cpu: '100m', memory: '256Mi' },
+                limits: { cpu: '500m', memory: '512Mi' },
+              },
+            },
+            migration: {
+              imageTag: env.IMAGE_TAG,
+              resources: {
+                requests: { cpu: '100m', memory: '256Mi' },
+                limits: { cpu: '500m', memory: '768Mi' },
+              },
+            },
+            services: [
+              {
+                name: 'identity-service',
+                image: 'luyen-thi-lai-xe-identity-service',
+                dbName: 'identity_db',
+                usesRedis: true,
+                hpa: { enabled: false },
+                routes: [
+                  { name: 'identity-route', paths: ['/auth'], stripPath: true },
+                  { name: 'identity-admin-route', paths: ['/admin'], stripPath: false },
+                  { name: 'identity-swagger-route', paths: ['/identity-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'user-service',
+                image: 'luyen-thi-lai-xe-user-service',
+                dbName: 'user_db',
+                routes: [
+                  { name: 'user-route', paths: ['/users'], stripPath: false },
+                  { name: 'user-admin-route', paths: ['/admin/users'], stripPath: false },
+                  { name: 'user-swagger-route', paths: ['/user-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'exam-service',
+                image: 'luyen-thi-lai-xe-exam-service',
+                dbName: 'exam_db',
+                hpa: { enabled: false },
+                routes: [
+                  { name: 'exam-route', paths: ['/exams'], stripPath: false },
+                  { name: 'exam-admin-route', paths: ['/admin/exams'], stripPath: false },
+                  { name: 'exam-swagger-route', paths: ['/exam-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'course-service',
+                image: 'luyen-thi-lai-xe-course-service',
+                dbName: 'course_db',
+                usesRedis: true,
+                hpa: { enabled: false },
+                routes: [
+                  { name: 'course-route', paths: ['/courses', '/enrollments'], stripPath: false },
+                  { name: 'course-admin-route', paths: ['/admin/courses'], stripPath: false },
+                  { name: 'course-swagger-route', paths: ['/course-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'question-service',
+                image: 'luyen-thi-lai-xe-question-service',
+                dbName: 'question_db',
+                routes: [
+                  { name: 'question-admin-route', paths: ['/admin/questions'], stripPath: false },
+                  { name: 'question-swagger-route', paths: ['/question-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'notification-service',
+                image: 'luyen-thi-lai-xe-notification-service',
+                dbName: 'notification_db',
+                usesRedis: true,
+                routes: [
+                  { name: 'notification-route', paths: ['/notifications'], stripPath: false },
+                  { name: 'notification-swagger-route', paths: ['/notification-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'analytics-service',
+                image: 'luyen-thi-lai-xe-analytics-service',
+                dbName: 'analytics_db',
+                usesRedis: true,
+                hpa: { enabled: false },
+                routes: [
+                  { name: 'analytics-route', paths: ['/analytics'], stripPath: false },
+                  { name: 'analytics-admin-route', paths: ['/admin/analytics'], stripPath: false },
+                  { name: 'analytics-swagger-route', paths: ['/analytics-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'simulation-service',
+                image: 'luyen-thi-lai-xe-simulation-service',
+                dbName: 'simulation_db',
+                usesRedis: true,
+                hpa: { enabled: false },
+                routes: [
+                  { name: 'simulation-route', paths: ['/simulation'], stripPath: false },
+                  { name: 'simulation-swagger-route', paths: ['/simulation-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'media-service',
+                image: 'luyen-thi-lai-xe-media-service',
+                dbName: 'media_db',
+                resources: {
+                  requests: { cpu: '75m', memory: '192Mi' },
+                  limits: { cpu: '750m', memory: '1Gi' },
+                },
+                routes: [
+                  { name: 'media-route', paths: ['/media'], stripPath: false },
+                  { name: 'media-admin-route', paths: ['/admin/media'], stripPath: false },
+                  { name: 'media-swagger-route', paths: ['/media-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'audit-service',
+                image: 'luyen-thi-lai-xe-audit-service',
+                dbName: 'audit_db',
+                routes: [
+                  { name: 'audit-admin-route', paths: ['/admin/audit-logs'], stripPath: false },
+                  { name: 'audit-swagger-route', paths: ['/audit-service'], stripPath: true },
+                ],
+              },
+            ],
+          };
+
+          fs.writeFileSync(env.HELM_VALUES_FILE, JSON.stringify(values, null, 2));
+          NODE
+
+      - name: Cleanup old Helm jobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl delete jobs -n staging -l app.kubernetes.io/instance=luyen-thi-lai-xe --ignore-not-found
+
+      - name: Deploy Helm release
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm lint charts/luyen-thi-lai-xe -f "$RUNNER_TEMP/azure-staging-values.json"
+          helm upgrade --install luyen-thi-lai-xe charts/luyen-thi-lai-xe \
+            --namespace staging \
+            --create-namespace \
+            --wait \
+            --wait-for-jobs \
+            --timeout 25m \
+            -f "$RUNNER_TEMP/azure-staging-values.json"
+
+      - name: Debug deployment failure
+        if: failure()
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "========== HELM STATUS =========="
+          helm list -n staging || true
+          helm history luyen-thi-lai-xe -n staging || true
+          echo "========== STORAGE CLASSES =========="
+          kubectl get storageclass || true
+          echo "========== INGRESS =========="
+          kubectl get ingress -n staging -o wide || true
+          kubectl get svc -n ingress-nginx -o wide || true
+          echo "========== PODS =========="
+          kubectl get pods -n staging -o wide || true
+          echo "========== NON-RUNNING POD DEBUG =========="
+          for pod in $(kubectl get pods -n staging --field-selector=status.phase!=Running,status.phase!=Succeeded --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do
+            echo "--- describe $pod ---"
+            kubectl describe pod "$pod" -n staging 2>/dev/null || true
+            echo "--- logs $pod ---"
+            kubectl logs "$pod" -n staging --all-containers --tail=120 2>/dev/null || true
+          done
+          echo "========== EVENTS =========="
+          kubectl get events -n staging --sort-by='.metadata.creationTimestamp' 2>/dev/null | tail -80 || true
+
+      - name: Verify rollout and smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl wait --for=condition=complete job -l app.kubernetes.io/component=consul-seed -n staging --timeout=10m
+          kubectl wait --for=condition=complete job -l app.kubernetes.io/component=migration -n staging --timeout=10m
+          if kubectl get job -l app.kubernetes.io/component=seed -n staging --no-headers 2>/dev/null | grep -q .; then
+            kubectl wait --for=condition=complete job -l app.kubernetes.io/component=seed -n staging --timeout=15m
+          fi
+          kubectl rollout status deployment -l app.kubernetes.io/component=app -n staging --timeout=10m
+          kubectl get deploy,svc,ingress,job -n staging
+          API_SCHEME="${API_SCHEME:-http}"
+          SMOKE_BASE_URL="${API_SCHEME}://${API_HOST}" bash scripts/k8s-smoke.sh
+
+      - name: Record deployment event
+        if: always()
+        env:
+          DEPLOYMENT_ENVIRONMENT: staging
+          DEPLOYMENT_TYPE: helm
+          DEPLOYMENT_TARGET: azure-aks
+          DEPLOYMENT_RELEASE_NAME: luyen-thi-lai-xe
+          DEPLOYMENT_NAMESPACE: staging
+          DEPLOYMENT_IMAGE_TAG: ${{ inputs.image_tag }}
+          DEPLOYMENT_GIT_SHA: ${{ inputs.image_tag }}
+          DEPLOYMENT_STATUS: ${{ job.status }}
+          DEPLOYMENT_SMOKE_STATUS: ${{ job.status }}
+        run: node scripts/devops-record-deployment.js
+
+      - name: Upload deployment event
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-event-azure-staging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/deployments/events/
+          retention-days: 90
