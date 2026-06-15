@@ -490,7 +490,7 @@ jobs:
       github.ref == 'refs/heads/main' &&
       needs.build.result == 'success' &&
       needs.build-migration-runner.result == 'success' &&
-      (vars.GCP_AUTO_DEPLOY_ENABLED == '' || vars.GCP_AUTO_DEPLOY_ENABLED == 'true')
+      vars.GCP_AUTO_DEPLOY_ENABLED == 'true'
     environment: staging
     env:
       IMAGE_TAG: ${{ github.sha }}
