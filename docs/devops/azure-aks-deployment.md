@@ -121,9 +121,12 @@ helm repo update
 helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx `
   --namespace ingress-nginx `
   --create-namespace `
+  --version 4.15.1 `
   --set-string controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"=/healthz `
+  --set controller.service.externalTrafficPolicy=Local `
   --wait `
-  --timeout 10m
+  --atomic `
+  --timeout 15m
 
 kubectl get svc -n ingress-nginx
 ```

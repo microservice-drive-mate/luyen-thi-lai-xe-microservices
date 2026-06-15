@@ -123,12 +123,34 @@ jobs:
           set -euo pipefail
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           helm repo update
-          timeout 12m helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+          kubectl create namespace ingress-nginx --dry-run=client -o yaml | kubectl apply -f -
+
+          STATUS=$(helm list --all -n ingress-nginx -f "^ingress-nginx$" -o json | jq -r '.[0].status // empty')
+          echo "Current ingress-nginx Helm release status: ${STATUS:-not-deployed}"
+
+          if [[ "$STATUS" == "pending-upgrade" || "$STATUS" == "pending-install" || "$STATUS" == "pending-rollback" ]]; then
+            echo "ingress-nginx is stuck in '$STATUS'. Clearing only the stuck Helm revision secret."
+            STUCK_REVISION=$(helm history ingress-nginx -n ingress-nginx -o json 2>/dev/null \
+              | jq -r '.[] | select(.status=="pending-upgrade" or .status=="pending-install" or .status=="pending-rollback") | .revision' \
+              | tail -n 1)
+
+            if [[ -n "$STUCK_REVISION" ]]; then
+              kubectl delete secret "sh.helm.release.v1.ingress-nginx.v$STUCK_REVISION" -n ingress-nginx || true
+              echo "Cleared stuck ingress-nginx Helm revision v$STUCK_REVISION."
+            else
+              echo "Could not identify a stuck ingress-nginx revision. Continuing to Helm upgrade."
+            fi
+          fi
+
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
             --namespace ingress-nginx \
             --create-namespace \
+            --version 4.15.1 \
             --set-string controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"=/healthz \
+            --set controller.service.externalTrafficPolicy=Local \
             --wait \
-            --timeout 10m
+            --atomic \
+            --timeout 15m
           kubectl get svc -n ingress-nginx
 
       - name: Render Helm values
@@ -406,11 +428,14 @@ jobs:
           echo "========== HELM STATUS =========="
           helm list -n staging || true
           helm history luyen-thi-lai-xe -n staging || true
+          echo "========== INGRESS-NGINX HELM STATUS =========="
+          helm list --all -n ingress-nginx || true
+          helm history ingress-nginx -n ingress-nginx || true
           echo "========== STORAGE CLASSES =========="
           kubectl get storageclass || true
           echo "========== INGRESS =========="
           kubectl get ingress -n staging -o wide || true
-          kubectl get svc -n ingress-nginx -o wide || true
+          kubectl get deploy,pod,svc -n ingress-nginx -o wide || true
           echo "========== PODS =========="
           kubectl get pods -n staging -o wide || true
           echo "========== NON-RUNNING POD DEBUG =========="
@@ -422,6 +447,8 @@ jobs:
           done
           echo "========== EVENTS =========="
           kubectl get events -n staging --sort-by='.metadata.creationTimestamp' 2>/dev/null | tail -80 || true
+          echo "========== INGRESS-NGINX EVENTS =========="
+          kubectl get events -n ingress-nginx --sort-by='.metadata.creationTimestamp' 2>/dev/null | tail -80 || true
 
       - name: Verify rollout and smoke
         shell: bash
