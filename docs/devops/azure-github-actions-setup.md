@@ -171,12 +171,21 @@ confirm_staging=true
 
 Dung `install_nginx_ingress=true` chi khi cluster chua co ingress-nginx hoac ban muon upgrade ingress controller. Neu ingress da co external IP va API dang vao duoc, de `false` de workflow deploy app nhanh va tranh wait lai Azure Load Balancer.
 
+Neu buoc install ingress-nginx fail voi loi:
+
+```text
+UPGRADE FAILED: another operation (install/upgrade/rollback) is in progress
+```
+
+thi Helm release `ingress-nginx` dang bi ket o trang thai pending tu lan chay truoc. Workflow Azure staging se tu kiem tra `ingress-nginx` trong namespace `ingress-nginx` va chi xoa Helm secret cua revision dang pending truoc khi install/upgrade lai. Workflow khong xoa revision da deploy thanh cong.
+
 Azure workflow se:
 
 ```text
 Azure OIDC login
 az aks get-credentials
-install/upgrade ingress-nginx with /healthz probe
+self-heal pending ingress-nginx Helm revision if needed
+install/upgrade ingress-nginx 4.15.1 with /healthz probe
 render Helm values
 helm upgrade --install
 run migration job
