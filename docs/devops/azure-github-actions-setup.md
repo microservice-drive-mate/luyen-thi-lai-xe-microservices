@@ -154,6 +154,14 @@ push main
 -> manually run Deploy Azure AKS Staging with image_tag=<git-sha>
 ```
 
+Neu push chi doi docs hoac GitHub khong tu chay `Main Image Release`, co the vao:
+
+```text
+GitHub -> Actions -> Main Image Release -> Run workflow -> branch main
+```
+
+Workflow nay build/push day du 10 service images va `luyen-thi-lai-xe-migration-runner` voi tag la SHA cua branch `main` tai luc chay. Sau khi workflow thanh cong, dung dung SHA do cho `Deploy Azure AKS Staging`.
+
 Lay SHA:
 
 ```powershell
