@@ -41,7 +41,9 @@ terraform/azure-aks/.terraform/
 Khuyen nghi dung helper script:
 
 ```powershell
-.\scripts\setup-azure-github-staging.ps1 -CreateAzureIdentity
+.\scripts\setup-azure-github-staging.ps1 `
+  -Repo "bolac71/luyen-thi-lai-xe-microservices" `
+  -CreateAzureIdentity
 ```
 
 Script se:
@@ -132,6 +134,7 @@ Neu da cai GitHub CLI va muon script set tu dong:
 
 ```powershell
 .\scripts\setup-azure-github-staging.ps1 `
+  -Repo "bolac71/luyen-thi-lai-xe-microservices" `
   -CreateAzureIdentity `
   -ApplyGitHub `
   -GhcrPullUsername "<github-username>" `
@@ -162,9 +165,11 @@ Run deploy:
 ```text
 GitHub -> Actions -> Deploy Azure AKS Staging -> Run workflow
 image_tag=<git-sha>
-install_nginx_ingress=true
+install_nginx_ingress=false
 confirm_staging=true
 ```
+
+Dung `install_nginx_ingress=true` chi khi cluster chua co ingress-nginx hoac ban muon upgrade ingress controller. Neu ingress da co external IP va API dang vao duoc, de `false` de workflow deploy app nhanh va tranh wait lai Azure Load Balancer.
 
 Azure workflow se:
 
