@@ -60,6 +60,8 @@ jobs:
       STORAGE_ACCOUNT_KEY: ${{ secrets.STAGING_STORAGE_ACCOUNT_KEY }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Mark deployment start
         shell: bash
@@ -104,6 +106,63 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Normalize image tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$IMAGE_TAG" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+            if FULL_SHA=$(git rev-parse --verify "${IMAGE_TAG}^{commit}" 2>/dev/null); then
+              if [[ "$FULL_SHA" != "$IMAGE_TAG" ]]; then
+                echo "Resolved image_tag '$IMAGE_TAG' to full Git SHA '$FULL_SHA'."
+                echo "IMAGE_TAG=$FULL_SHA" >> "$GITHUB_ENV"
+              else
+                echo "image_tag is already a full Git SHA: $IMAGE_TAG"
+              fi
+            elif [[ ${#IMAGE_TAG} -lt 40 ]]; then
+              echo "Short image_tag '$IMAGE_TAG' could not be resolved in git history." >&2
+              echo "Use the full 40-character Git SHA built by CI, or rerun CI for this commit." >&2
+              exit 1
+            fi
+          fi
+
+      - name: Validate GHCR images
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_PULL_USERNAME" --password-stdin
+
+          images=(
+            luyen-thi-lai-xe-identity-service
+            luyen-thi-lai-xe-user-service
+            luyen-thi-lai-xe-exam-service
+            luyen-thi-lai-xe-course-service
+            luyen-thi-lai-xe-question-service
+            luyen-thi-lai-xe-notification-service
+            luyen-thi-lai-xe-analytics-service
+            luyen-thi-lai-xe-simulation-service
+            luyen-thi-lai-xe-media-service
+            luyen-thi-lai-xe-audit-service
+            luyen-thi-lai-xe-migration-runner
+          )
+
+          missing=0
+          for image in "${images[@]}"; do
+            ref="ghcr.io/${{ github.repository_owner }}/${image}:${IMAGE_TAG}"
+            echo "Checking $ref"
+            if ! docker manifest inspect "$ref" >/dev/null 2>&1; then
+              echo "Missing GHCR image: $ref" >&2
+              missing=1
+            fi
+          done
+
+          docker logout ghcr.io >/dev/null 2>&1 || true
+
+          if [[ "$missing" -ne 0 ]]; then
+            echo "One or more required images do not exist for IMAGE_TAG=$IMAGE_TAG." >&2
+            echo "Make sure CI completed successfully for this exact commit before deploying." >&2
+            exit 1
+          fi
 
       - name: Configure AKS credentials
         shell: bash
