@@ -136,6 +136,8 @@ spec:
               value: {{ .name | quote }}
             - name: PORT
               value: "3000"
+            - name: SWAGGER_SERVER_URL
+              value: '{{ printf "%s/%s" $.Values.config.gatewayPublicUrl .name }}'
             {{ if $.Values.tracing.enabled }}
             - name: OTEL_TRACING_ENABLED
               value: "true"
