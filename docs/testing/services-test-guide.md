@@ -40,6 +40,25 @@ Direct service docs:
 
 Kong public base is `http://localhost:8000`. In Scalar direct service mode use direct paths, for example `POST http://localhost:3001/login`. Through Kong use public paths such as `POST http://localhost:8000/auth/login`.
 
+### Azure AKS Demo Smoke
+
+For the cloud demo path, follow `docs/devops/azure-aks-deployment.md` first. After AKS deploy succeeds, test through the Azure ingress host:
+
+```powershell
+$env:SMOKE_BASE_URL="http://api.<external-ip>.nip.io"
+bash scripts/k8s-smoke.sh
+```
+
+Then open service docs through Kong:
+
+```text
+http://api.<external-ip>.nip.io/identity-service/docs
+http://api.<external-ip>.nip.io/media-service/docs
+http://api.<external-ip>.nip.io/analytics-service/docs
+```
+
+Use `https://...` only after a real TLS certificate is configured. The Azure demo workflow defaults to HTTP to avoid a missing TLS secret during first deploy.
+
 ## 2. Tokens
 
 Use seed accounts from `docs/testing/demo-seed-plan.md`, or create accounts through identity-service.

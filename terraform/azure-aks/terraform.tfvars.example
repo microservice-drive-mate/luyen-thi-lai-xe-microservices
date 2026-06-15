@@ -1,0 +1,43 @@
+subscription_id = "replace-with-your-azure-subscription-id"
+
+project_name = "lttl"
+environment  = "staging"
+location     = "southeastasia"
+
+# Leave empty to use rg-lttl-staging-sea and aks-lttl-staging.
+resource_group_name = ""
+aks_cluster_name    = ""
+
+# Leave empty to let Azure choose the default supported Kubernetes version.
+kubernetes_version = ""
+
+# Demo guardrail: keep one 4 vCPU / 16 GiB system node and add a small app node pool.
+# Increase app_node_count or enable autoscaling only after the first successful deploy.
+node_count           = 1
+node_vm_size         = "Standard_D4s_v4"
+node_os_disk_size_gb = 128
+enable_auto_scaling  = false
+min_node_count       = 1
+max_node_count       = 2
+
+app_node_pool_enabled    = true
+app_node_count           = 1
+app_node_vm_size         = "Standard_B2s_v2"
+app_node_os_disk_size_gb = 64
+
+# Must be globally unique, 3-24 lowercase letters/numbers.
+storage_account_name   = "lttlmediastg12345"
+storage_container_name = "media"
+
+blob_cors_allowed_origins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+  "https://staging.example.com",
+  "https://api.staging.example.com",
+  "https://auth.staging.example.com",
+]
+
+enable_log_analytics = true

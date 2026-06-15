@@ -1,5 +1,22 @@
 # Kỹ thuật microservices đã triển khai và hướng mở rộng
 
+## Current Azure Demo Direction
+
+The recommended cloud path for the final student demo is now **Azure AKS Free tier + Azure Blob Storage + Helm + GitHub Actions + Terraform**.
+
+- Azure is the preferred demo target because `media-service` already uses Azure Blob Storage and direct SAS upload.
+- New Azure IaC lives beside the existing GCP/K3s baseline:
+  - `terraform/azure-aks`
+  - `terraform/modules/azure-aks`
+- The existing GCP/K3s Terraform remains useful fallback evidence, but it is no longer the primary recommended demo path.
+- Docker Compose VPS remains the emergency fallback when Kubernetes cloud resources are not available.
+- No Ansible is required for v1 because AKS is managed; Terraform provisions cloud resources and Helm deploys runtime workloads.
+- Detailed Azure setup and demo scripts are in:
+  - `docs/devops/azure-aks-deployment.md`
+  - `docs/devops/azure-demo-runbook.md`
+
+---
+
 > Tài liệu này được viết dựa trên `docs/requirements/microservices_techniques_implementation.md` và đối chiếu với trạng thái hiện tại của repo `luyen-thi-lai-xe-microservices`.
 >
 > Mục tiêu: ghi rõ kỹ thuật nào đã có trong hệ thống, kỹ thuật nào mới có baseline/một phần, và kỹ thuật nào có thể triển khai thêm để làm phần mềm mạnh hơn. Tài liệu này cố ý liệt kê chi tiết, kể cả các hướng nâng cấp khá "production-grade".

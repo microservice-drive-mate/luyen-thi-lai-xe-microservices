@@ -56,6 +56,8 @@ spec:
                 secretKeyRef:
                   name: {{ include "lttl.secretName" . }}
                   key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "postgres"]

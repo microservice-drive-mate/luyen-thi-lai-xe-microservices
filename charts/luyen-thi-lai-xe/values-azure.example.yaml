@@ -1,0 +1,294 @@
+global:
+  imageRegistry: ghcr.io/bolac71
+  imageTag: latest
+  imagePullPolicy: IfNotPresent
+  nodeEnv: staging
+  storageClassName: managed-csi
+
+imagePullSecret:
+  enabled: false
+  registry: ghcr.io
+  username: replace-with-ghcr-username
+  token: change-me
+
+ingress:
+  enabled: true
+  # Recommended v1 demo path: install ingress-nginx into AKS and use this class.
+  # AKS Web App Routing can be used later by changing this class and installing/enabling that add-on.
+  className: nginx
+  apiHost: api.staging.example.com
+  authHost: auth.staging.example.com
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  tls:
+    enabled: false
+    secretName: luyen-thi-lai-xe-tls
+
+config:
+  frontendOrigin: https://staging.example.com
+  gatewayPublicUrl: https://api.staging.example.com
+  keycloakPublicUrl: https://auth.staging.example.com
+  corsOrigins:
+    - http://localhost:3000
+    - http://localhost:5173
+    - http://localhost:5174
+    - https://staging.example.com
+    - https://api.staging.example.com
+    - https://auth.staging.example.com
+  logConsoleFormat: json
+  logLevel: info
+  logFormat: json
+
+tracing:
+  enabled: false
+
+secrets:
+  postgresUser: user
+  postgresPassword: change-me
+  rabbitmqUser: app
+  rabbitmqPassword: change-me
+  rabbitmqErlangCookie: change-me-rabbitmq-cookie
+  keycloakAdmin: admin
+  keycloakAdminPassword: change-me
+  keycloakRealm: luyen-thi-lai-xe-realm
+  keycloakClientId: nestjs-backend
+  keycloakClientSecret: change-me
+  storageAccountName: replace-with-azure-storage-account
+  storageAccountKey: change-me
+  storageContainerName: media
+  storagePresignedUrlExpiry: "3600"
+
+# Keep the student-demo AKS footprint conservative.
+# A single Standard_D4s_v4 node is enough for demo only when requests stay small.
+appDefaults:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: false
+
+services:
+  - name: identity-service
+    image: luyen-thi-lai-xe-identity-service
+    dbName: identity_db
+    usesRedis: true
+    hpa:
+      enabled: false
+    routes:
+      - name: identity-route
+        paths: ["/auth"]
+        stripPath: true
+      - name: identity-admin-route
+        paths: ["/admin"]
+        stripPath: false
+      - name: identity-swagger-route
+        paths: ["/identity-service"]
+        stripPath: true
+  - name: user-service
+    image: luyen-thi-lai-xe-user-service
+    dbName: user_db
+    routes:
+      - name: user-route
+        paths: ["/users"]
+        stripPath: false
+      - name: user-admin-route
+        paths: ["/admin/users"]
+        stripPath: false
+      - name: user-swagger-route
+        paths: ["/user-service"]
+        stripPath: true
+  - name: exam-service
+    image: luyen-thi-lai-xe-exam-service
+    dbName: exam_db
+    hpa:
+      enabled: false
+    routes:
+      - name: exam-route
+        paths: ["/exams"]
+        stripPath: false
+      - name: exam-admin-route
+        paths: ["/admin/exams"]
+        stripPath: false
+      - name: exam-swagger-route
+        paths: ["/exam-service"]
+        stripPath: true
+  - name: course-service
+    image: luyen-thi-lai-xe-course-service
+    dbName: course_db
+    usesRedis: true
+    hpa:
+      enabled: false
+    routes:
+      - name: course-route
+        paths: ["/courses", "/enrollments"]
+        stripPath: false
+      - name: course-admin-route
+        paths: ["/admin/courses"]
+        stripPath: false
+      - name: course-swagger-route
+        paths: ["/course-service"]
+        stripPath: true
+  - name: question-service
+    image: luyen-thi-lai-xe-question-service
+    dbName: question_db
+    routes:
+      - name: question-admin-route
+        paths: ["/admin/questions"]
+        stripPath: false
+      - name: question-swagger-route
+        paths: ["/question-service"]
+        stripPath: true
+  - name: notification-service
+    image: luyen-thi-lai-xe-notification-service
+    dbName: notification_db
+    usesRedis: true
+    routes:
+      - name: notification-route
+        paths: ["/notifications"]
+        stripPath: false
+      - name: notification-swagger-route
+        paths: ["/notification-service"]
+        stripPath: true
+  - name: analytics-service
+    image: luyen-thi-lai-xe-analytics-service
+    dbName: analytics_db
+    usesRedis: true
+    hpa:
+      enabled: false
+    routes:
+      - name: analytics-route
+        paths: ["/analytics"]
+        stripPath: false
+      - name: analytics-admin-route
+        paths: ["/admin/analytics"]
+        stripPath: false
+      - name: analytics-swagger-route
+        paths: ["/analytics-service"]
+        stripPath: true
+  - name: simulation-service
+    image: luyen-thi-lai-xe-simulation-service
+    dbName: simulation_db
+    usesRedis: true
+    hpa:
+      enabled: false
+    routes:
+      - name: simulation-route
+        paths: ["/simulation"]
+        stripPath: false
+      - name: simulation-swagger-route
+        paths: ["/simulation-service"]
+        stripPath: true
+  - name: media-service
+    image: luyen-thi-lai-xe-media-service
+    dbName: media_db
+    resources:
+      requests:
+        cpu: 75m
+        memory: 192Mi
+      limits:
+        cpu: 750m
+        memory: 1Gi
+    routes:
+      - name: media-route
+        paths: ["/media"]
+        stripPath: false
+      - name: media-admin-route
+        paths: ["/admin/media"]
+        stripPath: false
+      - name: media-swagger-route
+        paths: ["/media-service"]
+        stripPath: true
+  - name: audit-service
+    image: luyen-thi-lai-xe-audit-service
+    dbName: audit_db
+    routes:
+      - name: audit-admin-route
+        paths: ["/admin/audit-logs"]
+        stripPath: false
+      - name: audit-swagger-route
+        paths: ["/audit-service"]
+        stripPath: true
+
+postgres:
+  storage: 8Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+
+rabbitmq:
+  storage: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 768Mi
+
+redis:
+  storage: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+consul:
+  storage: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+keycloak:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+kong:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+migration:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 768Mi
+
+seed:
+  enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 768Mi
