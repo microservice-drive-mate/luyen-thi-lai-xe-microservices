@@ -123,9 +123,12 @@ jobs:
           set -euo pipefail
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           helm repo update
-          kubectl create namespace ingress-nginx --dry-run=client -o yaml | kubectl apply -f -
+          kubectl get namespace ingress-nginx >/dev/null 2>&1 || kubectl create namespace ingress-nginx
 
-          STATUS=$(helm list --all -n ingress-nginx -f "^ingress-nginx$" -o json | jq -r '.[0].status // empty')
+          STATUS=$(helm list -n ingress-nginx -f "^ingress-nginx$" -o json | jq -r '.[0].status // empty')
+          if [[ -z "$STATUS" ]]; then
+            STATUS=$(helm list --pending -n ingress-nginx -f "^ingress-nginx$" -o json | jq -r '.[0].status // empty')
+          fi
           echo "Current ingress-nginx Helm release status: ${STATUS:-not-deployed}"
 
           if [[ "$STATUS" == "pending-upgrade" || "$STATUS" == "pending-install" || "$STATUS" == "pending-rollback" ]]; then
@@ -429,7 +432,8 @@ jobs:
           helm list -n staging || true
           helm history luyen-thi-lai-xe -n staging || true
           echo "========== INGRESS-NGINX HELM STATUS =========="
-          helm list --all -n ingress-nginx || true
+          helm list -n ingress-nginx || true
+          helm list --pending -n ingress-nginx || true
           helm history ingress-nginx -n ingress-nginx || true
           echo "========== STORAGE CLASSES =========="
           kubectl get storageclass || true
