@@ -18,6 +18,7 @@ import { EnrollStudentUseCase } from './application/use-cases/enroll-student/enr
 import { GetCourseUseCase } from './application/use-cases/get-course/get-course.use-case';
 import { GetEnrollmentUseCase } from './application/use-cases/get-enrollment/get-enrollment.use-case';
 import { GetLessonUseCase } from './application/use-cases/get-lesson/get-lesson.use-case';
+import { ListAdminStudentEnrollmentsUseCase } from './application/use-cases/list-admin-student-enrollments/list-admin-student-enrollments.use-case';
 import { ListCoursesUseCase } from './application/use-cases/list-courses/list-courses.use-case';
 import { ListCourseSchedulesUseCase } from './application/use-cases/list-course-schedules/list-course-schedules.use-case';
 import { ListStudentEnrollmentsUseCase } from './application/use-cases/list-student-enrollments/list-student-enrollments.use-case';
@@ -54,6 +55,7 @@ import { PrismaCourseScheduleRepository } from './infrastructure/persistence/pri
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { PrismaStudentLicenseProfileRepository } from './infrastructure/persistence/prisma/prisma-student-license-profile.repository';
 import { AdminCourseController } from './presentation/http/admin-course.controller';
+import { AdminEnrollmentController } from './presentation/http/admin-enrollment.controller';
 import { CourseController } from './presentation/http/course.controller';
 import { EnrollmentController } from './presentation/http/enrollment.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';
@@ -90,6 +92,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
   controllers: [
     CourseController,
     AdminCourseController,
+    AdminEnrollmentController,
     EnrollmentController,
     MessagingController,
   ],
@@ -159,6 +162,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     CompleteLessonUseCase,
     GetEnrollmentUseCase,
     ListStudentEnrollmentsUseCase,
+    ListAdminStudentEnrollmentsUseCase,
     ResetEnrollmentProgressUseCase,
     SyncStudentLicenseUseCase,
   ],

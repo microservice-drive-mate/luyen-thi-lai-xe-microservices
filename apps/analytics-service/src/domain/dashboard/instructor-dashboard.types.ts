@@ -33,6 +33,18 @@ export interface InstructorClassProgress {
   totalStudents: number;
   completedStudents: number;
   progressPct: number;
+  students: InstructorCourseStudent[];
+}
+
+export interface InstructorCourseStudent {
+  studentId: string;
+  fullName: string | null;
+  email: string | null;
+  licenseTier: string | null;
+  status: string;
+  progress: number;
+  enrolledAt: Date | null;
+  completedAt: Date | null;
 }
 
 export interface InstructorTodayScheduleItem {

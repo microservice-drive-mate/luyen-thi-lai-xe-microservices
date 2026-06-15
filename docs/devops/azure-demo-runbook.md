@@ -61,6 +61,16 @@ kubectl get ingress -n staging -o wide
 kubectl get pods -n staging -l app.kubernetes.io/component=app
 ```
 
+UI walkthrough:
+
+```powershell
+k9s
+```
+
+- In `k9s`, switch to namespace `staging`, then show `:deploy`, `:pods`, `:svc`, `:ing`, and `:jobs`.
+- In Lens, open context `aks-lttl-staging`, choose namespace `staging`, then show Workloads, Pods, Services, Ingresses, and Jobs.
+- Use Lens as the main visual UI and k9s as the realtime terminal UI during scaling or rollout demos.
+
 Smoke:
 
 ```powershell
@@ -147,6 +157,18 @@ Talking points:
 - Logs carry correlation IDs.
 
 ## 9. Resilience And Rollback
+
+Scaling:
+
+```powershell
+kubectl scale deploy luyen-thi-lai-xe-user-service -n staging --replicas=2
+kubectl rollout status deploy/luyen-thi-lai-xe-user-service -n staging
+kubectl get pods -n staging -l app.kubernetes.io/service-name=user-service -o wide
+kubectl scale deploy luyen-thi-lai-xe-user-service -n staging --replicas=1
+kubectl rollout status deploy/luyen-thi-lai-xe-user-service -n staging
+```
+
+Keep Lens or k9s open while scaling to show the new `user-service` pod appearing and then returning to the desired replica count.
 
 Rollout restart:
 

@@ -43,6 +43,13 @@ Role là nguồn đúng từ identity-service. User-service chỉ giữ bản sa
 
 ## Tổng Quan Xác Thực
 
+Student detail screens that need course/enrollment data should compose two APIs:
+
+1. `GET /admin/users/:userId` from user-service for profile-owned fields.
+2. `GET /admin/enrollments?studentId=:userId&page=1&size=100` from course-service for all course enrollments.
+
+User-service does not embed course data in profile responses, so each service keeps ownership of its own data.
+
 User-service dùng `nest-keycloak-connect`.
 
 | Endpoint                        | Auth hiện tại            |

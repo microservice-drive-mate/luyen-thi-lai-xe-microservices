@@ -29,6 +29,17 @@ export class InstructorTopicAverageDto {
   @ApiProperty() answeredQuestions!: number;
 }
 
+export class InstructorCourseStudentDto {
+  @ApiProperty() studentId!: string;
+  @ApiPropertyOptional({ nullable: true }) fullName!: string | null;
+  @ApiPropertyOptional({ nullable: true }) email!: string | null;
+  @ApiPropertyOptional({ nullable: true }) licenseTier!: string | null;
+  @ApiProperty() status!: string;
+  @ApiProperty() progress!: number;
+  @ApiPropertyOptional({ nullable: true }) enrolledAt!: Date | null;
+  @ApiPropertyOptional({ nullable: true }) completedAt!: Date | null;
+}
+
 export class InstructorClassProgressDto {
   @ApiProperty() courseId!: string;
   @ApiProperty() title!: string;
@@ -36,6 +47,8 @@ export class InstructorClassProgressDto {
   @ApiProperty() totalStudents!: number;
   @ApiProperty() completedStudents!: number;
   @ApiProperty() progressPct!: number;
+  @ApiProperty({ type: () => [InstructorCourseStudentDto] })
+  students!: InstructorCourseStudentDto[];
 }
 
 export class InstructorTodayScheduleItemDto {

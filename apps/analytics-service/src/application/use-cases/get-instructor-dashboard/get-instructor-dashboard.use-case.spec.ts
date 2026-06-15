@@ -20,7 +20,28 @@ describe('GetInstructorDashboardUseCase', () => {
     },
     weeklyTeachingTrend: [],
     topicAverages: [],
-    classProgress: [],
+    classProgress: [
+      {
+        courseId: 'course-1',
+        title: 'A1 basics',
+        licenseCategory: 'A1',
+        totalStudents: 1,
+        completedStudents: 0,
+        progressPct: 0,
+        students: [
+          {
+            studentId: 'student-1',
+            fullName: 'Student One',
+            email: 'student.one@example.com',
+            licenseTier: 'A1',
+            status: 'ACTIVE',
+            progress: 20,
+            enrolledAt: new Date('2026-06-01T00:00:00.000Z'),
+            completedAt: null,
+          },
+        ],
+      },
+    ],
     todaySchedule: [],
   };
 

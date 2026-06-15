@@ -125,6 +125,7 @@ export class MessagingController {
           occurredAt,
         },
       });
+      await this.cache.invalidateInstructorDashboard();
     });
   }
 
@@ -414,6 +415,9 @@ export class MessagingController {
         occurredAt,
       },
     });
+    if (user?.role === 'STUDENT') {
+      await this.cache.invalidateInstructorDashboard();
+    }
   }
 
   private async recordCourseDashboardEvent(

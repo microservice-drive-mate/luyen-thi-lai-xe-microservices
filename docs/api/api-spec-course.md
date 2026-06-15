@@ -1,7 +1,7 @@
 # Course Service API Specification
 
 **Base URL qua Kong:** `http://localhost:8000`  
-**Service paths:** `/courses`, `/enrollments`, `/admin/courses`  
+**Service paths:** `/courses`, `/enrollments`, `/admin/courses`, `/admin/enrollments`  
 **Direct local:** `http://localhost:3004`  
 **Swagger UI:** `http://localhost:3004/docs`  
 **Swagger UI qua Kong:** `http://localhost:8000/course-service/docs`  
@@ -19,6 +19,7 @@ Course-service validate JWT/RBAC tại service bằng Keycloak guard. Frontend g
 
 | Endpoint | Role |
 | --- | --- |
+| `GET /admin/enrollments` | `ADMIN`, `CENTER_MANAGER` |
 | `POST /admin/courses` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 | `GET /admin/courses` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
 | `GET /admin/courses/:id` | `ADMIN`, `CENTER_MANAGER`, `INSTRUCTOR` |
@@ -786,6 +787,53 @@ Danh sách enrollment của student hiện tại.
     "total": 1,
     "page": 1,
     "size": 20
+  }
+}
+```
+
+---
+
+### GET `/admin/enrollments`
+
+List enrollments for a specific student, including a compact course snapshot for admin student-detail screens.
+
+**Auth:** `ADMIN`, `CENTER_MANAGER`
+
+**Query**
+
+| Param | Type | Default | Validation |
+| --- | --- | ---: | --- |
+| `studentId` | string | - | required |
+| `page` | number | 1 | integer, `>= 1` |
+| `size` | number | 100 | integer, `1..100` |
+| `status` | EnrollmentStatus | - | optional enum |
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "OK",
+  "timestamp": "2026-05-14T10:00:00.000Z",
+  "path": "/admin/enrollments?studentId=student-uuid&page=1&size=100",
+  "data": {
+    "items": [
+      {
+        "enrollmentId": "enrollment-uuid",
+        "courseId": "course-uuid",
+        "courseCode": "B2-001",
+        "title": "B2 Practice",
+        "licenseCategory": "B2",
+        "status": "ACTIVE",
+        "progress": 42,
+        "enrolledAt": "2026-05-14T10:00:00.000Z",
+        "completedAt": null
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "size": 100
   }
 }
 ```

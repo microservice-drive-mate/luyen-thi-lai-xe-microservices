@@ -2,10 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { AuditEventEnvelope } from '@repo/common';
 import { Prisma } from '@prisma/course-client';
 import { CourseEnrollment } from '../../../domain/aggregates/course-enrollment/course-enrollment.aggregate';
+import { EnrollmentStatus } from '../../../domain/aggregates/course-enrollment/course-enrollment.types';
+import { LicenseCategory } from '../../../domain/aggregates/course/course.types';
 import {
   CourseEnrollmentRepository,
+  CourseEnrollmentWithCourse,
   ListEnrollmentsFilter,
   ListEnrollmentsPage,
+  ListEnrollmentsWithCoursePage,
 } from '../../../domain/repositories/course-enrollment.repository';
 import { CourseEnrollmentMapper } from '../mappers/course-enrollment.mapper';
 import { PrismaService } from './prisma.service';
@@ -55,6 +59,59 @@ export class PrismaCourseEnrollmentRepository extends CourseEnrollmentRepository
 
     return {
       items: rawItems.map(CourseEnrollmentMapper.toDomain),
+      total,
+    };
+  }
+
+  async findByStudentIdWithCourse(
+    filter: ListEnrollmentsFilter,
+  ): Promise<ListEnrollmentsWithCoursePage> {
+    const where = {
+      studentId: filter.studentId,
+      ...(filter.status && { status: filter.status }),
+    };
+
+    const skip = (filter.page - 1) * filter.size;
+
+    const [rawItems, total] = await this.prisma.$transaction([
+      this.prisma.courseEnrollment.findMany({
+        where,
+        include: {
+          course: {
+            select: {
+              id: true,
+              courseCode: true,
+              title: true,
+              licenseCategory: true,
+            },
+          },
+        },
+        skip,
+        take: filter.size,
+        orderBy: { enrolledAt: 'desc' },
+      }),
+      this.prisma.courseEnrollment.count({ where }),
+    ]);
+
+    return {
+      items: rawItems.map(
+        (item): CourseEnrollmentWithCourse => ({
+          id: item.id,
+          courseId: item.courseId,
+          studentId: item.studentId,
+          status: item.status as unknown as EnrollmentStatus,
+          progress: item.progress,
+          enrolledAt: item.enrolledAt,
+          completedAt: item.completedAt,
+          course: {
+            id: item.course.id,
+            courseCode: item.course.courseCode,
+            title: item.course.title,
+            licenseCategory: item.course
+              .licenseCategory as unknown as LicenseCategory,
+          },
+        }),
+      ),
       total,
     };
   }
