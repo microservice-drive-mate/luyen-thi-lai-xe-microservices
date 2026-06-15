@@ -169,6 +169,8 @@ install_nginx_ingress=false
 confirm_staging=true
 ```
 
+`image_tag` nen la full 40-character Git SHA tu `git rev-parse HEAD`. Neu nhap short SHA, workflow se co gang resolve sang full SHA truoc khi deploy. Workflow cung kiem tra truoc tren GHCR de dam bao tag do ton tai cho 10 service images va `luyen-thi-lai-xe-migration-runner`; neu CI chua build/push du images, workflow se fail som thay vi doi Helm timeout.
+
 Dung `install_nginx_ingress=true` chi khi cluster chua co ingress-nginx hoac ban muon upgrade ingress controller. Neu ingress da co external IP va API dang vao duoc, de `false` de workflow deploy app nhanh va tranh wait lai Azure Load Balancer.
 
 Neu buoc install ingress-nginx fail voi loi:
@@ -185,6 +187,8 @@ Azure workflow se:
 
 ```text
 Azure OIDC login
+resolve short image_tag to full Git SHA if needed
+verify required GHCR images exist
 az aks get-credentials
 self-heal pending ingress-nginx Helm revision if needed
 install ingress-nginx 4.15.1, or patch settings if already deployed
