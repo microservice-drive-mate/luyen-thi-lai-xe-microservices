@@ -179,13 +179,15 @@ UPGRADE FAILED: another operation (install/upgrade/rollback) is in progress
 
 thi Helm release `ingress-nginx` dang bi ket o trang thai pending tu lan chay truoc. Workflow Azure staging se tu kiem tra `ingress-nginx` trong namespace `ingress-nginx` va chi xoa Helm secret cua revision dang pending truoc khi install/upgrade lai. Workflow khong xoa revision da deploy thanh cong.
 
+Neu release `ingress-nginx` da co status `deployed`, workflow se khong chay Helm upgrade nua. No chi dam bao Service co Azure health probe `/healthz` va `externalTrafficPolicy=Local`, roi tiep tuc deploy app de tranh treo o buoc wait cua ingress controller.
+
 Azure workflow se:
 
 ```text
 Azure OIDC login
 az aks get-credentials
 self-heal pending ingress-nginx Helm revision if needed
-install/upgrade ingress-nginx 4.15.1 with /healthz probe
+install ingress-nginx 4.15.1, or patch settings if already deployed
 render Helm values
 helm upgrade --install
 run migration job
