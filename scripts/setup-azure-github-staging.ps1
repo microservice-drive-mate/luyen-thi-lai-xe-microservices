@@ -175,12 +175,27 @@ if ($CreateAzureIdentity) {
     }
 
     $subject = "repo:${Repo}:environment:staging"
-    $existingFicOutput = az ad app federated-credential list --id $AppId --query "[?name=='github-staging'].name | [0]" -o tsv
+    Write-Host "Required federated credential subject: $subject"
+    $existingFicOutput = az ad app federated-credential list --id $AppId --query "[?name=='github-staging'] | [0]" -o json
     if ($LASTEXITCODE -ne 0) {
       throw "az ad app federated-credential list failed"
     }
-    $existingFic = if ($null -eq $existingFicOutput) { "" } else { $existingFicOutput.Trim() }
-    if ([string]::IsNullOrWhiteSpace($existingFic)) {
+    $existingFic = if ($null -eq $existingFicOutput -or [string]::IsNullOrWhiteSpace($existingFicOutput.Trim()) -or $existingFicOutput.Trim() -eq "null") {
+      $null
+    } else {
+      $existingFicOutput | ConvertFrom-Json
+    }
+
+    if ($null -ne $existingFic -and $existingFic.subject -ne $subject) {
+      Write-Host "Federated credential github-staging exists, but subject is different:"
+      Write-Host "  current:  $($existingFic.subject)"
+      Write-Host "  required: $subject"
+      Write-Host "Recreating github-staging federated credential for the current repository."
+      Invoke-Az @("ad", "app", "federated-credential", "delete", "--id", $AppId, "--federated-credential-id", "github-staging") | Out-Null
+      $existingFic = $null
+    }
+
+    if ($null -eq $existingFic) {
       $ficPath = Join-Path $env:TEMP "lttl-github-staging-fic.json"
       @{
         name      = "github-staging"
@@ -191,7 +206,7 @@ if ($CreateAzureIdentity) {
 
       Invoke-Az @("ad", "app", "federated-credential", "create", "--id", $AppId, "--parameters", $ficPath) | Out-Null
     } else {
-      Write-Host "Federated credential github-staging already exists."
+      Write-Host "Federated credential github-staging already exists with the correct subject."
     }
   }
 } else {

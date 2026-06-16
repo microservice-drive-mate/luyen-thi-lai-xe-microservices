@@ -42,7 +42,7 @@ Khuyen nghi dung helper script:
 
 ```powershell
 .\scripts\setup-azure-github-staging.ps1 `
-  -Repo "bolac71/luyen-thi-lai-xe-microservices" `
+  -Repo "OWNER/luyen-thi-lai-xe-microservices" `
   -CreateAzureIdentity
 ```
 
@@ -135,7 +135,7 @@ Neu da cai GitHub CLI va muon script set tu dong:
 
 ```powershell
 .\scripts\setup-azure-github-staging.ps1 `
-  -Repo "bolac71/luyen-thi-lai-xe-microservices" `
+  -Repo "OWNER/luyen-thi-lai-xe-microservices" `
   -CreateAzureIdentity `
   -ApplyGitHub `
   -GhcrPullUsername "<github-username>" `
