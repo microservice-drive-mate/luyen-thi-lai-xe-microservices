@@ -161,21 +161,41 @@ jobs:
           )
 
           missing=0
+          auth_failed=0
           for image in "${images[@]}"; do
             ref="ghcr.io/${GHCR_OWNER}/${image}:${IMAGE_TAG}"
             echo "Checking $ref"
-            if ! docker manifest inspect "$ref" >/dev/null 2>&1; then
-              echo "Missing GHCR image: $ref" >&2
-              missing=1
+            error_file="$(mktemp)"
+            if docker manifest inspect "$ref" >/dev/null 2>"$error_file"; then
+              echo "Found GHCR image: $ref"
+            else
+              error_message="$(tr '\n' ' ' < "$error_file" | sed 's/[[:space:]]\+/ /g')"
+              if echo "$error_message" | grep -Eiq "unauthorized|denied|forbidden|authentication required|insufficient_scope"; then
+                echo "GHCR authorization failed for: $ref" >&2
+                echo "Docker error: $error_message" >&2
+                auth_failed=1
+              else
+                echo "Missing GHCR image: $ref" >&2
+                echo "Docker error: ${error_message:-unknown error}" >&2
+                missing=1
+              fi
             fi
+            rm -f "$error_file"
           done
 
           docker logout ghcr.io >/dev/null 2>&1 || true
 
+          if [[ "$auth_failed" -ne 0 ]]; then
+            echo "GHCR login succeeded, but the token/user cannot read one or more private package manifests." >&2
+            echo "Grant the repository Actions access to the packages, or update GHCR_PULL_USERNAME/GHCR_PULL_TOKEN with read:packages access to GHCR owner '$GHCR_OWNER'." >&2
+            exit 1
+          fi
+
           if [[ "$missing" -ne 0 ]]; then
             echo "One or more required images do not exist for IMAGE_TAG=$IMAGE_TAG." >&2
             echo "Checked GHCR owner: $GHCR_OWNER." >&2
-            echo "Make sure CI completed successfully for this exact commit before deploying." >&2
+            echo "Make sure Main Image Release completed successfully for this exact commit before deploying." >&2
+            echo "If this is a manual deploy, use a tag visible in GitHub Packages for all 10 services and luyen-thi-lai-xe-migration-runner." >&2
             exit 1
           fi
 
