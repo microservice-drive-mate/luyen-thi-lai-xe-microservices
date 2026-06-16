@@ -41,7 +41,7 @@ Talking points:
 
 Show GitHub Actions:
 
-- `Main Image Release`: quality gate, Docker build, Trivy, SBOM, Cosign signing, GHCR push.
+- `Main Image Release`: code quality gate, Docker build, Trivy HIGH/CRITICAL audit, fixed CRITICAL vulnerability gate, SBOM, Cosign signing, GHCR push.
 - `Deploy Azure AKS Staging`: AKS credentials, Helm values render, Helm deploy, rollout wait, smoke test, deployment event.
 - Setup checklist: `docs/devops/azure-github-actions-setup.md`.
 
