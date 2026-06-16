@@ -39,6 +39,7 @@ export class ListFilesUseCase
             f.bucketName,
             f.uploadedById,
             f.isPublic,
+            f.status,
             f.createdAt,
           ),
       ),

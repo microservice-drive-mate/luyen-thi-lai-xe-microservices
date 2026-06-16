@@ -6,6 +6,8 @@ import {
   ConsulConfigFactory,
   HealthModule,
   MetricsModule,
+  TokenBlacklistGuard,
+  TokenBlacklistModule,
 } from '@repo/common';
 import Joi from 'joi';
 import {
@@ -87,10 +89,12 @@ import { MediaModule } from './media.module';
         tokenValidation: TokenValidation.OFFLINE,
       }),
     }),
+    TokenBlacklistModule,
     MediaModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: TokenBlacklistGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
     { provide: APP_GUARD, useClass: ResourceGuard },
   ],

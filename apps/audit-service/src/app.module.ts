@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ClientsModule } from '@nestjs/microservices';
 import {
   AppLoggerModule,
   ConsulConfigFactory,
+  createRabbitMqClientOptions,
   HealthModule,
   MetricsModule,
   TokenBlacklistModule,
@@ -26,7 +28,10 @@ import { AuditLogRepository } from './domain/repositories/audit-log.repository';
 import { PrismaAuditLogRepository } from './infrastructure/persistence/prisma/prisma-audit-log.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { AuditLogController } from './presentation/http/audit-log.controller';
-import { MessagingController } from './presentation/messaging/messaging.controller';
+import {
+  ANALYTICS_SERVICE_CLIENT,
+  MessagingController,
+} from './presentation/messaging/messaging.controller';
 
 @Module({
   imports: [
@@ -73,6 +78,17 @@ import { MessagingController } from './presentation/messaging/messaging.controll
       ],
       isGlobal: true,
     }),
+    ClientsModule.registerAsync([
+      {
+        name: ANALYTICS_SERVICE_CLIENT,
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) =>
+          createRabbitMqClientOptions(
+            configService,
+            'analytics_service_events',
+          ),
+      },
+    ]),
     KeycloakConnectModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService): KeycloakConnectOptions => ({

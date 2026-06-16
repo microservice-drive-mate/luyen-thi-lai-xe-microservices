@@ -16,6 +16,7 @@ export interface ExamQuestionOptionSnapshot {
 export interface ExamQuestionSnapshot {
   id: string;
   questionId: string;
+  topicId?: string | null;
   questionContent: string;
   imageUrl?: string | null;
   mediaFileId?: string | null;

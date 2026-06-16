@@ -31,3 +31,14 @@ export class ProgressResponseDto {
     return Object.assign(new ProgressResponseDto(), result);
   }
 }
+
+export class WeakTopicsResponseDto {
+  @ApiProperty({ type: [WeakTopicDto] })
+  items!: WeakTopicDto[];
+}
+
+export class StudyStreakResponseDto {
+  @ApiProperty() currentStreakDays!: number;
+  @ApiProperty() longestWindowDays!: number;
+  @ApiProperty({ nullable: true }) lastActivityDate!: string | null;
+}

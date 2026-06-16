@@ -7,6 +7,7 @@ import { EventPublisher } from '../../application/ports/event-publisher.port';
 export const RABBITMQ_CLIENT = 'RABBITMQ_CLIENT';
 export const MEDIA_SERVICE_CLIENT = 'MEDIA_SERVICE_CLIENT';
 export const COURSE_SERVICE_CLIENT = 'COURSE_SERVICE_CLIENT';
+export const ANALYTICS_SERVICE_CLIENT = 'ANALYTICS_SERVICE_CLIENT';
 
 // Events routed exclusively to media-service for file ownership confirmation
 const MEDIA_NOTIFY_EVENTS = new Set(['user.avatar.linked']);
@@ -22,6 +23,8 @@ export class RabbitMqEventPublisher extends EventPublisher {
     private readonly mediaServiceClient: ClientProxy,
     @Inject(COURSE_SERVICE_CLIENT)
     private readonly courseServiceClient: ClientProxy,
+    @Inject(ANALYTICS_SERVICE_CLIENT)
+    private readonly analyticsServiceClient: ClientProxy,
   ) {
     super();
   }
@@ -36,10 +39,17 @@ export class RabbitMqEventPublisher extends EventPublisher {
         );
         this.logger.log(`Routed ${event.eventName} → media-service`);
       } else if (COURSE_NOTIFY_EVENTS.has(event.eventName)) {
-        await lastValueFrom(
-          this.courseServiceClient.emit(event.eventName, payload),
+        await Promise.all([
+          lastValueFrom(
+            this.courseServiceClient.emit(event.eventName, payload),
+          ),
+          lastValueFrom(
+            this.analyticsServiceClient.emit(event.eventName, payload),
+          ),
+        ]);
+        this.logger.log(
+          `Routed ${event.eventName} to course-service and analytics-service`,
         );
-        this.logger.log(`Routed ${event.eventName} to course-service`);
       } else {
         await lastValueFrom(this.client.emit(event.eventName, payload));
         this.logger.log(`Published event: ${event.eventName}`);

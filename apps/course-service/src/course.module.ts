@@ -8,20 +8,30 @@ import { EventPublisher } from './application/ports/event-publisher.port';
 import { ActivateCourseUseCase } from './application/use-cases/activate-course/activate-course.use-case';
 import { AddCourseMaterialUseCase } from './application/use-cases/add-course-material/add-course-material.use-case';
 import { AddLessonUseCase } from './application/use-cases/add-lesson/add-lesson.use-case';
+import { AssignCourseInstructorUseCase } from './application/use-cases/assign-course-instructor/assign-course-instructor.use-case';
 import { CompleteLessonUseCase } from './application/use-cases/complete-lesson/complete-lesson.use-case';
+import { CreateCourseScheduleUseCase } from './application/use-cases/create-course-schedule/create-course-schedule.use-case';
 import { CreateCourseUseCase } from './application/use-cases/create-course/create-course.use-case';
+import { DeleteCourseScheduleUseCase } from './application/use-cases/delete-course-schedule/delete-course-schedule.use-case';
 import { DeleteCourseUseCase } from './application/use-cases/delete-course/delete-course.use-case';
 import { EnrollStudentUseCase } from './application/use-cases/enroll-student/enroll-student.use-case';
 import { GetCourseUseCase } from './application/use-cases/get-course/get-course.use-case';
 import { GetEnrollmentUseCase } from './application/use-cases/get-enrollment/get-enrollment.use-case';
+import { GetLessonUseCase } from './application/use-cases/get-lesson/get-lesson.use-case';
 import { ListCoursesUseCase } from './application/use-cases/list-courses/list-courses.use-case';
+import { ListCourseSchedulesUseCase } from './application/use-cases/list-course-schedules/list-course-schedules.use-case';
 import { ListStudentEnrollmentsUseCase } from './application/use-cases/list-student-enrollments/list-student-enrollments.use-case';
 import { RemoveLessonUseCase } from './application/use-cases/remove-lesson/remove-lesson.use-case';
+import { RemoveCourseInstructorUseCase } from './application/use-cases/remove-course-instructor/remove-course-instructor.use-case';
 import { ResetEnrollmentProgressUseCase } from './application/use-cases/reset-enrollment-progress/reset-enrollment-progress.use-case';
 import { SyncStudentLicenseUseCase } from './application/use-cases/sync-student-license/sync-student-license.use-case';
+import { UnenrollStudentUseCase } from './application/use-cases/unenroll-student/unenroll-student.use-case';
+import { UpdateCourseScheduleUseCase } from './application/use-cases/update-course-schedule/update-course-schedule.use-case';
 import { UpdateCourseUseCase } from './application/use-cases/update-course/update-course.use-case';
+import { UpdateLessonUseCase } from './application/use-cases/update-lesson/update-lesson.use-case';
 import { CourseEnrollmentRepository } from './domain/repositories/course-enrollment.repository';
 import { CourseRepository } from './domain/repositories/course.repository';
+import { CourseScheduleRepository } from './domain/repositories/course-schedule.repository';
 import { StudentLicenseProfileRepository } from './domain/repositories/student-license-profile.repository';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 import {
@@ -40,6 +50,7 @@ import {
 } from './infrastructure/outbox/audit-outbox-relay.service';
 import { PrismaCourseEnrollmentRepository } from './infrastructure/persistence/prisma/prisma-course-enrollment.repository';
 import { PrismaCourseRepository } from './infrastructure/persistence/prisma/prisma-course.repository';
+import { PrismaCourseScheduleRepository } from './infrastructure/persistence/prisma/prisma-course-schedule.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { PrismaStudentLicenseProfileRepository } from './infrastructure/persistence/prisma/prisma-student-license-profile.repository';
 import { AdminCourseController } from './presentation/http/admin-course.controller';
@@ -106,6 +117,10 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     // Repository bindings
     { provide: CourseRepository, useClass: PrismaCourseRepository },
     {
+      provide: CourseScheduleRepository,
+      useClass: PrismaCourseScheduleRepository,
+    },
+    {
       provide: CourseEnrollmentRepository,
       useClass: PrismaCourseEnrollmentRepository,
     },
@@ -125,13 +140,22 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     ActivateCourseUseCase,
     AddLessonUseCase,
     RemoveLessonUseCase,
+    UpdateLessonUseCase,
     AddCourseMaterialUseCase,
+    AssignCourseInstructorUseCase,
+    RemoveCourseInstructorUseCase,
+    CreateCourseScheduleUseCase,
+    UpdateCourseScheduleUseCase,
+    DeleteCourseScheduleUseCase,
+    ListCourseSchedulesUseCase,
     GetCourseUseCase,
+    GetLessonUseCase,
     ListCoursesUseCase,
     DeleteCourseUseCase,
 
     // Enrollment use cases
     EnrollStudentUseCase,
+    UnenrollStudentUseCase,
     CompleteLessonUseCase,
     GetEnrollmentUseCase,
     ListStudentEnrollmentsUseCase,

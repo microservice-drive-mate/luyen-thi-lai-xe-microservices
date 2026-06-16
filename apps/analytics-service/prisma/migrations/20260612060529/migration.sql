@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "dashboard_exam_session_projections_licenseCategory_completedAt_" RENAME TO "dashboard_exam_session_projections_licenseCategory_complete_idx";

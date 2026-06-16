@@ -12,6 +12,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import {
   GetManeuverUseCase,
+  GetSimulationSessionResultUseCase,
+  ListSimulationSessionsUseCase,
   ListManeuverErrorsUseCase,
   ListManeuversUseCase,
   SaveSimulationAnswerUseCase,
@@ -38,6 +40,7 @@ import {
   Practice2dSessionResponseDto,
   Practice2dTelemetryRequestDto,
   SaveSimulationAnswerRequestDto,
+  SimulationSessionResultResponseDto,
   SimulationSessionResponseDto,
   StartPractice2dSessionRequestDto,
   StartSimulationSessionRequestDto,
@@ -58,6 +61,8 @@ export class SimulationController {
     private readonly startSimulationSessionUseCase: StartSimulationSessionUseCase,
     private readonly saveSimulationAnswerUseCase: SaveSimulationAnswerUseCase,
     private readonly submitSimulationSessionUseCase: SubmitSimulationSessionUseCase,
+    private readonly listSimulationSessionsUseCase: ListSimulationSessionsUseCase,
+    private readonly getSimulationSessionResultUseCase: GetSimulationSessionResultUseCase,
     private readonly startPractice2dSessionUseCase: StartPractice2dSessionUseCase,
     private readonly ingestPractice2dTelemetryUseCase: IngestPractice2dTelemetryUseCase,
     private readonly endPractice2dSessionUseCase: EndPractice2dSessionUseCase,
@@ -130,6 +135,33 @@ export class SimulationController {
       dto.licenseCategory,
     );
     return SimulationSessionResponseDto.fromRecord(result);
+  }
+
+  @Get('sessions')
+  @Roles({ roles: ['realm:STUDENT'] })
+  @ApiOperation({ summary: 'List current student simulation sessions' })
+  async listSessions(
+    @AuthenticatedUser() user: JwtPayload,
+  ): Promise<SimulationSessionResponseDto[]> {
+    const result = await this.listSimulationSessionsUseCase.execute(
+      user.sub ?? '',
+    );
+    return result.map(SimulationSessionResponseDto.fromRecord);
+  }
+
+  @Get('sessions/:id/result')
+  @Roles({ roles: ['realm:STUDENT'] })
+  @ApiOperation({ summary: 'Get simulation session result' })
+  async getResult(
+    @AuthenticatedUser() user: JwtPayload,
+    @Param('id') sessionId: string,
+  ): Promise<SimulationSessionResultResponseDto> {
+    const result = await this.getSimulationSessionResultUseCase.execute(
+      sessionId,
+      user.sub ?? '',
+    );
+    if (!result) throw new NotFoundException('Simulation session not found');
+    return SimulationSessionResultResponseDto.fromRecord(result);
   }
 
   @Patch('sessions/:id/answers')

@@ -6,6 +6,7 @@ import { IdentityEventPublisherPort } from '../../application/ports/identity-eve
 
 export const USER_SERVICE_CLIENT = 'USER_SERVICE_CLIENT';
 export const NOTI_SERVICE_CLIENT = 'NOTI_SERVICE';
+export const ANALYTICS_SERVICE_CLIENT = 'ANALYTICS_SERVICE_CLIENT';
 
 const USER_AND_NOTI_EVENTS = new Set([
   'identity.user.created',
@@ -27,6 +28,8 @@ export class IdentityEventPublisher extends IdentityEventPublisherPort {
     private readonly userServiceClient: ClientProxy,
     @Inject(NOTI_SERVICE_CLIENT)
     private readonly notiServiceClient: ClientProxy,
+    @Inject(ANALYTICS_SERVICE_CLIENT)
+    private readonly analyticsServiceClient: ClientProxy,
   ) {
     super();
   }
@@ -39,11 +42,17 @@ export class IdentityEventPublisher extends IdentityEventPublisherPort {
         await Promise.all([
           lastValueFrom(this.userServiceClient.emit(event.eventName, payload)),
           lastValueFrom(this.notiServiceClient.emit(event.eventName, payload)),
+          lastValueFrom(
+            this.analyticsServiceClient.emit(event.eventName, payload),
+          ),
         ]);
       } else if (USER_ONLY_EVENTS.has(event.eventName)) {
-        await lastValueFrom(
-          this.userServiceClient.emit(event.eventName, payload),
-        );
+        await Promise.all([
+          lastValueFrom(this.userServiceClient.emit(event.eventName, payload)),
+          lastValueFrom(
+            this.analyticsServiceClient.emit(event.eventName, payload),
+          ),
+        ]);
       }
       this.logger.log(`Published event: ${event.eventName}`);
     } catch (error) {

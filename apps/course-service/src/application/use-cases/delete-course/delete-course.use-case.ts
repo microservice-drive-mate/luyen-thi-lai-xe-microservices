@@ -4,6 +4,7 @@ import { CourseNotFoundException } from '../../../domain/exceptions/course-not-f
 import { CourseHasActiveEnrollmentsException } from '../../../domain/exceptions/course-has-active-enrollments.exception';
 import { CourseRepository } from '../../../domain/repositories/course.repository';
 import { CourseCachePort } from '../../ports/course-cache.port';
+import { EventPublisher } from '../../ports/event-publisher.port';
 import { CourseResult } from '../shared/course.result';
 import { DeleteCourseCommand } from './delete-course.command';
 
@@ -13,6 +14,7 @@ export class DeleteCourseUseCase
 {
   constructor(
     private readonly courseRepository: CourseRepository,
+    private readonly eventPublisher: EventPublisher,
     private readonly courseCache: CourseCachePort,
   ) {}
 
@@ -45,6 +47,8 @@ export class DeleteCourseUseCase
     );
     await this.courseCache.invalidateCourse(course.id);
     await this.courseCache.invalidateLists();
+    await this.eventPublisher.publishAll(course.getDomainEvents());
+    course.clearDomainEvents();
 
     return CourseResult.fromAggregate(course);
   }

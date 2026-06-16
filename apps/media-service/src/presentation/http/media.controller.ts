@@ -20,6 +20,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthenticatedUser } from 'nest-keycloak-connect';
+import { CompleteUploadCommand } from '../../application/use-cases/complete-upload/complete-upload.command';
+import { CompleteUploadUseCase } from '../../application/use-cases/complete-upload/complete-upload.use-case';
 import { GetFileMetadataQuery } from '../../application/use-cases/get-file-metadata/get-file-metadata.query';
 import { GetFileMetadataUseCase } from '../../application/use-cases/get-file-metadata/get-file-metadata.use-case';
 import { GetPresignedUrlQuery } from '../../application/use-cases/get-presigned-url/get-presigned-url.query';
@@ -48,6 +50,7 @@ export class MediaController {
   constructor(
     private readonly uploadFileUseCase: UploadFileUseCase,
     private readonly initiateUploadUseCase: InitiateUploadUseCase,
+    private readonly completeUploadUseCase: CompleteUploadUseCase,
     private readonly getFileMetadataUseCase: GetFileMetadataUseCase,
     private readonly getPresignedUrlUseCase: GetPresignedUrlUseCase,
   ) {}
@@ -100,6 +103,18 @@ export class MediaController {
       ),
     );
     return InitiateUploadResponseDto.fromResult(result);
+  }
+
+  @Post(':id/complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm direct upload completed on Azure Blob' })
+  async completeUpload(
+    @Param('id') id: string,
+  ): Promise<FileObjectResponseDto> {
+    const result = await this.completeUploadUseCase.execute(
+      new CompleteUploadCommand(id),
+    );
+    return FileObjectResponseDto.fromResult(result);
   }
 
   @Get(':id')

@@ -12,7 +12,10 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TopicDistributionItemRequestDto } from './create-template.request.dto';
+import {
+  B2_TEMPLATE_TOPIC_DISTRIBUTION_EXAMPLE,
+  TopicDistributionItemRequestDto,
+} from './create-template.request.dto';
 
 export class UpdateTemplateRequestDto {
   @ApiProperty({ example: 1 })
@@ -70,7 +73,12 @@ export class UpdateTemplateRequestDto {
   @IsBoolean()
   shuffleQuestions?: boolean;
 
-  @ApiPropertyOptional({ type: [TopicDistributionItemRequestDto] })
+  @ApiPropertyOptional({
+    type: [TopicDistributionItemRequestDto],
+    example: B2_TEMPLATE_TOPIC_DISTRIBUTION_EXAMPLE,
+    description:
+      'Strict per-topic counts. Sum of questionCount must equal totalQuestions.',
+  })
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)

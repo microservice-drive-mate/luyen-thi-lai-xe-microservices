@@ -112,10 +112,24 @@ export const DEMO_IDS = {
     deterministicUuid(`demo-course-${courseSlug}-requirement`),
   instructor: (courseSlug: string, instructorId: string) =>
     deterministicUuid(`demo-course-${courseSlug}-instructor-${instructorId}`),
+  schedule: (courseSlug: string, index: number) =>
+    deterministicUuid(`demo-course-${courseSlug}-schedule-${index}`),
   enrollment: (courseSlug: string, studentId: string) =>
     deterministicUuid(`demo-course-${courseSlug}-enrollment-${studentId}`),
   examTemplate: (slug: string) =>
     deterministicUuid(`demo-exam-template-${slug}`),
+  examSession: (studentId: string, attemptIndex: number) =>
+    deterministicUuid(`demo-exam-session-${studentId}-${attemptIndex}`),
+  topicAttempt: (
+    sessionId: string,
+    topicIndex: number,
+    questionIndex: number,
+  ) =>
+    deterministicUuid(
+      `demo-topic-attempt-${sessionId}-${topicIndex}-${questionIndex}`,
+    ),
+  dashboardActivity: (slug: string) =>
+    deterministicUuid(`demo-dashboard-activity-${slug}`),
   analyticsActivity: (studentId: string, day: string) =>
     deterministicUuid(`demo-analytics-activity-${studentId}-${day}`),
   accuracy: (studentId: string, questionId: string) =>
@@ -184,6 +198,352 @@ export const DEMO_COURSES = [
     title: 'Khóa B1 cũ',
     licenseCategory: 'B1',
     status: 'ARCHIVED',
+  },
+] as const;
+
+export function demoInstructorIdsForCourse(courseSlug: string): string[] {
+  if (courseSlug.startsWith('b2')) return [DEMO_USERS.instructors[1].id];
+  return [DEMO_USERS.instructors[0].id];
+}
+
+export const DEMO_COURSE_ENROLLMENTS = [
+  {
+    courseSlug: 'a1-basic',
+    studentIndex: 0,
+    progress: 45,
+    status: 'ACTIVE',
+  },
+  {
+    courseSlug: 'b1-basic',
+    studentIndex: 1,
+    progress: 75,
+    status: 'ACTIVE',
+  },
+  {
+    courseSlug: 'b1-intensive',
+    studentIndex: 2,
+    progress: 25,
+    status: 'ACTIVE',
+  },
+  {
+    courseSlug: 'b2-basic',
+    studentIndex: 3,
+    progress: 100,
+    status: 'COMPLETED',
+  },
+  {
+    courseSlug: 'b2-advanced',
+    studentIndex: 4,
+    progress: 10,
+    status: 'ACTIVE',
+  },
+] as const;
+
+export const DEMO_COURSE_SCHEDULES = [
+  {
+    courseSlug: 'a1-basic',
+    dayOfWeek: 1,
+    startTime: '07:00',
+    endTime: '09:00',
+    room: 'Phong 101',
+  },
+  {
+    courseSlug: 'a1-basic',
+    dayOfWeek: 3,
+    startTime: '07:00',
+    endTime: '09:00',
+    room: 'Phong 101',
+  },
+  {
+    courseSlug: 'a1-basic',
+    dayOfWeek: 5,
+    startTime: '07:00',
+    endTime: '09:00',
+    room: 'Phong 101',
+  },
+  {
+    courseSlug: 'a1-practice',
+    dayOfWeek: 2,
+    startTime: '09:00',
+    endTime: '11:00',
+    room: 'Phong 102',
+  },
+  {
+    courseSlug: 'a1-practice',
+    dayOfWeek: 4,
+    startTime: '09:00',
+    endTime: '11:00',
+    room: 'Phong 102',
+  },
+  {
+    courseSlug: 'b1-basic',
+    dayOfWeek: 1,
+    startTime: '14:00',
+    endTime: '16:00',
+    room: 'Phong 201',
+  },
+  {
+    courseSlug: 'b1-basic',
+    dayOfWeek: 3,
+    startTime: '14:00',
+    endTime: '16:00',
+    room: 'Phong 201',
+  },
+  {
+    courseSlug: 'b1-basic',
+    dayOfWeek: 5,
+    startTime: '14:00',
+    endTime: '16:00',
+    room: 'Phong 201',
+  },
+  {
+    courseSlug: 'b1-intensive',
+    dayOfWeek: 2,
+    startTime: '18:00',
+    endTime: '20:00',
+    room: 'Phong 202',
+  },
+  {
+    courseSlug: 'b1-intensive',
+    dayOfWeek: 4,
+    startTime: '18:00',
+    endTime: '20:00',
+    room: 'Phong 202',
+  },
+  {
+    courseSlug: 'b1-intensive',
+    dayOfWeek: 6,
+    startTime: '18:00',
+    endTime: '20:00',
+    room: 'Phong 202',
+  },
+  {
+    courseSlug: 'b2-basic',
+    dayOfWeek: 2,
+    startTime: '14:00',
+    endTime: '16:00',
+    room: 'Phong 301',
+  },
+  {
+    courseSlug: 'b2-basic',
+    dayOfWeek: 4,
+    startTime: '14:00',
+    endTime: '16:00',
+    room: 'Phong 301',
+  },
+  {
+    courseSlug: 'b2-basic',
+    dayOfWeek: 6,
+    startTime: '14:00',
+    endTime: '16:00',
+    room: 'Phong 301',
+  },
+  {
+    courseSlug: 'b2-advanced',
+    dayOfWeek: 1,
+    startTime: '18:00',
+    endTime: '20:00',
+    room: 'Phong 302',
+  },
+  {
+    courseSlug: 'b2-advanced',
+    dayOfWeek: 3,
+    startTime: '18:00',
+    endTime: '20:00',
+    room: 'Phong 302',
+  },
+  {
+    courseSlug: 'b2-advanced',
+    dayOfWeek: 5,
+    startTime: '18:00',
+    endTime: '20:00',
+    room: 'Phong 302',
+  },
+] as const;
+
+export const DEMO_EXAM_ATTEMPTS = [
+  {
+    studentIndex: 0,
+    licenseCategory: 'A1',
+    score: 68,
+    isPassed: false,
+    completedAt: '2026-06-03T08:30:00.000Z',
+    topicResults: [
+      { topicIndex: 0, answered: 5, correct: 3 },
+      { topicIndex: 4, answered: 5, correct: 2 },
+      { topicIndex: 5, answered: 5, correct: 5 },
+    ],
+  },
+  {
+    studentIndex: 0,
+    licenseCategory: 'A1',
+    score: 86,
+    isPassed: true,
+    completedAt: '2026-06-10T08:30:00.000Z',
+    topicResults: [
+      { topicIndex: 0, answered: 5, correct: 4 },
+      { topicIndex: 4, answered: 5, correct: 5 },
+      { topicIndex: 5, answered: 5, correct: 4 },
+    ],
+  },
+  {
+    studentIndex: 1,
+    licenseCategory: 'B1',
+    score: 88,
+    isPassed: true,
+    completedAt: '2026-06-04T15:30:00.000Z',
+    topicResults: [
+      { topicIndex: 0, answered: 6, correct: 5 },
+      { topicIndex: 2, answered: 6, correct: 5 },
+      { topicIndex: 4, answered: 6, correct: 6 },
+    ],
+  },
+  {
+    studentIndex: 1,
+    licenseCategory: 'B1',
+    score: 91,
+    isPassed: true,
+    completedAt: '2026-06-11T15:30:00.000Z',
+    topicResults: [
+      { topicIndex: 0, answered: 6, correct: 6 },
+      { topicIndex: 2, answered: 6, correct: 5 },
+      { topicIndex: 5, answered: 6, correct: 5 },
+    ],
+  },
+  {
+    studentIndex: 2,
+    licenseCategory: 'B1',
+    score: 54,
+    isPassed: false,
+    completedAt: '2026-06-05T19:30:00.000Z',
+    topicResults: [
+      { topicIndex: 0, answered: 6, correct: 3 },
+      { topicIndex: 4, answered: 6, correct: 2 },
+      { topicIndex: 5, answered: 6, correct: 2 },
+    ],
+  },
+  {
+    studentIndex: 2,
+    licenseCategory: 'B1',
+    score: 62,
+    isPassed: false,
+    completedAt: '2026-06-12T19:30:00.000Z',
+    topicResults: [
+      { topicIndex: 0, answered: 6, correct: 4 },
+      { topicIndex: 4, answered: 6, correct: 3 },
+      { topicIndex: 5, answered: 6, correct: 2 },
+    ],
+  },
+  {
+    studentIndex: 3,
+    licenseCategory: 'B2',
+    score: 92,
+    isPassed: true,
+    completedAt: '2026-06-06T15:30:00.000Z',
+    topicResults: [
+      { topicIndex: 0, answered: 7, correct: 6 },
+      { topicIndex: 2, answered: 7, correct: 7 },
+      { topicIndex: 4, answered: 7, correct: 6 },
+    ],
+  },
+  {
+    studentIndex: 3,
+    licenseCategory: 'B2',
+    score: 89,
+    isPassed: true,
+    completedAt: '2026-06-13T15:30:00.000Z',
+    topicResults: [
+      { topicIndex: 0, answered: 7, correct: 6 },
+      { topicIndex: 2, answered: 7, correct: 6 },
+      { topicIndex: 5, answered: 7, correct: 7 },
+    ],
+  },
+  {
+    studentIndex: 4,
+    licenseCategory: 'B2',
+    score: 57,
+    isPassed: false,
+    completedAt: '2026-06-09T19:30:00.000Z',
+    topicResults: [
+      { topicIndex: 0, answered: 7, correct: 4 },
+      { topicIndex: 4, answered: 7, correct: 2 },
+      { topicIndex: 5, answered: 7, correct: 3 },
+    ],
+  },
+] as const;
+
+export const DEMO_DASHBOARD_ACTIVITIES = [
+  {
+    slug: 'student-b1-enrolled',
+    type: 'student',
+    title: 'Student B1 Demo enrolled',
+    description: 'course.enrollment.created',
+    resourceType: 'COURSE_ENROLLMENT',
+    resourceId: DEMO_IDS.enrollment('b1-basic', DEMO_USERS.students[1].id),
+    occurredAt: '2026-06-13T09:15:00.000Z',
+  },
+  {
+    slug: 'student-b2-completed',
+    type: 'student',
+    title: 'Student B2 Demo completed course',
+    description: 'course.enrollment.completed',
+    resourceType: 'COURSE_ENROLLMENT',
+    resourceId: DEMO_IDS.enrollment('b2-basic', DEMO_USERS.students[3].id),
+    occurredAt: '2026-06-13T08:45:00.000Z',
+  },
+  {
+    slug: 'exam-b2-passed',
+    type: 'exam',
+    title: 'Student B2 Demo passed B2 exam',
+    description: 'exam.session.completed',
+    resourceType: 'EXAM_SESSION',
+    resourceId: DEMO_IDS.examSession(DEMO_USERS.students[3].id, 2),
+    occurredAt: '2026-06-13T08:30:00.000Z',
+  },
+  {
+    slug: 'exam-b1-risk',
+    type: 'exam',
+    title: 'Student B1 Low Score Demo needs support',
+    description: 'exam.session.completed',
+    resourceType: 'EXAM_SESSION',
+    resourceId: DEMO_IDS.examSession(DEMO_USERS.students[2].id, 2),
+    occurredAt: '2026-06-12T19:30:00.000Z',
+  },
+  {
+    slug: 'course-b1-updated',
+    type: 'course',
+    title: 'Khoa B1 co ban updated',
+    description: 'course.updated',
+    resourceType: 'COURSE',
+    resourceId: DEMO_IDS.course('b1-basic'),
+    occurredAt: '2026-06-12T10:00:00.000Z',
+  },
+  {
+    slug: 'course-b2-schedule',
+    type: 'course',
+    title: 'Khoa B2 co ban schedule created',
+    description: 'course.schedule.created',
+    resourceType: 'COURSE',
+    resourceId: DEMO_IDS.course('b2-basic'),
+    occurredAt: '2026-06-11T10:00:00.000Z',
+  },
+  {
+    slug: 'student-a1-license',
+    type: 'student',
+    title: 'Student A1 Demo assigned A1 license',
+    description: 'user.student.license-assigned',
+    resourceType: 'STUDENT',
+    resourceId: DEMO_USERS.students[0].id,
+    occurredAt: '2026-06-10T09:00:00.000Z',
+  },
+  {
+    slug: 'audit-course-material',
+    type: 'audit',
+    title: 'Course material added',
+    description: 'security.audit.recorded',
+    resourceType: 'COURSE',
+    resourceId: DEMO_IDS.course('a1-basic'),
+    occurredAt: '2026-06-09T09:00:00.000Z',
   },
 ] as const;
 

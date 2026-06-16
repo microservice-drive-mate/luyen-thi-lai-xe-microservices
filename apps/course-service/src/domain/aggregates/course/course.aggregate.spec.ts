@@ -1,4 +1,5 @@
 import { CourseMaterialLinkedEvent } from '../../events/course-material-linked.event';
+import { CourseCreatedEvent } from '../../events/course-created.event';
 import { Course } from './course.aggregate';
 import { CourseStatus, LicenseCategory } from './course.types';
 
@@ -20,6 +21,7 @@ describe('Course', () => {
     expect(course.status).toBe(CourseStatus.DRAFT);
     expect(course.instructorIds).toEqual(['instructor-1']);
     expect(course.version).toBe(1);
+    expect(course.getDomainEvents()).toEqual([expect.any(CourseCreatedEvent)]);
   });
 
   it('adds lessons and can activate once lessons exist', () => {
@@ -38,6 +40,7 @@ describe('Course', () => {
 
   it('emits an event when linking media-backed material', () => {
     const course = createCourse();
+    course.clearDomainEvents();
 
     course.addMaterial({
       id: 'material-1',

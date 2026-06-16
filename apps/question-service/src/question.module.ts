@@ -11,6 +11,7 @@ import { GetQuestionUseCase } from './application/use-cases/get-question/get-que
 import { GetTopicUseCase } from './application/use-cases/get-topic/get-topic.use-case';
 import { ListQuestionsUseCase } from './application/use-cases/list-questions/list-questions.use-case';
 import { ListTopicsUseCase } from './application/use-cases/list-topics/list-topics.use-case';
+import { ReportQuestionUseCase } from './application/use-cases/report-question/report-question.use-case';
 import { UpdateQuestionUseCase } from './application/use-cases/update-question/update-question.use-case';
 import { UpdateTopicUseCase } from './application/use-cases/update-topic/update-topic.use-case';
 import { QuestionRepository } from './domain/repositories/question.repository';
@@ -24,6 +25,7 @@ import {
 import { PrismaQuestionRepository } from './infrastructure/persistence/prisma/prisma-question.repository';
 import { PrismaQuestionTopicRepository } from './infrastructure/persistence/prisma/prisma-question-topic.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { PublicQuestionController } from './presentation/http/public-question.controller';
 import { QuestionController } from './presentation/http/question.controller';
 
 @Module({
@@ -43,7 +45,7 @@ import { QuestionController } from './presentation/http/question.controller';
       },
     ]),
   ],
-  controllers: [QuestionController],
+  controllers: [QuestionController, PublicQuestionController],
   providers: [
     PrismaService,
     DomainExceptionFilter,
@@ -63,6 +65,7 @@ import { QuestionController } from './presentation/http/question.controller';
     UpdateTopicUseCase,
     GetTopicUseCase,
     ListTopicsUseCase,
+    ReportQuestionUseCase,
   ],
 })
 export class QuestionModule {}

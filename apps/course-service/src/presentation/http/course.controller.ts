@@ -6,18 +6,26 @@ import {
   HttpStatus,
   Param,
   Post,
+  Req,
   Query,
 } from '@nestjs/common';
+import { buildAuditRequestContext } from '@repo/common';
+import type { Request } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { EnrollStudentCommand } from '../../application/use-cases/enroll-student/enroll-student.command';
 import { EnrollStudentUseCase } from '../../application/use-cases/enroll-student/enroll-student.use-case';
 import { GetCourseQuery } from '../../application/use-cases/get-course/get-course.query';
 import { GetCourseUseCase } from '../../application/use-cases/get-course/get-course.use-case';
+import { GetLessonQuery } from '../../application/use-cases/get-lesson/get-lesson.query';
+import { GetLessonUseCase } from '../../application/use-cases/get-lesson/get-lesson.use-case';
 import { ListCoursesQuery } from '../../application/use-cases/list-courses/list-courses.query';
 import { ListCoursesUseCase } from '../../application/use-cases/list-courses/list-courses.use-case';
+import { UnenrollStudentCommand } from '../../application/use-cases/unenroll-student/unenroll-student.command';
+import { UnenrollStudentUseCase } from '../../application/use-cases/unenroll-student/unenroll-student.use-case';
 import {
   CourseResponseDto,
+  LessonResponseDto,
   ListCoursesResponseDto,
 } from '../dtos/course.response.dto';
 import { EnrollmentResponseDto } from '../dtos/enrollment.response.dto';
@@ -39,6 +47,8 @@ export class CourseController {
     private readonly getCourseUseCase: GetCourseUseCase,
     private readonly listCoursesUseCase: ListCoursesUseCase,
     private readonly enrollStudentUseCase: EnrollStudentUseCase,
+    private readonly unenrollStudentUseCase: UnenrollStudentUseCase,
+    private readonly getLessonUseCase: GetLessonUseCase,
   ) {}
 
   @Get()
@@ -64,6 +74,19 @@ export class CourseController {
     return CourseResponseDto.fromResult(result);
   }
 
+  @Get(':id/lessons/:lessonId')
+  @Roles({ roles: ['realm:STUDENT', 'realm:INSTRUCTOR'] })
+  @ApiOperation({ summary: 'Get course lesson detail' })
+  async getLesson(
+    @Param('id') courseId: string,
+    @Param('lessonId') lessonId: string,
+  ): Promise<LessonResponseDto> {
+    const result = await this.getLessonUseCase.execute(
+      new GetLessonQuery(courseId, lessonId),
+    );
+    return LessonResponseDto.fromResult(result);
+  }
+
   @Post(':id/enroll')
   @Roles({ roles: ['realm:STUDENT'] })
   @HttpCode(HttpStatus.CREATED)
@@ -75,6 +98,26 @@ export class CourseController {
   ): Promise<EnrollmentResponseDto> {
     const result = await this.enrollStudentUseCase.execute(
       new EnrollStudentCommand(courseId, resolveActorId(user, headerUserId)),
+    );
+    return EnrollmentResponseDto.fromResult(result);
+  }
+
+  @Post(':id/unenroll')
+  @Roles({ roles: ['realm:STUDENT'] })
+  @ApiOperation({ summary: 'Unenroll current student from course' })
+  async unenroll(
+    @Param('id') courseId: string,
+    @AuthenticatedUser() user: JwtPayload,
+    @Headers('x-user-id') headerUserId: string | undefined,
+    @Req() request: Request,
+  ): Promise<EnrollmentResponseDto> {
+    const studentId = resolveActorId(user, headerUserId);
+    const result = await this.unenrollStudentUseCase.execute(
+      new UnenrollStudentCommand(
+        courseId,
+        studentId,
+        buildAuditRequestContext(request, user),
+      ),
     );
     return EnrollmentResponseDto.fromResult(result);
   }

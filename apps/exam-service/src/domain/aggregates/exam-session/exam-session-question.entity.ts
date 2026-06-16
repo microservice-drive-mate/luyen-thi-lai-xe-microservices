@@ -14,6 +14,7 @@ export class ExamSessionQuestion extends Entity<string> {
   private constructor(
     id: string,
     readonly questionId: string,
+    readonly topicId: string | null,
     readonly questionContent: string,
     readonly imageUrl: string | null,
     readonly mediaFileId: string | null,
@@ -38,6 +39,7 @@ export class ExamSessionQuestion extends Entity<string> {
     return new ExamSessionQuestion(
       props.id,
       props.questionId,
+      props.topicId ?? null,
       props.questionContent.trim(),
       props.imageUrl ?? null,
       props.mediaFileId ?? null,

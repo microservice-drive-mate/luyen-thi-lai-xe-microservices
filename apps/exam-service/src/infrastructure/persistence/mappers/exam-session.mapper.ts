@@ -20,6 +20,7 @@ interface RawTemplateForSession {
 interface RawSessionQuestion {
   id: string;
   questionId: string;
+  topicId: string | null;
   questionContent: string;
   imageUrl: string | null;
   mediaFileId: string | null;
@@ -96,6 +97,7 @@ export const ExamSessionMapper = {
       questions: raw.questions.map((question) => ({
         id: question.id,
         questionId: question.questionId,
+        topicId: question.topicId,
         questionContent: question.questionContent,
         imageUrl: question.imageUrl,
         mediaFileId: question.mediaFileId,

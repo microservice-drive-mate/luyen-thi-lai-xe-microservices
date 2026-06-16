@@ -50,7 +50,7 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=frontend
 | `course-service` | `/courses/*`, `/enrollments/*`, `/admin/courses/*` | `/course-service/docs` |
 | `question-service` | `/admin/questions/*` | `/question-service/docs` |
 | `notification-service` | `/notifications/*`, `/admin/academic-warnings/*` | `/notification-service/docs` |
-| `analytics-service` | `/analytics/*` | `/analytics-service/docs` |
+| `analytics-service` | `/analytics/*`, `/admin/analytics/*` | `/analytics-service/docs` |
 | `simulation-service` | `/simulation/*` | `/simulation-service/docs` |
 | `media-service` | `/media/*`, `/admin/media/*` | `/media-service/docs` |
 | `audit-service` | `/admin/audit-logs/*` | `/audit-service/docs` |
@@ -357,3 +357,40 @@ docker compose -f docker-compose.infra.yml restart kong-dev
 - Không tự gửi `x-user-id`.
 - Swagger qua Kong dùng `/<service-name>/docs`.
 - Forgot password local xem mail ở Mailpit: `http://localhost:8025`.
+
+## Instructor Dashboard Routes
+
+Frontend calls instructor dashboard through the same Kong base URL and JWT interceptor:
+
+```http
+GET http://localhost:8000/analytics/instructor/dashboard?month=2026-06&weekStart=2026-06-08&date=2026-06-13
+Authorization: Bearer <instructor_access_token>
+```
+
+Admin/center-manager can inspect a specific instructor:
+
+```http
+GET http://localhost:8000/admin/analytics/instructors/<instructorId>/dashboard?month=2026-06&weekStart=2026-06-08&date=2026-06-13
+Authorization: Bearer <admin_access_token>
+```
+
+The response is projection-based. After creating courses, schedules, enrollments, lessons, or exam attempts, allow the RabbitMQ consumers to project events before expecting dashboard numbers to change.
+## Endpoint Gap Batch Notes
+
+Frontend should call the newly added endpoints through Kong with the same service prefixes already used in this project:
+
+- Identity: `POST /identity-service/auth/change-password`; admin reset via `POST /identity-service/auth/reset-password`.
+- User documents: upload/complete file through media-service first, then `POST /user-service/admin/users/:id/documents` with `mediaFileId`.
+- Course: `GET /course-service/courses/:id/lessons/:lessonId`, `POST /course-service/courses/:id/unenroll`, and admin lesson/instructor mutations under `/course-service/admin/courses/...`.
+- Simulation: `GET /simulation-service/simulation/sessions` and `GET /simulation-service/simulation/sessions/:id/result`.
+- Notification preferences: `/notification-service/notifications/preferences/me`.
+- Question practice: `/question-service/questions/topics`, `/question-service/questions/practice`, `/question-service/questions/:id/report`.
+
+`GET /questions/practice` is the safe client endpoint. Do not use `POST /admin/questions/pool` directly from frontend because it includes answer data for exam-service.
+
+## Auth Session Revocation Notes
+
+- `POST /auth/logout` is current-device logout: frontend should delete local access/refresh tokens after success.
+- `POST /auth/change-password` logs out all active devices for that user. After success, frontend should clear local auth state and redirect to login.
+- Admin `POST /auth/reset-password` and account lock also log out all target-user sessions. Any old access token should receive `401` on protected APIs after revocation propagates through Redis.
+- `POST /auth/forgot-password` only sends a reset email; it does not revoke sessions until the password is actually changed/reset.

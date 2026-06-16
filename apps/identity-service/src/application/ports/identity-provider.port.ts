@@ -21,6 +21,7 @@ export abstract class IdentityProviderPort {
   abstract login(username: string, password: string): Promise<IdentityTokenSet>;
   abstract refreshToken(refreshToken: string): Promise<IdentityTokenSet>;
   abstract revokeSession(refreshToken: string): Promise<void>;
+  abstract logoutUserAllSessions(userId: string): Promise<void>;
   abstract createUser(
     email: string,
     password: string,
@@ -34,4 +35,14 @@ export abstract class IdentityProviderPort {
   abstract setUserEnabled(userId: string, enabled: boolean): Promise<void>;
   abstract findUserByEmail(email: string): Promise<ExternalIdentityUser | null>;
   abstract sendPasswordResetEmail(userId: string): Promise<void>;
+  abstract resetPassword(
+    userId: string,
+    newPassword: string,
+    temporary?: boolean,
+  ): Promise<void>;
+  abstract changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void>;
 }

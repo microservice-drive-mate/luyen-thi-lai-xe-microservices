@@ -4,6 +4,7 @@ import { Course } from '../../../domain/aggregates/course/course.aggregate';
 import { CourseCodeAlreadyExistsException } from '../../../domain/exceptions/course-code-already-exists.exception';
 import { CourseRepository } from '../../../domain/repositories/course.repository';
 import { CourseCachePort } from '../../ports/course-cache.port';
+import { EventPublisher } from '../../ports/event-publisher.port';
 import { CourseResult } from '../shared/course.result';
 import { CreateCourseCommand } from './create-course.command';
 
@@ -13,6 +14,7 @@ export class CreateCourseUseCase
 {
   constructor(
     private readonly courseRepository: CourseRepository,
+    private readonly eventPublisher: EventPublisher,
     private readonly courseCache: CourseCachePort,
   ) {}
 
@@ -59,6 +61,8 @@ export class CreateCourseUseCase
       }),
     );
     await this.courseCache.invalidateLists();
+    await this.eventPublisher.publishAll(course.getDomainEvents());
+    course.clearDomainEvents();
     return CourseResult.fromAggregate(course);
   }
 }

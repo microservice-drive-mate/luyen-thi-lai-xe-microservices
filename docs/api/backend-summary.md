@@ -123,6 +123,7 @@ Quản lý thông báo In-app và Push Notification tới thiết bị.
 Phân tích dữ liệu học tập và tổng hợp báo cáo.
 - `GET /analytics/me/progress`: Xuất dashboard tiến trình ôn luyện cho cá nhân (tỷ lệ giải đúng câu, số chuyên đề còn yếu).
 - `GET /admin/analytics/students/:studentId/progress`: Công cụ cho Giáo viên/Admin để giám sát độ siêng năng và năng lực thực tế của một học viên bất kỳ.
+- `GET /admin/analytics/dashboard`: Dashboard thống kê tổng cho Admin/CENTER_MANAGER: tổng học viên, khóa học, giảng viên, bài thi hoàn thành, trend theo tháng, phân bổ hạng GPLX, pass rate và recent activities.
 
 ### 8. Simulation Service (`/simulation/*`, `/practice2d/*`)
 Hệ thống ôn luyện thực hành và sa hình 2D/3D.
@@ -143,9 +144,9 @@ Hệ thống ôn luyện thực hành và sa hình 2D/3D.
 ### 9. Media Service (`/media/*`, `/admin/media/*`)
 Xử lý lưu trữ, tối ưu hóa và xuất URL các file định dạng ảnh/video.
 - `POST /media/files`: Tải trực tiếp file ảnh (dưới giới hạn dung lượng) thông qua formData.
-- `POST /media/files/init`: Khởi tạo quá trình Upload File Lớn (trả về presigned URLs S3 multipart/form).
+- `POST /media/files/init`: Khởi tạo direct upload, trả về Azure Blob SAS `uploadUrl`, `mediaFileId` và stable blob `publicUrl`.
 - `GET /media/files/:id`: Đọc metadata chuẩn của một tập tin.
-- `GET /media/files/:id/url`: Xin cấp URL Public (hoặc Signed Link có thời hạn) để hiển thị/stream ảnh/video trên Web.
+- `GET /media/files/:id/url`: Xin cấp SAS read URL có thời hạn để hiển thị/stream ảnh/video khi Azure container private.
 - `GET /admin/media/files`: Admin kiểm kê tất cả file có trong kho lưu trữ (Storage).
 - `DELETE /admin/media/files/:id`: Admin chủ động xóa file rác (Orphan files).
 
@@ -177,3 +178,41 @@ Ngoài các HTTP REST API, hệ thống microservices còn giao tiếp thông qu
 - **Media Service**: Lắng nghe các event xác nhận file đã được sử dụng (`user.avatar.linked`, `course.material.linked`, `question.image.linked`) để chuyển trạng thái file thành `LINKED`.
 - **Notification Service**: Lắng nghe `identity.user.created`, `identity.user.password-reset-requested`, `exam.session.passed/.failed`, `course.updated`, `notification.academic-warning.queued` để bắn email/push notification.
 - **User Service**: Lắng nghe `identity.user.*` (created, updated, role-changed, locked, deleted) từ Keycloak webhook để đồng bộ hồ sơ, và `media.file.deleted` để gỡ ảnh đại diện nếu file bị xóa.
+
+## Instructor Dashboard Update
+
+Instructor dashboard analytics has been added with projection-based read models in `analytics-service`.
+
+- `GET /analytics/instructor/dashboard?month=YYYY-MM&weekStart=YYYY-MM-DD&date=YYYY-MM-DD`
+- `GET /admin/analytics/instructors/:instructorId/dashboard?month=YYYY-MM&weekStart=YYYY-MM-DD&date=YYYY-MM-DD`
+
+Course schedules are now managed by `course-service` and feed instructor analytics:
+
+- `GET /admin/courses/:id/schedules`
+- `POST /admin/courses/:id/schedules`
+- `PATCH /admin/courses/:id/schedules/:scheduleId`
+- `DELETE /admin/courses/:id/schedules/:scheduleId`
+
+Analytics consumes `course.created|updated|archived`, `course.schedule.created|updated|deleted`, `course.enrollment.*`, `course.lesson.completed`, and `exam.session.completed` to calculate active classes, total students, pass rate, teaching hours, weekly teaching trend, topic averages, class progress, and today's schedule.
+## Endpoint Gap Batch - 2026-06-13
+
+Implemented the filtered P1/P2 endpoint batch from `context/endpoint-iDrive.md`:
+
+- Identity password change/admin reset.
+- User document metadata with `mediaFileId`.
+- Course lesson detail/update, unenroll, and instructor assignment management.
+- Simulation session history/result.
+- Notification mark-all-read and preferences.
+- Analytics weak-topics and study-streak convenience endpoints.
+- Question public topics/practice/report with student-safe practice DTO.
+
+Exam pause/resume/timer/review/statistics endpoints remain intentionally out of scope for a later integrity-focused design.
+
+## Auth Revocation Update - 2026-06-14
+
+Identity-service now uses Keycloak user logout plus Redis token revocation epochs for sensitive account flows:
+
+- `POST /auth/logout` revokes the current refresh token/session and blacklists the current access token.
+- `POST /auth/change-password`, `POST /auth/reset-password`, and locking an identity user log out all sessions for the affected user.
+- Shared `TokenBlacklistGuard` rejects tokens whose `iat` is older than `auth:revoked-after:{userId}`.
+- Media-service now also uses the shared token blacklist guard.

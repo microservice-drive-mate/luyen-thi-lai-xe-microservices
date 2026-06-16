@@ -90,6 +90,7 @@ model ExamSessionQuestion {
   id               String   @id @default(uuid())
   sessionId        String
   questionId       String
+  topicId          String?
   questionContent  String   @db.Text
   imageUrl         String?
   mediaFileId      String?

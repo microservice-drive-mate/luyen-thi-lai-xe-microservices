@@ -69,3 +69,21 @@ export class SubmitSimulationSessionUseCase {
     return this.repository.submitSession(sessionId, studentId);
   }
 }
+
+@Injectable()
+export class ListSimulationSessionsUseCase {
+  constructor(private readonly repository: SimulationRepository) {}
+
+  execute(studentId: string) {
+    return this.repository.listSessions(studentId);
+  }
+}
+
+@Injectable()
+export class GetSimulationSessionResultUseCase {
+  constructor(private readonly repository: SimulationRepository) {}
+
+  execute(sessionId: string, studentId: string) {
+    return this.repository.getSessionResult(sessionId, studentId);
+  }
+}

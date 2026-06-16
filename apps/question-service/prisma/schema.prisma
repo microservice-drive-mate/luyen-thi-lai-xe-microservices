@@ -68,6 +68,7 @@ model Question {
   topic   QuestionTopic    @relation(fields: [topicId], references: [id])
   options QuestionOption[]
   versions QuestionVersion[]
+  reports QuestionReport[]
 
   @@index([topicId])
   @@index([topicId, isActive, isDeleted])
@@ -115,4 +116,21 @@ model QuestionOption {
 
   @@unique([questionId, displayOrder])
   @@map("question_options")
+}
+
+model QuestionReport {
+  id         String   @id @default(uuid())
+  questionId String
+  userId     String
+  reason     String
+  message    String?  @db.Text
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId, status])
+  @@index([userId, createdAt])
+  @@map("question_reports")
 }

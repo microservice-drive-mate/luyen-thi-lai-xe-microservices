@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsOptional,
@@ -132,4 +133,65 @@ export class ListNotificationsResponseDto {
     dto.size = result.size;
     return dto;
   }
+}
+
+export class MarkAllNotificationsReadResponseDto {
+  @ApiProperty()
+  updated!: number;
+}
+
+export class NotificationPreferencesResponseDto {
+  @ApiProperty() userId!: string;
+  @ApiProperty() inAppEnabled!: boolean;
+  @ApiProperty() emailEnabled!: boolean;
+  @ApiProperty() pushEnabled!: boolean;
+  @ApiProperty() smsEnabled!: boolean;
+  @ApiProperty() studyReminderEnabled!: boolean;
+  @ApiProperty() examReminderEnabled!: boolean;
+  @ApiProperty() courseUpdateEnabled!: boolean;
+  @ApiProperty() academicWarningEnabled!: boolean;
+  @ApiProperty() createdAt!: Date;
+  @ApiProperty() updatedAt!: Date;
+}
+
+export class UpdateNotificationPreferencesRequestDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  inAppEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  emailEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  pushEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  smsEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  studyReminderEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  examReminderEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  courseUpdateEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  academicWarningEnabled?: boolean;
 }
