@@ -117,7 +117,7 @@ Variables:
 ```text
 AZURE_AKS_RESOURCE_GROUP=rg-lttl-staging-sea
 AZURE_AKS_CLUSTER_NAME=aks-lttl-staging
-GHCR_OWNER=bolac71
+GHCR_OWNER=microservice-drive-mate
 STAGING_AUTO_DEPLOY_ENABLED=true
 STAGING_API_HOST=api.52.139.233.166.nip.io
 STAGING_AUTH_HOST=auth.52.139.233.166.nip.io
@@ -132,7 +132,7 @@ PAT `GHCR_PULL_TOKEN` can scope:
 read:packages
 ```
 
-`GHCR_OWNER` phai trung voi namespace dang chua Docker packages tren GHCR. Neu images nam o personal account thi dung `bolac71`; neu team da chuyen packages sang organization thi dung organization owner, vi workflow build/deploy se doc va ghi image theo dang:
+`GHCR_OWNER` phai trung voi namespace dang chua Docker packages tren GHCR. Voi repo trong organization hien tai, dung `microservice-drive-mate`. Neu images nam o personal account thi dung personal owner. Workflow build/deploy se doc va ghi image theo dang:
 
 ```text
 ghcr.io/<GHCR_OWNER>/luyen-thi-lai-xe-<service>:<git-sha>
@@ -282,6 +282,7 @@ confirm_production=true
 Configure GitHub Environment `production` with required reviewers. Do not add a production auto trigger. Production should use environment-scoped variables/secrets:
 
 ```text
+GHCR_OWNER=microservice-drive-mate
 AZURE_AKS_RESOURCE_GROUP
 AZURE_AKS_CLUSTER_NAME
 PRODUCTION_API_HOST
@@ -298,6 +299,20 @@ PRODUCTION_KEYCLOAK_ADMIN_PASSWORD
 PRODUCTION_KEYCLOAK_CLIENT_SECRET
 PRODUCTION_STORAGE_ACCOUNT_NAME
 PRODUCTION_STORAGE_ACCOUNT_KEY
+```
+
+Azure OIDC federated credential for production must use the production environment subject:
+
+```text
+repo:<owner>/<repo>:environment:production
+```
+
+Production workflow resolves short image tags to full Git SHA, verifies all 10 service images plus `luyen-thi-lai-xe-migration-runner` exist in GHCR, and fails early if the tag is missing or `GHCR_PULL_TOKEN` cannot read private package manifests.
+
+For the production milestone demo, use:
+
+```text
+docs/devops/production-milestone-runbook.md
 ```
 
 ## 7. Demo Script: DevOps, Kubernetes, Scaling, Secrets

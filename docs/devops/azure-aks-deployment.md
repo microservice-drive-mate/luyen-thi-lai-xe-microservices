@@ -271,6 +271,7 @@ terraform -chdir=terraform/azure-aks destroy
 
 After the demo is stable:
 
+- Use `docs/devops/production-milestone-runbook.md` for the production milestone evidence and demo flow.
 - Keep staging automatic from `main` through `Deploy Azure AKS Staging`.
 - Keep production manual through `Production Release` and GitHub Environment required reviewers.
 - Move PostgreSQL to Azure Database for PostgreSQL Flexible Server.

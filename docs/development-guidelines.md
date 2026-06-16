@@ -189,6 +189,7 @@ Cập nhật theo phạm vi:
 - Observability/logging/metrics/tracing: [ELK Logging Guide](./devops/elk-logging-guide.md), [Observability Runbook](./devops/observability-runbook.md), [OpenTelemetry Jaeger Tracing](./devops/opentelemetry-jaeger-tracing.md)
 - Backup/restore: [Backup Strategy](./devops/backup-strategy.md)
 - Azure AKS/Helm: [Azure AKS Deployment](./devops/azure-aks-deployment.md), [Azure GitHub Actions Setup](./devops/azure-github-actions-setup.md), [Azure Demo Runbook](./devops/azure-demo-runbook.md)
+- Production milestone evidence: [Production Milestone Runbook](./devops/production-milestone-runbook.md)
 - GitHub Actions/release: [GitHub Actions Release Safety](./devops/github-actions-release-safety.md)
 - DORA/deployment events: [DORA Metrics Guide](./devops/dora-metrics-guide.md), [Deployment Event Store](./devops/deployment-event-store.md)
 
