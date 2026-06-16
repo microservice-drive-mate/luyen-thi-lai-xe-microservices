@@ -54,8 +54,8 @@ async function main() {
     await seedNotification({
       id: DEMO_IDS.notification(student.id, 'welcome'),
       userId: student.id,
-      title: 'Chao mung ban den voi he thong on thi',
-      body: `Ho so hoc vien ${student.licenseTier} da san sang cho demo.`,
+      title: 'Chào mừng bạn đến với hệ thống ôn thi',
+      body: `Hồ sơ học viên ${student.licenseTier} đã sẵn sàng cho demo.`,
       data: { kind: 'WELCOME', licenseTier: student.licenseTier },
       isRead: true,
       createdAt: new Date('2026-05-19T08:00:00.000Z'),
@@ -64,8 +64,8 @@ async function main() {
     await seedNotification({
       id: DEMO_IDS.notification(student.id, 'exam-reminder'),
       userId: student.id,
-      title: 'Nhac on tap ly thuyet',
-      body: 'Hay hoan thanh bai luyen tap va xem lai nhom cau hoi thuong sai.',
+      title: 'Nhắc ôn tập lý thuyết',
+      body: 'Hãy hoàn thành bài luyện tập và xem lại nhóm câu hỏi thường sai.',
       data: { kind: 'EXAM_REMINDER' },
       createdAt: new Date('2026-05-20T09:30:00.000Z'),
     });
@@ -82,7 +82,7 @@ async function main() {
         reason: 'LOW_EXAM_SCORE',
         severity: 'HIGH',
         message:
-          'Can on lai nhom bien bao va tinh huong sa hinh truoc khi thi tiep.',
+          'Cần ôn lại nhóm biển báo và tình huống sa hình trước khi thi tiếp.',
         createdById: DEMO_USERS.instructors[0].id,
       },
       create: {
@@ -91,7 +91,7 @@ async function main() {
         reason: 'LOW_EXAM_SCORE',
         severity: 'HIGH',
         message:
-          'Can on lai nhom bien bao va tinh huong sa hinh truoc khi thi tiep.',
+          'Cần ôn lại nhóm biển báo và tình huống sa hình trước khi thi tiếp.',
         createdById: DEMO_USERS.instructors[0].id,
       },
     });
@@ -99,8 +99,8 @@ async function main() {
     await seedNotification({
       id: DEMO_IDS.notification(riskyStudent.id, 'academic-warning'),
       userId: riskyStudent.id,
-      title: 'Academic warning: HIGH',
-      body: 'Can on lai nhom bien bao va tinh huong sa hinh truoc khi thi tiep.',
+      title: 'Cảnh báo học tập: CAO',
+      body: 'Cần ôn lại nhóm biển báo và tình huống sa hình trước khi thi tiếp.',
       data: {
         warningId: DEMO_IDS.warning(riskyStudent.id),
         reason: 'LOW_EXAM_SCORE',

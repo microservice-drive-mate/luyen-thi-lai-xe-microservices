@@ -25,11 +25,11 @@ const prisma = new PrismaClient({
 });
 
 const lessons = [
-  'Tong quan luat giao thong',
-  'Bien bao va vach ke duong',
-  'Ky thuat dieu khien xe',
-  'Xu ly tinh huong nguy hiem',
-  'On tap va bai kiem tra',
+  'Tổng quan luật giao thông',
+  'Biển báo và vạch kẻ đường',
+  'Kỹ thuật điều khiển xe',
+  'Xử lý tình huống nguy hiểm',
+  'Ôn tập và bài kiểm tra',
 ];
 
 const legacyCourseId = 'seed-course-b2-0001';
@@ -43,10 +43,10 @@ async function seedCourse(course: (typeof DEMO_COURSES)[number]) {
     where: { id: courseId },
     update: {
       title: course.title,
-      description: `${course.title} danh cho demo frontend va ASR.`,
+      description: `${course.title} dành cho demo frontend và ASR.`,
       licenseCategory: course.licenseCategory as LicenseCategory,
       totalLessons: lessons.length,
-      duration: '8 tuan',
+      duration: '8 tuần',
       tuitionFee: course.licenseCategory === 'A1' ? '2500000' : '6500000',
       capacity: 30,
       status: course.status as CourseStatus,
@@ -55,10 +55,10 @@ async function seedCourse(course: (typeof DEMO_COURSES)[number]) {
     create: {
       id: courseId,
       title: course.title,
-      description: `${course.title} danh cho demo frontend va ASR.`,
+      description: `${course.title} dành cho demo frontend và ASR.`,
       licenseCategory: course.licenseCategory as LicenseCategory,
       totalLessons: lessons.length,
-      duration: '8 tuan',
+      duration: '8 tuần',
       tuitionFee: course.licenseCategory === 'A1' ? '2500000' : '6500000',
       capacity: 30,
       status: course.status as CourseStatus,
@@ -70,7 +70,7 @@ async function seedCourse(course: (typeof DEMO_COURSES)[number]) {
     where: { courseId },
     update: {
       minAge: course.licenseCategory === 'A1' ? 16 : 18,
-      prerequisites: 'Co giay to tuy than hop le',
+      prerequisites: 'Có giấy tờ tùy thân hợp lệ',
       attendanceRate: 80,
       minPassScore: 80,
       requiredExams: 2,
@@ -79,7 +79,7 @@ async function seedCourse(course: (typeof DEMO_COURSES)[number]) {
       id: DEMO_IDS.requirement(course.slug),
       courseId,
       minAge: course.licenseCategory === 'A1' ? 16 : 18,
-      prerequisites: 'Co giay to tuy than hop le',
+      prerequisites: 'Có giấy tờ tùy thân hợp lệ',
       attendanceRate: 80,
       minPassScore: 80,
       requiredExams: 2,
@@ -91,14 +91,14 @@ async function seedCourse(course: (typeof DEMO_COURSES)[number]) {
       where: { id: DEMO_IDS.lesson(course.slug, index + 1) },
       update: {
         title,
-        content: `Noi dung bai ${index + 1} cua ${course.title}.`,
+        content: `Nội dung bài ${index + 1} của ${course.title}.`,
         order: index + 1,
       },
       create: {
         id: DEMO_IDS.lesson(course.slug, index + 1),
         courseId,
         title,
-        content: `Noi dung bai ${index + 1} cua ${course.title}.`,
+        content: `Nội dung bài ${index + 1} của ${course.title}.`,
         order: index + 1,
       },
     });
@@ -108,14 +108,14 @@ async function seedCourse(course: (typeof DEMO_COURSES)[number]) {
     await prisma.courseMaterial.upsert({
       where: { id: DEMO_IDS.material(course.slug, order) },
       update: {
-        title: order === 1 ? 'Tai lieu ly thuyet' : 'Checklist thuc hanh',
+        title: order === 1 ? 'Tài liệu lý thuyết' : 'Checklist thực hành',
         fileUrl: `https://example.com/demo/${course.slug}/material-${order}.pdf`,
         type: 'PDF',
       },
       create: {
         id: DEMO_IDS.material(course.slug, order),
         courseId,
-        title: order === 1 ? 'Tai lieu ly thuyet' : 'Checklist thuc hanh',
+        title: order === 1 ? 'Tài liệu lý thuyết' : 'Checklist thực hành',
         fileUrl: `https://example.com/demo/${course.slug}/material-${order}.pdf`,
         type: 'PDF',
       },
@@ -225,17 +225,17 @@ async function main() {
   await prisma.course.upsert({
     where: { id: legacyCourseId },
     update: {
-      title: 'Khoi dong khoa B2',
+      title: 'Khởi động khóa B2',
       status: CourseStatus.ACTIVE,
       totalLessons: 1,
     },
     create: {
       id: legacyCourseId,
-      title: 'Khoi dong khoa B2',
-      description: 'Du lieu seed local cho course-service',
+      title: 'Khởi động khóa B2',
+      description: 'Dữ liệu seed local cho course-service',
       licenseCategory: LicenseCategory.B2,
       totalLessons: 1,
-      duration: '30 ngay',
+      duration: '30 ngày',
       tuitionFee: '1500000',
       capacity: 30,
       status: CourseStatus.ACTIVE,
@@ -246,14 +246,14 @@ async function main() {
   await prisma.lesson.upsert({
     where: { id: legacyLessonId },
     update: {
-      title: 'Buoi hoc dau tien',
+      title: 'Buổi học đầu tiên',
       order: 1,
     },
     create: {
       id: legacyLessonId,
       courseId: legacyCourseId,
-      title: 'Buoi hoc dau tien',
-      content: 'Gioi thieu tong quan khoa hoc va lo trinh hoc',
+      title: 'Buổi học đầu tiên',
+      content: 'Giới thiệu tổng quan khóa học và lộ trình học',
       order: 1,
     },
   });

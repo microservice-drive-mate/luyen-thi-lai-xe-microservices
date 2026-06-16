@@ -15,26 +15,26 @@ export const DEMO_USERS = {
   admin: {
     id: '10000000-0000-0000-0000-000000000001',
     email: 'admin@test.com',
-    fullName: 'Admin Test',
+    fullName: 'Quản trị viên thử nghiệm',
     role: 'ADMIN',
   },
   centerManager: {
     id: deterministicUuid('demo-center-manager-01'),
     email: 'manager@test.com',
-    fullName: 'Center Manager Demo',
+    fullName: 'Quản lý trung tâm Demo',
     role: 'CENTER_MANAGER',
   },
   instructors: [
     {
       id: deterministicUuid('demo-instructor-01'),
       email: 'instructor.b1@test.com',
-      fullName: 'Instructor B1 Demo',
+      fullName: 'Giáo viên hướng dẫn B1 Demo',
       role: 'INSTRUCTOR',
     },
     {
       id: deterministicUuid('demo-instructor-02'),
       email: 'instructor.b2@test.com',
-      fullName: 'Instructor B2 Demo',
+      fullName: 'Giáo viên hướng dẫn B2 Demo',
       role: 'INSTRUCTOR',
     },
   ],
@@ -42,7 +42,7 @@ export const DEMO_USERS = {
     {
       id: deterministicUuid('demo-student-a1-01'),
       email: 'student.a1@test.com',
-      fullName: 'Student A1 Demo',
+      fullName: 'Học viên A1 Demo',
       role: 'STUDENT',
       licenseTier: 'A1',
       progressSeed: 'active',
@@ -50,7 +50,7 @@ export const DEMO_USERS = {
     {
       id: deterministicUuid('demo-student-b1-01'),
       email: 'student.b1@test.com',
-      fullName: 'Student B1 Demo',
+      fullName: 'Học viên B1 Demo',
       role: 'STUDENT',
       licenseTier: 'B1',
       progressSeed: 'strong',
@@ -58,7 +58,7 @@ export const DEMO_USERS = {
     {
       id: deterministicUuid('demo-student-b1-02'),
       email: 'student.b1.low@test.com',
-      fullName: 'Student B1 Low Score Demo',
+      fullName: 'Học viên B1 điểm thấp Demo',
       role: 'STUDENT',
       licenseTier: 'B1',
       progressSeed: 'risk',
@@ -66,7 +66,7 @@ export const DEMO_USERS = {
     {
       id: deterministicUuid('demo-student-b2-01'),
       email: 'student.b2@test.com',
-      fullName: 'Student B2 Demo',
+      fullName: 'Học viên B2 Demo',
       role: 'STUDENT',
       licenseTier: 'B2',
       progressSeed: 'completed',
@@ -74,7 +74,7 @@ export const DEMO_USERS = {
     {
       id: deterministicUuid('demo-student-b2-02'),
       email: 'student.b2.new@test.com',
-      fullName: 'Student B2 New Demo',
+      fullName: 'Học viên B2 mới Demo',
       role: 'STUDENT',
       licenseTier: 'B2',
       progressSeed: 'new',
@@ -94,12 +94,12 @@ export const DEMO_TOPIC_IDS = [
 ] as const;
 
 export const DEMO_TOPIC_NAMES = [
-  'Quy dinh chung va quy tac giao thong duong bo',
-  'Van hoa giao thong va dao duc nguoi lai xe',
-  'Ky thuat lai xe',
-  'Cau tao va sua chua',
-  'Bao hieu duong bo',
-  'Giai the sa hinh va xu ly tinh huong',
+  'Quy định chung và quy tắc giao thông đường bộ',
+  'Văn hóa giao thông và đạo đức người lái xe',
+  'Kỹ thuật lái xe',
+  'Cấu tạo và sửa chữa',
+  'Báo hiệu đường bộ',
+  'Giải thế sa hình và xử lý tình huống',
 ] as const;
 
 export const DEMO_IDS = {
@@ -153,49 +153,49 @@ export const DEMO_IDS = {
 export const DEMO_COURSES = [
   {
     slug: 'a1-basic',
-    title: 'Khoa A1 co ban',
+    title: 'Khóa A1 cơ bản',
     licenseCategory: 'A1',
     status: 'ACTIVE',
   },
   {
     slug: 'a1-practice',
-    title: 'Khoa A1 luyen de',
+    title: 'Khóa A1 luyện đề',
     licenseCategory: 'A1',
     status: 'ACTIVE',
   },
   {
     slug: 'b1-basic',
-    title: 'Khoa B1 co ban',
+    title: 'Khóa B1 cơ bản',
     licenseCategory: 'B1',
     status: 'ACTIVE',
   },
   {
     slug: 'b1-intensive',
-    title: 'Khoa B1 cap toc',
+    title: 'Khóa B1 cấp tốc',
     licenseCategory: 'B1',
     status: 'ACTIVE',
   },
   {
     slug: 'b2-basic',
-    title: 'Khoa B2 co ban',
+    title: 'Khóa B2 cơ bản',
     licenseCategory: 'B2',
     status: 'ACTIVE',
   },
   {
     slug: 'b2-advanced',
-    title: 'Khoa B2 nang cao',
+    title: 'Khóa B2 nâng cao',
     licenseCategory: 'B2',
     status: 'ACTIVE',
   },
   {
     slug: 'b2-draft',
-    title: 'Khoa B2 sap khai giang',
+    title: 'Khóa B2 sắp khai giảng',
     licenseCategory: 'B2',
     status: 'DRAFT',
   },
   {
     slug: 'b1-archived',
-    title: 'Khoa B1 cu',
+    title: 'Khóa B1 cũ',
     licenseCategory: 'B1',
     status: 'ARCHIVED',
   },
