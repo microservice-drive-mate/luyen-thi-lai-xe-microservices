@@ -324,7 +324,7 @@ Không cần tạo incident cho lỗi local cá nhân, lỗi format/lint trong P
 
 | Severity | Khi dùng | Ví dụ |
 | --- | --- | --- |
-| `sev1` | Hệ thống ngừng phục vụ hoặc mất dữ liệu | Kong/GKE ingress down, user không thể đăng nhập toàn hệ thống |
+| `sev1` | Hệ thống ngừng phục vụ hoặc mất dữ liệu | Kong/AKS ingress down, user không thể đăng nhập toàn hệ thống |
 | `sev2` | Chức năng chính lỗi, ảnh hưởng nhiều user | Không nộp được bài thi, exam-service lỗi 5xx diện rộng |
 | `sev3` | Lỗi cục bộ hoặc có workaround | Một endpoint admin lỗi, retry queue tăng nhưng hệ thống vẫn phục vụ |
 | `sev4` | Cảnh báo hoặc lỗi nhỏ | Alert warning, dashboard thiếu panel, log format chưa chuẩn |
@@ -360,7 +360,7 @@ Workflow `.github/workflows/incident-labeler.yml` sẽ tự thêm phần lớn l
 1. Tạo issue bằng template `Incident report`.
 2. Chọn đúng môi trường và severity.
 3. Điền thời điểm phát hiện theo ISO 8601 nếu có thể.
-4. Nếu liên quan deploy, điền Git SHA, image tag, workflow URL hoặc Jenkins build URL.
+4. Nếu liên quan deploy, điền Git SHA, image tag hoặc GitHub Actions workflow URL.
 5. Nếu lỗi do deploy, tick các checkbox tương ứng:
    - Sự cố do deploy mới gây ra.
    - Cần rollback hoặc redeploy về tag cũ.
@@ -414,5 +414,4 @@ Nếu incident chưa đóng, script vẫn liệt kê nhưng chưa tính vào MTT
 ## 7. Câu nói demo
 
 > Quy trình incident/postmortem giúp biến incident thành dữ liệu đo lường. Khi có sự cố, nhóm tạo issue theo template, workflow tự gắn label môi trường/severity/change-failure. Khi issue đóng, DORA report tính được MTTR. Nếu incident liên quan deploy hoặc rollback, report cũng phản ánh vào Change Failure Rate.
-
 

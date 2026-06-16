@@ -41,9 +41,9 @@ Nhóm này là nguồn chính cho API contract của service. Mỗi file nên m�
 
 - [DevOps Status Report](./devops/devops-status-report.md)
 - [Consul Workflow](./devops/consul-workflow.md)
-- [Jenkins + Docker Compose](./devops/jenkins-docker-compose.md)
-- [Kubernetes GCP Deployment](./devops/kubernetes-gcp-deployment.md)
-- [GCP Setup](./devops/gcp-setup.md)
+- [Azure AKS Deployment](./devops/azure-aks-deployment.md)
+- [Azure GitHub Actions Setup](./devops/azure-github-actions-setup.md)
+- [Azure Demo Runbook](./devops/azure-demo-runbook.md)
 - [GitHub Actions Release Safety](./devops/github-actions-release-safety.md)
 - [Backup Strategy](./devops/backup-strategy.md)
 - [Deployment Event Store](./devops/deployment-event-store.md)
@@ -79,4 +79,5 @@ Nhóm này là nguồn chính cho API contract của service. Mỗi file nên m�
 - Nếu đổi config key: cập nhật [Consul Workflow](./devops/consul-workflow.md).
 - Nếu đổi gateway/auth/frontend flow: cập nhật [Kong + Frontend Integration](./api/kong-frontend-integration.md).
 - Nếu đổi kiến trúc/layer/database convention: cập nhật [DDD + Clean Architecture Conventions](./architecture/clean-ddd-conventions.md).
+- Nếu đổi hạ tầng/deploy cloud: cập nhật [Azure AKS Deployment](./devops/azure-aks-deployment.md), [Azure GitHub Actions Setup](./devops/azure-github-actions-setup.md) và [Azure Demo Runbook](./devops/azure-demo-runbook.md).
 - Nếu đổi cách chạy hệ thống: cập nhật [README root](../README.md).

@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
   packages: read
 
 env:
@@ -36,17 +37,19 @@ jobs:
     environment:
       name: ${{ inputs.target_environment }}
     concurrency:
-      group: deploy-gcp-production
+      group: deploy-azure-production
       cancel-in-progress: false
     env:
       IMAGE_TAG: ${{ inputs.image_tag }}
-      KUBE_CONFIG_B64: ${{ secrets.PRODUCTION_KUBE_CONFIG_B64 }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_AKS_RESOURCE_GROUP: ${{ vars.AZURE_AKS_RESOURCE_GROUP }}
+      AZURE_AKS_CLUSTER_NAME: ${{ vars.AZURE_AKS_CLUSTER_NAME }}
       API_HOST: ${{ vars.PRODUCTION_API_HOST }}
       AUTH_HOST: ${{ vars.PRODUCTION_AUTH_HOST }}
       FRONTEND_ORIGIN: ${{ vars.PRODUCTION_FRONTEND_ORIGIN }}
       API_SCHEME: ${{ vars.PRODUCTION_API_SCHEME }}
-      INGRESS_CLASS_NAME: ${{ vars.PRODUCTION_INGRESS_CLASS_NAME }}
-      STORAGE_CLASS_NAME: ${{ vars.PRODUCTION_STORAGE_CLASS_NAME }}
       GHCR_PULL_USERNAME: ${{ secrets.GHCR_PULL_USERNAME }}
       GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
       POSTGRES_PASSWORD: ${{ secrets.PRODUCTION_POSTGRES_PASSWORD }}
@@ -67,13 +70,21 @@ jobs:
 
       - uses: azure/setup-kubectl@v4
 
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Validate Kubernetes deployment inputs
         shell: bash
         run: |
           set -euo pipefail
           required_vars=(
             IMAGE_TAG
-            KUBE_CONFIG_B64
+            AZURE_AKS_RESOURCE_GROUP
+            AZURE_AKS_CLUSTER_NAME
             API_HOST
             AUTH_HOST
             FRONTEND_ORIGIN
@@ -84,6 +95,8 @@ jobs:
             RABBITMQ_ERLANG_COOKIE
             KEYCLOAK_ADMIN_PASSWORD
             KEYCLOAK_CLIENT_SECRET
+            STORAGE_ACCOUNT_NAME
+            STORAGE_ACCOUNT_KEY
           )
 
           for var_name in "${required_vars[@]}"; do
@@ -93,14 +106,16 @@ jobs:
             fi
           done
 
-      - name: Configure kubeconfig
+      - name: Configure AKS credentials
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p ~/.kube
-          printf '%s' "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          az aks get-credentials \
+            --resource-group "$AZURE_AKS_RESOURCE_GROUP" \
+            --name "$AZURE_AKS_CLUSTER_NAME" \
+            --overwrite-existing
           kubectl cluster-info
+          kubectl get nodes -o wide
 
       - name: Render Helm values
         shell: bash
@@ -128,7 +143,7 @@ jobs:
               imageTag: env.IMAGE_TAG,
               imageRegistry: `ghcr.io/${{ github.repository_owner }}`,
               nodeEnv: 'production',
-              storageClassName: env.STORAGE_CLASS_NAME || 'standard-rwo',
+              storageClassName: 'managed-csi',
             },
             migration: { imageTag: env.IMAGE_TAG },
             imagePullSecret: {
@@ -137,18 +152,16 @@ jobs:
               token: env.GHCR_PULL_TOKEN,
             },
             ingress: {
-              className: env.INGRESS_CLASS_NAME || 'gce',
+              className: 'nginx',
               apiHost: env.API_HOST,
               authHost: env.AUTH_HOST,
-              ...(env.API_SCHEME === 'https' ? {
-                annotations: {
-                  'cert-manager.io/cluster-issuer': 'letsencrypt-http01',
-                },
-                tls: {
-                  enabled: true,
-                  secretName: 'luyen-thi-lai-xe-tls',
-                },
-              } : {}),
+              annotations: {
+                'nginx.ingress.kubernetes.io/proxy-body-size': '100m',
+              },
+              tls: {
+                enabled: env.API_SCHEME === 'https',
+                secretName: 'luyen-thi-lai-xe-tls',
+              },
             },
             config: {
               frontendOrigin: env.FRONTEND_ORIGIN,
@@ -232,7 +245,7 @@ jobs:
         env:
           DEPLOYMENT_ENVIRONMENT: production
           DEPLOYMENT_TYPE: helm
-          DEPLOYMENT_TARGET: gke
+          DEPLOYMENT_TARGET: azure-aks
           DEPLOYMENT_RELEASE_NAME: luyen-thi-lai-xe
           DEPLOYMENT_NAMESPACE: production
           DEPLOYMENT_IMAGE_TAG: ${{ inputs.image_tag }}

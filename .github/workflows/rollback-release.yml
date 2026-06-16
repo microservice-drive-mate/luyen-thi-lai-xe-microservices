@@ -4,33 +4,34 @@ on:
   workflow_dispatch:
     inputs:
       target_environment:
-        description: "Môi trường cần rollback"
+        description: "Environment to roll back"
         required: true
         type: choice
         options:
           - staging
           - production
       helm_revision:
-        description: "Helm revision cần rollback về, xem bằng: helm history luyen-thi-lai-xe -n <namespace>"
+        description: "Helm revision to roll back to. Check with: helm history luyen-thi-lai-xe -n <namespace>"
         required: true
         type: string
       confirm_rollback:
-        description: "Xác nhận rollback release"
+        description: "Confirm rollback release"
         required: true
         type: boolean
         default: false
       run_smoke:
-        description: "Chạy smoke test sau rollback"
+        description: "Run smoke test after rollback"
         required: true
         type: boolean
         default: true
       rollback_reason:
-        description: "Lý do rollback để lưu vào deployment event"
+        description: "Rollback reason stored in the deployment event"
         required: false
         type: string
 
 permissions:
   contents: read
+  id-token: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -42,20 +43,18 @@ jobs:
     timeout-minutes: 25
     if: inputs.target_environment == 'staging' && inputs.confirm_rollback == true
     environment:
-      name: ${{ inputs.target_environment }}
+      name: staging
     concurrency:
-      group: deploy-gcp-staging
+      group: deploy-azure-staging
       cancel-in-progress: false
     env:
       NAMESPACE: staging
       RELEASE_NAME: luyen-thi-lai-xe
       TARGET_REVISION: ${{ inputs.helm_revision }}
-      KUBE_CONFIG_B64: ${{ secrets.STAGING_KUBE_CONFIG_B64 }}
+      AZURE_AKS_RESOURCE_GROUP: ${{ vars.AZURE_AKS_RESOURCE_GROUP }}
+      AZURE_AKS_CLUSTER_NAME: ${{ vars.AZURE_AKS_CLUSTER_NAME }}
       API_HOST: ${{ vars.STAGING_API_HOST }}
       API_SCHEME: ${{ vars.STAGING_API_SCHEME }}
-      GCP_VM_NAME: luyen-thi-lai-xe-staging-k3s
-      GCP_VM_ZONE: asia-southeast1-b
-      GCP_PROJECT_ID: devops-497910
     steps:
       - uses: actions/checkout@v4
 
@@ -67,6 +66,13 @@ jobs:
 
       - uses: azure/setup-kubectl@v4
 
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Validate rollback inputs
         shell: bash
         run: |
@@ -75,52 +81,21 @@ jobs:
             echo "helm_revision must be a numeric Helm revision: $TARGET_REVISION" >&2
             exit 1
           fi
-
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Start IAP tunnel to K3s API
-        shell: bash
-        run: |
-          set -euo pipefail
-          pip install --no-cache-dir numpy
-
-          gcloud compute start-iap-tunnel "$GCP_VM_NAME" 6443 \
-            --local-host-port=127.0.0.1:16443 \
-            --zone="$GCP_VM_ZONE" \
-            --project="$GCP_PROJECT_ID" &
-          TUNNEL_PID=$!
-          echo "TUNNEL_PID=$TUNNEL_PID" >> "$GITHUB_ENV"
-
-          for attempt in $(seq 1 60); do
-            if nc -z 127.0.0.1 16443 2>/dev/null; then
-              echo "IAP tunnel ready on attempt ${attempt}"
-              exit 0
+          for var_name in AZURE_AKS_RESOURCE_GROUP AZURE_AKS_CLUSTER_NAME API_HOST; do
+            if [[ -z "${!var_name:-}" ]]; then
+              echo "Missing required value: ${var_name}" >&2
+              exit 1
             fi
-            sleep 1
           done
 
-          echo "IAP tunnel failed to start within 60s" >&2
-          kill "$TUNNEL_PID" 2>/dev/null || true
-          exit 1
-
-      - name: Configure kubeconfig
+      - name: Configure AKS credentials
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${KUBE_CONFIG_B64:-}" ]]; then
-            echo "Missing STAGING_KUBE_CONFIG_B64" >&2
-            exit 1
-          fi
-
-          mkdir -p ~/.kube
-          printf '%s' "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          az aks get-credentials \
+            --resource-group "$AZURE_AKS_RESOURCE_GROUP" \
+            --name "$AZURE_AKS_CLUSTER_NAME" \
+            --overwrite-existing
           kubectl cluster-info
 
       - name: Capture current Helm revision
@@ -153,21 +128,13 @@ jobs:
           API_SCHEME="${API_SCHEME:-http}"
           SMOKE_BASE_URL="${API_SCHEME}://${API_HOST}" bash scripts/k8s-smoke.sh
 
-      - name: Cleanup IAP tunnel
-        if: always()
-        shell: bash
-        run: |
-          if [[ -n "${TUNNEL_PID:-}" ]]; then
-            kill "$TUNNEL_PID" 2>/dev/null || true
-          fi
-
       - name: Record rollback deployment event
         if: always()
         shell: bash
         env:
           DEPLOYMENT_ENVIRONMENT: staging
           DEPLOYMENT_TYPE: helm-rollback
-          DEPLOYMENT_TARGET: gcp-k3s
+          DEPLOYMENT_TARGET: azure-aks
           DEPLOYMENT_RELEASE_NAME: luyen-thi-lai-xe
           DEPLOYMENT_NAMESPACE: staging
           DEPLOYMENT_IMAGE_TAG: helm-revision-${{ inputs.helm_revision }}
@@ -200,15 +167,16 @@ jobs:
     timeout-minutes: 25
     if: inputs.target_environment == 'production' && inputs.confirm_rollback == true
     environment:
-      name: ${{ inputs.target_environment }}
+      name: production
     concurrency:
-      group: deploy-gcp-production
+      group: deploy-azure-production
       cancel-in-progress: false
     env:
       NAMESPACE: production
       RELEASE_NAME: luyen-thi-lai-xe
       TARGET_REVISION: ${{ inputs.helm_revision }}
-      KUBE_CONFIG_B64: ${{ secrets.PRODUCTION_KUBE_CONFIG_B64 }}
+      AZURE_AKS_RESOURCE_GROUP: ${{ vars.AZURE_AKS_RESOURCE_GROUP }}
+      AZURE_AKS_CLUSTER_NAME: ${{ vars.AZURE_AKS_CLUSTER_NAME }}
       API_HOST: ${{ vars.PRODUCTION_API_HOST }}
       API_SCHEME: ${{ vars.PRODUCTION_API_SCHEME }}
     steps:
@@ -222,6 +190,13 @@ jobs:
 
       - uses: azure/setup-kubectl@v4
 
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Validate rollback inputs
         shell: bash
         run: |
@@ -230,19 +205,21 @@ jobs:
             echo "helm_revision must be a numeric Helm revision: $TARGET_REVISION" >&2
             exit 1
           fi
+          for var_name in AZURE_AKS_RESOURCE_GROUP AZURE_AKS_CLUSTER_NAME API_HOST; do
+            if [[ -z "${!var_name:-}" ]]; then
+              echo "Missing required value: ${var_name}" >&2
+              exit 1
+            fi
+          done
 
-      - name: Configure kubeconfig
+      - name: Configure AKS credentials
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${KUBE_CONFIG_B64:-}" ]]; then
-            echo "Missing PRODUCTION_KUBE_CONFIG_B64" >&2
-            exit 1
-          fi
-
-          mkdir -p ~/.kube
-          printf '%s' "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          az aks get-credentials \
+            --resource-group "$AZURE_AKS_RESOURCE_GROUP" \
+            --name "$AZURE_AKS_CLUSTER_NAME" \
+            --overwrite-existing
           kubectl cluster-info
 
       - name: Capture current Helm revision
@@ -281,7 +258,7 @@ jobs:
         env:
           DEPLOYMENT_ENVIRONMENT: production
           DEPLOYMENT_TYPE: helm-rollback
-          DEPLOYMENT_TARGET: gke
+          DEPLOYMENT_TARGET: azure-aks
           DEPLOYMENT_RELEASE_NAME: luyen-thi-lai-xe
           DEPLOYMENT_NAMESPACE: production
           DEPLOYMENT_IMAGE_TAG: helm-revision-${{ inputs.helm_revision }}

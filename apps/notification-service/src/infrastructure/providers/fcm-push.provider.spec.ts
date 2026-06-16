@@ -122,8 +122,11 @@ describe('FcmPushProvider', () => {
 
     expect(result.successCount).toBe(501);
     expect(mockSendEachForMulticast).toHaveBeenCalledTimes(2);
-    expect(mockSendEachForMulticast.mock.calls[0][0].tokens).toHaveLength(500);
-    expect(mockSendEachForMulticast.mock.calls[1][0].tokens).toHaveLength(1);
+    const calls = mockSendEachForMulticast.mock.calls as unknown as Array<
+      [{ tokens: string[] }]
+    >;
+    expect(calls[0][0].tokens).toHaveLength(500);
+    expect(calls[1][0].tokens).toHaveLength(1);
   });
 });
 

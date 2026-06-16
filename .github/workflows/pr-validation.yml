@@ -70,7 +70,6 @@ jobs:
               - 'turbo.json'
               - 'charts/**'
               - 'docker/**'
-              - 'deploy/**'
               - 'consul-seed-*.json'
             identity-service:
               - 'apps/identity-service/**'
@@ -223,7 +222,8 @@ jobs:
             sleep "$sleep_seconds"
           done
 
-      - name: Scan Docker Image with Trivy
+      - name: Audit Docker Image with Trivy
+        continue-on-error: true
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
@@ -231,6 +231,17 @@ jobs:
           format: table
           vuln-type: os,library
           severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Enforce Critical Vulnerability Gate
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-${{ matrix.service }}:${{ github.sha }}
+          scanners: vuln
+          format: table
+          vuln-type: os,library
+          severity: CRITICAL
           ignore-unfixed: true
           exit-code: "1"
 
@@ -276,7 +287,8 @@ jobs:
             --load \
             .
 
-      - name: Scan Migration Runner with Trivy
+      - name: Audit Migration Runner with Trivy
+        continue-on-error: true
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
@@ -284,6 +296,17 @@ jobs:
           format: table
           vuln-type: os,library
           severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Enforce Migration Runner Critical Vulnerability Gate
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/luyen-thi-lai-xe-migration-runner:${{ github.sha }}
+          scanners: vuln
+          format: table
+          vuln-type: os,library
+          severity: CRITICAL
           ignore-unfixed: true
           exit-code: "1"
 

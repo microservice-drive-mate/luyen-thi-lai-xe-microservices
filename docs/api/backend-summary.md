@@ -16,7 +16,7 @@ Trong quá trình xây dựng và phát triển, backend đã được triển k
 6. **Cơ Sở Dữ Liệu Phân Tán (PostgreSQL & Prisma)**: Mỗi service sở hữu một schema DB riêng rẽ để đảm bảo tính độc lập. Không dính líu foreign key chéo (chỉ lưu bằng UUID). Thao tác dữ liệu an toàn và type-safe qua Prisma ORM.
 7. **Bảo Mật & Audit**: Tách biệt hoàn toàn tính năng lưu vết hệ thống vào Audit Service. Mọi thao tác thay đổi dữ liệu nhạy cảm (nhật ký hệ thống) đều được ghi nhận (before/after data).
 8. **Observability Toàn Diện**: Đo lường sức khỏe (Health checks) và metric qua Prometheus, Grafana. Quản lý Log tập trung qua ELK (Elasticsearch, Logstash, Kibana) và dò tìm dấu vết Request (Distributed Tracing) bằng OpenTelemetry / Jaeger.
-9. **DevOps & Tự Động Hóa**: Tích hợp CI/CD chuẩn mực với GitHub Actions, Jenkins. Đóng gói triển khai bằng Docker Compose (cho local hybrid) và Helm Charts (cho Kubernetes/GCP).
+9. **DevOps & Tự Động Hóa**: Tích hợp CI/CD chuẩn mực với GitHub Actions, GHCR và Azure AKS. Docker Compose dùng cho local/dev; Helm Charts dùng cho Kubernetes/Azure.
 10. **Centralized Documentation (Docs Service)**: Tích hợp Scalar UI để tổng hợp OpenAPI (Swagger) specs từ tất cả các service về một cổng tài liệu duy nhất.
 
 ---

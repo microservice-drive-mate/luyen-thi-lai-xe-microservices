@@ -125,6 +125,7 @@ export class MessagingController {
           occurredAt,
         },
       });
+      await this.cache.invalidateInstructorDashboard();
     });
   }
 
@@ -172,8 +173,8 @@ export class MessagingController {
         activity: {
           eventId,
           type: 'exam',
-          title: `Học viên ${payload.studentId} hoàn thành bài thi ${licenseCategory} - ${
-            payload.isPassed ? 'Đạt' : 'Không đạt'
+          title: `Học viên ${studentId ?? 'unknown'} hoàn thành bài thi ${licenseCategory} - ${
+            isPassed ? 'Đạt' : 'Không đạt'
           }`,
           description: `Score: ${score}`,
           resourceType: 'EXAM_SESSION',
@@ -414,6 +415,9 @@ export class MessagingController {
         occurredAt,
       },
     });
+    if (user?.role === 'STUDENT') {
+      await this.cache.invalidateInstructorDashboard();
+    }
   }
 
   private async recordCourseDashboardEvent(

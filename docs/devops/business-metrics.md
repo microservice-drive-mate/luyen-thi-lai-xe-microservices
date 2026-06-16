@@ -126,4 +126,4 @@ Khi trình bày, nói ngắn gọn:
 - Đây là counter trong memory của process và được Prometheus scrape định kỳ. Khi service restart, counter trong process reset nhưng Prometheus vẫn giữ time series cũ theo retention.
 - Labels nên giữ low-cardinality. `course_id` đang dùng để demo theo khóa học; nếu production có rất nhiều khóa học, nên cân nhắc gom theo `course_type` hoặc `license_category`.
 - Không đưa dữ liệu cá nhân như email, số điện thoại, user id vào label Prometheus.
-- Nếu triển khai GKE, cần bảo đảm Prometheus scrape được `/metrics` của các service hoặc cấu hình ServiceMonitor tương ứng.
+- Nếu triển khai AKS, cần bảo đảm Prometheus scrape được `/metrics` của các service hoặc cấu hình ServiceMonitor tương ứng.

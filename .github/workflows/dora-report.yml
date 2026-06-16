@@ -12,7 +12,7 @@ on:
         description: "Danh sách workflow deploy, phân tách bằng dấu phẩy"
         type: string
         required: true
-        default: "Main Image Release,Production Release,Rollback Release,Legacy SSH Compose Deploy"
+        default: "Deploy Azure AKS Staging,Production Release,Rollback Release"
   schedule:
     - cron: "0 1 * * 1"
 
@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 15
     env:
       DORA_DAYS: ${{ inputs.days || '30' }}
-      DORA_DEPLOY_WORKFLOWS: ${{ inputs.deploy_workflows || 'Main Image Release,Production Release,Rollback Release,Legacy SSH Compose Deploy' }}
+      DORA_DEPLOY_WORKFLOWS: ${{ inputs.deploy_workflows || 'Deploy Azure AKS Staging,Production Release,Rollback Release' }}
       DORA_OUTPUT: reports/dora/dora-report.md
       DORA_JSON_OUTPUT: reports/dora/dora-report.json
       DORA_DEPLOYMENT_EVENTS_DIR: reports/deployments
@@ -58,10 +58,9 @@ jobs:
           set -euo pipefail
           mkdir -p reports/deployments
           workflows=(
-            "Main Image Release"
+            "Deploy Azure AKS Staging"
             "Production Release"
             "Rollback Release"
-            "Legacy SSH Compose Deploy"
           )
 
           for workflow in "${workflows[@]}"; do

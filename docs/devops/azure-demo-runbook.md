@@ -34,14 +34,14 @@ terraform -chdir=terraform/azure-aks output storage_account_name
 Talking points:
 
 - Terraform creates the Azure Resource Group, AKS cluster, Storage Account, private Blob container, and optional Log Analytics.
-- GCP/K3s Terraform remains as fallback, but Azure is the recommended demo path because media is already Azure Blob-native.
+- Azure AKS is the supported cloud demo path, and media is already Azure Blob-native.
 - No Ansible is used because AKS is managed; Terraform and Helm are the correct abstraction levels.
 
 ## 3. CI/CD
 
 Show GitHub Actions:
 
-- `Main Image Release`: quality gate, Docker build, Trivy, SBOM, Cosign signing, GHCR push.
+- `Main Image Release`: code quality gate, Docker build, Trivy HIGH/CRITICAL audit, fixed CRITICAL vulnerability gate, SBOM, Cosign signing, GHCR push.
 - `Deploy Azure AKS Staging`: AKS credentials, Helm values render, Helm deploy, rollout wait, smoke test, deployment event.
 - Setup checklist: `docs/devops/azure-github-actions-setup.md`.
 
@@ -60,6 +60,16 @@ helm history luyen-thi-lai-xe -n staging
 kubectl get ingress -n staging -o wide
 kubectl get pods -n staging -l app.kubernetes.io/component=app
 ```
+
+UI walkthrough:
+
+```powershell
+k9s
+```
+
+- In `k9s`, switch to namespace `staging`, then show `:deploy`, `:pods`, `:svc`, `:ing`, and `:jobs`.
+- In Lens, open context `aks-lttl-staging`, choose namespace `staging`, then show Workloads, Pods, Services, Ingresses, and Jobs.
+- Use Lens as the main visual UI and k9s as the realtime terminal UI during scaling or rollout demos.
 
 Smoke:
 
@@ -147,6 +157,18 @@ Talking points:
 - Logs carry correlation IDs.
 
 ## 9. Resilience And Rollback
+
+Scaling:
+
+```powershell
+kubectl scale deploy luyen-thi-lai-xe-user-service -n staging --replicas=2
+kubectl rollout status deploy/luyen-thi-lai-xe-user-service -n staging
+kubectl get pods -n staging -l app.kubernetes.io/service-name=user-service -o wide
+kubectl scale deploy luyen-thi-lai-xe-user-service -n staging --replicas=1
+kubectl rollout status deploy/luyen-thi-lai-xe-user-service -n staging
+```
+
+Keep Lens or k9s open while scaling to show the new `user-service` pod appearing and then returning to the desired replica count.
 
 Rollout restart:
 

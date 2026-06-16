@@ -1,6 +1,6 @@
 # Release Safety Cho GitHub Actions
 
-Phần release safety này chỉ tập trung vào GitHub Actions, không thay đổi Jenkins. Mục tiêu là làm release an toàn hơn sau khi đã có CI/CD, GHCR, Helm deploy, DORA và business metrics.
+Phần release safety này tập trung vào GitHub Actions, GHCR, Helm deploy trên Azure AKS, DORA và business metrics.
 
 ## 1. Thành phần đã thêm
 
@@ -31,7 +31,7 @@ Các file này được upload vào artifact của workflow `Main Image Release`
 
 Lời thoại gợi ý:
 
-> Sau khi build và scan Trivy, pipeline còn sinh SBOM cho từng image. SBOM giúp nhóm biết image đang chứa những package nào, phục vụ audit bảo mật và xử lý CVE về sau.
+> Sau khi build, pipeline audit HIGH/CRITICAL bằng Trivy và chặn release nếu có fixed CRITICAL vulnerability. Pipeline còn sinh SBOM cho từng image để nhóm biết image đang chứa những package nào, phục vụ audit bảo mật và xử lý CVE về sau.
 
 ## 3. Cosign signing là gì và dùng để demo thế nào?
 
@@ -45,7 +45,7 @@ Workflow cũng verify lại chữ ký bằng Cosign.
 
 Lời thoại gợi ý:
 
-> Image không chỉ được build và scan, mà còn được ký bằng Cosign. Khi deploy, team có thể truy vết image này đến workflow GitHub Actions đã tạo ra nó. Đây là nền tảng cho provenance và policy admission nếu harden production sâu hơn.
+> Image không chỉ được build và audit, mà còn được ký bằng Cosign. Khi deploy, team có thể truy vết image này đến workflow GitHub Actions đã tạo ra nó. Đây là nền tảng cho provenance và policy admission nếu harden production sâu hơn.
 
 ## 4. Cách rollback bằng GitHub Actions
 

@@ -117,6 +117,7 @@ Variables:
 ```text
 AZURE_AKS_RESOURCE_GROUP=rg-lttl-staging-sea
 AZURE_AKS_CLUSTER_NAME=aks-lttl-staging
+STAGING_AUTO_DEPLOY_ENABLED=true
 STAGING_API_HOST=api.52.139.233.166.nip.io
 STAGING_AUTH_HOST=auth.52.139.233.166.nip.io
 STAGING_FRONTEND_ORIGIN=http://localhost:5173
@@ -151,7 +152,7 @@ push main
 -> build/test
 -> docker build service images
 -> push GHCR :latest and :<git-sha>
--> manually run Deploy Azure AKS Staging with image_tag=<git-sha>
+-> Deploy Azure AKS Staging auto-runs with image_tag=<git-sha>
 ```
 
 Neu push chi doi docs hoac GitHub khong tu chay `Main Image Release`, co the vao:
@@ -160,7 +161,7 @@ Neu push chi doi docs hoac GitHub khong tu chay `Main Image Release`, co the vao
 GitHub -> Actions -> Main Image Release -> Run workflow -> branch main
 ```
 
-Workflow nay build/push day du 10 service images va `luyen-thi-lai-xe-migration-runner` voi tag la SHA cua branch `main` tai luc chay. Sau khi workflow thanh cong, dung dung SHA do cho `Deploy Azure AKS Staging`.
+Workflow nay build/push day du 10 service images va `luyen-thi-lai-xe-migration-runner` voi tag la SHA cua branch `main` tai luc chay. Neu `STAGING_AUTO_DEPLOY_ENABLED=true`, workflow `Deploy Azure AKS Staging` se tu chay sau khi build thanh cong tren `main`.
 
 Lay SHA:
 
@@ -168,7 +169,7 @@ Lay SHA:
 git rev-parse HEAD
 ```
 
-Run deploy:
+Manual deploy chi dung khi can replay/debug mot image tag cu:
 
 ```text
 GitHub -> Actions -> Deploy Azure AKS Staging -> Run workflow
@@ -261,7 +262,38 @@ POST /media/files/:id/complete
 GET /media/files/:id/url
 ```
 
-## 6. Demo Script: DevOps, Kubernetes, Scaling, Secrets
+## 6. Production Policy
+
+Production deploy is manual only:
+
+```text
+GitHub -> Actions -> Production Release -> Run workflow
+image_tag=<git-sha-that-passed-staging>
+confirm_production=true
+```
+
+Configure GitHub Environment `production` with required reviewers. Do not add a production auto trigger. Production should use environment-scoped variables/secrets:
+
+```text
+AZURE_AKS_RESOURCE_GROUP
+AZURE_AKS_CLUSTER_NAME
+PRODUCTION_API_HOST
+PRODUCTION_AUTH_HOST
+PRODUCTION_FRONTEND_ORIGIN
+PRODUCTION_API_SCHEME
+AZURE_CLIENT_ID
+AZURE_TENANT_ID
+AZURE_SUBSCRIPTION_ID
+PRODUCTION_POSTGRES_PASSWORD
+PRODUCTION_RABBITMQ_PASSWORD
+PRODUCTION_RABBITMQ_ERLANG_COOKIE
+PRODUCTION_KEYCLOAK_ADMIN_PASSWORD
+PRODUCTION_KEYCLOAK_CLIENT_SECRET
+PRODUCTION_STORAGE_ACCOUNT_NAME
+PRODUCTION_STORAGE_ACCOUNT_KEY
+```
+
+## 7. Demo Script: DevOps, Kubernetes, Scaling, Secrets
 
 IaC/Terraform:
 

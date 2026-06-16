@@ -375,6 +375,22 @@ Authorization: Bearer <admin_access_token>
 ```
 
 The response is projection-based. After creating courses, schedules, enrollments, lessons, or exam attempts, allow the RabbitMQ consumers to project events before expecting dashboard numbers to change.
+
+`classProgress[]` includes compact `students[]` summaries for each assigned course. The student profile fields are projection-based too, so `fullName`, `email`, or `licenseTier` can be `null` briefly until user events are consumed.
+
+## Student Detail Composition
+
+Frontend should compose student detail screens from the owning services:
+
+```http
+GET http://localhost:8000/admin/users/<studentId>
+Authorization: Bearer <admin_access_token>
+
+GET http://localhost:8000/admin/enrollments?studentId=<studentId>&page=1&size=100
+Authorization: Bearer <admin_access_token>
+```
+
+Use user-service for profile fields and course-service for course/enrollment fields.
 ## Endpoint Gap Batch Notes
 
 Frontend should call the newly added endpoints through Kong with the same service prefixes already used in this project:

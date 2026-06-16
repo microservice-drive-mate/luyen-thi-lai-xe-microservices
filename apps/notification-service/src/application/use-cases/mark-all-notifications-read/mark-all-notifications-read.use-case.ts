@@ -23,11 +23,11 @@ export class MarkAllNotificationsReadUseCase
     command: MarkAllNotificationsReadCommand,
   ): Promise<{ updated: number }> {
     const updated = await this.repository.markAllReadByUser(command.userId);
-    await this.emitUnreadCount(command.userId);
+    this.emitUnreadCount(command.userId);
     return { updated };
   }
 
-  private async emitUnreadCount(userId: string): Promise<void> {
+  private emitUnreadCount(userId: string): void {
     try {
       const payload: NotificationUnreadCountPayload = { unreadCount: 0 };
       this.wsEmitter.emitToUser(

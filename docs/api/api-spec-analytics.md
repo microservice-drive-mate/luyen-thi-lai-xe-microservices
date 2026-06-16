@@ -142,8 +142,10 @@ Instructor dashboard is an eventually-consistent read model for the instructor h
 | `summary.teachingHoursThisMonth` | `number` | Sum of weekly schedule occurrences in the selected month |
 | `weeklyTeachingTrend` | `InstructorWeeklyTeachingTrendPoint[]` | Seven points from `weekStart` |
 | `topicAverages` | `InstructorTopicAverage[]` | Correct answers / answered questions by topic |
-| `classProgress` | `InstructorClassProgress[]` | Completed enrollments / total enrollments by course |
+| `classProgress` | `InstructorClassProgress[]` | Completed enrollments / total enrollments by course, including compact student summaries |
 | `todaySchedule` | `InstructorTodayScheduleItem[]` | Schedule occurrences matching `date` |
+
+`InstructorClassProgress.students[]` includes `studentId`, `fullName`, `email`, `licenseTier`, `status`, `progress`, `enrolledAt`, and `completedAt`. Name/email/license fields come from the analytics user projection and may be `null` until user events have been projected.
 
 ---
 
@@ -268,7 +270,19 @@ Returns the current instructor dashboard. The instructor id is read from JWT `su
         "licenseCategory": "B1",
         "totalStudents": 24,
         "completedStudents": 18,
-        "progressPct": 75
+        "progressPct": 75,
+        "students": [
+          {
+            "studentId": "student-id",
+            "fullName": "Nguyen Van A",
+            "email": "student@example.com",
+            "licenseTier": "B1",
+            "status": "ACTIVE",
+            "progress": 42,
+            "enrolledAt": "2026-06-01T10:00:00.000Z",
+            "completedAt": null
+          }
+        ]
       }
     ],
     "todaySchedule": [

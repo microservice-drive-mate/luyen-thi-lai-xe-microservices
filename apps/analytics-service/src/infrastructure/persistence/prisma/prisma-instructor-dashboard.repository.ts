@@ -48,6 +48,16 @@ export class PrismaInstructorDashboardRepository extends InstructorDashboardRepo
         : await this.prisma.instructorEnrollmentProjection.findMany({
             where: { courseId: { in: courseIds }, status: { not: 'DROPPED' } },
           });
+    const userProfiles: DashboardUserRecord[] =
+      enrollments.length === 0
+        ? []
+        : await this.prisma.dashboardUserProjection.findMany({
+            where: {
+              userId: {
+                in: [...new Set(enrollments.map((item) => item.studentId))],
+              },
+            },
+          });
     const schedules: ScheduleRecord[] =
       courseIds.length === 0
         ? []
@@ -127,6 +137,11 @@ export class PrismaInstructorDashboardRepository extends InstructorDashboardRepo
           totalStudents: total,
           completedStudents: completed,
           progressPct: total === 0 ? 0 : Math.round((completed / total) * 100),
+          students: buildCourseStudents(
+            course.courseId,
+            enrollments,
+            userProfiles,
+          ),
         };
       }),
       todaySchedule: schedules
@@ -284,6 +299,16 @@ type EnrollmentRecord = {
   courseId: string;
   studentId: string;
   status: string;
+  progress: number;
+  enrolledAt: Date | null;
+  completedAt: Date | null;
+};
+
+type DashboardUserRecord = {
+  userId: string;
+  fullName: string | null;
+  email: string | null;
+  licenseTier: string | null;
 };
 
 type ScheduleRecord = {
@@ -339,6 +364,34 @@ function countCompletedByCourse(
     );
   }
   return grouped;
+}
+
+function buildCourseStudents(
+  courseId: string,
+  enrollments: EnrollmentRecord[],
+  users: DashboardUserRecord[],
+) {
+  const usersById = new Map(users.map((user) => [user.userId, user]));
+  return enrollments
+    .filter((enrollment) => enrollment.courseId === courseId)
+    .sort((a, b) => {
+      const aName = usersById.get(a.studentId)?.fullName ?? a.studentId;
+      const bName = usersById.get(b.studentId)?.fullName ?? b.studentId;
+      return aName.localeCompare(bName);
+    })
+    .map((enrollment) => {
+      const user = usersById.get(enrollment.studentId);
+      return {
+        studentId: enrollment.studentId,
+        fullName: user?.fullName ?? null,
+        email: user?.email ?? null,
+        licenseTier: user?.licenseTier ?? null,
+        status: enrollment.status,
+        progress: enrollment.progress,
+        enrolledAt: enrollment.enrolledAt,
+        completedAt: enrollment.completedAt,
+      };
+    });
 }
 
 function buildWeeklyTrend(

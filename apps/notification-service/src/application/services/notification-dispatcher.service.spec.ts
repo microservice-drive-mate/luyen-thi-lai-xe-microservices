@@ -6,12 +6,8 @@ import {
 } from '../../domain/repositories/notification.repository';
 import { DeviceTokenRepository } from '../../domain/repositories/device-token.repository';
 import { NotificationMetrics } from '../../infrastructure/metrics/notification.metrics';
-import { MailProvider } from '../ports/mail.provider';
-import { PushProvider, PushSendResult } from '../ports/push.provider';
-import {
-  NOTIFICATION_WS_EVENTS,
-  WsEmitterPort,
-} from '../ports/ws-emitter.port';
+import { PushSendResult } from '../ports/push.provider';
+import { NOTIFICATION_WS_EVENTS } from '../ports/ws-emitter.port';
 import { NotificationDispatcher } from './notification-dispatcher.service';
 
 describe('NotificationDispatcher push delivery', () => {
@@ -74,10 +70,10 @@ describe('NotificationDispatcher push delivery', () => {
     dispatcher = new NotificationDispatcher(
       notificationRepository as unknown as NotificationRepository,
       deviceTokenRepository as unknown as DeviceTokenRepository,
-      { send: jest.fn() } as unknown as MailProvider,
-      pushProvider as unknown as PushProvider,
+      { send: jest.fn() },
+      pushProvider,
       metrics as unknown as NotificationMetrics,
-      wsEmitter as unknown as WsEmitterPort,
+      wsEmitter,
     );
   });
 
@@ -181,8 +177,9 @@ describe('NotificationDispatcher push delivery', () => {
       'All push delivery attempts failed with retryable errors',
     );
 
-    const saved = notificationRepository.saveNotificationDelivery.mock
-      .calls[0][0] as Notification;
+    const calls = notificationRepository.saveNotificationDelivery.mock
+      .calls as unknown[][];
+    const saved = calls[0][0] as Notification;
     expect(saved.toSnapshot()).toMatchObject({
       status: NotificationStatus.FAILED,
     });

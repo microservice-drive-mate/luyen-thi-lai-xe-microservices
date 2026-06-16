@@ -1,4 +1,3 @@
-import { NotificationEventPublisher } from '../../ports/event-publisher.port';
 import { AcademicWarningRecipientRequiredException } from '../../../domain/exceptions/academic-warning-recipient-required.exception';
 import { UnsupportedDeliveryChannelException } from '../../../domain/exceptions/unsupported-delivery-channel.exception';
 import {
@@ -29,7 +28,7 @@ describe('QueueAcademicWarningsUseCase', () => {
     };
     useCase = new QueueAcademicWarningsUseCase(
       repository as unknown as NotificationRepository,
-      eventPublisher as unknown as NotificationEventPublisher,
+      eventPublisher,
     );
   });
 

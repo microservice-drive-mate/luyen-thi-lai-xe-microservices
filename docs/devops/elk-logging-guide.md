@@ -419,9 +419,9 @@ Runbook xử lý sự cố nằm ở:
 docs/devops/observability-runbook.md
 ```
 
-## Deploy staging/production
+## Local/AKS logging
 
-`docker-compose.deploy.yml` đã có:
+Local Docker Compose has:
 
 - `elasticsearch`
 - `logstash`
@@ -429,6 +429,8 @@ docs/devops/observability-runbook.md
 - `prometheus`
 - `alertmanager`
 - `grafana`
+
+For AKS, use the Azure deployment docs and enable logging components only when the cluster has enough resources.
 - volume `elasticsearch_data`
 - volume `prometheus_data`
 - volume `alertmanager_data`
@@ -496,5 +498,4 @@ Với Grafana/Prometheus cũng nên giới hạn public access tương tự; ít
 - Smoke test kiểm tra Prometheus ready, alert rules, Alertmanager ready, Grafana health, Elasticsearch health và Kibana status.
 - Smoke test hỗ trợ kiểm tra thêm URL `/metrics` qua biến `OBS_SERVICE_METRICS_URLS`.
 - Có runbook `docs/devops/observability-runbook.md` cho service down, 5xx cao, latency cao, CPU/RAM cao.
-
 
