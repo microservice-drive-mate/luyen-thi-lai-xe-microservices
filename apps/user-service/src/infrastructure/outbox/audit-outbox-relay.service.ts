@@ -7,8 +7,10 @@ import {
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Prisma } from '@prisma/user-client';
+import { DomainEvent } from '@repo/common';
 import { lastValueFrom } from 'rxjs';
 import { PrismaService } from '../persistence/prisma/prisma.service';
+import { EventPublisher } from '../../application/ports/event-publisher.port';
 
 export const AUDIT_SERVICE_CLIENT = 'AUDIT_SERVICE_CLIENT';
 
@@ -21,6 +23,7 @@ export class AuditOutboxRelayService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(AUDIT_SERVICE_CLIENT) private readonly auditClient: ClientProxy,
+    private readonly eventPublisher: EventPublisher,
   ) {}
 
   onModuleInit(): void {
@@ -44,13 +47,19 @@ export class AuditOutboxRelayService implements OnModuleInit, OnModuleDestroy {
 
       for (const message of messages) {
         try {
-          await this.auditClient.connect();
-          await lastValueFrom(
-            this.auditClient.emit(
-              message.eventName,
-              message.payload as Prisma.JsonObject,
-            ),
-          );
+          if (message.eventName === 'security.audit.recorded') {
+            await this.auditClient.connect();
+            await lastValueFrom(
+              this.auditClient.emit(
+                message.eventName,
+                message.payload as Prisma.JsonObject,
+              ),
+            );
+          } else {
+            await this.eventPublisher.publish(
+              message.payload as unknown as DomainEvent,
+            );
+          }
           await this.prisma.outboxMessage.update({
             where: { id: message.id },
             data: {

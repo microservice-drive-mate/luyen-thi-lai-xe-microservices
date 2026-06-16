@@ -3,7 +3,6 @@ import { IUseCase, MetricsService } from '@repo/common';
 import { ExamSessionStatus } from '../../../domain/aggregates/exam-session/exam-session.types';
 import { ExamSessionNotFoundException } from '../../../domain/exceptions/exam.exceptions';
 import { ExamSessionRepository } from '../../../domain/repositories/exam-session.repository';
-import { EventPublisher } from '../../ports/event-publisher.port';
 import { ExamSessionResult } from '../shared/exam-session.result';
 import { SubmitSessionCommand } from './submit-session.command';
 
@@ -13,7 +12,6 @@ export class SubmitSessionUseCase
 {
   constructor(
     private readonly sessionRepository: ExamSessionRepository,
-    private readonly eventPublisher: EventPublisher,
     private readonly metricsService: MetricsService,
   ) {}
 
@@ -29,9 +27,6 @@ export class SubmitSessionUseCase
 
     session.submit();
     await this.sessionRepository.save(session);
-    const events = session.getDomainEvents();
-    session.clearDomainEvents();
-    await this.eventPublisher.publishAll(events);
     this.metricsService.recordExamSessionCompleted({
       licenseCategory: session.licenseCategory,
       status: session.status,

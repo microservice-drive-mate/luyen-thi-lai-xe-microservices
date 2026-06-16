@@ -591,7 +591,6 @@ describe('Exam use cases', () => {
 
     const useCase = new SubmitSessionUseCase(
       sessionRepository,
-      eventPublisher,
       metricsService as never,
     );
     const result = await useCase.execute(
@@ -600,12 +599,6 @@ describe('Exam use cases', () => {
 
     expect(result.isPassed).toBe(true);
     expect(sessionRepository.save).toHaveBeenCalledTimes(1);
-    expect(eventPublisher.publishAll).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ eventName: 'exam.session.completed' }),
-        expect.objectContaining({ eventName: 'exam.session.passed' }),
-      ]),
-    );
     expect(metricsService.recordExamSessionCompleted).toHaveBeenCalledWith({
       licenseCategory: LicenseCategory.B2,
       status: ExamSessionStatus.COMPLETED,
@@ -618,10 +611,7 @@ describe('Exam use cases', () => {
     const session = createExpiredSession();
     sessionRepository.findById.mockResolvedValue(session);
 
-    const useCase = new GetSessionResultUseCase(
-      sessionRepository,
-      eventPublisher,
-    );
+    const useCase = new GetSessionResultUseCase(sessionRepository);
     const result = await useCase.execute(
       new GetSessionResultQuery('session-id', 'student-id'),
     );
@@ -629,11 +619,5 @@ describe('Exam use cases', () => {
     expect(result.status).toBe(ExamSessionStatus.TIMED_OUT);
     expect(result.score).toBe(1);
     expect(sessionRepository.save).toHaveBeenCalledWith(session);
-    expect(eventPublisher.publishAll).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ eventName: 'exam.session.completed' }),
-        expect.objectContaining({ eventName: 'exam.session.failed' }),
-      ]),
-    );
   });
 });

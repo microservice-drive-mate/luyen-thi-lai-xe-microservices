@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/exam-client';
+import { withCorrelationId } from '@repo/common';
 import { ExamSession } from '../../../domain/aggregates/exam-session/exam-session.aggregate';
 import {
   ExamSessionRepository,
@@ -189,6 +190,19 @@ export class PrismaExamSessionRepository extends ExamSessionRepository {
           update: questionData,
         });
       }
+
+      const domainEvents = session.getDomainEvents();
+      for (const event of domainEvents) {
+        await tx.outboxMessage.create({
+          data: {
+            eventName: event.eventName,
+            payload: withCorrelationId(
+              event,
+            ) as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+      session.clearDomainEvents();
     });
   }
 }

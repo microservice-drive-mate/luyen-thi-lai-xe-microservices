@@ -2,6 +2,7 @@ import { AggregateRoot } from '@repo/common';
 import { CourseEnrollmentCompletedEvent } from '../../events/course-enrollment-completed.event';
 import { CourseEnrollmentProgressResetEvent } from '../../events/course-enrollment-progress-reset.event';
 import { CourseLessonCompletedEvent } from '../../events/course-lesson-completed.event';
+import { CourseEnrollmentCreatedEvent } from '../../events/course-enrollment-created.event';
 import { EnrollmentAlreadyCompletedException } from '../../exceptions/enrollment-already-completed.exception';
 import {
   CreateEnrollmentProps,
@@ -39,7 +40,7 @@ export class CourseEnrollment extends AggregateRoot<string> {
   }
 
   static create(props: CreateEnrollmentProps): CourseEnrollment {
-    return new CourseEnrollment(
+    const enrollment = new CourseEnrollment(
       props.id,
       props.courseId,
       props.studentId,
@@ -49,6 +50,16 @@ export class CourseEnrollment extends AggregateRoot<string> {
       null,
       null,
     );
+    enrollment.addDomainEvent(
+      new CourseEnrollmentCreatedEvent(
+        enrollment.id,
+        enrollment.studentId,
+        enrollment.courseId,
+        enrollment.status,
+        enrollment.progress,
+      ),
+    );
+    return enrollment;
   }
 
   static reconstitute(props: ReconstituteEnrollmentProps): CourseEnrollment {
@@ -111,6 +122,15 @@ export class CourseEnrollment extends AggregateRoot<string> {
     this._progress = 0;
     this._completedAt = null;
     this._enrolledAt = new Date();
+    this.addDomainEvent(
+      new CourseEnrollmentCreatedEvent(
+        this._id,
+        this._studentId,
+        this._courseId,
+        this._status,
+        this._progress,
+      ),
+    );
   }
 
   resetProgress(): void {

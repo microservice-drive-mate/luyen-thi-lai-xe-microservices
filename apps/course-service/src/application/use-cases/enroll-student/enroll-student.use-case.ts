@@ -12,8 +12,6 @@ import { StudentLicenseNotAssignedException } from '../../../domain/exceptions/s
 import { CourseEnrollmentRepository } from '../../../domain/repositories/course-enrollment.repository';
 import { CourseRepository } from '../../../domain/repositories/course.repository';
 import { StudentLicenseProfileRepository } from '../../../domain/repositories/student-license-profile.repository';
-import { EventPublisher } from '../../ports/event-publisher.port';
-import { CourseEnrollmentCreatedEvent } from '../../../domain/events/course-enrollment-created.event';
 import { EnrollmentResult } from '../shared/enrollment.result';
 import { EnrollStudentCommand } from './enroll-student.command';
 import { CourseCachePort } from '../../ports/course-cache.port';
@@ -26,7 +24,6 @@ export class EnrollStudentUseCase
     private readonly courseRepository: CourseRepository,
     private readonly enrollmentRepository: CourseEnrollmentRepository,
     private readonly studentLicenseProfileRepository: StudentLicenseProfileRepository,
-    private readonly eventPublisher: EventPublisher,
     private readonly courseCache: CourseCachePort,
   ) {}
 
@@ -90,16 +87,6 @@ export class EnrollStudentUseCase
 
     await this.enrollmentRepository.save(enrollment);
     await this.courseCache.invalidateCourse(command.courseId);
-
-    await this.eventPublisher.publish(
-      new CourseEnrollmentCreatedEvent(
-        enrollment.id,
-        command.studentId,
-        command.courseId,
-        enrollment.status,
-        enrollment.progress,
-      ),
-    );
 
     return EnrollmentResult.fromAggregate(enrollment);
   }

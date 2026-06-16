@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { createAuditEvent, IUseCase } from '@repo/common';
 import { UserProfileNotFoundException } from '../../../domain/exceptions/user-profile-not-found.exception';
 import { UserProfileRepository } from '../../../domain/repositories/user-profile.repository';
-import { EventPublisher } from '../../ports/event-publisher.port';
 import { GetUserProfileResult } from '../get-user-profile/get-user-profile.result';
 import { AssignLicenseTierCommand } from './assign-license-tier.command';
 
@@ -10,10 +9,7 @@ import { AssignLicenseTierCommand } from './assign-license-tier.command';
 export class AssignLicenseTierUseCase
   implements IUseCase<AssignLicenseTierCommand, GetUserProfileResult>
 {
-  constructor(
-    private readonly userProfileRepository: UserProfileRepository,
-    private readonly eventPublisher: EventPublisher,
-  ) {}
+  constructor(private readonly userProfileRepository: UserProfileRepository) {}
 
   async execute(
     command: AssignLicenseTierCommand,
@@ -44,10 +40,6 @@ export class AssignLicenseTierUseCase
     });
 
     await this.userProfileRepository.save(profile, auditEvent);
-
-    const events = profile.getDomainEvents();
-    profile.clearDomainEvents();
-    await this.eventPublisher.publishAll(events);
 
     return new GetUserProfileResult(
       profile.id,

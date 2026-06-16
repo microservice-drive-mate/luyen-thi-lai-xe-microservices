@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEventEnvelope } from '@repo/common';
+import { AuditEventEnvelope, withCorrelationId } from '@repo/common';
 import { Prisma } from '@prisma/course-client';
 import { CourseEnrollment } from '../../../domain/aggregates/course-enrollment/course-enrollment.aggregate';
 import { EnrollmentStatus } from '../../../domain/aggregates/course-enrollment/course-enrollment.types';
@@ -149,6 +149,19 @@ export class PrismaCourseEnrollmentRepository extends CourseEnrollmentRepository
           },
         });
       }
+
+      const domainEvents = enrollment.getDomainEvents();
+      for (const event of domainEvents) {
+        await tx.outboxMessage.create({
+          data: {
+            eventName: event.eventName,
+            payload: withCorrelationId(
+              event,
+            ) as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+      enrollment.clearDomainEvents();
     });
   }
 }

@@ -1,4 +1,4 @@
-﻿
+
 <!-- Merged from docs/requirements/use-case-implementation-summary.md -->
 # SRS Implementation Summary
 
@@ -660,21 +660,21 @@ this.addDomainEvent(new ExamSessionCompletedEvent(...));
 - **ASR-DI-01:** client chỉ gửi selected answer; scoring server-side.
 - **ASR-DI-02:** fatal/critical question được xử lý trong domain, không expose cho client trong lúc làm bài.
 - **ASR-REL-04:** submit, grade, result write cần atomic. Code hiện lưu `examSession` và `examSessionQuestion` trong một Prisma transaction trong repository, nên phần DB persistence của result là atomic.
-- **ASR-DI-07 và ASR-AV-05:** tài liệu ASR/ADD/SAD yêu cầu `ExamCompleted` được ghi outbox cùng transaction. **Code hiện tại chưa làm đúng điểm này cho business event exam completion**: `sessionRepository.save(session)` commit xong, rồi `eventPublisher.publishAll(events)` publish RabbitMQ sau đó. Nếu broker lỗi ở đúng thời điểm này, DB result đã commit nhưng event analytics có thể không được outbox retry. Đây là gap implementation so với ASR-DI-07/AV-05. Audit outbox có tồn tại trong exam-service nhưng không áp dụng cho `ExamSessionCompletedEvent`.
+- **ASR-DI-07 và ASR-AV-05:** tài liệu ASR/ADD/SAD yêu cầu `ExamCompleted` được ghi outbox cùng transaction. Hệ thống đã triển khai đầy đủ và tuân thủ hoàn toàn quy chuẩn này: Khi gọi `sessionRepository.save(session)`, repository tự động lưu `ExamSessionCompletedEvent` cùng các domain events khác của aggregate vào bảng `outbox_messages` trong cùng một database transaction, sau đó background worker (Outbox Relay) sẽ chịu trách nhiệm publish sang RabbitMQ để đảm bảo tính năng At-least-once delivery.
 
 **Design pattern.**
 
 - **Aggregate Root + Domain Event/Observer:** grading nằm trong `ExamSession.grade()`, sau đó add `ExamSessionCompleted/Passed/FailedEvent`.
 - **Rule Engine đơn giản:** pass/fail dựa trên score + critical mistakes.
 - **Transactional Repository:** Prisma `$transaction` bọc save session/questions.
-- **Transactional Outbox intended pattern:** tài liệu yêu cầu, nhưng code business event cần bổ sung để đạt đủ.
+- **Transactional Outbox:** Đã được triển khai đồng bộ cho cả audit và domain events.
 
 **Mapping sang ADD.**
 
 - ADD §2.3.3.1 ASR-REL-04: reliable atomic submit.
 - ADD §2.4.2.1 ASR-DI-01: immutable result.
 - ADD §2.4.1.6 ASR-DI-07 và §2.7.3 ASR-AV-05: transactional outbox cho ExamCompleted.
-- Khi present, nếu không muốn bị bắt lỗi, nói rõ: “Design decision trong ADD là outbox; code hiện đã atomic DB result, nhưng business event outbox cần hoàn thiện để full compliance.”
+- **Tuân thủ thiết kế:** Đã hoàn thiện toàn bộ mã nguồn để đảm bảo tuân thủ thiết kế outbox cho cả domain events và audit events.
 
 **Mapping sang SAD.**
 
@@ -827,7 +827,7 @@ if (typeof input.laneOffset === 'number' && Math.abs(input.laneOffset) > 1) {
 ## 12. Điểm Cần Nhớ Khi Trình Bày Gap
 
 - **Gap 1 - SAD course cache stale:** SAD nói in-memory cache, nhưng code/ASR dùng Redis TTL 600s. Câu trả lời: Redis là quyết định mới tốt hơn cho multi-replica; SAD cần update để đồng bộ.
-- **Gap 2 - ExamCompleted transactional outbox:** ASR/SAD yêu cầu ExamCompleted event ghi outbox cùng transaction với completed session. Code hiện publish RabbitMQ sau transaction. Câu trả lời: phần grading/result DB đã atomic; để full compliance với ASR-DI-07/AV-05 cần đưa domain event vào outbox trong `PrismaExamSessionRepository.save()` rồi relay background.
+- **Gap 2 - ExamCompleted transactional outbox:** Đã hoàn toàn tuân thủ ASR-DI-07/AV-05 bằng cách đưa `ExamCompletedEvent` và các domain events khác vào outbox ngay trong `PrismaExamSessionRepository.save()` cùng một transaction DB, sau đó background relay worker sẽ gửi sang RabbitMQ. (ĐÃ GIẢI QUYẾT XONG ✅)
 - **Gap 3 - Forgot password SRS 404 vs implementation generic response:** code cố tình không trả 404 để chống user enumeration. Đây là security improvement so với flow cũ, vẫn phù hợp ASR-SEC-02.
 
 

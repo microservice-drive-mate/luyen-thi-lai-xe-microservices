@@ -1,4 +1,4 @@
-﻿# ASR V1 Testing And Demo Guide
+# ASR V1 Testing And Demo Guide
 
 Guide này dùng để chuẩn bị môi trường, tạo dữ liệu, kiểm thử và demo các Architecturally Significant Requirements trong ASR V1 một cách mạch lạc. Mục tiêu là khi demo, mình có thể nói rõ:
 
@@ -111,88 +111,101 @@ docker compose ps user-service
 
 Expected: `user-service` duoc Docker Compose start lai do `restart: unless-stopped`. Luu y Docker Compose healthcheck chi danh dau `healthy/unhealthy`; no khong tu restart container chi vi healthcheck fail neu process van dang chay. Khong dung `docker compose stop` de demo restart policy vi day la thao tac dung thu cong co chu dich.
 
-### 2.2 Security: Access Logging + Audit Trail + Transactional Outbox
+### 2.2 Security & Data Integrity: Access Logging + Audit Trail + Transactional Outbox
 
-Security tactic phase nay tach thanh 3 tang:
+Security & Data Integrity tactics được triển khai qua các tầng:
 
-- Access log: moi HTTP request duoc log metadata vao Winston/Logstash/Elasticsearch voi `correlationId`.
-- Transactional outbox: audited business mutation va audit event duoc ghi trong cung database transaction.
-- Centralized audit log: cac hanh dong security/business quan trong duoc ghi immutable trong `audit-service`.
+- **Access log:** Mỗi HTTP request được log metadata vào Winston/Logstash/Elasticsearch với `correlationId`.
+- **Transactional Outbox:** Cả audit events và domain events được ghi đồng bộ vào bảng `outbox_messages` trong cùng một database transaction với thao tác nghiệp vụ chính của Aggregate.
+- **Centralized audit log:** Các hành động security/business quan trọng được ghi nhận bất biến trong `audit-service`.
+- **Domain Event Propagation:** Các domain events (ví dụ: `exam.session.completed`, `course.enrollment.created`, `user.profile.updated`) được gửi một cách đáng tin cậy sang RabbitMQ nhờ background relay worker quét bảng outbox.
 
-Design pattern ap dung:
+Design pattern áp dụng:
 
-- **Transactional Outbox Pattern** cho audit events o `user-service`, `course-service`, `exam-service`.
-- **Idempotent Consumer** o `audit-service` bang unique `eventId`.
-- **Correlation Id** de join access log trong ELK voi audit trail trong `audit_db`.
+- **Transactional Outbox Pattern** cho cả audit events và domain events ở `user-service`, `course-service`, `exam-service`.
+- **Idempotent Consumer** ở các service tiêu thụ nhờ kiểm tra ID sự kiện duy nhất (`eventId`).
+- **Correlation Id** để liên kết log nghiệp vụ với audit log và domain events.
 
-Scope phase hien tai:
+Phạm vi và bằng chứng kiểm thử:
 
-| Service | Vai tro | Evidence |
+| Service | Vai trò | Evidence (Bảng `outbox_messages`) |
 | --- | --- | --- |
-| `@repo/common` | Correlation id + access log | Response co `x-correlation-id`, log co `logType=access`. |
-| `user-service` | Producer audit cho assign license | `user_db.outbox_messages`, action `USER_LICENSE_ASSIGNED`. |
-| `course-service` | Producer audit cho course/enrollment mutations | `course_db.outbox_messages`, action `COURSE_*` hoac `ENROLLMENT_PROGRESS_RESET`. |
-| `exam-service` | Producer audit cho exam-template mutations | `exam_db.outbox_messages`, action `EXAM_TEMPLATE_*`. |
-| `audit-service` | Consumer/source of truth audit trail | `audit_db.audit_logs`, API `/admin/audit-logs`. |
+| `@repo/common` | Correlation id + access log | Response có `x-correlation-id`, log có `logType=access`. |
+| `user-service` | Outbox cho profile & license | Audit event (`security.audit.recorded` - action `USER_LICENSE_ASSIGNED`), Domain event (`user.profile.updated`). |
+| `course-service` | Outbox cho course & enrollment | Audit event (action `COURSE_*`, `ENROLLMENT_PROGRESS_RESET`), Domain event (`course.enrollment.created`, `course.enrollment.progress-reset`). |
+| `exam-service` | Outbox cho template & session | Audit event (action `EXAM_TEMPLATE_*`), Domain event (`exam.session.completed`). |
+| `audit-service` | Centralized audit trail | `audit_db.audit_logs`, API `/admin/audit-logs`. |
 
-Audited actions:
+Các sự kiện/actions được audit và emit qua Outbox:
 
-| Service | Actions |
-| --- | --- |
-| `user-service` | `USER_LICENSE_ASSIGNED` |
-| `course-service` | `COURSE_CREATED`, `COURSE_UPDATED`, `COURSE_ARCHIVED`, `COURSE_ACTIVATED`, `COURSE_LESSON_ADDED`, `COURSE_LESSON_REMOVED`, `COURSE_MATERIAL_ADDED`, `ENROLLMENT_PROGRESS_RESET` |
-| `exam-service` | `EXAM_TEMPLATE_CREATED`, `EXAM_TEMPLATE_UPDATED`, `EXAM_TEMPLATE_DELETED` |
+| Service | Actions / Event Names | Loại sự kiện |
+| --- | --- | --- |
+| `user-service` | `USER_LICENSE_ASSIGNED` | Audit Event |
+| | `user.profile.updated` | Domain Event |
+| `course-service` | `COURSE_CREATED`, `COURSE_UPDATED`, `ENROLLMENT_PROGRESS_RESET` | Audit Event |
+| | `course.enrollment.created`, `course.enrollment.progress-reset` | Domain Event |
+| `exam-service` | `EXAM_TEMPLATE_CREATED`, `EXAM_TEMPLATE_UPDATED`, `EXAM_TEMPLATE_DELETED` | Audit Event |
+| | `exam.session.completed` | Domain Event |
 
 Demo nhanh:
 
 ```powershell
-# Goi mot audited action, vi du assign license tier
+# 1. Gọi một audited action, ví dụ assign license tier hoặc nộp bài thi (submit exam)
 curl -X PATCH http://localhost:8000/admin/users/<student-id>/license-tier `
   -H "Authorization: Bearer <admin_access_token>" `
   -H "Content-Type: application/json" `
   -d "{ \"licenseTier\": \"B1\" }"
 
-# Query centralized audit trail
+# 2. Query centralized audit trail hoặc kiểm tra hàng đợi RabbitMQ xem event đã tới nơi
 curl "http://localhost:8000/admin/audit-logs?action=USER_LICENSE_ASSIGNED" `
   -H "Authorization: Bearer <admin_access_token>"
 ```
 
 Expected:
 
-- Response audited action co header `x-correlation-id`.
-- `outbox_messages` trong `user_db` co row `security.audit.recorded`, `status = PUBLISHED`.
-- `audit_db.audit_logs` co record `USER_LICENSE_ASSIGNED`.
-- Access log trong ELK co cung `correlationId`.
+- Response có header `x-correlation-id`.
+- Bảng `outbox_messages` trong database tương ứng ghi nhận bản ghi sự kiện có trạng thái `PUBLISHED`.
+- Hệ thống trung gian (RabbitMQ) nhận được domain event tương ứng để các service khác xử lý (ví dụ: `analytics-service` nhận event để cập nhật dashboard học tập).
 
-Verify bang DB:
+Verify bằng DB:
 
 ```powershell
-docker compose exec db-user psql -U user -d user_db -c "SELECT payload->>'action' AS action, status, attempts, \"publishedAt\" FROM outbox_messages ORDER BY \"createdAt\" DESC LIMIT 5;"
-docker compose exec db-audit psql -U user -d audit_db -c "SELECT \"serviceName\", action, \"resourceType\", \"resourceId\", \"correlationId\" FROM audit_logs ORDER BY \"occurredAt\" DESC LIMIT 5;"
+# Kiểm tra sự kiện outbox đã ghi nhận và phát hành (published)
+docker compose exec db-user psql -U user -d user_db -c "SELECT event_name, status, attempts, \"publishedAt\" FROM outbox_messages ORDER BY \"createdAt\" DESC LIMIT 5;"
+docker compose exec db-exam psql -U user -d exam_db -c "SELECT event_name, status, attempts, \"publishedAt\" FROM outbox_messages ORDER BY \"createdAt\" DESC LIMIT 5;"
+docker compose exec db-course psql -U user -d course_db -c "SELECT event_name, status, attempts, \"publishedAt\" FROM outbox_messages ORDER BY \"createdAt\" DESC LIMIT 5;"
 ```
 
-Demo outbox khi RabbitMQ loi:
+Demo outbox khi RabbitMQ/Audit Service gặp sự cố (Network Partition / Broker Down):
 
 ```powershell
+# 1. Dừng RabbitMQ broker
 docker compose stop rabbitmq
-# Goi audited action
-# Kiem tra outbox_messages van giu event PENDING/FAILED de retry
+
+# 2. Thực hiện hành động (ví dụ: cập nhật profile hoặc nộp bài thi)
+# Thao tác nghiệp vụ vẫn thành công nhờ ghi nhận outbox đồng bộ trong DB địa phương.
+
+# 3. Kiểm tra trạng thái outbox_messages trong DB
+# Bản ghi event tương ứng sẽ ở trạng thái PENDING hoặc FAILED do không kết nối được RabbitMQ
+docker compose exec db-user psql -U user -d user_db -c "SELECT event_name, status, attempts FROM outbox_messages WHERE status = 'PENDING' OR status = 'FAILED';"
+
+# 4. Khởi động lại RabbitMQ
 docker compose start rabbitmq
-# Kiem tra event duoc publish lai va audit log xuat hien
+
+# 5. Background Outbox Relay worker sẽ tự động quét lại các bản ghi chưa gửi thành công và thực hiện retry publish.
+# Sau một khoảng thời gian ngắn, kiểm tra lại DB outbox_messages sẽ thấy trạng thái chuyển sang PUBLISHED.
 ```
 
 Expected khi RabbitMQ down:
 
-- Business mutation van commit neu request path khong phu thuoc RabbitMQ truc tiep.
-- Producer DB co outbox row `PENDING` hoac `FAILED`.
-- Audit-service chua co record moi cho den khi broker hoat dong lai va relay publish thanh cong.
+- Thao tác ghi nhận nghiệp vụ của người dùng (DB commit) vẫn hoàn thành bình thường.
+- Các sự kiện được đảm bảo không bị mất mát (At-least-once Delivery) nhờ lưu giữ an toàn trong database.
+- Tự động phục hồi tính nhất quán (Eventual Consistency) sau khi hạ tầng khôi phục.
 
-Chi tiet API va test:
+Chi tiết API và kiểm thử:
 
 - `docs/api/api-spec-audit.md`
 - `docs/testing/services-test-guide.md`
-- `docs/api/api-spec-user.md` phan Security Audit
-- `docs/api/api-spec-course.md` phan Security Audit
 - `docs/api/api-spec-exam.md` phan Security Audit
 
 ## 3. Prerequisites

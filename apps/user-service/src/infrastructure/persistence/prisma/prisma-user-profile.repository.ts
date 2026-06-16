@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEventEnvelope } from '@repo/common';
+import { AuditEventEnvelope, withCorrelationId } from '@repo/common';
 import {
   Gender as PrismaGender,
   LicenseTier as PrismaLicenseTier,
@@ -151,6 +151,19 @@ export class PrismaUserProfileRepository extends UserProfileRepository {
           },
         });
       }
+
+      const domainEvents = profile.getDomainEvents();
+      for (const event of domainEvents) {
+        await tx.outboxMessage.create({
+          data: {
+            eventName: event.eventName,
+            payload: withCorrelationId(
+              event,
+            ) as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+      profile.clearDomainEvents();
     });
   }
 
