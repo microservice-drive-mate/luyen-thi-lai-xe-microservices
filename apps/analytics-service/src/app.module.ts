@@ -53,7 +53,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
         { name: 'redis', configKey: 'redis.url' },
         {
           name: 'keycloak',
-          configKey: 'keycloak.authServerUrl',
+          configKey: 'keycloak.healthUrl',
           kind: 'http',
         },
       ],
@@ -91,6 +91,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
             }).optional(),
             keycloak: Joi.object({
               authServerUrl: Joi.string().default('http://localhost:8080'),
+              healthUrl: Joi.string().optional(),
               realm: Joi.string().default('luyen-thi-lai-xe-realm'),
               clientId: Joi.string().default('nestjs-backend'),
               clientSecret: Joi.string().optional(),
