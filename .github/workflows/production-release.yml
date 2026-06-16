@@ -233,7 +233,6 @@ jobs:
               nodeEnv: 'production',
               storageClassName: 'managed-csi',
             },
-            migration: { imageTag: env.IMAGE_TAG },
             imagePullSecret: {
               enabled: true,
               username: env.GHCR_PULL_USERNAME,
@@ -257,8 +256,23 @@ jobs:
               keycloakPublicUrl: env.KEYCLOAK_PUBLIC_URL,
               corsOrigins: [...new Set(origins)],
             },
+            tracing: {
+              enabled: false,
+            },
+            appDefaults: {
+              replicaCount: 1,
+              resources: {
+                requests: { cpu: '50m', memory: '128Mi' },
+                limits: { cpu: '500m', memory: '512Mi' },
+              },
+              hpa: { enabled: false },
+            },
             seed: {
               enabled: false,
+              resources: {
+                requests: { cpu: '100m', memory: '256Mi' },
+                limits: { cpu: '500m', memory: '768Mi' },
+              },
             },
             secrets: {
               postgresPassword: env.POSTGRES_PASSWORD,
@@ -268,11 +282,179 @@ jobs:
               keycloakClientSecret: env.KEYCLOAK_CLIENT_SECRET,
               storageAccountName: env.STORAGE_ACCOUNT_NAME || '',
               storageAccountKey: env.STORAGE_ACCOUNT_KEY || '',
+              storageContainerName: 'media',
             },
+            postgres: {
+              storage: '8Gi',
+              resources: {
+                requests: { cpu: '250m', memory: '512Mi' },
+                limits: { cpu: '1', memory: '2Gi' },
+              },
+            },
+            rabbitmq: {
+              storage: '1Gi',
+              resources: {
+                requests: { cpu: '100m', memory: '256Mi' },
+                limits: { cpu: '500m', memory: '768Mi' },
+              },
+            },
+            redis: {
+              storage: '1Gi',
+              resources: {
+                requests: { cpu: '50m', memory: '128Mi' },
+                limits: { cpu: '250m', memory: '256Mi' },
+              },
+            },
+            consul: {
+              storage: '1Gi',
+              resources: {
+                requests: { cpu: '50m', memory: '128Mi' },
+                limits: { cpu: '250m', memory: '256Mi' },
+              },
+            },
+            keycloak: {
+              replicas: 1,
+              resources: {
+                requests: { cpu: '250m', memory: '512Mi' },
+                limits: { cpu: '1', memory: '1Gi' },
+              },
+            },
+            kong: {
+              replicas: 1,
+              resources: {
+                requests: { cpu: '100m', memory: '256Mi' },
+                limits: { cpu: '500m', memory: '512Mi' },
+              },
+            },
+            migration: {
+              imageTag: env.IMAGE_TAG,
+              resources: {
+                requests: { cpu: '100m', memory: '256Mi' },
+                limits: { cpu: '500m', memory: '768Mi' },
+              },
+            },
+            services: [
+              {
+                name: 'identity-service',
+                image: 'luyen-thi-lai-xe-identity-service',
+                dbName: 'identity_db',
+                usesRedis: true,
+                hpa: { enabled: false },
+                routes: [
+                  { name: 'identity-route', paths: ['/auth'], stripPath: true },
+                  { name: 'identity-admin-route', paths: ['/admin'], stripPath: false },
+                  { name: 'identity-swagger-route', paths: ['/identity-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'user-service',
+                image: 'luyen-thi-lai-xe-user-service',
+                dbName: 'user_db',
+                routes: [
+                  { name: 'user-route', paths: ['/users'], stripPath: false },
+                  { name: 'user-admin-route', paths: ['/admin/users'], stripPath: false },
+                  { name: 'user-swagger-route', paths: ['/user-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'exam-service',
+                image: 'luyen-thi-lai-xe-exam-service',
+                dbName: 'exam_db',
+                hpa: { enabled: false },
+                routes: [
+                  { name: 'exam-route', paths: ['/exams'], stripPath: false },
+                  { name: 'exam-admin-route', paths: ['/admin/exams'], stripPath: false },
+                  { name: 'exam-swagger-route', paths: ['/exam-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'course-service',
+                image: 'luyen-thi-lai-xe-course-service',
+                dbName: 'course_db',
+                usesRedis: true,
+                hpa: { enabled: false },
+                routes: [
+                  { name: 'course-route', paths: ['/courses', '/enrollments'], stripPath: false },
+                  { name: 'course-admin-route', paths: ['/admin/courses', '/admin/enrollments'], stripPath: false },
+                  { name: 'course-swagger-route', paths: ['/course-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'question-service',
+                image: 'luyen-thi-lai-xe-question-service',
+                dbName: 'question_db',
+                routes: [
+                  { name: 'question-admin-route', paths: ['/admin/questions'], stripPath: false },
+                  { name: 'question-swagger-route', paths: ['/question-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'notification-service',
+                image: 'luyen-thi-lai-xe-notification-service',
+                dbName: 'notification_db',
+                usesRedis: true,
+                routes: [
+                  { name: 'notification-route', paths: ['/notifications'], stripPath: false },
+                  { name: 'notification-swagger-route', paths: ['/notification-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'analytics-service',
+                image: 'luyen-thi-lai-xe-analytics-service',
+                dbName: 'analytics_db',
+                usesRedis: true,
+                hpa: { enabled: false },
+                routes: [
+                  { name: 'analytics-route', paths: ['/analytics'], stripPath: false },
+                  { name: 'analytics-admin-route', paths: ['/admin/analytics'], stripPath: false },
+                  { name: 'analytics-swagger-route', paths: ['/analytics-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'simulation-service',
+                image: 'luyen-thi-lai-xe-simulation-service',
+                dbName: 'simulation_db',
+                usesRedis: true,
+                hpa: { enabled: false },
+                routes: [
+                  { name: 'simulation-route', paths: ['/simulation'], stripPath: false },
+                  { name: 'simulation-swagger-route', paths: ['/simulation-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'media-service',
+                image: 'luyen-thi-lai-xe-media-service',
+                dbName: 'media_db',
+                resources: {
+                  requests: { cpu: '75m', memory: '192Mi' },
+                  limits: { cpu: '750m', memory: '1Gi' },
+                },
+                routes: [
+                  { name: 'media-route', paths: ['/media'], stripPath: false },
+                  { name: 'media-admin-route', paths: ['/admin/media'], stripPath: false },
+                  { name: 'media-swagger-route', paths: ['/media-service'], stripPath: true },
+                ],
+              },
+              {
+                name: 'audit-service',
+                image: 'luyen-thi-lai-xe-audit-service',
+                dbName: 'audit_db',
+                routes: [
+                  { name: 'audit-admin-route', paths: ['/admin/audit-logs'], stripPath: false },
+                  { name: 'audit-swagger-route', paths: ['/audit-service'], stripPath: true },
+                ],
+              },
+            ],
           };
 
           fs.writeFileSync(env.HELM_VALUES_FILE, JSON.stringify(values, null, 2));
           NODE
+
+      - name: Cleanup old Helm jobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl delete jobs -n production -l app.kubernetes.io/instance=luyen-thi-lai-xe --ignore-not-found
 
       - name: Deploy Helm release
         shell: bash
