@@ -8,6 +8,7 @@ param(
   [string]$FrontendOrigin = "http://localhost:5173",
   [string]$ApiScheme = "http",
   [string]$StagingSeedEnabled = "true",
+  [string]$GhcrOwner = "",
   [string]$GhcrPullUsername = "",
   [string]$GhcrPullToken = "",
   [string]$PostgresPassword = "change-me",
@@ -129,6 +130,10 @@ if ([string]::IsNullOrWhiteSpace($Repo)) {
   $Repo = Get-RepoFromGit
 }
 
+if ([string]::IsNullOrWhiteSpace($GhcrOwner)) {
+  $GhcrOwner = $Repo.Split("/")[0]
+}
+
 $SubscriptionId = (Invoke-Az @("account", "show", "--query", "id", "-o", "tsv")).Trim()
 $TenantId = (Invoke-Az @("account", "show", "--query", "tenantId", "-o", "tsv")).Trim()
 $StorageAccountName = (terraform -chdir=terraform/azure-aks output -raw storage_account_name).Trim()
@@ -239,6 +244,7 @@ $SecretValues = [ordered]@{
 $VariableValues = [ordered]@{
   AZURE_AKS_RESOURCE_GROUP = $ResourceGroup
   AZURE_AKS_CLUSTER_NAME   = $AksCluster
+  GHCR_OWNER               = $GhcrOwner
   STAGING_API_HOST         = $ApiHost
   STAGING_AUTH_HOST        = $AuthHost
   STAGING_FRONTEND_ORIGIN  = $FrontendOrigin

@@ -117,6 +117,7 @@ Variables:
 ```text
 AZURE_AKS_RESOURCE_GROUP=rg-lttl-staging-sea
 AZURE_AKS_CLUSTER_NAME=aks-lttl-staging
+GHCR_OWNER=bolac71
 STAGING_AUTO_DEPLOY_ENABLED=true
 STAGING_API_HOST=api.52.139.233.166.nip.io
 STAGING_AUTH_HOST=auth.52.139.233.166.nip.io
@@ -129,6 +130,12 @@ PAT `GHCR_PULL_TOKEN` can scope:
 
 ```text
 read:packages
+```
+
+`GHCR_OWNER` phai trung voi namespace dang chua Docker packages tren GHCR. Neu images nam o personal account thi dung `bolac71`; neu team da chuyen packages sang organization thi dung organization owner, vi workflow build/deploy se doc va ghi image theo dang:
+
+```text
+ghcr.io/<GHCR_OWNER>/luyen-thi-lai-xe-<service>:<git-sha>
 ```
 
 Neu da cai GitHub CLI va muon script set tu dong:
@@ -151,7 +158,7 @@ push main
 -> .github/workflows/ci.yml
 -> build/test
 -> docker build service images
--> push GHCR :latest and :<git-sha>
+-> push GHCR :latest and :<git-sha> under GHCR_OWNER
 -> Deploy Azure AKS Staging auto-runs with image_tag=<git-sha>
 ```
 
@@ -161,7 +168,7 @@ Neu push chi doi docs hoac GitHub khong tu chay `Main Image Release`, co the vao
 GitHub -> Actions -> Main Image Release -> Run workflow -> branch main
 ```
 
-Workflow nay build/push day du 10 service images va `luyen-thi-lai-xe-migration-runner` voi tag la SHA cua branch `main` tai luc chay. Neu `STAGING_AUTO_DEPLOY_ENABLED=true`, workflow `Deploy Azure AKS Staging` se tu chay sau khi build thanh cong tren `main`.
+Workflow nay build/push day du 10 service images va `luyen-thi-lai-xe-migration-runner` voi tag la SHA cua branch `main` tai luc chay. Image namespace lay tu variable `GHCR_OWNER`, fallback ve repository owner neu khong set. Neu `STAGING_AUTO_DEPLOY_ENABLED=true`, workflow `Deploy Azure AKS Staging` se tu chay sau khi build thanh cong tren `main`.
 
 Lay SHA:
 

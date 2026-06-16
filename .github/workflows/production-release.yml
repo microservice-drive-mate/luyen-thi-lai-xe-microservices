@@ -27,6 +27,7 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  GHCR_OWNER: ${{ vars.GHCR_OWNER || github.repository_owner }}
 
 jobs:
   deploy-production:
@@ -106,6 +107,10 @@ jobs:
             fi
           done
 
+          echo "Repository: ${{ github.repository }}"
+          echo "GHCR owner: $GHCR_OWNER"
+          echo "Image tag: $IMAGE_TAG"
+
       - name: Configure AKS credentials
         shell: bash
         run: |
@@ -141,7 +146,7 @@ jobs:
           const values = {
             global: {
               imageTag: env.IMAGE_TAG,
-              imageRegistry: `ghcr.io/${{ github.repository_owner }}`,
+              imageRegistry: `ghcr.io/${env.GHCR_OWNER}`,
               nodeEnv: 'production',
               storageClassName: 'managed-csi',
             },
