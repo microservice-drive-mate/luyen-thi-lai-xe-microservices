@@ -88,3 +88,35 @@ Show:
 Say:
 
 > Deployment events plus incident issues allow the team to calculate Deployment Frequency, Lead Time, Change Failure Rate, and MTTR.
+
+## 8. Production Milestone
+
+Use:
+
+```text
+docs/devops/production-milestone-runbook.md
+```
+
+Show centralized config and secrets:
+
+```powershell
+kubectl get configmap,secret -n staging
+kubectl get job -n staging -l app.kubernetes.io/component=consul-seed
+```
+
+Say:
+
+> Consul KV stores centralized runtime config. Secrets come from GitHub Secrets into Kubernetes Secrets and are mounted into pods through secretKeyRef. We do not put real secrets into Consul.
+
+Show service discovery and load balancing:
+
+```powershell
+kubectl get svc,endpoints,ingress -n staging
+kubectl scale deploy luyen-thi-lai-xe-user-service -n staging --replicas=2
+kubectl get endpoints luyen-thi-lai-xe-user-service -n staging
+kubectl scale deploy luyen-thi-lai-xe-user-service -n staging --replicas=1
+```
+
+Say:
+
+> Kubernetes Service DNS provides service discovery, ClusterIP Services load balance across pod endpoints, ingress-nginx exposes public traffic, and Kong routes API paths to the right microservice.

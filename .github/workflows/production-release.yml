@@ -62,6 +62,8 @@ jobs:
       STORAGE_ACCOUNT_KEY: ${{ secrets.PRODUCTION_STORAGE_ACCOUNT_KEY }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Mark deployment start
         shell: bash
@@ -110,6 +112,87 @@ jobs:
           echo "Repository: ${{ github.repository }}"
           echo "GHCR owner: $GHCR_OWNER"
           echo "Image tag: $IMAGE_TAG"
+          echo "Azure resource group: $AZURE_AKS_RESOURCE_GROUP"
+          echo "Azure AKS cluster: $AZURE_AKS_CLUSTER_NAME"
+          echo "Kubernetes namespace: production"
+
+      - name: Normalize image tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$IMAGE_TAG" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+            if FULL_SHA=$(git rev-parse --verify "${IMAGE_TAG}^{commit}" 2>/dev/null); then
+              if [[ "$FULL_SHA" != "$IMAGE_TAG" ]]; then
+                echo "Resolved image_tag '$IMAGE_TAG' to full Git SHA '$FULL_SHA'."
+                echo "IMAGE_TAG=$FULL_SHA" >> "$GITHUB_ENV"
+              else
+                echo "image_tag is already a full Git SHA: $IMAGE_TAG"
+              fi
+            elif [[ ${#IMAGE_TAG} -lt 40 ]]; then
+              echo "Short image_tag '$IMAGE_TAG' could not be resolved in git history." >&2
+              echo "Use the full 40-character Git SHA built by Main Image Release." >&2
+              exit 1
+            fi
+          fi
+
+      - name: Validate GHCR images
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_PULL_USERNAME" --password-stdin
+
+          images=(
+            luyen-thi-lai-xe-identity-service
+            luyen-thi-lai-xe-user-service
+            luyen-thi-lai-xe-exam-service
+            luyen-thi-lai-xe-course-service
+            luyen-thi-lai-xe-question-service
+            luyen-thi-lai-xe-notification-service
+            luyen-thi-lai-xe-analytics-service
+            luyen-thi-lai-xe-simulation-service
+            luyen-thi-lai-xe-media-service
+            luyen-thi-lai-xe-audit-service
+            luyen-thi-lai-xe-migration-runner
+          )
+
+          missing=0
+          auth_failed=0
+          for image in "${images[@]}"; do
+            ref="ghcr.io/${GHCR_OWNER}/${image}:${IMAGE_TAG}"
+            echo "Checking $ref"
+            error_file="$(mktemp)"
+            if docker manifest inspect "$ref" >/dev/null 2>"$error_file"; then
+              echo "Found GHCR image: $ref"
+            else
+              error_message="$(tr '\n' ' ' < "$error_file" | sed 's/[[:space:]]\+/ /g')"
+              if echo "$error_message" | grep -Eiq "unauthorized|denied|forbidden|authentication required|insufficient_scope"; then
+                echo "GHCR authorization failed for: $ref" >&2
+                echo "Docker error: $error_message" >&2
+                auth_failed=1
+              else
+                echo "Missing GHCR image: $ref" >&2
+                echo "Docker error: ${error_message:-unknown error}" >&2
+                missing=1
+              fi
+            fi
+            rm -f "$error_file"
+          done
+
+          docker logout ghcr.io >/dev/null 2>&1 || true
+
+          if [[ "$auth_failed" -ne 0 ]]; then
+            echo "GHCR login succeeded, but the token/user cannot read one or more private package manifests." >&2
+            echo "Grant the repository Actions access to the packages, or update GHCR_PULL_USERNAME/GHCR_PULL_TOKEN with read:packages access to GHCR owner '$GHCR_OWNER'." >&2
+            exit 1
+          fi
+
+          if [[ "$missing" -ne 0 ]]; then
+            echo "One or more required images do not exist for IMAGE_TAG=$IMAGE_TAG." >&2
+            echo "Checked GHCR owner: $GHCR_OWNER." >&2
+            echo "Make sure Main Image Release completed successfully for this exact commit before production deploy." >&2
+            echo "Use the same immutable SHA that already passed staging smoke tests." >&2
+            exit 1
+          fi
 
       - name: Configure AKS credentials
         shell: bash
@@ -241,7 +324,7 @@ jobs:
           kubectl wait --for=condition=complete job -l app.kubernetes.io/component=consul-seed -n production --timeout=10m
           kubectl wait --for=condition=complete job -l app.kubernetes.io/component=migration -n production --timeout=10m
           kubectl rollout status deployment -l app.kubernetes.io/component=app -n production --timeout=10m
-          kubectl get jobs -n production
+          kubectl get deploy,svc,ingress,job -n production
           API_SCHEME="${API_SCHEME:-http}"
           SMOKE_BASE_URL="${API_SCHEME}://${API_HOST}" bash scripts/k8s-smoke.sh
 
@@ -253,11 +336,12 @@ jobs:
           DEPLOYMENT_TARGET: azure-aks
           DEPLOYMENT_RELEASE_NAME: luyen-thi-lai-xe
           DEPLOYMENT_NAMESPACE: production
-          DEPLOYMENT_IMAGE_TAG: ${{ inputs.image_tag }}
-          DEPLOYMENT_GIT_SHA: ${{ inputs.image_tag }}
           DEPLOYMENT_STATUS: ${{ job.status }}
           DEPLOYMENT_SMOKE_STATUS: ${{ job.status }}
-        run: node scripts/devops-record-deployment.js
+        run: |
+          DEPLOYMENT_IMAGE_TAG="$IMAGE_TAG" \
+          DEPLOYMENT_GIT_SHA="$IMAGE_TAG" \
+          node scripts/devops-record-deployment.js
 
       - name: Upload deployment event
         if: always()

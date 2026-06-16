@@ -156,6 +156,43 @@ Talking points:
 - Metrics and traces are cross-cutting concerns from `packages/common`.
 - Logs carry correlation IDs.
 
+## 8.5. Production Milestone Evidence
+
+Use the focused milestone runbook:
+
+```text
+docs/devops/production-milestone-runbook.md
+```
+
+Show config and secrets:
+
+```powershell
+kubectl get configmap,secret -n staging
+kubectl get job -n staging -l app.kubernetes.io/component=consul-seed
+kubectl port-forward svc/luyen-thi-lai-xe-consul -n staging 8500:8500
+```
+
+Talking points:
+
+- Consul KV is used for centralized runtime configuration.
+- GitHub Secrets are rendered into Kubernetes Secret and consumed by pods through `secretKeyRef`.
+- Secrets are not stored in Consul; Azure Key Vault is the production-grade roadmap.
+
+Show service discovery and load balancing:
+
+```powershell
+kubectl get svc,endpoints,ingress -n staging
+kubectl scale deploy luyen-thi-lai-xe-user-service -n staging --replicas=2
+kubectl get endpoints luyen-thi-lai-xe-user-service -n staging
+kubectl scale deploy luyen-thi-lai-xe-user-service -n staging --replicas=1
+```
+
+Talking points:
+
+- Kubernetes DNS and ClusterIP Services provide service discovery and internal load balancing.
+- Public traffic flows through Azure Load Balancer, ingress-nginx, Kubernetes Ingress, and Kong.
+- Consul is config KV in this deployment, not the primary service registry.
+
 ## 9. Resilience And Rollback
 
 Scaling:
