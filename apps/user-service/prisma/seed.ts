@@ -51,13 +51,13 @@ async function main() {
       update: {
         licenseTier: licenseTier as LicenseTier,
         enrolledAt: new Date('2026-05-01T00:00:00.000Z'),
-        notes: 'Seeded demo student',
+        notes: 'Dữ liệu demo học viên',
       },
       create: {
         studentId: user.id,
         licenseTier: licenseTier as LicenseTier,
         enrolledAt: new Date('2026-05-01T00:00:00.000Z'),
-        notes: 'Seeded demo student',
+        notes: 'Dữ liệu demo học viên',
       },
     });
 
@@ -81,13 +81,13 @@ async function main() {
   await prisma.userProfile.upsert({
     where: { email: 'seed-admin@local.dev' },
     update: {
-      fullName: 'Seed Admin',
+      fullName: 'Quản trị viên seed',
       role: Role.ADMIN,
       isActive: true,
     },
     create: {
       id: legacyAdminId,
-      fullName: 'Seed Admin',
+      fullName: 'Quản trị viên seed',
       email: 'seed-admin@local.dev',
       role: Role.ADMIN,
       gender: Gender.OTHER,
@@ -98,13 +98,13 @@ async function main() {
   await prisma.userProfile.upsert({
     where: { email: 'seed-student@local.dev' },
     update: {
-      fullName: 'Seed Student',
+      fullName: 'Học viên seed',
       role: Role.STUDENT,
       isActive: true,
     },
     create: {
       id: legacyStudentId,
-      fullName: 'Seed Student',
+      fullName: 'Học viên seed',
       email: 'seed-student@local.dev',
       role: Role.STUDENT,
       gender: Gender.MALE,
@@ -116,12 +116,12 @@ async function main() {
     where: { studentId: legacyStudentId },
     update: {
       licenseTier: LicenseTier.B2,
-      notes: 'Seeded local student profile',
+      notes: 'Dữ liệu hồ sơ học viên nội bộ',
     },
     create: {
       studentId: legacyStudentId,
       licenseTier: LicenseTier.B2,
-      notes: 'Seeded local student profile',
+      notes: 'Dữ liệu hồ sơ học viên nội bộ',
     },
   });
 
