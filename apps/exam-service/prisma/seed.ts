@@ -19,8 +19,8 @@ const prisma = new PrismaClient({
 const templates = [
   {
     slug: 'a1-basic',
-    name: 'De thi A1 co ban',
-    description: 'De thi mo phong theo cau truc GPLX hang A1',
+    name: 'Đề thi A1 cơ bản',
+    description: 'Đề thi mô phỏng theo cấu trúc GPLX hạng A1',
     licenseCategory: LicenseCategory.A1,
     totalQuestions: 25,
     passingScore: 21,
@@ -31,8 +31,8 @@ const templates = [
   },
   {
     slug: 'b1-basic',
-    name: 'De thi B1 co ban',
-    description: 'De thi mo phong theo cau truc GPLX hang B1',
+    name: 'Đề thi B1 cơ bản',
+    description: 'Đề thi mô phỏng theo cấu trúc GPLX hạng B1',
     licenseCategory: LicenseCategory.B1,
     totalQuestions: 30,
     passingScore: 26,
@@ -43,8 +43,8 @@ const templates = [
   },
   {
     slug: 'b2-basic',
-    name: 'De thi B2 co ban',
-    description: 'De thi mo phong theo cau truc GPLX hang B2',
+    name: 'Đề thi B2 cơ bản',
+    description: 'Đề thi mô phỏng theo cấu trúc GPLX hạng B2',
     licenseCategory: LicenseCategory.B2,
     totalQuestions: 35,
     passingScore: 32,
@@ -55,8 +55,8 @@ const templates = [
   },
   {
     slug: 'b2-advanced',
-    name: 'De thi B2 nang cao',
-    description: 'De thi luyen tap nang cao cho hoc vien B2',
+    name: 'Đề thi B2 nâng cao',
+    description: 'Đề thi luyện tập nâng cao cho học viên B2',
     licenseCategory: LicenseCategory.B2,
     totalQuestions: 35,
     passingScore: 32,
