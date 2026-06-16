@@ -2489,7 +2489,7 @@ Kiểm tra từng **Constraint** trong cột "Constraints" của `ASR.xlsx` đ�
 | ASR | Constraint | Codebase Status | Evidence |
 |---|---|---|---|
 | ASR-AV-01 | All NestJS services implement `/health/live` and `/health/ready` via shared HealthModule | ✅ | `HealthModule.register()` in every `app.module.ts`; verified by smoke test output |
-| ASR-AV-02 | docker-compose uses `healthcheck` pointing to `/health/ready` and `restart: unless-stopped` | ✅ | `docker-compose.yaml` L286, L323, ...; `docker-compose.deploy.yml` all services |
+| ASR-AV-02 | docker-compose uses `healthcheck` pointing to `/health/ready` and `restart: unless-stopped` | ✅ | `docker-compose.yaml` and `docker-compose.infra.yml` for local/dev services |
 | ASR-AV-03 | GET `/metrics` endpoint via shared MetricsModule; smoke.ts propagates `x-correlation-id` | ✅ | `MetricsModule.register()` in all services; `observability-smoke.ts` in scripts/ |
 | ASR-AV-04 | Shared resilient HTTP client; fail within configured timeout; retry transient failures | ✅ | `resilientFetch()` in `@repo/common` with circuit breaker, exponential backoff, timeout |
 | ASR-AV-05 | Producer services write business change + outbox message in same PostgreSQL transaction | ✅ | user-service, course-service, exam-service all use `$transaction([saveEntity, insertOutbox])` |
@@ -2562,4 +2562,3 @@ CREATE INDEX "idx_..." ON "..." USING GIN ("..." gin_trgm_ops);
 ---
 
 > **Lưu ý về các ASR client-side (REL-01, REL-06, UX-01, UX-04, UX-05):** Các constraint này thuộc về React Native frontend, không thuộc phạm vi kiểm tra backend codebase. Cần verify riêng bên `apps/mobile/` khi có.
-

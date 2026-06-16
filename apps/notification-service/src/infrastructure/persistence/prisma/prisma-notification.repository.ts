@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  NotificationStatus as PrismaNotificationStatus,
-  NotificationType as PrismaNotificationType,
-  Prisma,
-} from '@prisma/notification-client';
+import { Prisma } from '@prisma/notification-client';
 import {
   AcademicWarningDeliveryStatus,
   AcademicWarningRecord,
@@ -32,10 +28,10 @@ export class PrismaNotificationRepository extends NotificationRepository {
         userId: snapshot.userId,
         title: snapshot.title,
         body: snapshot.body,
-        type: snapshot.type as PrismaNotificationType,
+        type: snapshot.type,
         eventType: snapshot.eventType,
         data: snapshot.data as Prisma.InputJsonValue,
-        status: snapshot.status as PrismaNotificationStatus,
+        status: snapshot.status,
         retryCount: snapshot.retryCount,
         errorMessage: snapshot.errorMessage,
         sentAt: snapshot.sentAt,
@@ -175,7 +171,7 @@ export class PrismaNotificationRepository extends NotificationRepository {
     const record = await this.prisma.notification.update({
       where: { id: snapshot.id },
       data: {
-        status: snapshot.status as PrismaNotificationStatus,
+        status: snapshot.status,
         retryCount: snapshot.retryCount,
         errorMessage: snapshot.errorMessage,
         deliveredAt: snapshot.deliveredAt,

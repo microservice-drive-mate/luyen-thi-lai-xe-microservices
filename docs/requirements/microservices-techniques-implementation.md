@@ -1893,7 +1893,6 @@ CI/CD là tự động hóa quy trình build, test và deploy.
 
 Công cụ:
 
-- Jenkins.
 - GitHub Actions.
 - GitLab CI.
 
@@ -1957,7 +1956,6 @@ Ví dụ:
 - GitHub Container Registry.
 - GitLab Container Registry.
 - AWS ECR.
-- GCP Artifact Registry.
 - Azure Container Registry.
 
 ### Cách triển khai
@@ -1982,10 +1980,8 @@ docker push my-org/order-service:1.0.0
 ### Nền tảng được nhắc
 
 - AWS ECS.
-- GCP GKE.
 - Azure AKS.
 - AWS EKS.
-- GKE.
 - AKS.
 
 ### Cách triển khai mức đồ án

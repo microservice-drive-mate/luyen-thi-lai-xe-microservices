@@ -41,7 +41,7 @@ Không bắt đầu implement endpoint hoặc sửa behavior public khi chưa đ
 | Luồng media/upload/file lifecycle                                    | `docs/api/media-service-flow.md`             |
 | DDD/Clean Architecture, layer boundary                               | `docs/architecture/clean-ddd-conventions.md` |
 | Config Consul/env                                                    | `docs/devops/consul-workflow.md`             |
-| Docker/Kong/Kubernetes/GCP/CI/CD/observability                       | `docs/devops/*.md`                           |
+| Docker/Kong/Kubernetes/Azure/CI/CD/observability                     | `docs/devops/*.md`                           |
 | Test scenario, traceability, demo                                    | `docs/testing/*.md`                          |
 | Requirement/SRS/ASR                                                  | `docs/requirements/*.md`                     |
 
@@ -188,9 +188,8 @@ Cập nhật theo phạm vi:
 - Docker Compose/local infra: `README.md`, [Consul Workflow](./devops/consul-workflow.md), DevOps docs liên quan
 - Observability/logging/metrics/tracing: [ELK Logging Guide](./devops/elk-logging-guide.md), [Observability Runbook](./devops/observability-runbook.md), [OpenTelemetry Jaeger Tracing](./devops/opentelemetry-jaeger-tracing.md)
 - Backup/restore: [Backup Strategy](./devops/backup-strategy.md)
-- GCP/GKE/Helm: [GCP Setup](./devops/gcp-setup.md), [Kubernetes GCP Deployment](./devops/kubernetes-gcp-deployment.md)
+- Azure AKS/Helm: [Azure AKS Deployment](./devops/azure-aks-deployment.md), [Azure GitHub Actions Setup](./devops/azure-github-actions-setup.md), [Azure Demo Runbook](./devops/azure-demo-runbook.md)
 - GitHub Actions/release: [GitHub Actions Release Safety](./devops/github-actions-release-safety.md)
-- Jenkins: [Jenkins + Docker Compose](./devops/jenkins-docker-compose.md)
 - DORA/deployment events: [DORA Metrics Guide](./devops/dora-metrics-guide.md), [Deployment Event Store](./devops/deployment-event-store.md)
 
 Không sửa hạ tầng mà bỏ qua docs. Hạ tầng sai docs là lỗi rất tốn thời gian debug.
@@ -527,8 +526,8 @@ Có, nếu thay đổi chạm vào vận hành. Bảng nhanh:
 | Đổi logging/ELK                            | `docs/devops/elk-logging-guide.md`                                                      |
 | Đổi tracing                                | `docs/devops/opentelemetry-jaeger-tracing.md`                                           |
 | Đổi backup/restore                         | `docs/devops/backup-strategy.md`                                                        |
-| Đổi Helm/GCP                               | `docs/devops/kubernetes-gcp-deployment.md`, `docs/devops/gcp-setup.md`                  |
-| Đổi CI/CD/release                          | `docs/devops/github-actions-release-safety.md`, `docs/devops/jenkins-docker-compose.md` |
+| Đổi Helm/Azure                             | `docs/devops/azure-aks-deployment.md`, `docs/devops/azure-github-actions-setup.md`      |
+| Đổi CI/CD/release                          | `docs/devops/github-actions-release-safety.md`                                          |
 | Đổi DORA/deployment event                  | `docs/devops/dora-metrics-guide.md`, `docs/devops/deployment-event-store.md`            |
 | Đổi incident/runbook                       | `docs/devops/incident-management-process.md`, `docs/devops/observability-runbook.md`    |
 

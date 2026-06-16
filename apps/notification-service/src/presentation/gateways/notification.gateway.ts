@@ -50,7 +50,8 @@ export class NotificationGateway
         return;
       }
 
-      client.data.userId = userId;
+      const socketData = client.data as Record<string, unknown>;
+      socketData.userId = userId;
       await client.join(notificationUserRoom(userId));
       client.emit('notification.connected', { userId });
       this.logger.log(`Socket ${client.id} connected for user ${userId}`);
@@ -63,13 +64,15 @@ export class NotificationGateway
   }
 
   handleDisconnect(client: Socket): void {
+    const socketData = client.data as Record<string, unknown>;
     const userId =
-      typeof client.data.userId === 'string' ? client.data.userId : 'unknown';
+      typeof socketData.userId === 'string' ? socketData.userId : 'unknown';
     this.logger.log(`Socket ${client.id} disconnected for user ${userId}`);
   }
 
   private extractToken(client: Socket): string | null {
-    const authToken = client.handshake.auth?.token;
+    const auth = client.handshake.auth as Record<string, unknown> | undefined;
+    const authToken = auth?.token;
     if (typeof authToken === 'string') {
       return this.normalizeToken(authToken);
     }

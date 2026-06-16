@@ -1,7 +1,4 @@
-import {
-  NOTIFICATION_WS_EVENTS,
-  WsEmitterPort,
-} from '../../ports/ws-emitter.port';
+import { NOTIFICATION_WS_EVENTS } from '../../ports/ws-emitter.port';
 import { NotificationNotFoundException } from '../../../domain/exceptions/notification-not-found.exception';
 import {
   Notification,
@@ -37,7 +34,7 @@ describe('MarkNotificationReadUseCase', () => {
     };
     useCase = new MarkNotificationReadUseCase(
       repository as unknown as NotificationRepository,
-      wsEmitter as unknown as WsEmitterPort,
+      wsEmitter,
     );
   });
 

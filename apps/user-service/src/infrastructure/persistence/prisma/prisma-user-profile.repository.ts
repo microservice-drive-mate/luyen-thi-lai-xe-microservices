@@ -21,15 +21,15 @@ import { UserProfileMapper } from '../mappers/user-profile.mapper';
 import { PrismaService } from './prisma.service';
 
 function toRole(r: UserRole): PrismaRole {
-  return r as unknown as PrismaRole;
+  return r;
 }
 
 function toGender(g: Gender | null): PrismaGender | null {
-  return g as unknown as PrismaGender | null;
+  return g;
 }
 
 function toLicenseTier(t: LicenseTier | null): PrismaLicenseTier | null {
-  return t as unknown as PrismaLicenseTier | null;
+  return t;
 }
 
 @Injectable()

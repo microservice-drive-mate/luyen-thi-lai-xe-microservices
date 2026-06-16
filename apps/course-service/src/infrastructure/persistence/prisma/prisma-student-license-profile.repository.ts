@@ -10,7 +10,7 @@ import { PrismaService } from './prisma.service';
 function toPrismaLicenseCategory(
   licenseTier: LicenseCategory,
 ): PrismaLicenseCategory {
-  return licenseTier as unknown as PrismaLicenseCategory;
+  return licenseTier;
 }
 
 @Injectable()

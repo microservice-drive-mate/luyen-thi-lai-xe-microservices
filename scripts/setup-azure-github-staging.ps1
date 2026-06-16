@@ -229,6 +229,7 @@ $VariableValues = [ordered]@{
   STAGING_FRONTEND_ORIGIN  = $FrontendOrigin
   STAGING_API_SCHEME       = $ApiScheme
   STAGING_SEED_ENABLED     = $StagingSeedEnabled
+  STAGING_AUTO_DEPLOY_ENABLED = "true"
 }
 
 Write-Host ""

@@ -173,8 +173,8 @@ export class MessagingController {
         activity: {
           eventId,
           type: 'exam',
-          title: `Học viên ${payload.studentId} hoàn thành bài thi ${licenseCategory} - ${
-            payload.isPassed ? 'Đạt' : 'Không đạt'
+          title: `Học viên ${studentId ?? 'unknown'} hoàn thành bài thi ${licenseCategory} - ${
+            isPassed ? 'Đạt' : 'Không đạt'
           }`,
           description: `Score: ${score}`,
           resourceType: 'EXAM_SESSION',

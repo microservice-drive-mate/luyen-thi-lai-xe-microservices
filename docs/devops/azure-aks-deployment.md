@@ -218,6 +218,7 @@ Repository variables:
 ```text
 AZURE_AKS_RESOURCE_GROUP
 AZURE_AKS_CLUSTER_NAME
+STAGING_AUTO_DEPLOY_ENABLED=true
 STAGING_API_SCHEME=http
 STAGING_API_HOST=api.<external-ip>.nip.io
 STAGING_AUTH_HOST=auth.<external-ip>.nip.io
@@ -225,7 +226,15 @@ STAGING_FRONTEND_ORIGIN=http://localhost:5173
 STAGING_SEED_ENABLED=false
 ```
 
-Run the workflow manually:
+Normal staging flow:
+
+```text
+merge to main
+-> Main Image Release
+-> Deploy Azure AKS Staging auto-runs when STAGING_AUTO_DEPLOY_ENABLED=true
+```
+
+Manual replay/debug flow:
 
 1. Open `Deploy Azure AKS Staging`.
 2. Enter `image_tag` as a Git SHA that exists in GHCR.
@@ -262,6 +271,8 @@ terraform -chdir=terraform/azure-aks destroy
 
 After the demo is stable:
 
+- Keep staging automatic from `main` through `Deploy Azure AKS Staging`.
+- Keep production manual through `Production Release` and GitHub Environment required reviewers.
 - Move PostgreSQL to Azure Database for PostgreSQL Flexible Server.
 - Move secrets to Azure Key Vault with workload identity.
 - Use Azure Container Registry if GHCR access becomes painful.

@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/question-client';
 import { Question } from '../../../domain/aggregates/question/question.aggregate';
 import {
   ListQuestionsFilter,
@@ -140,7 +139,7 @@ export class PrismaQuestionRepository extends QuestionRepository {
               content: option.content,
               isCorrect: option.isCorrect,
               displayOrder: option.displayOrder,
-            })) as Prisma.InputJsonValue,
+            })),
           },
           update: {},
         });

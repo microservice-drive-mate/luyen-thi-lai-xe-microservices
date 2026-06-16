@@ -132,7 +132,7 @@ const deploymentEventsDir =
   process.env.DORA_DEPLOYMENT_EVENTS_DIR ?? 'reports/deployments';
 const deployWorkflowNames = parseCsv(
   process.env.DORA_DEPLOY_WORKFLOWS ??
-    'Main Image Release,Production Release,Legacy SSH Compose Deploy',
+    'Deploy Azure AKS Staging,Production Release,Rollback Release',
 );
 const incidentLabels = parseCsv(process.env.DORA_INCIDENT_LABELS ?? 'incident');
 const localIncidentsFile = process.env.DORA_INCIDENTS_FILE;

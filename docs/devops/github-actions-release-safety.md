@@ -1,6 +1,6 @@
 # Release Safety Cho GitHub Actions
 
-Phần release safety này chỉ tập trung vào GitHub Actions, không thay đổi Jenkins. Mục tiêu là làm release an toàn hơn sau khi đã có CI/CD, GHCR, Helm deploy, DORA và business metrics.
+Phần release safety này tập trung vào GitHub Actions, GHCR, Helm deploy trên Azure AKS, DORA và business metrics.
 
 ## 1. Thành phần đã thêm
 

@@ -34,7 +34,7 @@ terraform -chdir=terraform/azure-aks output storage_account_name
 Talking points:
 
 - Terraform creates the Azure Resource Group, AKS cluster, Storage Account, private Blob container, and optional Log Analytics.
-- GCP/K3s Terraform remains as fallback, but Azure is the recommended demo path because media is already Azure Blob-native.
+- Azure AKS is the supported cloud demo path, and media is already Azure Blob-native.
 - No Ansible is used because AKS is managed; Terraform and Helm are the correct abstraction levels.
 
 ## 3. CI/CD

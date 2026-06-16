@@ -181,7 +181,7 @@ services:
         paths: ["/courses", "/enrollments"]
         stripPath: false
       - name: course-admin-route
-        paths: ["/admin/courses"]
+        paths: ["/admin/courses", "/admin/enrollments"]
         stripPath: false
       - name: course-swagger-route
         paths: ["/course-service"]
