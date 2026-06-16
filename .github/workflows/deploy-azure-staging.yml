@@ -28,6 +28,7 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  GHCR_OWNER: ${{ vars.GHCR_OWNER || github.repository_owner }}
 
 jobs:
   deploy-azure-staging:
@@ -116,6 +117,10 @@ jobs:
             fi
           done
 
+          echo "Repository: ${{ github.repository }}"
+          echo "GHCR owner: $GHCR_OWNER"
+          echo "Image tag: $IMAGE_TAG"
+
       - name: Normalize image tag
         shell: bash
         run: |
@@ -157,7 +162,7 @@ jobs:
 
           missing=0
           for image in "${images[@]}"; do
-            ref="ghcr.io/${{ github.repository_owner }}/${image}:${IMAGE_TAG}"
+            ref="ghcr.io/${GHCR_OWNER}/${image}:${IMAGE_TAG}"
             echo "Checking $ref"
             if ! docker manifest inspect "$ref" >/dev/null 2>&1; then
               echo "Missing GHCR image: $ref" >&2
@@ -169,6 +174,7 @@ jobs:
 
           if [[ "$missing" -ne 0 ]]; then
             echo "One or more required images do not exist for IMAGE_TAG=$IMAGE_TAG." >&2
+            echo "Checked GHCR owner: $GHCR_OWNER." >&2
             echo "Make sure CI completed successfully for this exact commit before deploying." >&2
             exit 1
           fi
@@ -264,7 +270,7 @@ jobs:
           const values = {
             global: {
               imageTag: env.IMAGE_TAG,
-              imageRegistry: `ghcr.io/${{ github.repository_owner }}`,
+              imageRegistry: `ghcr.io/${env.GHCR_OWNER}`,
               nodeEnv: 'staging',
               storageClassName: 'managed-csi',
             },
