@@ -30,7 +30,7 @@ import { IdentityModule } from './identity.module';
         { name: 'rabbitmq', configKey: 'rabbitmq.url' },
         {
           name: 'keycloak',
-          configKey: 'keycloak.authServerUrl',
+          configKey: 'keycloak.healthUrl',
           kind: 'http',
         },
       ],
@@ -69,6 +69,7 @@ import { IdentityModule } from './identity.module';
             }).optional(),
             keycloak: Joi.object({
               authServerUrl: Joi.string().uri().required(),
+              healthUrl: Joi.string().optional(),
               realm: Joi.string().required(),
               clientId: Joi.string().required(),
               clientSecret: Joi.string().required(),

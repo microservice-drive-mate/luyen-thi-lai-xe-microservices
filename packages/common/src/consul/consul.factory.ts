@@ -216,6 +216,8 @@ export class ConsulConfigFactory {
               clientId: env.KEYCLOAK_CLIENT_ID,
               clientSecret:
                 env.SECRET_KEYCLOAK_CLIENT_SECRET ?? env.KEYCLOAK_CLIENT_SECRET,
+              healthUrl:
+                env.KEYCLOAK_HEALTH_URL ?? env.KEYCLOAK_AUTH_SERVER_URL,
               timeoutMs: env.KEYCLOAK_TIMEOUT_MS
                 ? parseInt(env.KEYCLOAK_TIMEOUT_MS, 10)
                 : undefined,

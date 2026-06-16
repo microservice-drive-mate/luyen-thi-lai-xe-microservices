@@ -33,7 +33,7 @@ jobs:
   deploy-production:
     name: Deploy Production Kubernetes
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     if: inputs.confirm_production == true
     environment:
       name: ${{ inputs.target_environment }}
@@ -454,6 +454,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
           kubectl delete jobs -n production -l app.kubernetes.io/instance=luyen-thi-lai-xe --ignore-not-found
 
       - name: Deploy Helm release
@@ -475,24 +476,45 @@ jobs:
         run: |
           set -uo pipefail
           echo "========== HELM RELEASE STATUS =========="
-          helm list -n production || true
+          helm list --all -n production || true
+          helm status luyen-thi-lai-xe -n production || true
           echo ""
           echo "========== HELM HISTORY =========="
           helm history luyen-thi-lai-xe -n production || true
           echo ""
-          echo "========== ALL PODS =========="
-          kubectl get pods -n production -o wide || true
+          echo "========== CLUSTER SNAPSHOT =========="
+          kubectl get nodes -o wide || true
+          kubectl get deploy,rs,statefulset,pod,svc,endpoints,ingress,job -n production -o wide || true
           echo ""
-          echo "========== NON-RUNNING POD DEBUG =========="
-          for pod in $(kubectl get pods -n production --field-selector=status.phase!=Running,status.phase!=Succeeded --no-headers -o custom-columns=":metadata.name" 2>/dev/null); do
-            echo "--- Describing non-running pod: $pod ---"
+          echo "========== DEPLOYMENT DESCRIBE =========="
+          for deploy in $(kubectl get deploy -n production -o name 2>/dev/null); do
+            echo "--- ${deploy} ---"
+            kubectl describe "$deploy" -n production || true
+            echo ""
+          done
+          echo ""
+          echo "========== UNREADY POD DEBUG =========="
+          mapfile -t pods < <(kubectl get pods -n production -o jsonpath='{range .items[*]}{.metadata.name}{"|"}{.status.phase}{"|"}{range .status.conditions[*]}{.type}={.status}{";"}{end}{"\n"}{end}' 2>/dev/null | awk -F'|' '$2 != "Succeeded" && $3 !~ /Ready=True/ {print $1}')
+          for pod in "${pods[@]}"; do
+            echo "--- Describing unready pod: $pod ---"
             kubectl describe pod "$pod" -n production 2>/dev/null || true
             echo ""
             echo "--- Current logs: $pod ---"
-            kubectl logs "$pod" -n production --all-containers --tail=120 2>/dev/null || true
+            kubectl logs "$pod" -n production --all-containers --tail=180 2>/dev/null || true
             echo ""
             echo "--- Previous logs: $pod ---"
-            kubectl logs "$pod" -n production --all-containers --previous --tail=120 2>/dev/null || true
+            kubectl logs "$pod" -n production --all-containers --previous --tail=180 2>/dev/null || true
+            echo ""
+            echo "--- Readiness probe from inside app container: $pod ---"
+            kubectl exec "$pod" -n production -c app -- sh -ec 'wget -qO- http://127.0.0.1:3000/health/ready || curl -fsS http://127.0.0.1:3000/health/ready' 2>/dev/null || true
+            echo ""
+          done
+          echo ""
+          echo "========== JOB DEBUG =========="
+          for job in $(kubectl get jobs -n production -l app.kubernetes.io/instance=luyen-thi-lai-xe -o name 2>/dev/null); do
+            echo "--- ${job} ---"
+            kubectl describe "$job" -n production || true
+            kubectl logs "$job" -n production --all-containers --tail=180 || true
             echo ""
           done
           echo ""

@@ -31,7 +31,7 @@ import { ExamModule } from './exam.module';
         { name: 'rabbitmq', configKey: 'rabbitmq.url' },
         {
           name: 'keycloak',
-          configKey: 'keycloak.authServerUrl',
+          configKey: 'keycloak.healthUrl',
           kind: 'http',
         },
       ],
@@ -66,6 +66,7 @@ import { ExamModule } from './exam.module';
             }).optional(),
             keycloak: Joi.object({
               authServerUrl: Joi.string().required(),
+              healthUrl: Joi.string().optional(),
               realm: Joi.string().required(),
               clientId: Joi.string().required(),
               clientSecret: Joi.string().optional(),

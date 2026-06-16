@@ -9,6 +9,7 @@ data:
   NODE_TLS_REJECT_UNAUTHORIZED: "0"
   CONSUL_URL: {{ printf "http://%s-consul:8500" (include "lttl.fullname" .) | quote }}
   KEYCLOAK_AUTH_SERVER_URL: {{ .Values.config.keycloakPublicUrl | quote }}
+  KEYCLOAK_HEALTH_URL: {{ default (printf "http://%s-keycloak:8080" (include "lttl.fullname" .)) .Values.config.keycloakHealthUrl | quote }}
   KEYCLOAK_REALM: {{ .Values.secrets.keycloakRealm | quote }}
   KEYCLOAK_CLIENT_ID: {{ .Values.secrets.keycloakClientId | quote }}
   KEYCLOAK_TIMEOUT_MS: "10000"
@@ -87,6 +88,7 @@ data:
     set_kv "config/${NODE_ENV}/shared/log.format" {{ .Values.config.logFormat | quote }}
     set_kv "config/${NODE_ENV}/shared/public.gateway.url" {{ .Values.config.gatewayPublicUrl | quote }}
     set_kv "config/${NODE_ENV}/shared/public.keycloak.url" {{ .Values.config.keycloakPublicUrl | quote }}
+    set_kv "config/${NODE_ENV}/shared/keycloak.healthUrl" {{ default (printf "http://%s-keycloak:8080" (include "lttl.fullname" .)) .Values.config.keycloakHealthUrl | quote }}
     set_kv "config/${NODE_ENV}/shared/public.frontend.origin" {{ .Values.config.frontendOrigin | quote }}
     set_kv "config/${NODE_ENV}/shared/cors.origins" {{ join "," .Values.config.corsOrigins | quote }}
 
