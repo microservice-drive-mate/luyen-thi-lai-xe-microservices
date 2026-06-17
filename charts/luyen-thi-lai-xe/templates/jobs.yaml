@@ -69,6 +69,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "lttl.secretName" . }}
                   key: POSTGRES_PASSWORD
+            - name: POSTGRES_HOST
+              value: {{ if .Values.externalDatabase.enabled }}{{ .Values.externalDatabase.host | quote }}{{ else }}{{ printf "%s-postgres" (include "lttl.fullname" .) | quote }}{{ end }}
+            - name: POSTGRES_PORT
+              value: {{ if .Values.externalDatabase.enabled }}{{ .Values.externalDatabase.port | toString | quote }}{{ else }}"5432"{{ end }}
+            - name: POSTGRES_SSLMODE
+              value: {{ if .Values.externalDatabase.enabled }}{{ .Values.externalDatabase.sslmode | quote }}{{ else }}"disable"{{ end }}
             - name: CHECKPOINT_DISABLE
               value: "1"
             - name: PRISMA_HIDE_UPDATE_MESSAGE
@@ -79,7 +85,7 @@ spec:
             - |
               node - <<'NODE'
               const net = require('node:net');
-              const host = process.env.POSTGRES_HOST || '{{ include "lttl.fullname" . }}-postgres';
+              const host = process.env.POSTGRES_HOST;
               const port = Number(process.env.POSTGRES_PORT || 5432);
               const timeoutMs = 120000;
               const started = Date.now();
@@ -117,7 +123,7 @@ spec:
               {{- range .Values.services }}
               echo "[migrate] {{ .name }}"
               cd "/workspace/apps/{{ .name }}"
-              DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@{{ include "lttl.fullname" $ }}-postgres:5432/{{ .dbName }}" \
+              DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/{{ .dbName }}?sslmode=${POSTGRES_SSLMODE}" \
                 prisma migrate deploy
               cd /workspace
               {{- end }}
@@ -161,6 +167,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "lttl.secretName" . }}
                   key: POSTGRES_PASSWORD
+            - name: POSTGRES_HOST
+              value: {{ if .Values.externalDatabase.enabled }}{{ .Values.externalDatabase.host | quote }}{{ else }}{{ printf "%s-postgres" (include "lttl.fullname" .) | quote }}{{ end }}
+            - name: POSTGRES_PORT
+              value: {{ if .Values.externalDatabase.enabled }}{{ .Values.externalDatabase.port | toString | quote }}{{ else }}"5432"{{ end }}
+            - name: POSTGRES_SSLMODE
+              value: {{ if .Values.externalDatabase.enabled }}{{ .Values.externalDatabase.sslmode | quote }}{{ else }}"disable"{{ end }}
             - name: KEYCLOAK_ADMIN
               valueFrom:
                 secretKeyRef:
@@ -195,7 +207,7 @@ spec:
               node - <<'NODE'
               const net = require('node:net');
               const targets = [
-                { name: 'Postgres', host: '{{ include "lttl.fullname" . }}-postgres', port: 5432 },
+                { name: 'Postgres', host: process.env.POSTGRES_HOST, port: Number(process.env.POSTGRES_PORT || 5432) },
                 { name: 'Keycloak', host: '{{ include "lttl.fullname" . }}-keycloak', port: 8080 },
               ];
               const timeoutMs = 180000;
@@ -243,7 +255,7 @@ spec:
               {{- if has .name $.Values.seed.services }}
               echo "[seed] {{ .name }}"
               cd "/workspace/apps/{{ .name }}"
-              DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@{{ include "lttl.fullname" $ }}-postgres:5432/{{ .dbName }}" \
+              DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/{{ .dbName }}?sslmode=${POSTGRES_SSLMODE}" \
                 tsx prisma/seed.ts
               cd /workspace
               {{- end }}

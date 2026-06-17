@@ -65,8 +65,14 @@ jobs:
       RABBITMQ_ERLANG_COOKIE: ${{ secrets.STAGING_RABBITMQ_ERLANG_COOKIE }}
       KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.STAGING_KEYCLOAK_ADMIN_PASSWORD }}
       KEYCLOAK_CLIENT_SECRET: ${{ secrets.STAGING_KEYCLOAK_CLIENT_SECRET }}
+      STAGING_REDIS_PASSWORD: ${{ secrets.STAGING_REDIS_PASSWORD }}
       STORAGE_ACCOUNT_NAME: ${{ secrets.STAGING_STORAGE_ACCOUNT_NAME }}
       STORAGE_ACCOUNT_KEY: ${{ secrets.STAGING_STORAGE_ACCOUNT_KEY }}
+      KEY_VAULT_ENABLED: ${{ vars.STAGING_KEY_VAULT_ENABLED || 'false' }}
+      KEY_VAULT_NAME: ${{ vars.STAGING_KEY_VAULT_NAME }}
+      KEY_VAULT_CLIENT_ID: ${{ vars.STAGING_KEY_VAULT_CLIENT_ID }}
+      NEON_ENABLED: ${{ vars.STAGING_NEON_ENABLED || 'false' }}
+      NEON_HOST: ${{ vars.STAGING_NEON_HOST }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -287,12 +293,20 @@ jobs:
             .map((value) => value.trim())
             .filter(Boolean);
 
+          const keyVaultEnabled = String(env.KEY_VAULT_ENABLED || '').toLowerCase() === 'true';
+
           const values = {
             global: {
               imageTag: env.IMAGE_TAG,
               imageRegistry: `ghcr.io/${env.GHCR_OWNER}`,
               nodeEnv: 'staging',
               storageClassName: 'managed-csi',
+            },
+            keyVault: {
+              enabled: keyVaultEnabled,
+              name: env.KEY_VAULT_NAME || '',
+              tenantId: env.AZURE_TENANT_ID || '',
+              clientId: env.KEY_VAULT_CLIENT_ID || '',
             },
             imagePullSecret: {
               enabled: true,
@@ -339,15 +353,24 @@ jobs:
                 limits: { cpu: '500m', memory: '768Mi' },
               },
             },
-            secrets: {
-              postgresPassword: env.POSTGRES_PASSWORD,
-              rabbitmqPassword: env.RABBITMQ_DEFAULT_PASS,
-              rabbitmqErlangCookie: env.RABBITMQ_ERLANG_COOKIE,
-              keycloakAdminPassword: env.KEYCLOAK_ADMIN_PASSWORD,
-              keycloakClientSecret: env.KEYCLOAK_CLIENT_SECRET,
-              storageAccountName: env.STORAGE_ACCOUNT_NAME,
-              storageAccountKey: env.STORAGE_ACCOUNT_KEY,
-              storageContainerName: 'media',
+            ...(keyVaultEnabled ? {} : {
+              secrets: {
+                postgresPassword: env.POSTGRES_PASSWORD,
+                rabbitmqPassword: env.RABBITMQ_DEFAULT_PASS,
+                rabbitmqErlangCookie: env.RABBITMQ_ERLANG_COOKIE,
+                keycloakAdminPassword: env.KEYCLOAK_ADMIN_PASSWORD,
+                keycloakClientSecret: env.KEYCLOAK_CLIENT_SECRET,
+                redisPassword: env.STAGING_REDIS_PASSWORD,
+                storageAccountName: env.STORAGE_ACCOUNT_NAME,
+                storageAccountKey: env.STORAGE_ACCOUNT_KEY,
+                storageContainerName: 'media',
+              },
+            }),
+            externalDatabase: {
+              enabled: String(env.NEON_ENABLED || '').toLowerCase() === 'true',
+              host: env.NEON_HOST || '',
+              port: 5432,
+              sslmode: 'require',
             },
             postgres: {
               storage: '8Gi',

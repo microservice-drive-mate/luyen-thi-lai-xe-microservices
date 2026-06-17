@@ -1,0 +1,293 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-default-deny
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-kong-from-ingress
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kong
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8000
+        - port: 8443
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-apps-from-kong
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: app
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: kong
+      ports:
+        - port: 3000
+
+---
+# Inter-service HTTP calls (e.g. exam-service → question-service)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-apps-from-apps
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: app
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: app
+      ports:
+        - port: 3000
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-postgres
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: app
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: keycloak
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: migration
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: seed
+      ports:
+        - port: 5432
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-redis
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: app
+      ports:
+        - port: 6379
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-rabbitmq
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: rabbitmq
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: app
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: prometheus
+      ports:
+        - port: 5672
+        - port: 15692
+
+---
+# All pods in the release need Consul for service discovery and config
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-consul
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: consul
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+      ports:
+        - port: 8500
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-keycloak
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: keycloak
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: app
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: kong
+      ports:
+        - port: 8080
+
+---
+# Prometheus scrapes metrics from all release pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-prometheus-scrape
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: prometheus
+      ports:
+        - port: 3000
+        - port: 9090
+        - port: 15692
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-grafana-prometheus
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: prometheus
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: grafana
+      ports:
+        - port: 9090
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "lttl.fullname" . }}-allow-alertmanager
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: alertmanager
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "lttl.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: prometheus
+      ports:
+        - port: 9093
+
+{{- end }}
