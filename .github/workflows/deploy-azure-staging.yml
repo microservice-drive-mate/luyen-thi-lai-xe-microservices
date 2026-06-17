@@ -269,6 +269,22 @@ jobs:
           fi
           kubectl get svc -n ingress-nginx
 
+      - name: Load secrets from Key Vault
+        if: env.KEY_VAULT_ENABLED == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Loading secrets from Azure Key Vault: $KEY_VAULT_NAME"
+          echo "POSTGRES_PASSWORD=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name postgres-password --query value -o tsv)" >> "$GITHUB_ENV"
+          echo "RABBITMQ_DEFAULT_PASS=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name rabbitmq-password --query value -o tsv)" >> "$GITHUB_ENV"
+          echo "RABBITMQ_ERLANG_COOKIE=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name rabbitmq-erlang-cookie --query value -o tsv)" >> "$GITHUB_ENV"
+          echo "KEYCLOAK_ADMIN_PASSWORD=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name keycloak-admin-password --query value -o tsv)" >> "$GITHUB_ENV"
+          echo "KEYCLOAK_CLIENT_SECRET=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name keycloak-client-secret --query value -o tsv)" >> "$GITHUB_ENV"
+          echo "STAGING_REDIS_PASSWORD=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name redis-password --query value -o tsv)" >> "$GITHUB_ENV"
+          echo "STORAGE_ACCOUNT_NAME=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name storage-account-name --query value -o tsv)" >> "$GITHUB_ENV"
+          echo "STORAGE_ACCOUNT_KEY=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name storage-account-key --query value -o tsv)" >> "$GITHUB_ENV"
+          echo "Secrets loaded from Key Vault successfully."
+
       - name: Render Helm values
         shell: bash
         run: |
