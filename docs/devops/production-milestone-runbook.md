@@ -175,25 +175,70 @@ Current implementation:
 - Services expose `/metrics` through `@repo/common`.
 - Services include OpenTelemetry tracing hooks.
 - Helm can deploy Jaeger when `tracing.enabled=true`.
+- Helm can deploy lightweight Prometheus/Grafana/Alertmanager when `observability.enabled=true`.
 - Terraform can enable AKS Log Analytics/OMS agent.
 - DORA metrics come from GitHub Actions deployment event artifacts and incident issues.
+
+Local Docker Compose is a full lab stack. AKS Student staging is optimized for limited CPU/RAM:
+
+| Area | Local Docker Compose | AKS Student staging |
+| --- | --- | --- |
+| Databases | One PostgreSQL container per service database | One PostgreSQL StatefulSet with multiple logical databases |
+| Metrics UI | Prometheus + Grafana always available in local infra | Optional lightweight Prometheus + Grafana, disabled by default |
+| Tracing UI | Jaeger in local infra | Optional Jaeger, disabled by default |
+| Central logs | Elasticsearch + Logstash + Kibana | `kubectl logs`, Lens/k9s, optional Azure Monitor/Log Analytics |
+
+Keep the in-cluster observability stack disabled during normal auto deploy. Enable it manually only when demo capacity is available.
 
 Useful checks:
 
 ```powershell
+kubectl top nodes
+kubectl top pods -n staging
+kubectl get pods -A
 kubectl logs deploy/luyen-thi-lai-xe-kong -n staging --tail=100
 kubectl logs deploy/luyen-thi-lai-xe-identity-service -n staging --tail=100
 kubectl port-forward svc/luyen-thi-lai-xe-identity-service -n staging 3001:3000
 Invoke-WebRequest http://localhost:3001/metrics
 ```
 
-Optional tracing demo:
+Optional Prometheus/Grafana demo:
+
+Use the rendered staging values with real image tag and secrets. Do not use `values-azure.example.yaml` directly against the live cluster.
+
+```powershell
+helm upgrade luyen-thi-lai-xe charts/luyen-thi-lai-xe `
+  -n staging `
+  -f <rendered-staging-values.yaml> `
+  --set observability.enabled=true `
+  --set observability.prometheus.enabled=true `
+  --set observability.grafana.enabled=true
+
+kubectl rollout status statefulset/luyen-thi-lai-xe-prometheus -n staging
+kubectl rollout status deploy/luyen-thi-lai-xe-grafana -n staging
+kubectl port-forward svc/luyen-thi-lai-xe-prometheus -n staging 9090:9090
+kubectl port-forward svc/luyen-thi-lai-xe-grafana -n staging 30000:3000
+```
+
+Open:
 
 ```text
-Set tracing.enabled=true in Helm values
-Deploy Jaeger with the chart
-Port-forward svc/luyen-thi-lai-xe-jaeger 16686:16686
-Open http://localhost:16686
+Prometheus: http://localhost:9090/targets
+Grafana: http://localhost:30000
+```
+
+Optional tracing demo:
+
+Use the rendered staging values with real image tag and secrets.
+
+```powershell
+helm upgrade luyen-thi-lai-xe charts/luyen-thi-lai-xe `
+  -n staging `
+  -f <rendered-staging-values.yaml> `
+  --set tracing.enabled=true
+
+kubectl rollout status deploy/luyen-thi-lai-xe-jaeger -n staging
+kubectl port-forward svc/luyen-thi-lai-xe-jaeger -n staging 16686:16686
 ```
 
 Production roadmap:
@@ -205,6 +250,13 @@ Traces: OpenTelemetry Collector -> Jaeger/Tempo/Application Insights
 Alerts: Azure Monitor alerts or Alertmanager
 Dashboards: Azure Managed Grafana or Grafana in-cluster
 ```
+
+Azure Student cost guardrails:
+
+- Do not run production and staging workloads together on the current AKS cluster.
+- Do not deploy ELK to AKS Student; keep ELK local or use Azure Monitor/Log Analytics.
+- Keep Prometheus retention short, default `6h`, and storage small, default `2Gi`.
+- Azure Monitor Logs and Managed Grafana can generate cost after free/trial limits, so verify usage before leaving them enabled.
 
 ## 6. Production Release Demo
 

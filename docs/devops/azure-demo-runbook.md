@@ -136,10 +136,79 @@ Talking points:
 
 ## 8. Observability
 
-If running in AKS:
+AKS staging is intentionally lighter than local Docker Compose.
+
+| Area | Local Docker Compose | AKS Student staging |
+| --- | --- | --- |
+| Application runtime | 10 services | 10 services |
+| PostgreSQL | One container per service DB plus Keycloak DB | One PostgreSQL StatefulSet with multiple logical databases |
+| Core infrastructure | RabbitMQ, Redis, Consul, Keycloak, Kong | RabbitMQ, Redis, Consul, Keycloak, Kong |
+| Logs | ELK stack | `kubectl logs`, Lens/k9s, optional Azure Monitor/Log Analytics |
+| Metrics | Prometheus + Grafana | `/metrics` always available; optional lightweight Prometheus + Grafana |
+| Traces | Jaeger | Optional Jaeger with `tracing.enabled=true` |
+
+Talking point:
+
+```text
+Local Compose is a full lab stack. AKS Student staging is optimized for limited CPU/RAM, so databases are logical databases inside one PostgreSQL pod and observability is enabled only when needed for demo.
+```
+
+Capacity check before enabling the in-cluster observability stack:
 
 ```powershell
+kubectl top nodes
+kubectl top pods -n staging
+kubectl get pods -A
+kubectl describe nodes
+```
+
+Show service metrics without deploying Prometheus:
+
+```powershell
+kubectl port-forward -n staging svc/luyen-thi-lai-xe-identity-service 3001:3000
+Invoke-WebRequest http://localhost:3001/metrics
+```
+
+Optional AKS Prometheus/Grafana demo:
+
+Use the rendered staging values with real image tag and secrets. Do not use `values-azure.example.yaml` directly against the live cluster.
+
+```powershell
+helm upgrade luyen-thi-lai-xe charts/luyen-thi-lai-xe `
+  -n staging `
+  -f <rendered-staging-values.yaml> `
+  --set observability.enabled=true `
+  --set observability.prometheus.enabled=true `
+  --set observability.grafana.enabled=true
+
+kubectl rollout status statefulset/luyen-thi-lai-xe-prometheus -n staging
+kubectl rollout status deploy/luyen-thi-lai-xe-grafana -n staging
+kubectl port-forward -n staging svc/luyen-thi-lai-xe-grafana 30000:3000
+```
+
+Open:
+
+```text
+http://localhost:30000
+```
+
+Optional tracing demo:
+
+Use the rendered staging values with real image tag and secrets.
+
+```powershell
+helm upgrade luyen-thi-lai-xe charts/luyen-thi-lai-xe `
+  -n staging `
+  -f <rendered-staging-values.yaml> `
+  --set tracing.enabled=true
+
 kubectl port-forward -n staging svc/luyen-thi-lai-xe-jaeger 16686:16686
+```
+
+Open:
+
+```text
+http://localhost:16686
 ```
 
 If using local observability fallback:
@@ -155,6 +224,7 @@ Talking points:
 - Health/readiness probes protect rollout.
 - Metrics and traces are cross-cutting concerns from `packages/common`.
 - Logs carry correlation IDs.
+- ELK is kept local only for the Azure Student demo; Azure Monitor/Log Analytics is the cloud logging roadmap.
 
 ## 8.5. Production Milestone Evidence
 

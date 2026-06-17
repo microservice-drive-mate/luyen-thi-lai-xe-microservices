@@ -1,5 +1,83 @@
 # Runbook Observability
 
+## AKS Student Production-Lite
+
+Local Docker Compose chay full lab stack, con AKS staging chay runtime toi gian de vua tai nguyen Azure Student.
+
+| Thanh phan | Local Docker Compose | AKS Student staging |
+| --- | --- | --- |
+| App services | 10 service containers | 10 Kubernetes Deployments |
+| PostgreSQL | Nhieu Postgres containers, moi service mot DB container | Mot PostgreSQL StatefulSet, nhieu logical databases |
+| Metrics | Prometheus + Grafana | `/metrics` san co; Prometheus/Grafana bat thu cong |
+| Alerts | Alertmanager | Alertmanager optional, tat mac dinh |
+| Logs | Elasticsearch + Logstash + Kibana | `kubectl logs`, Lens/k9s, Azure Monitor/Log Analytics roadmap |
+| Traces | Jaeger | Jaeger optional voi `tracing.enabled=true` |
+
+Truoc khi bat observability trong AKS:
+
+```powershell
+kubectl top nodes
+kubectl top pods -n staging
+kubectl get pods -A
+kubectl describe nodes
+```
+
+Kiem tra metrics khong can Prometheus:
+
+```powershell
+kubectl port-forward -n staging svc/luyen-thi-lai-xe-identity-service 3001:3000
+Invoke-WebRequest http://localhost:3001/metrics
+```
+
+Bat Prometheus/Grafana nhe cho demo:
+
+Dung rendered staging values co image tag va secrets that. Khong dung `values-azure.example.yaml` truc tiep tren live cluster.
+
+```powershell
+helm upgrade luyen-thi-lai-xe charts/luyen-thi-lai-xe `
+  -n staging `
+  -f <rendered-staging-values.yaml> `
+  --set observability.enabled=true `
+  --set observability.prometheus.enabled=true `
+  --set observability.grafana.enabled=true
+
+kubectl rollout status statefulset/luyen-thi-lai-xe-prometheus -n staging
+kubectl rollout status deploy/luyen-thi-lai-xe-grafana -n staging
+kubectl port-forward -n staging svc/luyen-thi-lai-xe-prometheus 9090:9090
+kubectl port-forward -n staging svc/luyen-thi-lai-xe-grafana 30000:3000
+```
+
+Open:
+
+```text
+Prometheus targets: http://localhost:9090/targets
+Grafana dashboards: http://localhost:30000
+```
+
+Bat Alertmanager neu can demo alert routing:
+
+```powershell
+helm upgrade luyen-thi-lai-xe charts/luyen-thi-lai-xe `
+  -n staging `
+  -f <rendered-staging-values.yaml> `
+  --set observability.enabled=true `
+  --set observability.prometheus.enabled=true `
+  --set observability.alertmanager.enabled=true
+```
+
+Bat Jaeger neu can demo tracing:
+
+```powershell
+helm upgrade luyen-thi-lai-xe charts/luyen-thi-lai-xe `
+  -n staging `
+  -f <rendered-staging-values.yaml> `
+  --set tracing.enabled=true
+
+kubectl port-forward -n staging svc/luyen-thi-lai-xe-jaeger 16686:16686
+```
+
+Khong deploy ELK len AKS Student. Neu can log UI tren cloud, uu tien Azure Monitor/Log Analytics va kiem soat ingestion de tranh ton credit.
+
 Tài liệu này dùng khi hệ thống phát cảnh báo từ Prometheus/Alertmanager hoặc khi cần kiểm tra nhanh stack quan sát.
 
 ## Thành phần
