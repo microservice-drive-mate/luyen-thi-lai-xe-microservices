@@ -165,8 +165,14 @@ spec:
                 secretKeyRef:
                   name: {{ include "lttl.secretName" $ }}
                   key: POSTGRES_PASSWORD
+            - name: POSTGRES_HOST
+              value: {{ if $.Values.externalDatabase.enabled }}{{ $.Values.externalDatabase.host | quote }}{{ else }}{{ printf "%s-postgres" (include "lttl.fullname" $) | quote }}{{ end }}
+            - name: POSTGRES_PORT
+              value: {{ if $.Values.externalDatabase.enabled }}{{ $.Values.externalDatabase.port | toString | quote }}{{ else }}"5432"{{ end }}
+            - name: POSTGRES_SSLMODE
+              value: {{ if $.Values.externalDatabase.enabled }}{{ $.Values.externalDatabase.sslmode | quote }}{{ else }}"disable"{{ end }}
             - name: DATABASE_URL
-              value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@{{ include "lttl.fullname" $ }}-postgres:5432/{{ .dbName }}
+              value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/{{ .dbName }}?sslmode=$(POSTGRES_SSLMODE)
             - name: RABBITMQ_DEFAULT_USER
               valueFrom:
                 secretKeyRef:
@@ -184,8 +190,13 @@ spec:
             - name: RABBITMQ_URL
               value: amqp://$(RABBITMQ_DEFAULT_USER):$(RABBITMQ_DEFAULT_PASS)@{{ include "lttl.fullname" $ }}-rabbitmq:5672
             {{- if .usesRedis }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "lttl.secretName" $ }}
+                  key: REDIS_PASSWORD
             - name: REDIS_URL
-              value: redis://{{ include "lttl.fullname" $ }}-redis:6379
+              value: redis://:$(REDIS_PASSWORD)@{{ include "lttl.fullname" $ }}-redis:6379
             {{- end }}
             - name: KEYCLOAK_CLIENT_SECRET
               valueFrom:
@@ -224,4 +235,19 @@ spec:
             {{- toYaml $.Values.appDefaults.probes.readiness | nindent 12 }}
           resources:
             {{- toYaml (default $.Values.appDefaults.resources .resources) | nindent 12 }}
+          {{- if $.Values.keyVault.enabled }}
+          volumeMounts:
+            - name: keyvault-secrets
+              mountPath: /mnt/secrets
+              readOnly: true
+          {{- end }}
+      {{- if $.Values.keyVault.enabled }}
+      volumes:
+        - name: keyvault-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "lttl.fullname" $ }}-keyvault
+      {{- end }}
 {{- end }}

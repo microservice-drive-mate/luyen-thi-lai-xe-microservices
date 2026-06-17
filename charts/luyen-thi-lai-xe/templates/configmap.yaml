@@ -25,6 +25,7 @@ data:
   FRONTEND_ORIGIN: {{ .Values.config.frontendOrigin | quote }}
   KONG_CORS_ORIGINS: {{ join "," .Values.config.corsOrigins | quote }}
 
+{{- if not .Values.externalDatabase.enabled }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -52,6 +53,7 @@ data:
     create_database {{ .dbName | quote }}
     {{- end }}
     create_database "keycloak_db"
+{{- end }}
 
 ---
 apiVersion: v1

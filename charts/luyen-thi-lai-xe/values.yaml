@@ -5,6 +5,21 @@ global:
   nodeEnv: production
   storageClassName: local-path
 
+networkPolicy:
+  enabled: false
+
+keyVault:
+  enabled: false
+  name: ""
+  tenantId: ""
+  clientId: ""
+
+externalDatabase:
+  enabled: false
+  host: ""
+  port: 5432
+  sslmode: require
+
 imagePullSecret:
   enabled: false
   registry: ghcr.io
@@ -99,6 +114,7 @@ secrets:
   keycloakRealm: luyen-thi-lai-xe-realm
   keycloakClientId: nestjs-backend
   keycloakClientSecret: change-me
+  redisPassword: change-me
   storageAccountName: ""
   storageAccountKey: ""
   storageContainerName: media
