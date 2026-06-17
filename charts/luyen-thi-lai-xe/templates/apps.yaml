@@ -44,6 +44,12 @@ spec:
       {{- include "lttl.selectorLabels" $ | nindent 6 }}
       app.kubernetes.io/component: app
       app.kubernetes.io/service-name: {{ .name }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      {{- $rollingUpdate := .rollingUpdate | default dict }}
+      maxSurge: {{ default $.Values.appDefaults.rollingUpdate.maxSurge $rollingUpdate.maxSurge | quote }}
+      maxUnavailable: {{ default $.Values.appDefaults.rollingUpdate.maxUnavailable $rollingUpdate.maxUnavailable | quote }}
   template:
     metadata:
       labels:

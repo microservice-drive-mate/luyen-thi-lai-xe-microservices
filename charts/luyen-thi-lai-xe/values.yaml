@@ -71,6 +71,9 @@ secrets:
 appDefaults:
   replicaCount: 1
   port: 3000
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
   resources:
     requests:
       cpu: 150m

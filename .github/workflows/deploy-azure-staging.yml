@@ -322,6 +322,10 @@ jobs:
             },
             appDefaults: {
               replicaCount: 1,
+              rollingUpdate: {
+                maxSurge: 0,
+                maxUnavailable: 1,
+              },
               resources: {
                 requests: { cpu: '50m', memory: '128Mi' },
                 limits: { cpu: '500m', memory: '512Mi' },
@@ -527,6 +531,7 @@ jobs:
             --create-namespace \
             --wait \
             --wait-for-jobs \
+            --force-conflicts \
             --timeout 25m \
             -f "$RUNNER_TEMP/azure-staging-values.json"
 
