@@ -37,7 +37,7 @@ config:
   userServiceTimeoutMs: "3000"
 
 tracing:
-  enabled: true
+  enabled: false
   otlpTracesEndpoint: ""
   kongZipkinEndpoint: ""
   propagators: tracecontext,baggage
@@ -51,6 +51,42 @@ tracing:
       limits:
         cpu: 500m
         memory: 512Mi
+
+observability:
+  enabled: false
+  prometheus:
+    enabled: false
+    image: prom/prometheus:v2.54.1
+    retention: 6h
+    storage: 2Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 768Mi
+  grafana:
+    enabled: false
+    image: grafana/grafana:11.2.0
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 384Mi
+  alertmanager:
+    enabled: false
+    image: prom/alertmanager:v0.27.0
+    storage: 1Gi
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
 
 secrets:
   postgresUser: user

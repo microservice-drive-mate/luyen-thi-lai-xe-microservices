@@ -42,6 +42,17 @@ config:
 tracing:
   enabled: false
 
+observability:
+  enabled: false
+  prometheus:
+    enabled: false
+    retention: 6h
+    storage: 2Gi
+  grafana:
+    enabled: false
+  alertmanager:
+    enabled: false
+
 secrets:
   postgresUser: user
   postgresPassword: change-me

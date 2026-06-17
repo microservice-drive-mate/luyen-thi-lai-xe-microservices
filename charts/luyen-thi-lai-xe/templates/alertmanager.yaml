@@ -1,0 +1,103 @@
+{{- if and .Values.observability.enabled .Values.observability.alertmanager.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lttl.fullname" . }}-alertmanager
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alertmanager
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: demo-null
+      group_by: ["alertname", "service", "severity"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 2h
+    receivers:
+      - name: demo-null
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lttl.fullname" . }}-alertmanager
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alertmanager
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9093
+      targetPort: http
+  selector:
+    {{- include "lttl.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: alertmanager
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "lttl.fullname" . }}-alertmanager
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alertmanager
+spec:
+  serviceName: {{ include "lttl.fullname" . }}-alertmanager
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "lttl.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: alertmanager
+  template:
+    metadata:
+      labels:
+        {{- include "lttl.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: alertmanager
+    spec:
+      containers:
+        - name: alertmanager
+          image: {{ .Values.observability.alertmanager.image | quote }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - --config.file=/etc/alertmanager/alertmanager.yml
+            - --storage.path=/alertmanager
+          ports:
+            - name: http
+              containerPort: 9093
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.observability.alertmanager.resources | nindent 12 }}
+          volumeMounts:
+            - name: alertmanager-config
+              mountPath: /etc/alertmanager
+            - name: alertmanager-data
+              mountPath: /alertmanager
+      volumes:
+        - name: alertmanager-config
+          configMap:
+            name: {{ include "lttl.fullname" . }}-alertmanager
+  volumeClaimTemplates:
+    - metadata:
+        name: alertmanager-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClassName | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.observability.alertmanager.storage | quote }}
+{{- end }}

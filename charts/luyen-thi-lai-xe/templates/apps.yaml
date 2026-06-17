@@ -48,8 +48,8 @@ spec:
     type: RollingUpdate
     rollingUpdate:
       {{- $rollingUpdate := .rollingUpdate | default dict }}
-      maxSurge: {{ default $.Values.appDefaults.rollingUpdate.maxSurge $rollingUpdate.maxSurge | quote }}
-      maxUnavailable: {{ default $.Values.appDefaults.rollingUpdate.maxUnavailable $rollingUpdate.maxUnavailable | quote }}
+      maxSurge: {{ default $.Values.appDefaults.rollingUpdate.maxSurge $rollingUpdate.maxSurge }}
+      maxUnavailable: {{ default $.Values.appDefaults.rollingUpdate.maxUnavailable $rollingUpdate.maxUnavailable }}
   template:
     metadata:
       labels:
