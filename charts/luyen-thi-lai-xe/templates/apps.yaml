@@ -235,19 +235,4 @@ spec:
             {{- toYaml $.Values.appDefaults.probes.readiness | nindent 12 }}
           resources:
             {{- toYaml (default $.Values.appDefaults.resources .resources) | nindent 12 }}
-          {{- if $.Values.keyVault.enabled }}
-          volumeMounts:
-            - name: keyvault-secrets
-              mountPath: /mnt/secrets
-              readOnly: true
-          {{- end }}
-      {{- if $.Values.keyVault.enabled }}
-      volumes:
-        - name: keyvault-secrets
-          csi:
-            driver: secrets-store.csi.k8s.io
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: {{ include "lttl.fullname" $ }}-keyvault
-      {{- end }}
 {{- end }}
