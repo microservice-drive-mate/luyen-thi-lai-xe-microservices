@@ -120,7 +120,7 @@ spec:
             - sh
             - -ec
             - |
-              until nc -z {{ include "lttl.fullname" $ }}-postgres 5432; do echo waiting for postgres; sleep 2; done
+              until nc -z {{ if $.Values.externalDatabase.enabled }}{{ $.Values.externalDatabase.host }} {{ $.Values.externalDatabase.port }}{{ else }}{{ include "lttl.fullname" $ }}-postgres 5432{{ end }}; do echo waiting for postgres; sleep 2; done
               until nc -z {{ include "lttl.fullname" $ }}-rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done
               until nc -z {{ include "lttl.fullname" $ }}-consul 8500; do echo waiting for consul; sleep 2; done
               until nc -z {{ include "lttl.fullname" $ }}-keycloak 8080; do echo waiting for keycloak; sleep 2; done

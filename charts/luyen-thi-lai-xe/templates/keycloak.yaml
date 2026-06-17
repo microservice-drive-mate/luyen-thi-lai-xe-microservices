@@ -41,7 +41,7 @@ spec:
           command:
             - sh
             - -ec
-            - until nc -z {{ include "lttl.fullname" . }}-postgres 5432; do echo waiting for postgres; sleep 2; done
+            - until nc -z {{ if .Values.externalDatabase.enabled }}{{ .Values.externalDatabase.host }} {{ .Values.externalDatabase.port }}{{ else }}{{ include "lttl.fullname" . }}-postgres 5432{{ end }}; do echo waiting for postgres; sleep 2; done
       containers:
         - name: keycloak
           image: {{ .Values.keycloak.image | quote }}
@@ -57,7 +57,7 @@ spec:
             - name: KC_DB
               value: postgres
             - name: KC_DB_URL
-              value: jdbc:postgresql://{{ include "lttl.fullname" . }}-postgres:5432/keycloak_db
+              value: {{ if .Values.externalDatabase.enabled }}jdbc:postgresql://{{ .Values.externalDatabase.host }}:{{ .Values.externalDatabase.port }}/keycloak_db?sslmode={{ .Values.externalDatabase.sslmode }}{{ else }}jdbc:postgresql://{{ include "lttl.fullname" . }}-postgres:5432/keycloak_db{{ end }}
             - name: KC_DB_USERNAME
               valueFrom:
                 secretKeyRef:

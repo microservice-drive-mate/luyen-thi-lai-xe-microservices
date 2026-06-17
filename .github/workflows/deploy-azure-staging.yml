@@ -276,6 +276,7 @@ jobs:
           set -euo pipefail
           echo "Loading secrets from Azure Key Vault: $KEY_VAULT_NAME"
           echo "POSTGRES_PASSWORD=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name postgres-password --query value -o tsv)" >> "$GITHUB_ENV"
+          echo "POSTGRES_USER=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name postgres-user --query value -o tsv)" >> "$GITHUB_ENV"
           echo "RABBITMQ_DEFAULT_PASS=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name rabbitmq-password --query value -o tsv)" >> "$GITHUB_ENV"
           echo "RABBITMQ_ERLANG_COOKIE=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name rabbitmq-erlang-cookie --query value -o tsv)" >> "$GITHUB_ENV"
           echo "KEYCLOAK_ADMIN_PASSWORD=$(az keyvault secret show --vault-name "$KEY_VAULT_NAME" --name keycloak-admin-password --query value -o tsv)" >> "$GITHUB_ENV"
@@ -370,6 +371,7 @@ jobs:
               },
             },
             secrets: {
+              postgresUser: env.POSTGRES_USER || 'user',
               postgresPassword: env.POSTGRES_PASSWORD,
               rabbitmqPassword: env.RABBITMQ_DEFAULT_PASS,
               rabbitmqErlangCookie: env.RABBITMQ_ERLANG_COOKIE,
