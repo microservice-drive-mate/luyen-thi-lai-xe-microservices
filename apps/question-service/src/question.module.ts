@@ -6,8 +6,8 @@ import { EventPublisher } from './application/ports/event-publisher.port';
 import { CreateQuestionUseCase } from './application/use-cases/create-question/create-question.use-case';
 import { CreateTopicUseCase } from './application/use-cases/create-topic/create-topic.use-case';
 import { DeleteQuestionUseCase } from './application/use-cases/delete-question/delete-question.use-case';
-import { GetQuestionPoolUseCase } from './application/use-cases/get-question-pool/get-question-pool.use-case';
 import { GetQuestionUseCase } from './application/use-cases/get-question/get-question.use-case';
+import { GetQuestionPoolUseCase } from './application/use-cases/get-question-pool/get-question-pool.use-case';
 import { GetTopicUseCase } from './application/use-cases/get-topic/get-topic.use-case';
 import { ListQuestionsUseCase } from './application/use-cases/list-questions/list-questions.use-case';
 import { ListTopicsUseCase } from './application/use-cases/list-topics/list-topics.use-case';
@@ -22,9 +22,9 @@ import {
   RABBITMQ_CLIENT,
   RabbitMqEventPublisher,
 } from './infrastructure/messaging/rabbitmq-event-publisher.service';
+import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { PrismaQuestionRepository } from './infrastructure/persistence/prisma/prisma-question.repository';
 import { PrismaQuestionTopicRepository } from './infrastructure/persistence/prisma/prisma-question-topic.repository';
-import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { PublicQuestionController } from './presentation/http/public-question.controller';
 import { QuestionController } from './presentation/http/question.controller';
 

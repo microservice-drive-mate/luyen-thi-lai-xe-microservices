@@ -1,5 +1,5 @@
-import { RefreshTokenUseCase } from './refresh-token.use-case';
 import { RefreshTokenCommand } from './refresh-token.command';
+import { RefreshTokenUseCase } from './refresh-token.use-case';
 
 describe('RefreshTokenUseCase', () => {
   let useCase: RefreshTokenUseCase;

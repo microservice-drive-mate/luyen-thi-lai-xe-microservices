@@ -6,7 +6,7 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { Observable, finalize, tap } from 'rxjs';
+import { finalize, Observable, tap } from 'rxjs';
 import { MetricsService } from './metrics.service';
 
 @Injectable()

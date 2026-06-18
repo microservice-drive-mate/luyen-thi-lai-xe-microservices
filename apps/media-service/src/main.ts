@@ -1,15 +1,14 @@
-import { NestFactory, Reflector } from '@nestjs/core';
-import { ConfigService } from '@nestjs/config';
 import { Logger, ValidationPipe } from '@nestjs/common';
-import type { NextFunction, Request, Response } from 'express';
+import { ConfigService } from '@nestjs/config';
+import { NestFactory, Reflector } from '@nestjs/core';
 import {
+  AccessLogInterceptor,
   ApiExceptionFilter,
   ApiResponseInterceptor,
-  AccessLogInterceptor,
   assertRabbitMqResilienceTopology,
-  createRabbitMqConsumerOptions,
   CorrelationIdInterceptor,
   CorrelationIdMiddleware,
+  createRabbitMqConsumerOptions,
   getRabbitMqUrl,
   installLocalDevTransientErrorGuard,
   MetricsService,
@@ -21,6 +20,7 @@ import {
   TracingMiddleware,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
+import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 

@@ -1,5 +1,5 @@
-import { RecordAuditLogUseCase } from './record-audit-log.use-case';
 import { AuditEventEnvelope } from '@repo/common';
+import { RecordAuditLogUseCase } from './record-audit-log.use-case';
 
 describe('RecordAuditLogUseCase', () => {
   let useCase: RecordAuditLogUseCase;

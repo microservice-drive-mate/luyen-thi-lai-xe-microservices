@@ -1,17 +1,17 @@
 import { sleep } from 'k6';
 import type { Options } from 'k6/options';
 import { SOAK_THRESHOLDS } from '../config';
-import { testLogin, testGetProfile } from '../services/identity';
+import { setupKeycloak } from '../helpers/setup';
+import { testListCourses, testListEnrollments } from '../services/course';
 import {
-  testListExams,
   testGetExamDetail,
+  testListExams,
   testStartExam,
   testSubmitExam,
 } from '../services/exam';
-import { testListCourses, testListEnrollments } from '../services/course';
-import { testGetUserProfile } from '../services/user';
+import { testGetProfile, testLogin } from '../services/identity';
 import { testListQuestions } from '../services/question';
-import { setupKeycloak } from '../helpers/setup';
+import { testGetUserProfile } from '../services/user';
 
 export function setup(): void {
   setupKeycloak();

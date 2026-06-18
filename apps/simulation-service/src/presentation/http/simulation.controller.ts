@@ -11,15 +11,10 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import {
-  GetManeuverUseCase,
-  GetSimulationSessionResultUseCase,
-  ListSimulationSessionsUseCase,
-  ListManeuverErrorsUseCase,
-  ListManeuversUseCase,
-  SaveSimulationAnswerUseCase,
-  StartSimulationSessionUseCase,
-  SubmitSimulationSessionUseCase,
-} from '../../application/use-cases/simulation.use-cases';
+  EndPractice2dSessionCommand,
+  IngestPractice2dTelemetryCommand,
+  StartPractice2dSessionCommand,
+} from '../../application/use-cases/practice2d/practice2d.commands';
 import {
   EndPractice2dSessionUseCase,
   GetPractice2dSessionUseCase,
@@ -27,10 +22,15 @@ import {
   StartPractice2dSessionUseCase,
 } from '../../application/use-cases/practice2d/practice2d.use-cases';
 import {
-  EndPractice2dSessionCommand,
-  IngestPractice2dTelemetryCommand,
-  StartPractice2dSessionCommand,
-} from '../../application/use-cases/practice2d/practice2d.commands';
+  GetManeuverUseCase,
+  GetSimulationSessionResultUseCase,
+  ListManeuverErrorsUseCase,
+  ListManeuversUseCase,
+  ListSimulationSessionsUseCase,
+  SaveSimulationAnswerUseCase,
+  StartSimulationSessionUseCase,
+  SubmitSimulationSessionUseCase,
+} from '../../application/use-cases/simulation.use-cases';
 import {
   EndPractice2dSessionRequestDto,
   LicenseCategoryQueryDto,
@@ -40,8 +40,8 @@ import {
   Practice2dSessionResponseDto,
   Practice2dTelemetryRequestDto,
   SaveSimulationAnswerRequestDto,
-  SimulationSessionResultResponseDto,
   SimulationSessionResponseDto,
+  SimulationSessionResultResponseDto,
   StartPractice2dSessionRequestDto,
   StartSimulationSessionRequestDto,
 } from '../dtos/simulation.dtos';

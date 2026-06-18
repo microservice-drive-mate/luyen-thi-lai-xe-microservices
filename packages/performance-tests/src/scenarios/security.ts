@@ -1,16 +1,16 @@
 import { check, group, sleep } from 'k6';
-import { Counter } from 'k6/metrics';
 import encoding from 'k6/encoding';
+import { Counter } from 'k6/metrics';
 import type { Options } from 'k6/options';
 import {
+  authHeaders,
   BASE_URL,
   JSON_HEADERS,
-  authHeaders,
   SECURITY_THRESHOLDS,
 } from '../config';
-import { http } from '../helpers/http';
 import { loginAsDefaultUser } from '../helpers/auth';
 import { randomEmail, randomString } from '../helpers/data';
+import { http } from '../helpers/http';
 
 const rateLimitedRequests = new Counter('rate_limited_requests');
 const unauthorizedRequests = new Counter('unauthorized_requests');

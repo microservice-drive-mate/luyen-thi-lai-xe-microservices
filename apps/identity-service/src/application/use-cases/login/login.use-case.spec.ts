@@ -1,7 +1,7 @@
-import { LoginUseCase } from './login.use-case';
-import { LoginCommand } from './login.command';
-import { IdentityProviderPort } from '../../ports/identity-provider.port';
 import { AuditPublisherPort } from '../../ports/audit-publisher.port';
+import { IdentityProviderPort } from '../../ports/identity-provider.port';
+import { LoginCommand } from './login.command';
+import { LoginUseCase } from './login.use-case';
 
 describe('LoginUseCase', () => {
   let useCase: LoginUseCase;

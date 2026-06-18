@@ -3,10 +3,10 @@ import { createAuditEvent, IUseCase } from '@repo/common';
 import { IdentityUser } from '../../../domain/aggregates/identity-user/identity-user.aggregate';
 import { IdentityUserNotFoundException } from '../../../domain/exceptions/identity-user-not-found.exception';
 import { IdentityUserRepository } from '../../../domain/repositories/identity-user.repository';
+import { AuditPublisherPort } from '../../ports/audit-publisher.port';
 import { IdentityEventPublisherPort } from '../../ports/identity-event-publisher.port';
 import { IdentityProviderPort } from '../../ports/identity-provider.port';
 import { TokenBlacklistPort } from '../../ports/token-blacklist.port';
-import { AuditPublisherPort } from '../../ports/audit-publisher.port';
 import { LockUserCommand } from './lock-user.command';
 import { LockUserResult } from './lock-user.result';
 

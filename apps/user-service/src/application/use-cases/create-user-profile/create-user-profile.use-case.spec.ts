@@ -1,7 +1,7 @@
-import { CreateUserProfileUseCase } from './create-user-profile.use-case';
-import { CreateUserProfileCommand } from './create-user-profile.command';
-import { UserAlreadyExistsException } from '../../../domain/exceptions/user-already-exists.exception';
 import { UserRole } from '../../../domain/aggregates/user-profile/user-profile.types';
+import { UserAlreadyExistsException } from '../../../domain/exceptions/user-already-exists.exception';
+import { CreateUserProfileCommand } from './create-user-profile.command';
+import { CreateUserProfileUseCase } from './create-user-profile.use-case';
 
 describe('CreateUserProfileUseCase', () => {
   let useCase: CreateUserProfileUseCase;

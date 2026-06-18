@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { normalizeQuestionContent } from '../../../application/use-cases/shared/question-signature';
 import { Question } from '../../../domain/aggregates/question/question.aggregate';
 import {
   ListQuestionsFilter,
@@ -6,7 +7,6 @@ import {
   QuestionPoolFilter,
   QuestionRepository,
 } from '../../../domain/repositories/question.repository';
-import { normalizeQuestionContent } from '../../../application/use-cases/shared/question-signature';
 import { QuestionMapper } from '../mappers/question.mapper';
 import { PrismaService } from './prisma.service';
 

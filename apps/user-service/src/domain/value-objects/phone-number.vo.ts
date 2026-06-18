@@ -1,4 +1,4 @@
-import { ValueObject, DomainException } from '@repo/common';
+import { DomainException, ValueObject } from '@repo/common';
 
 export class InvalidPhoneNumberException extends DomainException {
   readonly code = 'INVALID_PHONE_NUMBER';

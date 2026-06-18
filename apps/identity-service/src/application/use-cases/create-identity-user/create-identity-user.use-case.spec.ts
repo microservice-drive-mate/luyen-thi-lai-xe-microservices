@@ -1,6 +1,6 @@
-import { CreateIdentityUserUseCase } from './create-identity-user.use-case';
-import { CreateIdentityUserCommand } from './create-identity-user.command';
 import { IdentityUser } from '../../../domain/aggregates/identity-user/identity-user.aggregate';
+import { CreateIdentityUserCommand } from './create-identity-user.command';
+import { CreateIdentityUserUseCase } from './create-identity-user.use-case';
 
 describe('CreateIdentityUserUseCase', () => {
   let useCase: CreateIdentityUserUseCase;

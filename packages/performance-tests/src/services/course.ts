@@ -1,8 +1,8 @@
 import { check, group, sleep } from 'k6';
-import { BASE_URL, JSON_HEADERS, authHeaders } from '../config';
-import { http } from '../helpers/http';
+import { authHeaders, BASE_URL, JSON_HEADERS } from '../config';
 import { loginAsDefaultUser } from '../helpers/auth';
 import { generateEnrollmentData, randomPagination } from '../helpers/data';
+import { http } from '../helpers/http';
 
 export function testListCourses(): void {
   group('Course - List', () => {

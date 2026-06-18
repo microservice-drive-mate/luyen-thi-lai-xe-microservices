@@ -1,9 +1,9 @@
+import { Prisma } from '@prisma/course-client';
 import { Course } from '../../../domain/aggregates/course/course.aggregate';
 import {
   CourseStatus,
   LicenseCategory,
 } from '../../../domain/aggregates/course/course.types';
-import { Prisma } from '@prisma/course-client';
 
 export interface RawLessonRow {
   id: string;

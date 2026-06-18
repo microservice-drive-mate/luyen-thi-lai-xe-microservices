@@ -1,7 +1,7 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { HealthController } from './health.controller';
 import { HEALTH_MODULE_OPTIONS } from './health.constants';
+import { HealthController } from './health.controller';
 import { HealthModuleOptions, HealthService } from './health.service';
 
 @Module({})

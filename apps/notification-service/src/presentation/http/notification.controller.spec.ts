@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationController } from './notification.controller';
-import { ListNotificationsUseCase } from '../../application/use-cases/list-notifications/list-notifications.use-case';
-import { MarkNotificationReadUseCase } from '../../application/use-cases/mark-notification-read/mark-notification-read.use-case';
-import { MarkAllNotificationsReadUseCase } from '../../application/use-cases/mark-all-notifications-read/mark-all-notifications-read.use-case';
 import { GetNotificationPreferencesUseCase } from '../../application/use-cases/get-notification-preferences/get-notification-preferences.use-case';
-import { UpdateNotificationPreferencesUseCase } from '../../application/use-cases/update-notification-preferences/update-notification-preferences.use-case';
+import { ListNotificationsUseCase } from '../../application/use-cases/list-notifications/list-notifications.use-case';
+import { MarkAllNotificationsReadUseCase } from '../../application/use-cases/mark-all-notifications-read/mark-all-notifications-read.use-case';
+import { MarkNotificationReadUseCase } from '../../application/use-cases/mark-notification-read/mark-notification-read.use-case';
 import { QueueAcademicWarningsUseCase } from '../../application/use-cases/queue-academic-warnings/queue-academic-warnings.use-case';
+import { UpdateNotificationPreferencesUseCase } from '../../application/use-cases/update-notification-preferences/update-notification-preferences.use-case';
+import { NotificationController } from './notification.controller';
 
 describe('NotificationController', () => {
   let controller: NotificationController;

@@ -1,3 +1,4 @@
+import { HttpService } from '@nestjs/axios';
 import {
   BadRequestException,
   Injectable,
@@ -5,11 +6,10 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { lastValueFrom } from 'rxjs';
-import { AxiosError, AxiosResponse } from 'axios';
 import { configureAxiosResilience } from '@repo/common';
+import { AxiosError, AxiosResponse } from 'axios';
+import { lastValueFrom } from 'rxjs';
 import {
   ExternalIdentityUser,
   IdentityProviderPort,

@@ -10,15 +10,15 @@ import { AuditPublisherPort } from './application/ports/audit-publisher.port';
 import { IdentityEventPublisherPort } from './application/ports/identity-event-publisher.port';
 import { IdentityProviderPort } from './application/ports/identity-provider.port';
 import { TokenBlacklistPort } from './application/ports/token-blacklist.port';
-import { ChangeUserRoleUseCase } from './application/use-cases/change-user-role/change-user-role.use-case';
 import { ChangePasswordUseCase } from './application/use-cases/change-password/change-password.use-case';
+import { ChangeUserRoleUseCase } from './application/use-cases/change-user-role/change-user-role.use-case';
 import { CreateIdentityUserUseCase } from './application/use-cases/create-identity-user/create-identity-user.use-case';
 import { DeleteIdentityUserUseCase } from './application/use-cases/delete-identity-user/delete-identity-user.use-case';
 import { ForgotPasswordUseCase } from './application/use-cases/forgot-password/forgot-password.use-case';
 import { GetIdentityUserUseCase } from './application/use-cases/get-identity-user/get-identity-user.use-case';
 import { ListIdentityUsersUseCase } from './application/use-cases/list-identity-users/list-identity-users.use-case';
-import { LoginUseCase } from './application/use-cases/login/login.use-case';
 import { LockUserUseCase } from './application/use-cases/lock-user/lock-user.use-case';
+import { LoginUseCase } from './application/use-cases/login/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout/logout.use-case';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token/refresh-token.use-case';
 import { ResetPasswordUseCase } from './application/use-cases/reset-password/reset-password.use-case';
@@ -35,8 +35,8 @@ import {
   AUDIT_SERVICE_CLIENT,
   RabbitMqAuditPublisher,
 } from './infrastructure/messaging/rabbitmq-audit-publisher.service';
-import { PrismaIdentityUserRepository } from './infrastructure/persistence/prisma/prisma-identity-user.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { PrismaIdentityUserRepository } from './infrastructure/persistence/prisma/prisma-identity-user.repository';
 import { AdminController } from './presentation/http/admin.controller';
 import { AuthController } from './presentation/http/auth.controller';
 

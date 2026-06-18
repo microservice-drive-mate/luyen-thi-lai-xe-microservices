@@ -12,9 +12,9 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { buildAuditRequestContext } from '@repo/common';
 import type { Request } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { ActivateCourseCommand } from '../../application/use-cases/activate-course/activate-course.command';
 import { ActivateCourseUseCase } from '../../application/use-cases/activate-course/activate-course.use-case';
@@ -24,24 +24,24 @@ import { AddLessonCommand } from '../../application/use-cases/add-lesson/add-les
 import { AddLessonUseCase } from '../../application/use-cases/add-lesson/add-lesson.use-case';
 import { AssignCourseInstructorCommand } from '../../application/use-cases/assign-course-instructor/assign-course-instructor.command';
 import { AssignCourseInstructorUseCase } from '../../application/use-cases/assign-course-instructor/assign-course-instructor.use-case';
-import { CreateCourseScheduleCommand } from '../../application/use-cases/create-course-schedule/create-course-schedule.command';
-import { CreateCourseScheduleUseCase } from '../../application/use-cases/create-course-schedule/create-course-schedule.use-case';
 import { CreateCourseCommand } from '../../application/use-cases/create-course/create-course.command';
 import { CreateCourseUseCase } from '../../application/use-cases/create-course/create-course.use-case';
-import { DeleteCourseScheduleCommand } from '../../application/use-cases/delete-course-schedule/delete-course-schedule.command';
-import { DeleteCourseScheduleUseCase } from '../../application/use-cases/delete-course-schedule/delete-course-schedule.use-case';
+import { CreateCourseScheduleCommand } from '../../application/use-cases/create-course-schedule/create-course-schedule.command';
+import { CreateCourseScheduleUseCase } from '../../application/use-cases/create-course-schedule/create-course-schedule.use-case';
 import { DeleteCourseCommand } from '../../application/use-cases/delete-course/delete-course.command';
 import { DeleteCourseUseCase } from '../../application/use-cases/delete-course/delete-course.use-case';
+import { DeleteCourseScheduleCommand } from '../../application/use-cases/delete-course-schedule/delete-course-schedule.command';
+import { DeleteCourseScheduleUseCase } from '../../application/use-cases/delete-course-schedule/delete-course-schedule.use-case';
 import { GetCourseQuery } from '../../application/use-cases/get-course/get-course.query';
 import { GetCourseUseCase } from '../../application/use-cases/get-course/get-course.use-case';
-import { ListCoursesQuery } from '../../application/use-cases/list-courses/list-courses.query';
-import { ListCoursesUseCase } from '../../application/use-cases/list-courses/list-courses.use-case';
 import { ListCourseSchedulesQuery } from '../../application/use-cases/list-course-schedules/list-course-schedules.query';
 import { ListCourseSchedulesUseCase } from '../../application/use-cases/list-course-schedules/list-course-schedules.use-case';
-import { RemoveLessonCommand } from '../../application/use-cases/remove-lesson/remove-lesson.command';
-import { RemoveLessonUseCase } from '../../application/use-cases/remove-lesson/remove-lesson.use-case';
+import { ListCoursesQuery } from '../../application/use-cases/list-courses/list-courses.query';
+import { ListCoursesUseCase } from '../../application/use-cases/list-courses/list-courses.use-case';
 import { RemoveCourseInstructorCommand } from '../../application/use-cases/remove-course-instructor/remove-course-instructor.command';
 import { RemoveCourseInstructorUseCase } from '../../application/use-cases/remove-course-instructor/remove-course-instructor.use-case';
+import { RemoveLessonCommand } from '../../application/use-cases/remove-lesson/remove-lesson.command';
+import { RemoveLessonUseCase } from '../../application/use-cases/remove-lesson/remove-lesson.use-case';
 import { UpdateCourseCommand } from '../../application/use-cases/update-course/update-course.command';
 import { UpdateCourseUseCase } from '../../application/use-cases/update-course/update-course.use-case';
 import { UpdateCourseScheduleCommand } from '../../application/use-cases/update-course-schedule/update-course-schedule.command';
@@ -52,14 +52,14 @@ import { AddCourseMaterialRequestDto } from '../dtos/add-course-material.request
 import { AddLessonRequestDto } from '../dtos/add-lesson.request.dto';
 import { AssignCourseInstructorRequestDto } from '../dtos/assign-course-instructor.request.dto';
 import {
+  CourseResponseDto,
+  ListCoursesResponseDto,
+} from '../dtos/course.response.dto';
+import {
   CreateCourseScheduleRequestDto,
   UpdateCourseScheduleRequestDto,
 } from '../dtos/course-schedule.request.dto';
 import { CourseScheduleResponseDto } from '../dtos/course-schedule.response.dto';
-import {
-  CourseResponseDto,
-  ListCoursesResponseDto,
-} from '../dtos/course.response.dto';
 import { CreateCourseRequestDto } from '../dtos/create-course.request.dto';
 import { ListCoursesQueryDto } from '../dtos/list-courses.query.dto';
 import { UpdateCourseRequestDto } from '../dtos/update-course.request.dto';

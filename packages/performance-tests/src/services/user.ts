@@ -1,8 +1,8 @@
 import { check, group, sleep } from 'k6';
-import { BASE_URL, authHeaders } from '../config';
-import { http } from '../helpers/http';
+import { authHeaders, BASE_URL } from '../config';
 import { loginAsDefaultUser } from '../helpers/auth';
 import { randomPhoneNumber, randomVietnameseName } from '../helpers/data';
+import { http } from '../helpers/http';
 
 export function testGetUserProfile(): void {
   const token = loginAsDefaultUser();

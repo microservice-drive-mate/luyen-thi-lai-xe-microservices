@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
-import { NotificationDispatcher } from '../../services/notification-dispatcher.service';
 import {
   NotificationRecord,
   NotificationType,
 } from '../../../domain/repositories/notification.repository';
+import { NotificationDispatcher } from '../../services/notification-dispatcher.service';
 import { SendExamResultCommand } from './send-exam-result.command';
 
 @Injectable()

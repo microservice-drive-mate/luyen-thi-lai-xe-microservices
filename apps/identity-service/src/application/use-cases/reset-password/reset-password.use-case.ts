@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { createAuditEvent, IUseCase } from '@repo/common';
-import { IdentityProviderPort } from '../../ports/identity-provider.port';
 import { AuditPublisherPort } from '../../ports/audit-publisher.port';
+import { IdentityProviderPort } from '../../ports/identity-provider.port';
 import { TokenBlacklistPort } from '../../ports/token-blacklist.port';
 import { ResetPasswordCommand } from './reset-password.command';
 import { ResetPasswordResult } from './reset-password.result';

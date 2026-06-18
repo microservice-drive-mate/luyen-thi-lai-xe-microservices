@@ -26,8 +26,8 @@ import {
   AUDIT_SERVICE_CLIENT,
   AuditOutboxRelayService,
 } from './infrastructure/outbox/audit-outbox-relay.service';
-import { PrismaUserProfileRepository } from './infrastructure/persistence/prisma/prisma-user-profile.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { PrismaUserProfileRepository } from './infrastructure/persistence/prisma/prisma-user-profile.repository';
 import { AdminUserController } from './presentation/http/admin-user.controller';
 import { UserController } from './presentation/http/user.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';

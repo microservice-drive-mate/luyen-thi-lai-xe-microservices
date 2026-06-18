@@ -1,6 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/analytics-client';
 import {
+  allDemoUsers,
   DEMO_COURSE_ENROLLMENTS,
   DEMO_COURSE_SCHEDULES,
   DEMO_COURSES,
@@ -10,7 +11,6 @@ import {
   DEMO_TOPIC_IDS,
   DEMO_TOPIC_NAMES,
   DEMO_USERS,
-  allDemoUsers,
   demoInstructorIdsForCourse,
   deterministicUuid,
 } from '../../../scripts/demo-seed-data';

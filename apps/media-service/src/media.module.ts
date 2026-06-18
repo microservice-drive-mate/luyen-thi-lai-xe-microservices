@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientsModule } from '@nestjs/microservices';
-import { createRabbitMqClientOptions } from '@repo/common';
 import { MulterModule } from '@nestjs/platform-express';
+import { createRabbitMqClientOptions } from '@repo/common';
 import { memoryStorage } from 'multer';
 import { EventPublisher } from './application/ports/event-publisher.port';
 import { StoragePort } from './application/ports/storage.port';
@@ -22,8 +22,8 @@ import {
   RabbitMqEventPublisher,
   USER_SERVICE_CLIENT,
 } from './infrastructure/messaging/rabbitmq-event-publisher.service';
-import { PrismaFileObjectRepository } from './infrastructure/persistence/prisma/prisma-file-object.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { PrismaFileObjectRepository } from './infrastructure/persistence/prisma/prisma-file-object.repository';
 import { AzureBlobStorageProvider } from './infrastructure/storage/azure-blob-storage.provider';
 import { AdminMediaController } from './presentation/http/admin-media.controller';
 import { MediaController } from './presentation/http/media.controller';

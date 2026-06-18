@@ -1,8 +1,8 @@
 import { check, group, sleep } from 'k6';
-import { BASE_URL, JSON_HEADERS, authHeaders } from '../config';
-import { http } from '../helpers/http';
+import { authHeaders, BASE_URL, JSON_HEADERS } from '../config';
 import { loginAsAdmin, loginAsDefaultUser } from '../helpers/auth';
 import { randomLicenseCategory, randomPagination } from '../helpers/data';
+import { http } from '../helpers/http';
 
 export function testListQuestions(): void {
   const token = loginAsDefaultUser();
@@ -15,7 +15,7 @@ export function testListQuestions(): void {
     const { page, limit } = randomPagination();
     const category = randomLicenseCategory();
     const res = http.get(
-      `${BASE_URL}/questions/practice?page=${page}&limit=${limit}&licenseCategory=${category}`,
+      `${BASE_URL}/question-service/questions/practice?page=${page}&size=${limit}&licenseCategory=${category}`,
       { headers: authHeaders(token), tags: { name: 'question_list' } },
     );
     check(res, {
@@ -29,7 +29,7 @@ export function testListQuestions(): void {
 export function testGetQuestionDetail(questionId?: string): void {
   group('Question - Detail', () => {
     const id = questionId ?? __ENV.TEST_QUESTION_ID ?? '1';
-    const res = http.get(`${BASE_URL}/questions/${id}`, {
+    const res = http.get(`${BASE_URL}/question-service/questions/${id}`, {
       headers: JSON_HEADERS,
       tags: { name: 'question_detail' },
     });
@@ -76,7 +76,7 @@ export function testSearchQuestions(): void {
     sleep(0.3);
 
     const res = http.get(
-      `${BASE_URL}/questions?search=${encodeURIComponent('đèn đỏ')}&page=1&limit=10`,
+      `${BASE_URL}/question-service/questions?search=${encodeURIComponent('đèn đỏ')}&page=1&limit=10`,
       { headers: authHeaders(token), tags: { name: 'question_search' } },
     );
     check(res, { 'Question search: 200': (r) => r.status === 200 });

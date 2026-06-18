@@ -3,8 +3,8 @@ import { IUseCase } from '@repo/common';
 import { ExamSessionNotFoundException } from '../../../domain/exceptions/exam.exceptions';
 import { ExamSessionRepository } from '../../../domain/repositories/exam-session.repository';
 import { EventPublisher } from '../../ports/event-publisher.port';
-import { finalizeExpiredSessionIfNeeded } from '../shared/finalize-expired-session';
 import { ExamSessionResult } from '../shared/exam-session.result';
+import { finalizeExpiredSessionIfNeeded } from '../shared/finalize-expired-session';
 import { SaveAnswerCommand } from './save-answer.command';
 
 @Injectable()

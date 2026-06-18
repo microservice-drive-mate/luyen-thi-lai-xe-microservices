@@ -17,7 +17,7 @@ export function randomInt(min: number, max: number): number {
 
 export function randomItem<T>(arr: readonly T[]): T {
   if (arr.length === 0) throw new Error('randomItem: empty array');
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  // biome-ignore lint/style/noNonNullAssertion: safe non-null assertion as array length is checked
   return arr[Math.floor(Math.random() * arr.length)]!;
 }
 

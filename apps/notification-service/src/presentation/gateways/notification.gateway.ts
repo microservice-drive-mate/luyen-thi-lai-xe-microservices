@@ -6,11 +6,11 @@ import {
   WebSocketGateway,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { SocketAuthPort } from '../../application/ports/socket-auth.port';
 import {
   notificationUserRoom,
   WsServerBinderPort,
 } from '../../application/ports/ws-emitter.port';
-import { SocketAuthPort } from '../../application/ports/socket-auth.port';
 
 @WebSocketGateway({
   namespace: '/notifications',

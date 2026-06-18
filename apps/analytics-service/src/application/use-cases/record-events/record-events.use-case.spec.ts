@@ -1,6 +1,6 @@
 import {
-  RecordLearningEventUseCase,
   LearningEventCommand,
+  RecordLearningEventUseCase,
 } from './record-events.use-case';
 
 describe('RecordLearningEventUseCase', () => {

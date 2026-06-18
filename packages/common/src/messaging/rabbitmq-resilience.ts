@@ -13,7 +13,7 @@ import {
   RmqOptions,
   Transport,
 } from '@nestjs/microservices';
-import { EMPTY, Observable, from } from 'rxjs';
+import { EMPTY, from, Observable } from 'rxjs';
 import { catchError, finalize, mergeMap, tap } from 'rxjs/operators';
 import {
   CORRELATION_ID_FIELD,

@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
 import crypto from 'node:crypto';
+import { Injectable, Logger } from '@nestjs/common';
 import { DeviceTokenRepository } from '../../domain/repositories/device-token.repository';
 import {
   Notification,

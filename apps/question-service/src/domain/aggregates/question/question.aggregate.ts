@@ -7,7 +7,6 @@ import {
   QuestionAlreadyDeletedException,
   QuestionVersionConflictException,
 } from '../../exceptions/question.exceptions';
-import { QuestionOption } from './question-option.entity';
 import {
   CreateQuestionProps,
   LicenseCategory,
@@ -17,6 +16,7 @@ import {
   ReconstituteQuestionProps,
   UpdateQuestionProps,
 } from './question.types';
+import { QuestionOption } from './question-option.entity';
 
 export class Question extends AggregateRoot<string> {
   private _content: string;

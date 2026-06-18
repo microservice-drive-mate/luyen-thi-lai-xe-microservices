@@ -1,14 +1,14 @@
 import { spawnSync } from 'node:child_process';
+import type { Dirent, Stats } from 'node:fs';
 import {
   existsSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
-import type { Dirent, Stats } from 'node:fs';
 import { basename, join } from 'node:path';
 
 type BackupTarget = {

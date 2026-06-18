@@ -9,17 +9,17 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { Request } from 'express';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
-  ApiForbiddenResponse,
 } from '@nestjs/swagger';
 import { buildAuditRequestContext } from '@repo/common';
+import { Request } from 'express';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { ChangeUserRoleCommand } from '../../application/use-cases/change-user-role/change-user-role.command';
 import { ChangeUserRoleUseCase } from '../../application/use-cases/change-user-role/change-user-role.use-case';
@@ -35,10 +35,10 @@ import { LockUserCommand } from '../../application/use-cases/lock-user/lock-user
 import { LockUserUseCase } from '../../application/use-cases/lock-user/lock-user.use-case';
 import { UpdateIdentityUserCommand } from '../../application/use-cases/update-identity-user/update-identity-user.command';
 import { UpdateIdentityUserUseCase } from '../../application/use-cases/update-identity-user/update-identity-user.use-case';
-import { CreateUserRequestDto } from '../dtos/create-user.request.dto';
-import { CreateUserResponseDto } from '../dtos/create-user.response.dto';
 import { ChangeRoleRequestDto } from '../dtos/change-role.request.dto';
 import { ChangeRoleResponseDto } from '../dtos/change-role.response.dto';
+import { CreateUserRequestDto } from '../dtos/create-user.request.dto';
+import { CreateUserResponseDto } from '../dtos/create-user.response.dto';
 import { DeleteIdentityUserRequestDto } from '../dtos/delete-identity-user.request.dto';
 import {
   IdentityUserResponseDto,

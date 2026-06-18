@@ -1,13 +1,13 @@
-import { EnrollStudentUseCase } from './enroll-student.use-case';
-import { EnrollStudentCommand } from './enroll-student.command';
 import { CourseStatus } from '../../../domain/aggregates/course/course.types';
 import { EnrollmentStatus } from '../../../domain/aggregates/course-enrollment/course-enrollment.types';
-import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
-import { CourseNotActiveException } from '../../../domain/exceptions/course-not-active.exception';
-import { EnrollmentAlreadyExistsException } from '../../../domain/exceptions/enrollment-already-exists.exception';
-import { StudentLicenseNotAssignedException } from '../../../domain/exceptions/student-license-not-assigned.exception';
-import { StudentLicenseMismatchException } from '../../../domain/exceptions/student-license-mismatch.exception';
 import { CourseCapacityExceededException } from '../../../domain/exceptions/course-capacity-exceeded.exception';
+import { CourseNotActiveException } from '../../../domain/exceptions/course-not-active.exception';
+import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
+import { EnrollmentAlreadyExistsException } from '../../../domain/exceptions/enrollment-already-exists.exception';
+import { StudentLicenseMismatchException } from '../../../domain/exceptions/student-license-mismatch.exception';
+import { StudentLicenseNotAssignedException } from '../../../domain/exceptions/student-license-not-assigned.exception';
+import { EnrollStudentCommand } from './enroll-student.command';
+import { EnrollStudentUseCase } from './enroll-student.use-case';
 
 describe('EnrollStudentUseCase', () => {
   let useCase: EnrollStudentUseCase;

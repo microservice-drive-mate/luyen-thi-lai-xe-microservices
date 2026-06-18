@@ -1,31 +1,31 @@
 import { sleep } from 'k6';
 import type { Options } from 'k6/options';
 import { LOAD_THRESHOLDS } from '../config';
-import { checkAllServicesHealth } from '../services/health';
+import { setupKeycloak } from '../helpers/setup';
 import {
-  testLogin,
-  testGetProfile,
-  testLoginFailure,
-} from '../services/identity';
+  testEnrollCourse,
+  testGetCourseDetail,
+  testListCourses,
+  testListEnrollments,
+} from '../services/course';
 import {
-  testListExams,
   testGetExamDetail,
+  testListExams,
   testStartExam,
   testSubmitExam,
 } from '../services/exam';
+import { checkAllServicesHealth } from '../services/health';
 import {
-  testListCourses,
-  testGetCourseDetail,
-  testEnrollCourse,
-  testListEnrollments,
-} from '../services/course';
+  testGetProfile,
+  testLogin,
+  testLoginFailure,
+} from '../services/identity';
 import {
   testEndSimulation,
   testSendTelemetry,
   testStartSimulation,
 } from '../services/simulation';
 import { testGetUserProfile } from '../services/user';
-import { setupKeycloak } from '../helpers/setup';
 
 export function setup(): void {
   setupKeycloak();

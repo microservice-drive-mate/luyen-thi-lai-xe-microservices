@@ -11,12 +11,12 @@ import {
   InvalidExamSessionException,
 } from '../../exceptions/exam.exceptions';
 import { LicenseCategory } from '../exam-template/exam-template.types';
-import { ExamSessionQuestion } from './exam-session-question.entity';
 import {
   CreateExamSessionProps,
   ExamSessionStatus,
   ReconstituteExamSessionProps,
 } from './exam-session.types';
+import { ExamSessionQuestion } from './exam-session-question.entity';
 
 export class ExamSession extends AggregateRoot<string> {
   private _status: ExamSessionStatus;

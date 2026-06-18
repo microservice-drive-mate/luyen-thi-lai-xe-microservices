@@ -13,10 +13,10 @@
  *   tsx ../../scripts/with-consul-env.ts identity-service -- prisma migrate dev --schema ./prisma/schema.prisma
  */
 
-import axios from 'axios';
 import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import axios from 'axios';
 
 const CONSUL_URL = process.env.CONSUL_URL || 'http://localhost:8500';
 const PLACEHOLDER_PATTERN = /\$\{([A-Z0-9_]+)(?::-(.*?))?\}/g;

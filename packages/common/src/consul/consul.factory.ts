@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { ConfigFactory } from '@nestjs/config';
-import { ConsulConfigService } from './consul-config.service';
 import Joi from 'joi';
+import { ConsulConfigService } from './consul-config.service';
 
 type ConfigRecord = Record<string, unknown>;
 

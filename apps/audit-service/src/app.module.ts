@@ -8,8 +8,8 @@ import {
   createRabbitMqClientOptions,
   HealthModule,
   MetricsModule,
-  TokenBlacklistModule,
   TokenBlacklistGuard,
+  TokenBlacklistModule,
 } from '@repo/common';
 import Joi from 'joi';
 import {
@@ -25,8 +25,8 @@ import { GetAuditLogUseCase } from './application/use-cases/get-audit-log.use-ca
 import { ListAuditLogsUseCase } from './application/use-cases/list-audit-logs.use-case';
 import { RecordAuditLogUseCase } from './application/use-cases/record-audit-log.use-case';
 import { AuditLogRepository } from './domain/repositories/audit-log.repository';
-import { PrismaAuditLogRepository } from './infrastructure/persistence/prisma/prisma-audit-log.repository';
 import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { PrismaAuditLogRepository } from './infrastructure/persistence/prisma/prisma-audit-log.repository';
 import { AuditLogController } from './presentation/http/audit-log.controller';
 import {
   ANALYTICS_SERVICE_CLIENT,

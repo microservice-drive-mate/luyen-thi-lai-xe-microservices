@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { LicenseCategory } from '@prisma/simulation-client';
-import { ManeuverErrorCacheService } from '../../infrastructure/cache/maneuver-error-cache.service';
 import { SimulationRepository } from '../../domain/repositories/simulation.repository';
+import { ManeuverErrorCacheService } from '../../infrastructure/cache/maneuver-error-cache.service';
 
 @Injectable()
 export class ListManeuversUseCase {

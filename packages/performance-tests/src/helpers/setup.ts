@@ -20,6 +20,7 @@ export function setupKeycloak(): void {
     return;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Keycloak API response untyped in performance-tests
   const token = (tokenRes.json() as any).access_token;
   const authHeaders = {
     Authorization: `Bearer ${token}`,
@@ -51,6 +52,7 @@ export function setupKeycloak(): void {
     return;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Keycloak API response untyped in performance-tests
   const users = usersRes.json() as any[];
   if (!users || users.length === 0) {
     console.error('[setup] Service account not found');
@@ -68,6 +70,7 @@ export function setupKeycloak(): void {
     return;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Keycloak API response untyped in performance-tests
   const adminRole = roleRes.json() as any;
 
   const assignRes = http.post(

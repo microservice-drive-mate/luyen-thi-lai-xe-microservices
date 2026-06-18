@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MessagingController } from './messaging.controller';
-import { SendWelcomeEmailUseCase } from '../../application/use-cases/send-welcome-email/send-welcome-email.use-case';
-import { SendExamResultUseCase } from '../../application/use-cases/send-exam-result/send-exam-result.use-case';
 import { SendAcademicWarningUseCase } from '../../application/use-cases/send-academic-warning/send-academic-warning.use-case';
-import { SendPasswordResetUseCase } from '../../application/use-cases/send-password-reset/send-password-reset.use-case';
 import { SendCourseUpdateUseCase } from '../../application/use-cases/send-course-update/send-course-update.use-case';
+import { SendExamResultUseCase } from '../../application/use-cases/send-exam-result/send-exam-result.use-case';
+import { SendPasswordResetUseCase } from '../../application/use-cases/send-password-reset/send-password-reset.use-case';
+import { SendWelcomeEmailUseCase } from '../../application/use-cases/send-welcome-email/send-welcome-email.use-case';
 import { NotificationMetrics } from '../../infrastructure/metrics/notification.metrics';
+import { MessagingController } from './messaging.controller';
 
 describe('MessagingController', () => {
   let controller: MessagingController;

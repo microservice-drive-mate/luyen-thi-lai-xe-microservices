@@ -1,8 +1,8 @@
 import { AggregateRoot } from '@repo/common';
-import { StudentDetail } from './student-detail.entity';
 import { LicenseTierAssignedEvent } from '../../events/license-tier-assigned.event';
 import { UserAvatarLinkedEvent } from '../../events/user-avatar-linked.event';
 import { UserNotStudentException } from '../../exceptions/user-not-student.exception';
+import { StudentDetail } from './student-detail.entity';
 import {
   CreateUserProfileProps,
   Gender,

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
-import { EventPublisher } from '../../ports/event-publisher.port';
 import { QuestionNotFoundException } from '../../../domain/exceptions/question.exceptions';
 import { QuestionRepository } from '../../../domain/repositories/question.repository';
+import { EventPublisher } from '../../ports/event-publisher.port';
 import { QuestionResult } from '../shared/question.result';
 import { DeleteQuestionCommand } from './delete-question.command';
 

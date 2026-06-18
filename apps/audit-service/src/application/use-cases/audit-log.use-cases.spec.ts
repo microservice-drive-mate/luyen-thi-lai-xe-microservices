@@ -1,5 +1,5 @@
-import { NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { NotFoundException } from '@nestjs/common';
 import { AuditEventEnvelope } from '@repo/common';
 import {
   AuditLogRecord,

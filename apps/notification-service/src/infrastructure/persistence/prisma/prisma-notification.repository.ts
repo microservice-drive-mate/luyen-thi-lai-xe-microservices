@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/notification-client';
 import {
+  AcademicWarning,
   AcademicWarningDeliveryStatus,
   AcademicWarningRecord,
-  AcademicWarning,
   Notification,
   NotificationRecord,
   NotificationRepository,

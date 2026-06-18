@@ -1,6 +1,6 @@
-import { EventPublisher } from '../../ports/event-publisher.port';
 import { ExamSession } from '../../../domain/aggregates/exam-session/exam-session.aggregate';
 import { ExamSessionRepository } from '../../../domain/repositories/exam-session.repository';
+import { EventPublisher } from '../../ports/event-publisher.port';
 
 export async function finalizeExpiredSessionIfNeeded(
   session: ExamSession,

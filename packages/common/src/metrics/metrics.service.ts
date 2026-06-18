@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
-  collectDefaultMetrics,
   Counter,
+  collectDefaultMetrics,
   Histogram,
   Registry,
 } from 'prom-client';

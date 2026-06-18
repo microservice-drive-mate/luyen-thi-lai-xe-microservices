@@ -1,10 +1,10 @@
 import { sleep } from 'k6';
 import type { Options } from 'k6/options';
-import { SMOKE_THRESHOLDS, SERVICES } from '../config';
-import { checkLiveness } from '../services/health';
-import { testLogin, testGetProfile } from '../services/identity';
-import { testListExams } from '../services/exam';
+import { SERVICES, SMOKE_THRESHOLDS } from '../config';
 import { testListCourses } from '../services/course';
+import { testListExams } from '../services/exam';
+import { checkLiveness } from '../services/health';
+import { testGetProfile, testLogin } from '../services/identity';
 
 export const options: Options = {
   vus: 3,

@@ -1,5 +1,5 @@
-import { CourseMaterialLinkedEvent } from '../../events/course-material-linked.event';
 import { CourseCreatedEvent } from '../../events/course-created.event';
+import { CourseMaterialLinkedEvent } from '../../events/course-material-linked.event';
 import { Course } from './course.aggregate';
 import { CourseStatus, LicenseCategory } from './course.types';
 

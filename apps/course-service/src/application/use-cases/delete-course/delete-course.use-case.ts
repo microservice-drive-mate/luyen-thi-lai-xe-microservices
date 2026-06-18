@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { createAuditEvent, IUseCase } from '@repo/common';
-import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
 import { CourseHasActiveEnrollmentsException } from '../../../domain/exceptions/course-has-active-enrollments.exception';
+import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
 import { CourseRepository } from '../../../domain/repositories/course.repository';
 import { CourseCachePort } from '../../ports/course-cache.port';
 import { EventPublisher } from '../../ports/event-publisher.port';

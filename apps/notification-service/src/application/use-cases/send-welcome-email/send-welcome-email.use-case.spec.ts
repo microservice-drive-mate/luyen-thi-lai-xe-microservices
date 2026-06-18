@@ -1,6 +1,6 @@
-import { SendWelcomeEmailUseCase } from './send-welcome-email.use-case';
-import { SendWelcomeEmailCommand } from './send-welcome-email.command';
 import { NotificationType } from '../../../domain/repositories/notification.repository';
+import { SendWelcomeEmailCommand } from './send-welcome-email.command';
+import { SendWelcomeEmailUseCase } from './send-welcome-email.use-case';
 
 describe('SendWelcomeEmailUseCase', () => {
   let useCase: SendWelcomeEmailUseCase;

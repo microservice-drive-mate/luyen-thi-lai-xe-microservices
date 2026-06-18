@@ -1,15 +1,14 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
-import type { NextFunction, Request, Response } from 'express';
 import {
   AccessLogInterceptor,
   ApiExceptionFilter,
   ApiResponseInterceptor,
   assertRabbitMqResilienceTopology,
-  createRabbitMqConsumerOptions,
   CorrelationIdInterceptor,
   CorrelationIdMiddleware,
+  createRabbitMqConsumerOptions,
   getRabbitMqUrl,
   installLocalDevTransientErrorGuard,
   MetricsService,
@@ -21,6 +20,7 @@ import {
   TracingMiddleware,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
+import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 
 const serviceName = 'audit-service';

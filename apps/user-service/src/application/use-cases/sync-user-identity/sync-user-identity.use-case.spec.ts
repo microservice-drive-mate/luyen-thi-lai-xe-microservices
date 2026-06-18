@@ -1,5 +1,5 @@
-import { SyncUserIdentityUseCase } from './sync-user-identity.use-case';
 import { SyncUserIdentityCommand } from './sync-user-identity.command';
+import { SyncUserIdentityUseCase } from './sync-user-identity.use-case';
 
 describe('SyncUserIdentityUseCase', () => {
   let useCase: SyncUserIdentityUseCase;

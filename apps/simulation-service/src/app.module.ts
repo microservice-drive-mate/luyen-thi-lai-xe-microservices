@@ -3,6 +3,16 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
+  AppLoggerModule,
+  ConsulConfigFactory,
+  HealthModule,
+  MetricsModule,
+  TokenBlacklistGuard,
+  TokenBlacklistModule,
+} from '@repo/common';
+import Redis from 'ioredis';
+import Joi from 'joi';
+import {
   AuthGuard,
   KeycloakConnectModule,
   KeycloakConnectOptions,
@@ -11,46 +21,36 @@ import {
   RoleGuard,
   TokenValidation,
 } from 'nest-keycloak-connect';
-import Redis from 'ioredis';
-import {
-  AppLoggerModule,
-  ConsulConfigFactory,
-  HealthModule,
-  MetricsModule,
-  TokenBlacklistModule,
-  TokenBlacklistGuard,
-} from '@repo/common';
-import Joi from 'joi';
-import {
-  GetManeuverUseCase,
-  GetSimulationSessionResultUseCase,
-  ListSimulationSessionsUseCase,
-  ListManeuverErrorsUseCase,
-  ListManeuversUseCase,
-  SaveSimulationAnswerUseCase,
-  StartSimulationSessionUseCase,
-  SubmitSimulationSessionUseCase,
-} from './application/use-cases/simulation.use-cases';
+import { EventPublisher } from './application/ports/event-publisher.port';
 import {
   EndPractice2dSessionUseCase,
   GetPractice2dSessionUseCase,
   IngestPractice2dTelemetryUseCase,
   StartPractice2dSessionUseCase,
 } from './application/use-cases/practice2d/practice2d.use-cases';
-import { EventPublisher } from './application/ports/event-publisher.port';
+import {
+  GetManeuverUseCase,
+  GetSimulationSessionResultUseCase,
+  ListManeuverErrorsUseCase,
+  ListManeuversUseCase,
+  ListSimulationSessionsUseCase,
+  SaveSimulationAnswerUseCase,
+  StartSimulationSessionUseCase,
+  SubmitSimulationSessionUseCase,
+} from './application/use-cases/simulation.use-cases';
 import { Practice2dSessionRepository } from './domain/repositories/practice2d-session.repository';
 import { SimulationRepository } from './domain/repositories/simulation.repository';
 import {
   ManeuverErrorCacheService,
   REDIS_CLIENT,
 } from './infrastructure/cache/maneuver-error-cache.service';
-import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
-import { PrismaPractice2dSessionRepository } from './infrastructure/persistence/prisma/prisma-practice2d-session.repository';
-import { PrismaSimulationRepository } from './infrastructure/persistence/prisma/prisma-simulation.repository';
 import {
   RABBITMQ_CLIENT,
   RabbitMqEventPublisher,
 } from './infrastructure/messaging/rabbitmq-event-publisher.service';
+import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
+import { PrismaPractice2dSessionRepository } from './infrastructure/persistence/prisma/prisma-practice2d-session.repository';
+import { PrismaSimulationRepository } from './infrastructure/persistence/prisma/prisma-simulation.repository';
 import { SimulationController } from './presentation/http/simulation.controller';
 
 @Module({

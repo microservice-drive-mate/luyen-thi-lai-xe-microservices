@@ -1,6 +1,6 @@
+import { mkdir, readdir, rm } from 'node:fs/promises';
+import { join, parse } from 'node:path';
 import { build } from 'esbuild';
-import { readdir, rm, mkdir } from 'fs/promises';
-import { join, parse } from 'path';
 
 const CONFIG = {
   srcDir: './src/scenarios',

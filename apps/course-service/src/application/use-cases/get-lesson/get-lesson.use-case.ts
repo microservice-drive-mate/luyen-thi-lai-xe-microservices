@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
-import { LessonNotFoundException } from '../../../domain/exceptions/lesson-not-found.exception';
 import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
+import { LessonNotFoundException } from '../../../domain/exceptions/lesson-not-found.exception';
 import { CourseRepository } from '../../../domain/repositories/course.repository';
 import { LessonResult } from '../shared/course.result';
 import { GetLessonQuery } from './get-lesson.query';

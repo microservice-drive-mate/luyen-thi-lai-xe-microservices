@@ -1,9 +1,9 @@
 import { check, group, sleep } from 'k6';
-import { BASE_URL, JSON_HEADERS, authHeaders } from '../config';
-import { http } from '../helpers/http';
+import { authHeaders, BASE_URL, JSON_HEADERS } from '../config';
+import { measureSocketIoEventLatency } from '../helpers/async';
 import { loginAsDefaultUser } from '../helpers/auth';
 import { generateExamSubmission, randomPagination } from '../helpers/data';
-import { measureSocketIoEventLatency } from '../helpers/async';
+import { http } from '../helpers/http';
 
 function isExamResultNotification(payload: unknown): boolean {
   const notification = (payload as { notification?: { eventType?: string } })
@@ -65,15 +65,39 @@ export function testStartExam(examId?: string): string | null {
   }
 
   let sessionId: string | null = null;
-  const id = examId ?? __ENV.TEST_EXAM_ID ?? '1';
+  let id = examId ?? __ENV.TEST_EXAM_ID;
+
+  if (!id) {
+    // Fetch available templates dynamically
+    const res = http.get(`${BASE_URL}/exams/available?page=1&size=1`, {
+      headers: authHeaders(token),
+    });
+    if (res.status === 200) {
+      try {
+        const body = JSON.parse(res.body as string);
+        id = body.data?.items?.[0]?.id ?? null;
+      } catch (e) {
+        console.error('[exam] Failed to parse available exams response', e);
+      }
+    }
+  }
+
+  if (!id) {
+    console.error('[exam] Skip start exam: no valid template ID found');
+    return null;
+  }
 
   group('Exam - Start', () => {
     sleep(0.3);
 
-    const res = http.post(`${BASE_URL}/exams/${id}/start`, null, {
-      headers: authHeaders(token),
-      tags: { name: 'exam_start' },
-    });
+    const res = http.post(
+      `${BASE_URL}/exams/sessions`,
+      JSON.stringify({ templateId: id }),
+      {
+        headers: authHeaders(token),
+        tags: { name: 'exam_start' },
+      },
+    );
     check(res, {
       'Exam start: 200/201': (r) => r.status === 200 || r.status === 201,
       'Exam start: <2s': (r) => r.timings.duration < 2000,
@@ -137,7 +161,28 @@ export function testFullExamFlow(examId?: string): void {
     return;
   }
 
-  const id = examId ?? __ENV.TEST_EXAM_ID ?? '1';
+  let id = examId ?? __ENV.TEST_EXAM_ID;
+
+  if (!id) {
+    // Fetch available templates dynamically
+    const res = http.get(`${BASE_URL}/exams/available?page=1&size=1`, {
+      headers: authHeaders(token),
+    });
+    if (res.status === 200) {
+      try {
+        const body = JSON.parse(res.body as string);
+        id = body.data?.items?.[0]?.id ?? null;
+      } catch (e) {
+        console.error('[exam] Failed to parse available exams for flow', e);
+      }
+    }
+  }
+
+  if (!id) {
+    console.error('[exam] Skip full exam flow: no valid template ID found');
+    return;
+  }
+
   let sessionId: string | null = null;
 
   group('Exam - Full Flow: Browse & Start', () => {
@@ -148,10 +193,14 @@ export function testFullExamFlow(examId?: string): void {
     check(listRes, { 'Flow list: 200': (r) => r.status === 200 });
     sleep(1);
 
-    const startRes = http.post(`${BASE_URL}/exams/${id}/start`, null, {
-      headers: authHeaders(token),
-      tags: { name: 'exam_flow_start' },
-    });
+    const startRes = http.post(
+      `${BASE_URL}/exams/sessions`,
+      JSON.stringify({ templateId: id }),
+      {
+        headers: authHeaders(token),
+        tags: { name: 'exam_flow_start' },
+      },
+    );
     check(startRes, {
       'Flow start: 200/201': (r) => r.status === 200 || r.status === 201,
     });

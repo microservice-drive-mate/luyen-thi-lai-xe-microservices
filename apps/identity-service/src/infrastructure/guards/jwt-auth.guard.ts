@@ -5,11 +5,11 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { META_UNPROTECTED } from 'nest-keycloak-connect';
-import * as jwt from 'jsonwebtoken';
+import { Reflector } from '@nestjs/core';
 import { resilientFetch } from '@repo/common';
+import * as jwt from 'jsonwebtoken';
+import { META_UNPROTECTED } from 'nest-keycloak-connect';
 
 interface KeycloakRealmInfo {
   public_key: string;

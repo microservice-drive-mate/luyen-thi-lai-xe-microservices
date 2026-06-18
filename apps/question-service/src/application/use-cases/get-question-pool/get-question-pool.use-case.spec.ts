@@ -1,7 +1,7 @@
-import { GetQuestionPoolUseCase } from './get-question-pool.use-case';
-import { GetQuestionPoolQuery } from './get-question-pool.query';
-import { QuestionPoolResult } from '../shared/question.result';
 import { LicenseCategory } from '../../../domain/aggregates/question/question.types';
+import { QuestionPoolResult } from '../shared/question.result';
+import { GetQuestionPoolQuery } from './get-question-pool.query';
+import { GetQuestionPoolUseCase } from './get-question-pool.use-case';
 
 describe('GetQuestionPoolUseCase', () => {
   let useCase: GetQuestionPoolUseCase;

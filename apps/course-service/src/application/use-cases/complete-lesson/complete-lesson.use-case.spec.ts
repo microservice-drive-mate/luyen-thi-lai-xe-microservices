@@ -1,8 +1,8 @@
-import { CompleteLessonUseCase } from './complete-lesson.use-case';
-import { CompleteLessonCommand } from './complete-lesson.command';
 import { EnrollmentStatus } from '../../../domain/aggregates/course-enrollment/course-enrollment.types';
 import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
 import { EnrollmentNotFoundException } from '../../../domain/exceptions/enrollment-not-found.exception';
+import { CompleteLessonCommand } from './complete-lesson.command';
+import { CompleteLessonUseCase } from './complete-lesson.use-case';
 
 describe('CompleteLessonUseCase', () => {
   let useCase: CompleteLessonUseCase;

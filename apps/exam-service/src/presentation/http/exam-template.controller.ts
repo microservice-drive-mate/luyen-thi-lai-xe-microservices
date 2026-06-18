@@ -12,9 +12,9 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { buildAuditRequestContext } from '@repo/common';
 import type { Request } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { CreateTemplateCommand } from '../../application/use-cases/create-template/create-template.command';
 import { CreateTemplateUseCase } from '../../application/use-cases/create-template/create-template.use-case';

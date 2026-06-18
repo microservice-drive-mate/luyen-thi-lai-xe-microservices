@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
-import { EventPublisher } from '../../ports/event-publisher.port';
 import { Question } from '../../../domain/aggregates/question/question.aggregate';
 import {
   QuestionDuplicateException,
@@ -8,6 +7,7 @@ import {
 } from '../../../domain/exceptions/question.exceptions';
 import { QuestionRepository } from '../../../domain/repositories/question.repository';
 import { QuestionTopicRepository } from '../../../domain/repositories/question-topic.repository';
+import { EventPublisher } from '../../ports/event-publisher.port';
 import { QuestionResult } from '../shared/question.result';
 import { normalizeQuestionContent } from '../shared/question-signature';
 import { CreateQuestionCommand } from './create-question.command';

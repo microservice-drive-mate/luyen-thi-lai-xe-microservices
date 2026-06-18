@@ -1,10 +1,11 @@
-import { SaveAnswerUseCase } from './save-answer.use-case';
-import { SaveAnswerCommand } from './save-answer.command';
 import { ExamSessionNotFoundException } from '../../../domain/exceptions/exam.exceptions';
+import { SaveAnswerCommand } from './save-answer.command';
+import { SaveAnswerUseCase } from './save-answer.use-case';
 
 jest.mock('../shared/finalize-expired-session', () => ({
   finalizeExpiredSessionIfNeeded: jest.fn(),
 }));
+
 import { finalizeExpiredSessionIfNeeded } from '../shared/finalize-expired-session';
 
 describe('SaveAnswerUseCase', () => {

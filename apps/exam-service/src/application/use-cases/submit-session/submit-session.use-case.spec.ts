@@ -1,7 +1,7 @@
-import { SubmitSessionUseCase } from './submit-session.use-case';
-import { SubmitSessionCommand } from './submit-session.command';
-import { ExamSessionNotFoundException } from '../../../domain/exceptions/exam.exceptions';
 import { ExamSessionStatus } from '../../../domain/aggregates/exam-session/exam-session.types';
+import { ExamSessionNotFoundException } from '../../../domain/exceptions/exam.exceptions';
+import { SubmitSessionCommand } from './submit-session.command';
+import { SubmitSessionUseCase } from './submit-session.use-case';
 
 describe('SubmitSessionUseCase', () => {
   let useCase: SubmitSessionUseCase;

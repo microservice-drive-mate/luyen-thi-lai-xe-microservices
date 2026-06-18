@@ -7,7 +7,6 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import { Request } from 'express';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -16,8 +15,8 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { buildAuditRequestContext } from '@repo/common';
-import { Public, Roles } from 'nest-keycloak-connect';
-import { AuthenticatedUser } from 'nest-keycloak-connect';
+import { Request } from 'express';
+import { AuthenticatedUser, Public, Roles } from 'nest-keycloak-connect';
 import { ChangePasswordCommand } from '../../application/use-cases/change-password/change-password.command';
 import { ChangePasswordUseCase } from '../../application/use-cases/change-password/change-password.use-case';
 import { ForgotPasswordCommand } from '../../application/use-cases/forgot-password/forgot-password.command';

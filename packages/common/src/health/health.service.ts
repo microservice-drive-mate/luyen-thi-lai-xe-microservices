@@ -1,7 +1,7 @@
+import * as net from 'node:net';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import * as net from 'node:net';
 import { HEALTH_MODULE_OPTIONS } from './health.constants';
 
 export type HealthDependencyKind = 'url' | 'http';

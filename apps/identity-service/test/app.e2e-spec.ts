@@ -3,10 +3,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ApiResponseInterceptor } from '@repo/common';
 import type { NextFunction, Request, Response } from 'express';
 import request from 'supertest';
-import { AdminController } from '../src/presentation/http/admin.controller';
-import { AuthController } from '../src/presentation/http/auth.controller';
-import { ChangeUserRoleUseCase } from '../src/application/use-cases/change-user-role/change-user-role.use-case';
 import { ChangePasswordUseCase } from '../src/application/use-cases/change-password/change-password.use-case';
+import { ChangeUserRoleUseCase } from '../src/application/use-cases/change-user-role/change-user-role.use-case';
 import { CreateIdentityUserUseCase } from '../src/application/use-cases/create-identity-user/create-identity-user.use-case';
 import { DeleteIdentityUserUseCase } from '../src/application/use-cases/delete-identity-user/delete-identity-user.use-case';
 import { ForgotPasswordUseCase } from '../src/application/use-cases/forgot-password/forgot-password.use-case';
@@ -18,6 +16,8 @@ import { LogoutUseCase } from '../src/application/use-cases/logout/logout.use-ca
 import { RefreshTokenUseCase } from '../src/application/use-cases/refresh-token/refresh-token.use-case';
 import { ResetPasswordUseCase } from '../src/application/use-cases/reset-password/reset-password.use-case';
 import { UpdateIdentityUserUseCase } from '../src/application/use-cases/update-identity-user/update-identity-user.use-case';
+import { AdminController } from '../src/presentation/http/admin.controller';
+import { AuthController } from '../src/presentation/http/auth.controller';
 
 describe('Identity service HTTP contract (e2e smoke)', () => {
   let app: INestApplication;

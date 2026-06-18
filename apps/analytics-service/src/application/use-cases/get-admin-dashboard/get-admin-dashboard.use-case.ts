@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
-import { DashboardMetricCalculator } from '../../../domain/dashboard/dashboard-metric.calculator';
 import { AdminDashboard } from '../../../domain/dashboard/admin-dashboard.types';
+import { DashboardMetricCalculator } from '../../../domain/dashboard/dashboard-metric.calculator';
 import { AdminDashboardRepository } from '../../../domain/repositories/admin-dashboard.repository';
 import { ProgressCacheService } from '../../../infrastructure/cache/progress-cache.service';
 import { GetAdminDashboardQuery } from './get-admin-dashboard.query';

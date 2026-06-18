@@ -16,9 +16,9 @@ import {
   PolicyEnforcementMode,
   TokenValidation,
 } from 'nest-keycloak-connect';
+import { IdentityModule } from './identity.module';
 import { JwtAuthGuard } from './infrastructure/guards/jwt-auth.guard';
 import { JwtRoleGuard } from './infrastructure/guards/jwt-role.guard';
-import { IdentityModule } from './identity.module';
 
 @Module({
   imports: [

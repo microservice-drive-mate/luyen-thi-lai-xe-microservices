@@ -8,10 +8,10 @@ import { AddCourseMaterialUseCase } from '../src/application/use-cases/add-cours
 import { AddLessonUseCase } from '../src/application/use-cases/add-lesson/add-lesson.use-case';
 import { AssignCourseInstructorUseCase } from '../src/application/use-cases/assign-course-instructor/assign-course-instructor.use-case';
 import { CompleteLessonUseCase } from '../src/application/use-cases/complete-lesson/complete-lesson.use-case';
-import { CreateCourseScheduleUseCase } from '../src/application/use-cases/create-course-schedule/create-course-schedule.use-case';
 import { CreateCourseUseCase } from '../src/application/use-cases/create-course/create-course.use-case';
-import { DeleteCourseScheduleUseCase } from '../src/application/use-cases/delete-course-schedule/delete-course-schedule.use-case';
+import { CreateCourseScheduleUseCase } from '../src/application/use-cases/create-course-schedule/create-course-schedule.use-case';
 import { DeleteCourseUseCase } from '../src/application/use-cases/delete-course/delete-course.use-case';
+import { DeleteCourseScheduleUseCase } from '../src/application/use-cases/delete-course-schedule/delete-course-schedule.use-case';
 import { EnrollStudentUseCase } from '../src/application/use-cases/enroll-student/enroll-student.use-case';
 import { GetCourseUseCase } from '../src/application/use-cases/get-course/get-course.use-case';
 import { GetEnrollmentUseCase } from '../src/application/use-cases/get-enrollment/get-enrollment.use-case';
@@ -24,13 +24,13 @@ import { RemoveCourseInstructorUseCase } from '../src/application/use-cases/remo
 import { RemoveLessonUseCase } from '../src/application/use-cases/remove-lesson/remove-lesson.use-case';
 import { ResetEnrollmentProgressUseCase } from '../src/application/use-cases/reset-enrollment-progress/reset-enrollment-progress.use-case';
 import { UnenrollStudentUseCase } from '../src/application/use-cases/unenroll-student/unenroll-student.use-case';
-import { UpdateCourseScheduleUseCase } from '../src/application/use-cases/update-course-schedule/update-course-schedule.use-case';
 import { UpdateCourseUseCase } from '../src/application/use-cases/update-course/update-course.use-case';
+import { UpdateCourseScheduleUseCase } from '../src/application/use-cases/update-course-schedule/update-course-schedule.use-case';
 import { UpdateLessonUseCase } from '../src/application/use-cases/update-lesson/update-lesson.use-case';
 import { AdminCourseController } from '../src/presentation/http/admin-course.controller';
+import { AdminEnrollmentController } from '../src/presentation/http/admin-enrollment.controller';
 import { CourseController } from '../src/presentation/http/course.controller';
 import { EnrollmentController } from '../src/presentation/http/enrollment.controller';
-import { AdminEnrollmentController } from '../src/presentation/http/admin-enrollment.controller';
 
 describe('Course service HTTP contract (e2e smoke)', () => {
   let app: INestApplication;

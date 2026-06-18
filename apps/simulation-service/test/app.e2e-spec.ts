@@ -4,6 +4,12 @@ import { ApiResponseInterceptor } from '@repo/common';
 import type { NextFunction, Request, Response } from 'express';
 import request from 'supertest';
 import {
+  EndPractice2dSessionUseCase,
+  GetPractice2dSessionUseCase,
+  IngestPractice2dTelemetryUseCase,
+  StartPractice2dSessionUseCase,
+} from '../src/application/use-cases/practice2d/practice2d.use-cases';
+import {
   GetManeuverUseCase,
   GetSimulationSessionResultUseCase,
   ListManeuverErrorsUseCase,
@@ -13,12 +19,6 @@ import {
   StartSimulationSessionUseCase,
   SubmitSimulationSessionUseCase,
 } from '../src/application/use-cases/simulation.use-cases';
-import {
-  EndPractice2dSessionUseCase,
-  GetPractice2dSessionUseCase,
-  IngestPractice2dTelemetryUseCase,
-  StartPractice2dSessionUseCase,
-} from '../src/application/use-cases/practice2d/practice2d.use-cases';
 import { SimulationController } from '../src/presentation/http/simulation.controller';
 
 describe('Simulation service HTTP contract (e2e smoke)', () => {

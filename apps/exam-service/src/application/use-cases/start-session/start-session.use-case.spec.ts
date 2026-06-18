@@ -1,12 +1,11 @@
-import { StartSessionUseCase } from './start-session.use-case';
-import { StartSessionCommand } from './start-session.command';
 import {
-  ExamTemplateNotFoundException,
   ExamTemplateInactiveException,
-  StudentProfileInvalidException,
+  ExamTemplateNotFoundException,
   StudentLicenseMismatchException,
-  InsufficientQuestionPoolException,
+  StudentProfileInvalidException,
 } from '../../../domain/exceptions/exam.exceptions';
+import { StartSessionCommand } from './start-session.command';
+import { StartSessionUseCase } from './start-session.use-case';
 
 describe('StartSessionUseCase', () => {
   let useCase: StartSessionUseCase;

@@ -10,14 +10,14 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { buildAuditRequestContext } from '@repo/common';
-import type { Request } from 'express';
 import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { buildAuditRequestContext } from '@repo/common';
+import type { Request } from 'express';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { AssignLicenseTierCommand } from '../../application/use-cases/assign-license-tier/assign-license-tier.command';
 import { AssignLicenseTierUseCase } from '../../application/use-cases/assign-license-tier/assign-license-tier.use-case';
@@ -41,14 +41,14 @@ import { ListUsersQueryDto } from '../dtos/list-users.query.dto';
 import { LockUserRequestDto } from '../dtos/lock-user.request.dto';
 import { UpdateUserRequestDto } from '../dtos/update-user.request.dto';
 import {
+  CreateUserDocumentRequestDto,
+  UserDocumentResponseDto,
+} from '../dtos/user-document.dto';
+import {
   CreateUserProfileResponseDto,
   PaginatedUsersResponseDto,
   UserProfileResponseDto,
 } from '../dtos/user-profile.response.dto';
-import {
-  CreateUserDocumentRequestDto,
-  UserDocumentResponseDto,
-} from '../dtos/user-document.dto';
 
 interface JwtPayload {
   sub: string;
