@@ -368,17 +368,21 @@ export class RabbitMqRetryInterceptor implements NestInterceptor {
       return EMPTY;
     }
 
+    let settled = false;
+    const recordSuccess = (): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (messageKey) {
+        markProcessedMessage(messageKey);
+      }
+      this.metricsService?.recordRabbitMqMessage(this.options.queue, 'success');
+      this.ack(context);
+    };
+
     return next.handle().pipe(
-      tap(() => {
-        if (messageKey) {
-          markProcessedMessage(messageKey);
-        }
-        this.metricsService?.recordRabbitMqMessage(
-          this.options.queue,
-          'success',
-        );
-        this.ack(context);
-      }),
+      tap({ next: recordSuccess, complete: recordSuccess }),
       catchError((error: unknown) =>
         from(this.retryOrDeadLetter(context, error)).pipe(
           mergeMap(() => EMPTY),

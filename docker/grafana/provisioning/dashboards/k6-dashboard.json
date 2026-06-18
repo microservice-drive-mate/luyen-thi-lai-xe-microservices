@@ -52,7 +52,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 1
       },
@@ -106,8 +106,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
+        "w": 3,
+        "x": 3,
         "y": 1
       },
       "id": 2,
@@ -161,8 +161,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 8,
+        "w": 3,
+        "x": 6,
         "y": 1
       },
       "id": 3,
@@ -207,29 +207,124 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 12,
+        "w": 3,
+        "x": 9,
         "y": 1
       },
       "id": 4,
       "options": {
         "reduceOptions": {
-          "calcs": ["last"]
+          "calcs": ["lastNotNull"]
         },
         "orientation": "auto",
         "textMode": "auto",
         "colorMode": "background"
       },
-      "title": "Throughput (req/s)",
+      "title": "Current Throughput (Last)",
       "type": "stat",
       "targets": [
         {
           "datasource": "InfluxDB_K6",
-          "query": "SELECT derivative(\"value\", 1s) FROM \"http_reqs\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/",
+          "query": "SELECT sum(\"value\") FROM \"http_reqs\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time(1s) fill(null)",
           "rawQuery": true,
           "refId": "A"
         }
-      ]
+      ],
+      "description": "Latest non-null K6 HTTP throughput in the selected time range; useful while the test is running."
+    },
+    {
+      "datasource": "InfluxDB_K6",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "reqps",
+          "noValue": "0"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 1
+      },
+      "id": 1003,
+      "options": {
+        "reduceOptions": {
+          "calcs": ["mean"]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "title": "Average Throughput (Mean)",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": "InfluxDB_K6",
+          "query": "SELECT sum(\"value\") FROM \"http_reqs\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time(1s) fill(null)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "description": "Mean K6 HTTP throughput across the selected test window; useful for post-run reporting."
+    },
+    {
+      "datasource": "InfluxDB_K6",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "reqps",
+          "noValue": "0"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 1
+      },
+      "id": 1004,
+      "options": {
+        "reduceOptions": {
+          "calcs": ["max"]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "title": "Peak Throughput (Max)",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": "InfluxDB_K6",
+          "query": "SELECT sum(\"value\") FROM \"http_reqs\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time(1s) fill(null)",
+          "rawQuery": true,
+          "refId": "A"
+        }
+      ],
+      "description": "Highest K6 HTTP throughput bucket in the selected time range; useful for peak capacity evidence."
     },
     {
       "datasource": "InfluxDB_K6",
@@ -253,8 +348,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 16,
+        "w": 3,
+        "x": 18,
         "y": 1
       },
       "id": 5,
@@ -299,14 +394,14 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 20,
+        "w": 3,
+        "x": 21,
         "y": 1
       },
       "id": 6,
       "options": {
         "reduceOptions": {
-          "calcs": ["sum"]
+          "calcs": ["lastNotNull"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -317,7 +412,7 @@
       "targets": [
         {
           "datasource": "InfluxDB_K6",
-          "query": "SELECT max(\"value\") FROM \"http_reqs\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/",
+          "query": "SELECT sum(\"value\") FROM \"http_reqs\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/",
           "rawQuery": true,
           "refId": "A"
         }
@@ -426,7 +521,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "1000 * histogram_quantile(0.95, sum(rate(rabbitmq_consumer_duration_seconds_bucket[$__rate_interval])) by (le))",
+          "expr": "1000 * histogram_quantile(0.95, sum(rate(rabbitmq_consumer_duration_seconds_bucket[$__rate_interval])) by (le)) or vector(0)",
           "refId": "A"
         }
       ],
@@ -463,12 +558,12 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(rabbitmq_global_messages_published_total[$__rate_interval])) or sum(rate(rabbitmq_channel_messages_published_total[$__rate_interval]))",
+          "expr": "(sum(rate(rabbitmq_global_messages_published_total[$__rate_interval])) or sum(rate(rabbitmq_channel_messages_published_total[$__rate_interval]))) or vector(0)",
           "legendFormat": "published",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(rabbitmq_global_messages_delivered_consume_manual_ack_total[$__rate_interval])) or sum(rate(rabbitmq_channel_messages_delivered_total[$__rate_interval]))",
+          "expr": "(sum(rate(rabbitmq_global_messages_delivered_consume_manual_ack_total[$__rate_interval])) or sum(rate(rabbitmq_channel_messages_delivered_total[$__rate_interval]))) or vector(0)",
           "legendFormat": "delivered",
           "refId": "B"
         }
@@ -505,9 +600,19 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (outcome) (rate(rabbitmq_messages_processed_total[$__rate_interval]))",
-          "legendFormat": "{{outcome}}",
+          "expr": "sum(rate(rabbitmq_messages_processed_total{outcome=\"success\"}[$__rate_interval])) or vector(0)",
+          "legendFormat": "success",
           "refId": "A"
+        },
+        {
+          "expr": "sum(rate(rabbitmq_messages_processed_total{outcome=\"retry\"}[$__rate_interval])) or vector(0)",
+          "legendFormat": "retry",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(rabbitmq_messages_processed_total{outcome=\"dlq\"}[$__rate_interval])) or vector(0)",
+          "legendFormat": "dlq",
+          "refId": "C"
         }
       ]
     },
@@ -649,7 +754,7 @@
         {
           "alias": "req/s",
           "datasource": "InfluxDB_K6",
-          "query": "SELECT derivative(max(\"value\"), 1s) FROM \"http_reqs\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time($__interval) fill(null)",
+          "query": "SELECT sum(\"value\") FROM \"http_reqs\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time(1s) fill(null)",
           "rawQuery": true,
           "refId": "A"
         }
@@ -847,7 +952,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "short",
+          "unit": "reqps",
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 10
@@ -867,14 +972,14 @@
         {
           "alias": "429 status",
           "datasource": "InfluxDB_K6",
-          "query": "SELECT derivative(sum(\"value\"), 1s) FROM \"http_reqs\" WHERE \"status\" = '429' AND \"name\" =~ /^security_/ AND $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time($__interval) fill(0)",
+          "query": "SELECT sum(\"value\") FROM \"http_reqs\" WHERE \"status\" = '429' AND \"name\" =~ /^security_/ AND $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time(1s) fill(0)",
           "rawQuery": true,
           "refId": "A"
         },
         {
           "alias": "rate_limited_requests counter",
           "datasource": "InfluxDB_K6",
-          "query": "SELECT derivative(sum(\"value\"), 1s) FROM \"rate_limited_requests\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time($__interval) fill(0)",
+          "query": "SELECT sum(\"value\") FROM \"rate_limited_requests\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time(1s) fill(0)",
           "rawQuery": true,
           "refId": "B"
         }
@@ -888,7 +993,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "short",
+          "unit": "reqps",
           "custom": {
             "lineWidth": 2,
             "fillOpacity": 10
@@ -908,21 +1013,21 @@
         {
           "alias": "401 status",
           "datasource": "InfluxDB_K6",
-          "query": "SELECT derivative(sum(\"value\"), 1s) FROM \"http_reqs\" WHERE \"status\" = '401' AND \"name\" =~ /^security_/ AND $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time($__interval) fill(0)",
+          "query": "SELECT sum(\"value\") FROM \"http_reqs\" WHERE \"status\" = '401' AND \"name\" =~ /^security_/ AND $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time(1s) fill(0)",
           "rawQuery": true,
           "refId": "A"
         },
         {
           "alias": "403 status",
           "datasource": "InfluxDB_K6",
-          "query": "SELECT derivative(sum(\"value\"), 1s) FROM \"http_reqs\" WHERE \"status\" = '403' AND \"name\" =~ /^security_/ AND $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time($__interval) fill(0)",
+          "query": "SELECT sum(\"value\") FROM \"http_reqs\" WHERE \"status\" = '403' AND \"name\" =~ /^security_/ AND $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time(1s) fill(0)",
           "rawQuery": true,
           "refId": "B"
         },
         {
           "alias": "blocked_requests counter",
           "datasource": "InfluxDB_K6",
-          "query": "SELECT derivative(sum(\"value\"), 1s) FROM \"blocked_requests\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time($__interval) fill(0)",
+          "query": "SELECT sum(\"value\") FROM \"blocked_requests\" WHERE $timeFilter AND \"scenario\" =~ /^$scenario$/ GROUP BY time(1s) fill(0)",
           "rawQuery": true,
           "refId": "C"
         }
@@ -1016,7 +1121,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "K6 Load Testing - Luyen Thi Lai Xe",
+  "title": "K6 Load Testing - Drive Mate",
   "uid": "k6-luyen-thi-lai-xe",
-  "version": 2
+  "version": 3
 }

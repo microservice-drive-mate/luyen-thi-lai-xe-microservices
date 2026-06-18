@@ -81,6 +81,7 @@ async function bootstrap() {
         url: rabbitmqUrl,
         queue: rabbitmqQueue,
       }),
+      { deferInitialization: true },
     )
     .useGlobalInterceptors(
       new CorrelationIdInterceptor(),

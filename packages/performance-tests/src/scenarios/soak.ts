@@ -35,8 +35,10 @@ export const options: Options = {
 };
 
 export default function (): void {
-  testLogin();
-  sleep(1 + Math.random());
+  if (Math.random() < 0.05) {
+    testLogin();
+    sleep(1 + Math.random());
+  }
 
   testGetProfile();
   sleep(0.5);

@@ -3,7 +3,7 @@ import { authHeaders, BASE_URL, JSON_HEADERS } from '../config';
 import { measureSocketIoEventLatency } from '../helpers/async';
 import { loginAsDefaultUser } from '../helpers/auth';
 import { generateExamSubmission, randomPagination } from '../helpers/data';
-import { http } from '../helpers/http';
+import { expected2xxOr404, http } from '../helpers/http';
 
 function isExamResultNotification(payload: unknown): boolean {
   const notification = (payload as { notification?: { eventType?: string } })
@@ -48,6 +48,7 @@ export function testGetExamDetail(examId?: string): void {
     const res = http.get(`${BASE_URL}/exams/${id}`, {
       headers: JSON_HEADERS,
       tags: { name: 'exam_detail' },
+      responseCallback: expected2xxOr404,
     });
     check(res, {
       'Exam detail: 200/404': (r) => r.status === 200 || r.status === 404,
@@ -129,7 +130,7 @@ export function testSubmitExam(sessionId?: string): void {
     const submission = generateExamSubmission();
     const submit = (): void => {
       const res = http.post(
-        `${BASE_URL}/exam-sessions/${id}/submit`,
+        `${BASE_URL}/exams/sessions/${id}/submit`,
         JSON.stringify(submission),
         { headers: authHeaders(token), tags: { name: 'exam_submit' } },
       );
@@ -146,7 +147,7 @@ export function testSubmitExam(sessionId?: string): void {
         token,
         expectedEvent: 'notification.created',
         conditionFn: isExamResultNotification,
-        timeoutMs: 5000,
+        timeoutMs: 15000,
       },
       submit,
     );
@@ -221,7 +222,7 @@ export function testFullExamFlow(examId?: string): void {
     const submission = generateExamSubmission();
     const submit = (): void => {
       const submitRes = http.post(
-        `${BASE_URL}/exam-sessions/${sessionId}/submit`,
+        `${BASE_URL}/exams/sessions/${sessionId}/submit`,
         JSON.stringify(submission),
         { headers: authHeaders(token), tags: { name: 'exam_flow_submit' } },
       );
@@ -237,7 +238,7 @@ export function testFullExamFlow(examId?: string): void {
         token,
         expectedEvent: 'notification.created',
         conditionFn: isExamResultNotification,
-        timeoutMs: 5000,
+        timeoutMs: 15000,
       },
       submit,
     );

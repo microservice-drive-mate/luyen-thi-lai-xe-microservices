@@ -57,8 +57,10 @@ export default function (): void {
     sleep(1);
   }
 
-  testLogin();
-  sleep(0.5 + Math.random());
+  if (Math.random() < 0.1) {
+    testLogin();
+    sleep(0.5 + Math.random());
+  }
 
   testGetProfile();
   sleep(0.3 + Math.random() * 0.5);

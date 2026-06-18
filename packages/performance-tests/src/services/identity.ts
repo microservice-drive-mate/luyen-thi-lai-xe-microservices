@@ -2,7 +2,7 @@ import { check, group, sleep } from 'k6';
 import { authHeaders, BASE_URL, JSON_HEADERS } from '../config';
 import { login, loginAsDefaultUser } from '../helpers/auth';
 import { generateRegistrationData } from '../helpers/data';
-import { http } from '../helpers/http';
+import { expected2xxOr400Or401Or403, http } from '../helpers/http';
 
 export function testLogin(): void {
   group('Identity - Login', () => {
@@ -44,7 +44,11 @@ export function testLoginFailure(): void {
         username: 'wrong@example.com',
         password: 'WrongPass123',
       }),
-      { headers: JSON_HEADERS, tags: { name: 'identity_login_fail' } },
+      {
+        headers: JSON_HEADERS,
+        tags: { name: 'identity_login_fail' },
+        responseCallback: expected2xxOr400Or401Or403,
+      },
     );
 
     check(res, {

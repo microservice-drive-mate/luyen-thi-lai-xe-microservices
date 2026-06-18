@@ -30,6 +30,9 @@ export function measureSocketIoEventLatency(
   let eventReceived = false;
   let triggered = false;
   let startedAt = 0;
+  const namespaceConnectPacket = `40${namespace}`;
+  const namespaceEventPacket = `42${namespace},`;
+  const debugWs = __ENV.K6_WS_DEBUG === 'true';
 
   const triggerOnce = (): void => {
     if (triggered) return;
@@ -49,15 +52,24 @@ export function measureSocketIoEventLatency(
       socket.on('message', (msg) => {
         if (typeof msg !== 'string') return;
 
+        if (debugWs && (msg.startsWith('40') || msg.startsWith('42'))) {
+          console.log(`[ws] ${msg}`);
+        }
+
         if (msg === '2') {
           socket.send('3');
           return;
         }
 
-        if (!msg.startsWith(`42${namespace},`)) return;
+        if (msg.startsWith(namespaceConnectPacket)) {
+          triggerOnce();
+          return;
+        }
+
+        if (!msg.startsWith(namespaceEventPacket)) return;
 
         try {
-          const payloadText = msg.substring(`42${namespace},`.length);
+          const payloadText = msg.substring(namespaceEventPacket.length);
           const [eventName, payload] = JSON.parse(payloadText) as [
             string,
             unknown,

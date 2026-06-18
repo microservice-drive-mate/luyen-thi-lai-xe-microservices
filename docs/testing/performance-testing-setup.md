@@ -124,6 +124,35 @@ Nếu panel RabbitMQ consumer trống, kiểm tra:
 - Service consumer đã xử lý message sau khi Prometheus bắt đầu scrape.
 - Endpoint `/metrics` của service có `rabbitmq_consumer_duration_seconds` và `rabbitmq_messages_processed_total`.
 
+Troubleshooting RabbitMQ consumer:
+
+- Nếu `/metrics` chỉ có `# HELP/# TYPE` cho `rabbitmq_messages_processed_total` nhưng không có sample line, Prometheus/Grafana chưa phải nguyên nhân. App chưa ghi consumer metric.
+- Nếu RabbitMQ Management hiển thị `messages_unacknowledged` bằng `prefetch_count` và `message_stats.ack=0`, consumer đang nhận message nhưng interceptor ack/metric chưa chạy.
+- RMQ microservice phải gọi `connectMicroservice(..., { deferInitialization: true })` trước `.useGlobalInterceptors(...)`, để `RabbitMqRetryInterceptor` được đăng ký trước khi Nest register RMQ listeners.
+- Sau khi đổi `@repo/common` hoặc `main.ts` của consumer, build lại shared package và restart service process.
+
+```powershell
+pnpm --filter @repo/common run build
+pnpm dev
+```
+
+Kiểm tra RabbitMQ app metrics:
+
+```powershell
+curl "http://localhost:9090/api/v1/query?query=rabbitmq_messages_processed_total"
+curl "http://localhost:9090/api/v1/query?query=rabbitmq_consumer_duration_seconds_count"
+```
+
+Kết quả đúng phải có series với label `queue`, `outcome`, `service`; RabbitMQ không còn kẹt `messages_unacknowledged`.
+
+Nếu Grafana không reload thay đổi trong provisioned dashboard JSON, restart Grafana:
+
+```powershell
+docker compose -f docker-compose.infra.yml restart grafana
+```
+
+Panel throughput K6 nên query InfluxDB measurement `http_reqs` bằng `sum("value") ... GROUP BY time(1s)` cho requests/sec. Không chia bằng `$__interval_ms` trong InfluxQL vì Grafana có thể render macro thành token không hợp lệ và gây lỗi parse query.
+
 ## 7. Prometheus Coverage
 
 Prometheus hiện lấy cả broker và app metrics:

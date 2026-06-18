@@ -2,7 +2,7 @@ import { check, group, sleep } from 'k6';
 import { authHeaders, BASE_URL } from '../config';
 import { loginAsDefaultUser } from '../helpers/auth';
 import { randomPhoneNumber, randomVietnameseName } from '../helpers/data';
-import { http } from '../helpers/http';
+import { expected2xxOr404, http } from '../helpers/http';
 
 export function testGetUserProfile(): void {
   const token = loginAsDefaultUser();
@@ -67,6 +67,7 @@ export function testGetUserById(userId?: string): void {
     const res = http.get(`${BASE_URL}/users/${id}`, {
       headers: authHeaders(token),
       tags: { name: 'user_by_id' },
+      responseCallback: expected2xxOr404,
     });
     check(res, {
       'User by ID: 200/404': (r) => r.status === 200 || r.status === 404,

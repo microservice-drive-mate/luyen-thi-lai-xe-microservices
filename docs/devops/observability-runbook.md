@@ -185,6 +185,56 @@ Hướng xử lý:
 - Kiểm tra query DB, call HTTP nội bộ, RabbitMQ hoặc cache Redis.
 - Nếu chỉ tăng ở một service, ưu tiên log service đó theo cùng khoảng thời gian.
 
+## Khi RabbitMQ consumer metrics bị trống
+
+Triệu chứng:
+
+```text
+curl "http://localhost:9090/api/v1/query?query=rabbitmq_messages_processed_total"
+```
+
+trả về `result: []`, hoặc Grafana RabbitMQ app consumer panels hiển thị `No data`.
+
+Kiểm tra service metrics endpoint trước:
+
+```powershell
+curl http://localhost:3006/metrics
+```
+
+Nếu chỉ thấy `# HELP/# TYPE rabbitmq_messages_processed_total` mà không có sample line, Prometheus/Grafana không phải nguyên nhân. App chưa ghi consumer metric.
+
+Kiểm tra RabbitMQ queue:
+
+```powershell
+$auth='Basic '+[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('guest:guest'))
+(Invoke-WebRequest -UseBasicParsing -Headers @{Authorization=$auth} 'http://localhost:15672/api/queues/%2F/notification_service_events').Content
+```
+
+Dấu hiệu RMQ interceptor không chạy:
+
+- `messages_unacknowledged` bằng `prefetch_count`.
+- `message_stats.ack` là `0`.
+- Business metrics từ handler tăng, nhưng RabbitMQ ack/consumer metrics không tăng.
+
+Checklist xử lý:
+
+1. Build lại shared package nếu vừa sửa `@repo/common`:
+
+```powershell
+pnpm --filter @repo/common run build
+```
+
+2. Đảm bảo RMQ services gọi `connectMicroservice(..., { deferInitialization: true })` trước `.useGlobalInterceptors(...)`.
+3. Restart local service process vì process cũ không tự reload `packages/common/dist`.
+4. Chờ Prometheus scrape lại rồi query:
+
+```powershell
+curl "http://localhost:9090/api/v1/query?query=rabbitmq_messages_processed_total"
+curl "http://localhost:9090/api/v1/query?query=rabbitmq_consumer_duration_seconds_count"
+```
+
+Kết quả đúng có label `queue`, `outcome`, `service`; RabbitMQ queue không còn kẹt `messages_unacknowledged`.
+
 ## Khi CPU/RAM cao
 
 Alert thường gặp:
