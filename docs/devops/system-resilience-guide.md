@@ -139,6 +139,26 @@ Các helper chính:
 
 Consumer thành công sẽ được `ack`. Consumer lỗi sẽ được publish sang retry queue hoặc DLQ rồi `ack` message gốc để tránh loop vô hạn trong queue chính.
 
+Khi gắn RMQ consumer trong Nest hybrid app, phải defer initialization trước khi thêm interceptor:
+
+```ts
+app
+  .connectMicroservice(
+    createRabbitMqConsumerOptions({ url: rabbitmqUrl, queue: rabbitmqQueue }),
+    { deferInitialization: true },
+  )
+  .useGlobalInterceptors(
+    new CorrelationIdInterceptor(),
+    new TracingInterceptor(serviceName),
+    new RabbitMqRetryInterceptor(
+      { queue: rabbitmqQueue },
+      app.get(MetricsService),
+    ),
+  );
+```
+
+`connectMicroservice()` có thể register listener ngay khi được gọi. Nếu `.useGlobalInterceptors(...)` chạy sau khi listener đã register, handler vẫn consume message nhưng `RabbitMqRetryInterceptor` không chạy. Triệu chứng thường thấy là không ack, không có `rabbitmq_messages_processed_total`, không có `rabbitmq_consumer_duration_seconds`, và queue backlog kẹt ở `messages_unacknowledged = prefetch_count`.
+
 Interceptor cũng lưu khóa idempotency thành công trong memory TTL 24 giờ. Nếu RabbitMQ gửi lại cùng message trong cửa sổ này, service sẽ `ack` và bỏ qua handler để không tạo side effect trùng lặp. Khóa ưu tiên theo thứ tự: AMQP `messageId`, payload `eventId`, payload `id`, `metadata.eventId`.
 
 Lưu ý: cơ chế này chống duplicate trong phạm vi instance đang chạy. Nếu cần exactly-once bền vững qua restart, từng service nên bổ sung bảng processed-message riêng hoặc unique constraint nghiệp vụ.
@@ -165,6 +185,7 @@ App metrics expose qua `/metrics`:
 | Metric | Ý nghĩa |
 | ------ | ------- |
 | `rabbitmq_messages_processed_total` | Tổng message RabbitMQ theo `queue` và `outcome` (`success`, `retry`, `dlq`) |
+| `rabbitmq_consumer_duration_seconds` | Histogram thời gian xử lý consumer theo `queue` |
 | `rabbitmq_message_retries_total` | Tổng message được đưa vào retry queue |
 | `rabbitmq_messages_dead_lettered_total` | Tổng message được đưa vào DLQ |
 
@@ -226,6 +247,13 @@ Sau đó kiểm tra tab `Queues` để thấy các queue `.retry.1`, `.retry.2`,
 
 Không purge DLQ khi chưa điều tra lỗi vì DLQ là bằng chứng vận hành để truy vết theo `x-correlation-id`.
 
+Nếu queue chính có `messages_unacknowledged` kẹt ở `prefetch_count` và `message_stats.ack=0`, kiểm tra theo thứ tự:
+
+1. Consumer service đã restart sau khi build lại `@repo/common`.
+2. `main.ts` của service có dùng `{ deferInitialization: true }` khi gọi `connectMicroservice()`.
+3. Endpoint `/metrics` của service có sample như `rabbitmq_messages_processed_total{queue="...",outcome="success"}`.
+4. Prometheus target đang `UP` và đã scrape sau khi consumer xử lý message.
+
 ## Replay DLQ thủ công
 
 Quy trình an toàn:
@@ -236,5 +264,3 @@ Quy trình an toàn:
 4. Sửa lỗi code/config/data trước khi replay.
 5. Publish lại payload sang queue chính tương ứng.
 6. Chỉ purge DLQ sau khi đã xác nhận message được xử lý thành công hoặc không còn giá trị nghiệp vụ.
-
-

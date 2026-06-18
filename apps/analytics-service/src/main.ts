@@ -67,6 +67,7 @@ async function bootstrap() {
   app
     .connectMicroservice(
       createRabbitMqConsumerOptions({ url: rabbitmqUrl, queue: rabbitmqQueue }),
+      { deferInitialization: true },
     )
     .useGlobalInterceptors(
       new CorrelationIdInterceptor(),

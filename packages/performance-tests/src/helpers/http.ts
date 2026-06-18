@@ -1,8 +1,30 @@
 import k6http, {
+  expectedStatuses,
   type RefinedParams,
   type RefinedResponse,
   type ResponseType,
 } from 'k6/http';
+
+export const expected2xxOr400Or401Or403 = expectedStatuses(
+  { min: 200, max: 299 },
+  400,
+  401,
+  403,
+);
+export const expected2xxOr400Or401Or403Or429 = expectedStatuses(
+  { min: 200, max: 299 },
+  400,
+  401,
+  403,
+  429,
+);
+export const expected2xxOr404 = expectedStatuses({ min: 200, max: 299 }, 404);
+export const expected2xxOr409 = expectedStatuses({ min: 200, max: 299 }, 409);
+export const expected2xxOr409Or429 = expectedStatuses(
+  { min: 200, max: 299 },
+  409,
+  429,
+);
 
 function generateTraceId(): string {
   const hex = '0123456789abcdef';

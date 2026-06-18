@@ -2,7 +2,7 @@ import { check, group, sleep } from 'k6';
 import { authHeaders, BASE_URL, JSON_HEADERS } from '../config';
 import { loginAsDefaultUser } from '../helpers/auth';
 import { generateEnrollmentData, randomPagination } from '../helpers/data';
-import { http } from '../helpers/http';
+import { expected2xxOr404, expected2xxOr409, http } from '../helpers/http';
 
 export function testListCourses(): void {
   group('Course - List', () => {
@@ -27,6 +27,7 @@ export function testGetCourseDetail(courseId?: string): void {
     const res = http.get(`${BASE_URL}/courses/${id}`, {
       headers: JSON_HEADERS,
       tags: { name: 'course_detail' },
+      responseCallback: expected2xxOr404,
     });
     check(res, {
       'Course detail: 200/404': (r) => r.status === 200 || r.status === 404,
@@ -63,7 +64,11 @@ export function testEnrollCourse(courseId?: string): void {
     const res = http.post(
       `${BASE_URL}/enrollments`,
       JSON.stringify(generateEnrollmentData(id)),
-      { headers: authHeaders(token), tags: { name: 'course_enroll' } },
+      {
+        headers: authHeaders(token),
+        tags: { name: 'course_enroll' },
+        responseCallback: expected2xxOr409,
+      },
     );
     check(res, {
       'Enroll: 200/201/409': (r) =>

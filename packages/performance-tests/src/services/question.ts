@@ -2,7 +2,7 @@ import { check, group, sleep } from 'k6';
 import { authHeaders, BASE_URL, JSON_HEADERS } from '../config';
 import { loginAsAdmin, loginAsDefaultUser } from '../helpers/auth';
 import { randomLicenseCategory, randomPagination } from '../helpers/data';
-import { http } from '../helpers/http';
+import { expected2xxOr404, http } from '../helpers/http';
 
 export function testListQuestions(): void {
   const token = loginAsDefaultUser();
@@ -32,6 +32,7 @@ export function testGetQuestionDetail(questionId?: string): void {
     const res = http.get(`${BASE_URL}/question-service/questions/${id}`, {
       headers: JSON_HEADERS,
       tags: { name: 'question_detail' },
+      responseCallback: expected2xxOr404,
     });
     check(res, {
       'Question detail: 200/404': (r) => r.status === 200 || r.status === 404,

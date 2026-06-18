@@ -10,7 +10,11 @@ import {
 } from '../config';
 import { loginAsDefaultUser } from '../helpers/auth';
 import { randomEmail, randomString } from '../helpers/data';
-import { http } from '../helpers/http';
+import {
+  expected2xxOr400Or401Or403Or429,
+  expected2xxOr409Or429,
+  http,
+} from '../helpers/http';
 
 const rateLimitedRequests = new Counter('rate_limited_requests');
 const unauthorizedRequests = new Counter('unauthorized_requests');
@@ -55,7 +59,11 @@ function testBruteForceLogin(): void {
     const res = http.post(
       `${BASE_URL}/auth/login`,
       JSON.stringify({ username: fakeUsername, password: fakePassword }),
-      { headers: JSON_HEADERS, tags: { name: 'security_brute_force' } },
+      {
+        headers: JSON_HEADERS,
+        tags: { name: 'security_brute_force' },
+        responseCallback: expected2xxOr400Or401Or403Or429,
+      },
     );
 
     const is401 =
@@ -80,7 +88,7 @@ function testJwtBypass(): void {
       '/auth/profile',
       '/users/me',
       '/enrollments',
-      '/exam-sessions',
+      '/exams/sessions',
     ];
 
     const endpoint =
@@ -89,6 +97,7 @@ function testJwtBypass(): void {
     const resNoToken = http.get(`${BASE_URL}${endpoint}`, {
       headers: JSON_HEADERS,
       tags: { name: 'security_no_token' },
+      responseCallback: expected2xxOr400Or401Or403Or429,
     });
     check(resNoToken, {
       'No token: 401/429': (r) => r.status === 401 || r.status === 429,
@@ -103,6 +112,7 @@ function testJwtBypass(): void {
     const resFakeToken = http.get(`${BASE_URL}${endpoint}`, {
       headers: authHeaders(fakeToken),
       tags: { name: 'security_fake_token' },
+      responseCallback: expected2xxOr400Or401Or403Or429,
     });
     check(resFakeToken, {
       'Fake token: 401': (r) => r.status === 401,
@@ -127,7 +137,11 @@ function testRegistrationFlood(): void {
     const res = http.post(
       `${BASE_URL}/auth/register`,
       JSON.stringify(payload),
-      { headers: JSON_HEADERS, tags: { name: 'security_reg_flood' } },
+      {
+        headers: JSON_HEADERS,
+        tags: { name: 'security_reg_flood' },
+        responseCallback: expected2xxOr400Or401Or403Or429,
+      },
     );
 
     const is429 = res.status === 429;
@@ -159,6 +173,7 @@ function testExamFlood(): void {
       const res = http.post(`${BASE_URL}/exams/${examId}/start`, null, {
         headers: authHeaders(token),
         tags: { name: 'security_exam_flood' },
+        responseCallback: expected2xxOr409Or429,
       });
 
       check(res, {

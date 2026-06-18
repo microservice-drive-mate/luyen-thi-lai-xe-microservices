@@ -2,7 +2,7 @@ import { check, group, sleep } from 'k6';
 import { authHeaders, BASE_URL } from '../config';
 import { loginAsDefaultUser } from '../helpers/auth';
 import { generateTelemetryEvent, randomLicenseCategory } from '../helpers/data';
-import { http } from '../helpers/http';
+import { expected2xxOr404, http } from '../helpers/http';
 
 export interface SimulationSession {
   id: string;
@@ -103,6 +103,7 @@ export function testGetSimulationResult(sessionId: string): void {
     const res = http.get(`${BASE_URL}/simulation/sessions/${sessionId}`, {
       headers: authHeaders(token),
       tags: { name: 'simulation_result' },
+      responseCallback: expected2xxOr404,
     });
     check(res, {
       'Simulation result: 200/404': (r) => r.status === 200 || r.status === 404,
