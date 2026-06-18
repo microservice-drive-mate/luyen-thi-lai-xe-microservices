@@ -19,7 +19,7 @@
     "identity-service": {
       "port": "3000",
       "database.url": "${SECRET_IDENTITY_DB_URL}",
-      "database.pool_size": "10",
+      "database.pool_size": "50",
       "database.connection_timeout": "5000",
       "rabbitmq.url": "${SECRET_RABBITMQ_URL}",
       "rabbitmq.username": "${SECRET_RABBITMQ_USERNAME}",
@@ -37,7 +37,9 @@
       "smtp.from": "${KEYCLOAK_SMTP_FROM}",
       "smtp.secure": "${KEYCLOAK_SMTP_SSL:-false}",
       "smtp.starttls": "${KEYCLOAK_SMTP_STARTTLS:-true}",
-      "push.fcmCredentials": "${FCM_CREDENTIALS:-}"
+      "push.fcmCredentials": "${FCM_CREDENTIALS:-}",
+      "retry.maxAttempts": "${NOTIFICATION_RETRY_MAX_ATTEMPTS:-3}",
+      "retry.delaysMs": "[${NOTIFICATION_RETRY_DELAYS_MS:-5000,60000,300000}]"
     },
     "user-service": {
       "port": "3000",

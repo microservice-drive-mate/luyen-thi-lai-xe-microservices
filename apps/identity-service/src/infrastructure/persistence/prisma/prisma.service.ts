@@ -17,7 +17,16 @@ export class PrismaService
 
   constructor(configService: ConfigService) {
     const connectionString = configService.getOrThrow<string>('database.url');
-    super({ adapter: new PrismaPg({ connectionString }) });
+    const poolSize = configService.get<number>('database.poolSize') ?? 10;
+    const connectionTimeoutMs =
+      configService.get<number>('database.connectionTimeout') ?? 5000;
+    super({
+      adapter: new PrismaPg({
+        connectionString,
+        max: poolSize,
+        connectionTimeoutMillis: connectionTimeoutMs,
+      }),
+    });
   }
 
   async onModuleInit(): Promise<void> {

@@ -31,6 +31,8 @@ describe('LoginUseCase', () => {
       accessToken: 'access',
       refreshToken: 'refresh',
       expiresIn: 3600,
+      refreshExpiresIn: 1800,
+      tokenType: 'Bearer',
     };
     identityProvider.login.mockResolvedValue(mockTokenSet);
 

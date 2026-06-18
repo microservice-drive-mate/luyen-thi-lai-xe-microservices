@@ -1,0 +1,22 @@
+{
+  "name": "@repo/performance-tests",
+  "version": "1.0.0",
+  "description": "Enterprise K6 performance tests for luyen-thi-lai-xe-microservices",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "test:smoke": "pnpm build && k6 run dist/smoke.js -e BASE_URL=http://localhost:8000 -e K6_SCENARIO=smoke --out influxdb=http://localhost:8086/k6",
+    "test:load": "pnpm build && k6 run dist/load.js -e BASE_URL=http://localhost:8000 -e K6_SCENARIO=load --out influxdb=http://localhost:8086/k6",
+    "test:soak": "pnpm build && k6 run dist/soak.js -e BASE_URL=http://localhost:8000 -e K6_SCENARIO=soak -e SOAK_DURATION=10m --out influxdb=http://localhost:8086/k6",
+    "test:soak:full": "pnpm build && k6 run dist/soak.js -e BASE_URL=http://localhost:8000 -e K6_SCENARIO=soak-full -e SOAK_DURATION=2h --out influxdb=http://localhost:8086/k6",
+    "test:security": "pnpm build && k6 run dist/security.js -e BASE_URL=http://localhost:8000 -e K6_SCENARIO=security --out influxdb=http://localhost:8086/k6",
+    "test:smoke:no-influx": "pnpm build && k6 run dist/smoke.js -e BASE_URL=http://localhost:8000",
+    "test:load:no-influx": "pnpm build && k6 run dist/load.js -e BASE_URL=http://localhost:8000"
+  },
+  "devDependencies": {
+    "@types/k6": "^1.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "5.9.2"
+  }
+}

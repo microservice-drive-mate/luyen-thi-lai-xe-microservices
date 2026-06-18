@@ -133,6 +133,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
             retry: Joi.object({
               maxAttempts: Joi.number().optional(),
               intervalMs: Joi.number().optional(),
+              delaysMs: Joi.array().items(Joi.number().min(1000)).optional(),
             }).default(),
             notification: Joi.object({
               warningRetryIntervalMs: Joi.number().default(300000),

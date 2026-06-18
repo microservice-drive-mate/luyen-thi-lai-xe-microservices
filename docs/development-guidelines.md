@@ -25,6 +25,7 @@ Trước khi sửa bất kỳ service nào, đọc theo thứ tự này:
    - [Services Test Guide](./testing/services-test-guide.md)
    - [Requirements Traceability Matrix](./testing/requirements-traceability-matrix.md)
    - [ASR Testing Guide](./testing/asr-testing-guide.md)
+   - [Performance Testing Setup](./testing/performance-testing-setup.md) nếu thay đổi K6, dashboard hoặc metric quan sát hiệu năng
 
 Không bắt đầu implement endpoint hoặc sửa behavior public khi chưa đọc API spec hiện tại và controller/use case liên quan.
 
@@ -43,6 +44,7 @@ Không bắt đầu implement endpoint hoặc sửa behavior public khi chưa đ
 | Config Consul/env                                                    | `docs/devops/consul-workflow.md`             |
 | Docker/Kong/Kubernetes/Azure/CI/CD/observability                     | `docs/devops/*.md`                           |
 | Test scenario, traceability, demo                                    | `docs/testing/*.md`                          |
+| K6 performance test, InfluxDB dashboard, Prometheus metric mới       | `docs/testing/performance-testing-setup.md`  |
 | Requirement/SRS/ASR                                                  | `docs/requirements/*.md`                     |
 
 `docs/api` là nơi chính để mô tả service API. Không tạo lại các file service summary ngắn riêng nếu nội dung đã có trong API spec.
@@ -195,7 +197,41 @@ Cập nhật theo phạm vi:
 
 Không sửa hạ tầng mà bỏ qua docs. Hạ tầng sai docs là lỗi rất tốn thời gian debug.
 
-### 3.8. Thay đổi requirement/use case
+### 3.8. Thay đổi performance test, K6 dashboard hoặc metric Prometheus
+
+Cập nhật bắt buộc:
+
+- `packages/performance-tests/src/**` nếu scenario/helper/service wrapper đổi.
+- `docker/grafana/provisioning/dashboards/k6-dashboard.json` nếu đổi metric name, tag, scenario hoặc datasource.
+- `docker/grafana/provisioning/datasources/*.yml` nếu đổi datasource name/uid/url.
+- `docker/prometheus/prometheus.yml` và `docker/prometheus/prometheus.local.yml` nếu thêm target scrape hoặc đổi endpoint `/metrics`.
+- [Performance Testing Setup](./testing/performance-testing-setup.md).
+- [Local Testing Guide](./testing/local-testing-guide.md) nếu đổi lệnh chạy root scripts.
+- `README.md` nếu đổi script hoặc port vận hành.
+
+Checklist riêng:
+
+- K6 InfluxDB query phải dùng datasource `InfluxDB_K6` và tag `scenario`.
+- Scenario phải set `tags.scenario` trùng với `K6_SCENARIO` để dashboard lọc được.
+- Custom K6 metric phải dùng đúng đơn vị trong tên metric và dashboard. Ví dụ latency WebSocket dùng `async_e2e_latency_ms` nếu `Trend(..., true)` ghi millisecond.
+- Security dashboard nên dựa thêm vào tag HTTP `status`/`name`, không chỉ dựa vào custom counter, để tránh panel rỗng khi counter chưa phát sinh.
+- Prometheus phải scrape cả RabbitMQ broker (`rabbitmq:15692`) và service `/metrics` để thấy đủ publisher/consumer, retry, DLQ và consumer duration.
+- Nếu thêm RabbitMQ metric app-side, giữ label low-cardinality (`queue`, `outcome`, `service`) và không đưa message id/user id vào label.
+
+Verify tối thiểu:
+
+```powershell
+pnpm perf:build
+pnpm perf:smoke:no-influx
+```
+
+Nếu sửa dashboard JSON:
+
+```powershell
+node -e "JSON.parse(require('fs').readFileSync('docker/grafana/provisioning/dashboards/k6-dashboard.json','utf8'))"
+```
+
+### 3.9. Thay đổi requirement/use case
 
 Cập nhật bắt buộc:
 

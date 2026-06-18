@@ -54,6 +54,18 @@
     "start:dev": {
       "dependsOn": ["^build"],
       "persistent": true
+    },
+    "test:load": {
+      "cache": false
+    },
+    "test:soak": {
+      "cache": false
+    },
+    "test:security": {
+      "cache": false
+    },
+    "test:smoke": {
+      "cache": false
     }
   }
 }

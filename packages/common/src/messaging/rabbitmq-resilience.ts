@@ -14,7 +14,7 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { EMPTY, Observable, from } from 'rxjs';
-import { catchError, mergeMap, tap } from 'rxjs/operators';
+import { catchError, finalize, mergeMap, tap } from 'rxjs/operators';
 import {
   CORRELATION_ID_FIELD,
   CORRELATION_ID_HEADER,
@@ -22,13 +22,15 @@ import {
 import { MetricsService } from '../metrics/metrics.service';
 
 export const DEFAULT_RABBITMQ_URL = 'amqp://127.0.0.1:5672';
-export const DEFAULT_RABBITMQ_RETRY_DELAYS_MS = [5_000, 30_000, 120_000];
+export const DEFAULT_RABBITMQ_RETRY_DELAYS_MS = [5_000, 60_000, 300_000];
 export const DEFAULT_RABBITMQ_PREFETCH_COUNT = 10;
+const MAX_PROCESSED_MESSAGE_KEYS = 10_000;
 
 export interface RabbitMqResilienceOptions {
   queue: string;
   retryDelaysMs?: number[];
   prefetchCount?: number;
+  resetRetryQueuesOnTtlMismatch?: boolean;
 }
 
 interface RabbitMqMessageProperties {
@@ -63,6 +65,9 @@ interface RabbitMqChannel {
 }
 
 interface AmqpChannel extends RabbitMqChannel {
+  on?(event: 'error', listener: (error: Error) => void): this;
+  off?(event: 'error', listener: (error: Error) => void): this;
+  removeListener?(event: 'error', listener: (error: Error) => void): this;
   assertQueue(
     queue: string,
     options: {
@@ -208,6 +213,8 @@ export async function assertRabbitMqResilienceTopology(
     options.retryDelaysMs ?? DEFAULT_RABBITMQ_RETRY_DELAYS_MS;
   const connection = await amqp.connect(url);
   let channel = await connection.createChannel();
+  const cleanupInitialChannelErrorListener =
+    suppressUnhandledChannelErrors(channel);
 
   try {
     try {
@@ -217,7 +224,9 @@ export async function assertRabbitMqResilienceTopology(
         retryDelaysMs,
       );
     } catch (error) {
-      if (!canResetLocalRetryTopology(error)) {
+      if (
+        !canResetRetryTopology(error, options.resetRetryQueuesOnTtlMismatch)
+      ) {
         throw error;
       }
 
@@ -246,6 +255,7 @@ export async function assertRabbitMqResilienceTopology(
       );
     }
   } finally {
+    cleanupInitialChannelErrorListener();
     await closeChannelQuietly(channel);
     await connection.close();
   }
@@ -292,8 +302,32 @@ async function closeChannelQuietly(channel: AmqpChannel): Promise<void> {
   }
 }
 
-function canResetLocalRetryTopology(error: unknown): boolean {
-  if (process.env.NODE_ENV !== 'development-local') {
+function suppressUnhandledChannelErrors(channel: AmqpChannel): () => void {
+  const listener = () => {
+    // assertQueue rejects with the same protocol error; this listener prevents
+    // Node from treating the channel error event as an uncaught exception.
+  };
+
+  channel.on?.('error', listener);
+
+  return () => {
+    if (channel.off) {
+      channel.off('error', listener);
+      return;
+    }
+
+    channel.removeListener?.('error', listener);
+  };
+}
+
+function canResetRetryTopology(
+  error: unknown,
+  resetRetryQueuesOnTtlMismatch?: boolean,
+): boolean {
+  if (
+    resetRetryQueuesOnTtlMismatch !== true &&
+    process.env.NODE_ENV !== 'development-local'
+  ) {
     return false;
   }
 
@@ -324,10 +358,12 @@ export class RabbitMqRetryInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    const startedAt = process.hrtime.bigint();
     const messageKey = resolveMessageKey(context, this.options.queue);
     if (messageKey && isProcessedMessage(messageKey)) {
       this.logger.warn(`RabbitMQ duplicate message skipped: ${messageKey}`);
       this.metricsService?.recordRabbitMqMessage(this.options.queue, 'success');
+      this.recordConsumerDuration(startedAt);
       this.ack(context);
       return EMPTY;
     }
@@ -348,6 +384,16 @@ export class RabbitMqRetryInterceptor implements NestInterceptor {
           mergeMap(() => EMPTY),
         ),
       ),
+      finalize(() => this.recordConsumerDuration(startedAt)),
+    );
+  }
+
+  private recordConsumerDuration(startedAt: bigint): void {
+    const durationSeconds =
+      Number(process.hrtime.bigint() - startedAt) / 1_000_000_000;
+    this.metricsService?.recordRabbitMqConsumerDuration(
+      this.options.queue,
+      durationSeconds,
     );
   }
 
@@ -452,6 +498,7 @@ function isProcessedMessage(messageKey: string): boolean {
 function markProcessedMessage(messageKey: string): void {
   processedMessageKeys.set(messageKey, Date.now() + IDEMPOTENCY_TTL_MS);
   pruneProcessedMessages();
+  trimProcessedMessages();
 }
 
 function pruneProcessedMessages(): void {
@@ -460,6 +507,18 @@ function pruneProcessedMessages(): void {
     if (expiresAt <= now) {
       processedMessageKeys.delete(messageKey);
     }
+  }
+}
+
+function trimProcessedMessages(): void {
+  while (processedMessageKeys.size > MAX_PROCESSED_MESSAGE_KEYS) {
+    const oldestKey = processedMessageKeys.keys().next().value as
+      | string
+      | undefined;
+    if (!oldestKey) {
+      return;
+    }
+    processedMessageKeys.delete(oldestKey);
   }
 }
 

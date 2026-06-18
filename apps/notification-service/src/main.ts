@@ -46,6 +46,8 @@ async function bootstrap() {
   await assertRabbitMqResilienceTopology(rabbitmqUrl, {
     queue: rabbitmqQueue,
     retryDelaysMs,
+    resetRetryQueuesOnTtlMismatch:
+      configService.get<string>('nodeEnv') === 'development-local',
   });
   const port = configService.get<number>('port') ?? 3000;
 
@@ -99,8 +101,13 @@ async function bootstrap() {
 void runBootstrapWithRetries(serviceName, bootstrap);
 
 function createRetryDelays(configService: ConfigService): number[] {
+  const configuredDelaysMs = configService.get<number[]>('retry.delaysMs');
   const configuredMaxAttempts = configService.get<number>('retry.maxAttempts');
   const configuredIntervalMs = configService.get<number>('retry.intervalMs');
+
+  if (configuredDelaysMs?.length) {
+    return configuredDelaysMs.map((delayMs) => Math.max(1000, delayMs));
+  }
 
   if (
     configuredMaxAttempts === undefined &&
