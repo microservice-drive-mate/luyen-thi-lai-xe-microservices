@@ -19,13 +19,16 @@ describe('RecordAuditLogUseCase', () => {
   it('should call repository.record with the event', async () => {
     const event: AuditEventEnvelope = {
       eventId: 'evt-1',
-      timestamp: new Date().toISOString(),
+      eventName: 'security.audit.recorded',
+      schemaVersion: 1,
+      occurredAt: new Date().toISOString(),
       serviceName: 'identity-service',
       actorId: 'user-1',
       action: 'USER_LOGIN_FAILED',
       resourceType: 'IdentityUser',
       resourceId: 'user-1',
       outcome: 'FAILURE',
+      metadata: {},
     };
 
     await useCase.execute(event);

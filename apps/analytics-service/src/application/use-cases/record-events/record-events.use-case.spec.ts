@@ -41,6 +41,7 @@ describe('RecordLearningEventUseCase', () => {
   it('should handle exam-completed event and invalidate cache', async () => {
     const payload = {
       studentId: 'stu-1',
+      sessionId: 'sess-1',
       isPassed: true,
       licenseCategory: 'B2',
       score: 100,
