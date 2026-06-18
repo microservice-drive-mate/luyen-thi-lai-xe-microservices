@@ -59,9 +59,7 @@
       "id": 1,
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "p95"
-          ]
+          "calcs": ["p95"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -115,9 +113,7 @@
       "id": 2,
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "p99"
-          ]
+          "calcs": ["p99"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -172,9 +168,7 @@
       "id": 3,
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ]
+          "calcs": ["last"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -220,9 +214,7 @@
       "id": 4,
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
+          "calcs": ["lastNotNull"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -269,9 +261,7 @@
       "id": 1003,
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "mean"
-          ]
+          "calcs": ["mean"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -318,9 +308,7 @@
       "id": 1004,
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "max"
-          ]
+          "calcs": ["max"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -367,9 +355,7 @@
       "id": 5,
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ]
+          "calcs": ["last"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -415,9 +401,7 @@
       "id": 6,
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
+          "calcs": ["lastNotNull"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -471,9 +455,7 @@
       "id": 999,
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "p95"
-          ]
+          "calcs": ["p95"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -529,9 +511,7 @@
       "id": 1000,
       "options": {
         "reduceOptions": {
-          "calcs": [
-            "p95"
-          ]
+          "calcs": ["p95"]
         },
         "orientation": "auto",
         "textMode": "auto",
@@ -1111,11 +1091,7 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": [
-    "k6",
-    "load-testing",
-    "performance"
-  ],
+  "tags": ["k6", "load-testing", "performance"],
   "templating": {
     "list": [
       {

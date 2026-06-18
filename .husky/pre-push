@@ -1,1 +1,2 @@
 pnpm exec turbo run check-types
+pnpm exec biome ci .
