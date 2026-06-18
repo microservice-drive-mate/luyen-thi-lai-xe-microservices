@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { createAuditEvent, IUseCase } from '@repo/common';
+import { AuditPublisherPort } from '../../ports/audit-publisher.port';
 import {
   IdentityProviderPort,
   IdentityTokenSet,
 } from '../../ports/identity-provider.port';
-import { AuditPublisherPort } from '../../ports/audit-publisher.port';
 import { LoginCommand } from './login.command';
 
 const SERVICE_NAME = 'identity-service';

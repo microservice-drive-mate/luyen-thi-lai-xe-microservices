@@ -1,7 +1,7 @@
 import { AuditEventEnvelope } from '@repo/common';
+import { LicenseCategory } from '../aggregates/course/course.types';
 import { CourseEnrollment } from '../aggregates/course-enrollment/course-enrollment.aggregate';
 import { EnrollmentStatus } from '../aggregates/course-enrollment/course-enrollment.types';
-import { LicenseCategory } from '../aggregates/course/course.types';
 
 export interface ListEnrollmentsFilter {
   studentId: string;

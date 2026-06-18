@@ -1,8 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
-  IsBoolean,
   IsArray,
+  IsBoolean,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -11,7 +12,6 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import {
   B2_TEMPLATE_TOPIC_DISTRIBUTION_EXAMPLE,
   TopicDistributionItemRequestDto,

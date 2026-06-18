@@ -95,7 +95,9 @@
       "keycloak.clientId": "${KEYCLOAK_CLIENT_ID}",
       "keycloak.clientSecret": "${SECRET_KEYCLOAK_CLIENT_SECRET}",
       "keycloak.timeoutMs": "3000",
-      "push.fcmCredentials": "${FCM_CREDENTIALS:-}"
+      "push.fcmCredentials": "${FCM_CREDENTIALS:-}",
+      "retry.maxAttempts": "${NOTIFICATION_RETRY_MAX_ATTEMPTS:-3}",
+      "retry.delaysMs": "[${NOTIFICATION_RETRY_DELAYS_MS:-5000,60000,300000}]"
     },
     "analytics-service": {
       "port": "3000",

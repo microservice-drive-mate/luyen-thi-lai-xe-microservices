@@ -1,8 +1,12 @@
 import { AggregateRoot } from '@repo/common';
-import { CourseInstructor } from './course-instructor.entity';
-import { CourseMaterial } from './course-material.entity';
-import { CourseRequirement } from './course-requirement.entity';
-import { Lesson } from './lesson.entity';
+import { CourseArchivedEvent } from '../../events/course-archived.event';
+import { CourseCreatedEvent } from '../../events/course-created.event';
+import { CourseMaterialLinkedEvent } from '../../events/course-material-linked.event';
+import { CourseUpdatedEvent } from '../../events/course-updated.event';
+import { CourseHasNoLessonException } from '../../exceptions/course-has-no-lesson.exception';
+import { CourseVersionConflictException } from '../../exceptions/course-version-conflict.exception';
+import { InstructorAlreadyAssignedException } from '../../exceptions/instructor-already-assigned.exception';
+import { LessonNotFoundException } from '../../exceptions/lesson-not-found.exception';
 import {
   CourseStatus,
   CreateCourseProps,
@@ -14,14 +18,10 @@ import {
   UpdateCourseProps,
   UpdateLessonProps,
 } from './course.types';
-import { CourseHasNoLessonException } from '../../exceptions/course-has-no-lesson.exception';
-import { InstructorAlreadyAssignedException } from '../../exceptions/instructor-already-assigned.exception';
-import { LessonNotFoundException } from '../../exceptions/lesson-not-found.exception';
-import { CourseArchivedEvent } from '../../events/course-archived.event';
-import { CourseCreatedEvent } from '../../events/course-created.event';
-import { CourseMaterialLinkedEvent } from '../../events/course-material-linked.event';
-import { CourseUpdatedEvent } from '../../events/course-updated.event';
-import { CourseVersionConflictException } from '../../exceptions/course-version-conflict.exception';
+import { CourseInstructor } from './course-instructor.entity';
+import { CourseMaterial } from './course-material.entity';
+import { CourseRequirement } from './course-requirement.entity';
+import { Lesson } from './lesson.entity';
 
 export class Course extends AggregateRoot<string> {
   private _title: string;

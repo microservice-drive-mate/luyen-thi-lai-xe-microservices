@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEventEnvelope } from '@repo/common';
 import { Prisma } from '@prisma/course-client';
+import { AuditEventEnvelope } from '@repo/common';
+import { LicenseCategory } from '../../../domain/aggregates/course/course.types';
 import { CourseEnrollment } from '../../../domain/aggregates/course-enrollment/course-enrollment.aggregate';
 import { EnrollmentStatus } from '../../../domain/aggregates/course-enrollment/course-enrollment.types';
-import { LicenseCategory } from '../../../domain/aggregates/course/course.types';
 import {
   CourseEnrollmentRepository,
   CourseEnrollmentWithCourse,

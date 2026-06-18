@@ -1,11 +1,11 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
-import {
-  TokenBlacklistService,
-  BLACKLIST_REDIS_CLIENT,
-} from './token-blacklist.service';
 import { TokenBlacklistGuard } from './token-blacklist.guard';
+import {
+  BLACKLIST_REDIS_CLIENT,
+  TokenBlacklistService,
+} from './token-blacklist.service';
 
 @Global()
 @Module({

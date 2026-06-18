@@ -6,8 +6,8 @@ import {
   ConsulConfigFactory,
   HealthModule,
   MetricsModule,
-  TokenBlacklistModule,
   TokenBlacklistGuard,
+  TokenBlacklistModule,
 } from '@repo/common';
 import Joi from 'joi';
 import {

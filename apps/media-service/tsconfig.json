@@ -12,7 +12,7 @@
     "sourceMap": true,
     "rootDir": ".",
     "outDir": "./dist",
-    "baseUrl": "./",
+    "types": ["node", "jest"],
     "paths": {
       "@/*": ["./src/*"]
     },
@@ -23,8 +23,7 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
-    "types": ["jest", "node"]
+    "noFallthroughCasesInSwitch": false
   },
   "include": ["src/**/*.ts", "test/**/*.ts"],
   "exclude": ["node_modules", "dist", "prisma"]

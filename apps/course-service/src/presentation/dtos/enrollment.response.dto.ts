@@ -1,9 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { EnrollmentStatus } from '../../domain/aggregates/course-enrollment/course-enrollment.types';
 import {
   EnrollmentResult,
   ListEnrollmentsResult,
 } from '../../application/use-cases/shared/enrollment.result';
+import { EnrollmentStatus } from '../../domain/aggregates/course-enrollment/course-enrollment.types';
 
 export class EnrollmentResponseDto {
   @ApiProperty() id: string;

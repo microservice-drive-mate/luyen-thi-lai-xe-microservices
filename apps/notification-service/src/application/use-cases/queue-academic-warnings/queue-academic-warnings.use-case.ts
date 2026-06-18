@@ -1,7 +1,6 @@
+import crypto from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
-import crypto from 'node:crypto';
-import { NotificationEventPublisher } from '../../ports/event-publisher.port';
 import { AcademicWarningRecipientRequiredException } from '../../../domain/exceptions/academic-warning-recipient-required.exception';
 import { UnsupportedDeliveryChannelException } from '../../../domain/exceptions/unsupported-delivery-channel.exception';
 import {
@@ -9,6 +8,7 @@ import {
   NotificationRepository,
   NotificationType,
 } from '../../../domain/repositories/notification.repository';
+import { NotificationEventPublisher } from '../../ports/event-publisher.port';
 import { QueueAcademicWarningsCommand } from './queue-academic-warnings.command';
 
 export interface QueueAcademicWarningsResult {

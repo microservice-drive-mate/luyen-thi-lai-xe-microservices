@@ -1,5 +1,5 @@
-import { EnrollmentStatus } from '../../../domain/aggregates/course-enrollment/course-enrollment.types';
 import { LicenseCategory } from '../../../domain/aggregates/course/course.types';
+import { EnrollmentStatus } from '../../../domain/aggregates/course-enrollment/course-enrollment.types';
 import { CourseEnrollmentRepository } from '../../../domain/repositories/course-enrollment.repository';
 import { ListAdminStudentEnrollmentsQuery } from './list-admin-student-enrollments.query';
 import { ListAdminStudentEnrollmentsUseCase } from './list-admin-student-enrollments.use-case';

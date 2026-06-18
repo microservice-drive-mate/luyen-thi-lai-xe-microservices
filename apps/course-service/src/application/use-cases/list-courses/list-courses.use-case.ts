@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
-import { CourseCachePort } from '../../ports/course-cache.port';
 import { CourseRepository } from '../../../domain/repositories/course.repository';
+import { CourseCachePort } from '../../ports/course-cache.port';
 import { CourseResult, ListCoursesResult } from '../shared/course.result';
 import { ListCoursesQuery } from './list-courses.query';
 

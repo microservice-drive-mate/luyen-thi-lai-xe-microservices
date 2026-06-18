@@ -34,14 +34,14 @@ import {
   AUDIT_SERVICE_CLIENT,
   AuditOutboxRelayService,
 } from './infrastructure/outbox/audit-outbox-relay.service';
+import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { PrismaExamSessionRepository } from './infrastructure/persistence/prisma/prisma-exam-session.repository';
 import { PrismaExamTemplateRepository } from './infrastructure/persistence/prisma/prisma-exam-template.repository';
-import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
-import { ExamController } from './presentation/http/exam.controller';
 import { AdminExamSessionController } from './presentation/http/admin-exam-session.controller';
+import { ExamController } from './presentation/http/exam.controller';
+import { ExamReviewController } from './presentation/http/exam-review.controller';
 import { ExamSessionController } from './presentation/http/exam-session.controller';
 import { ExamTemplateController } from './presentation/http/exam-template.controller';
-import { ExamReviewController } from './presentation/http/exam-review.controller';
 
 const rmqClientFactory = (queue: string) => ({
   inject: [ConfigService],

@@ -1,4 +1,3 @@
-import { NOTIFICATION_WS_EVENTS } from '../../ports/ws-emitter.port';
 import { NotificationNotFoundException } from '../../../domain/exceptions/notification-not-found.exception';
 import {
   Notification,
@@ -7,6 +6,7 @@ import {
   NotificationStatus,
   NotificationType,
 } from '../../../domain/repositories/notification.repository';
+import { NOTIFICATION_WS_EVENTS } from '../../ports/ws-emitter.port';
 import { MarkNotificationReadCommand } from './mark-notification-read.command';
 import { MarkNotificationReadUseCase } from './mark-notification-read.use-case';
 

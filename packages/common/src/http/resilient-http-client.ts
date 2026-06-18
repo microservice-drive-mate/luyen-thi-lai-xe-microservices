@@ -1,3 +1,4 @@
+import { context, propagation, type TextMapSetter } from '@opentelemetry/api';
 import type {
   AxiosError,
   AxiosInstance,
@@ -5,7 +6,6 @@ import type {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from 'axios';
-import { context, propagation, type TextMapSetter } from '@opentelemetry/api';
 
 export interface CircuitBreakerOptions {
   failureThreshold?: number;

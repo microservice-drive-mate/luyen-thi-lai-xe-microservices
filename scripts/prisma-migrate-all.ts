@@ -1,6 +1,6 @@
-import axios from 'axios';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import axios from 'axios';
 
 type MigrationMode = 'deploy' | 'dev';
 

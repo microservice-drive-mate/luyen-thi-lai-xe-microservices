@@ -3,7 +3,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/identity-client';
 import axios from 'axios';
-import { DEMO_PASSWORD, allDemoUsers } from '../../../scripts/demo-seed-data';
+import { allDemoUsers, DEMO_PASSWORD } from '../../../scripts/demo-seed-data';
 
 const connectionString = process.env.DATABASE_URL;
 const CONSUL_URL = process.env.CONSUL_URL || 'http://127.0.0.1:8500';

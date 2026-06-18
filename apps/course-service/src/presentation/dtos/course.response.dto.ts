@@ -1,15 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  CourseStatus,
-  LicenseCategory,
-} from '../../domain/aggregates/course/course.types';
-import {
   CourseMaterialResult,
   CourseRequirementResult,
   CourseResult,
   LessonResult,
   ListCoursesResult,
 } from '../../application/use-cases/shared/course.result';
+import {
+  CourseStatus,
+  LicenseCategory,
+} from '../../domain/aggregates/course/course.types';
 
 export class LessonResponseDto {
   @ApiProperty() id: string;

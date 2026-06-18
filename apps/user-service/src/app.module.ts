@@ -1,24 +1,24 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import {
   AppLoggerModule,
   ConsulConfigFactory,
   HealthModule,
   MetricsModule,
-  TokenBlacklistModule,
   TokenBlacklistGuard,
+  TokenBlacklistModule,
 } from '@repo/common';
 import Joi from 'joi';
 import {
+  AuthGuard,
   KeycloakConnectModule,
   KeycloakConnectOptions,
   PolicyEnforcementMode,
-  TokenValidation,
-  AuthGuard,
-  RoleGuard,
   ResourceGuard,
+  RoleGuard,
+  TokenValidation,
 } from 'nest-keycloak-connect';
-import { APP_GUARD } from '@nestjs/core';
 import { UserModule } from './user.module';
 
 @Module({

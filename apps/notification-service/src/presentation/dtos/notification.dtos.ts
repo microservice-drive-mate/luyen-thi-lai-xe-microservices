@@ -10,10 +10,10 @@ import {
   IsUUID,
 } from 'class-validator';
 import {
+  NotificationRecord,
   NotificationStatus,
   NotificationType,
 } from '../../domain/repositories/notification.repository';
-import { NotificationRecord } from '../../domain/repositories/notification.repository';
 
 export class SendAcademicWarningRequestDto {
   @ApiPropertyOptional({

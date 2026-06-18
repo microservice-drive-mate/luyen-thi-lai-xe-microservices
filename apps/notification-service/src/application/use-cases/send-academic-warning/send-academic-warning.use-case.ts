@@ -1,7 +1,6 @@
+import crypto from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
-import crypto from 'node:crypto';
-import { NotificationDispatcher } from '../../services/notification-dispatcher.service';
 import {
   AcademicWarning,
   AcademicWarningDeliveryStatus,
@@ -10,6 +9,7 @@ import {
   NotificationRepository,
   NotificationType,
 } from '../../../domain/repositories/notification.repository';
+import { NotificationDispatcher } from '../../services/notification-dispatcher.service';
 import { SendAcademicWarningCommand } from './send-academic-warning.command';
 
 export interface SendAcademicWarningResult {

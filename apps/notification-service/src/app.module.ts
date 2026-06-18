@@ -46,15 +46,15 @@ import { UnregisterDeviceTokenUseCase } from './application/use-cases/unregister
 import { UpdateNotificationPreferencesUseCase } from './application/use-cases/update-notification-preferences/update-notification-preferences.use-case';
 import { DeviceTokenRepository } from './domain/repositories/device-token.repository';
 import { NotificationRepository } from './domain/repositories/notification.repository';
-import { NotificationMetrics } from './infrastructure/metrics/notification.metrics';
 import { KeycloakJwtVerifierService } from './infrastructure/auth/keycloak-jwt-verifier.service';
 import {
   NOTIFICATION_EVENT_CLIENT,
   RabbitMqNotificationEventPublisher,
 } from './infrastructure/messaging/notification-event.publisher';
+import { NotificationMetrics } from './infrastructure/metrics/notification.metrics';
+import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { PrismaDeviceTokenRepository } from './infrastructure/persistence/prisma/prisma-device-token.repository';
 import { PrismaNotificationRepository } from './infrastructure/persistence/prisma/prisma-notification.repository';
-import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { FcmPushProvider } from './infrastructure/providers/fcm-push.provider';
 import { SmtpMailProvider } from './infrastructure/providers/smtp.provider';
 import { SocketIoNotificationEmitter } from './infrastructure/websockets/socket-io-notification-emitter.adapter';
@@ -133,6 +133,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
             retry: Joi.object({
               maxAttempts: Joi.number().optional(),
               intervalMs: Joi.number().optional(),
+              delaysMs: Joi.array().items(Joi.number().min(1000)).optional(),
             }).default(),
             notification: Joi.object({
               warningRetryIntervalMs: Joi.number().default(300000),

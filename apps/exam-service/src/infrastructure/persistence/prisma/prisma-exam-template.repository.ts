@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEventEnvelope } from '@repo/common';
 import { Prisma } from '@prisma/exam-client';
+import { AuditEventEnvelope } from '@repo/common';
 import { ExamTemplate } from '../../../domain/aggregates/exam-template/exam-template.aggregate';
 import {
   ExamTemplateRepository,

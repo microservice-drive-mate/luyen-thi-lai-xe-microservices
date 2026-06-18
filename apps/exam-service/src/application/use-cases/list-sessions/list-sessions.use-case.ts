@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
+import { ExamSessionStatus } from '../../../domain/aggregates/exam-session/exam-session.types';
 import { ExamSessionRepository } from '../../../domain/repositories/exam-session.repository';
 import {
   ExamSessionResult,
   ListExamSessionsResult,
 } from '../shared/exam-session.result';
-import { ExamSessionStatus } from '../../../domain/aggregates/exam-session/exam-session.types';
 import { ListSessionsQuery } from './list-sessions.query';
 
 @Injectable()

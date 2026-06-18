@@ -4,8 +4,8 @@ import {
   propagation,
   SpanKind,
   SpanStatusCode,
-  trace,
   type TextMapGetter,
+  trace,
 } from '@opentelemetry/api';
 import type { NextFunction, Request, Response } from 'express';
 import { CORRELATION_ID_HEADER } from '../http/correlation-context';

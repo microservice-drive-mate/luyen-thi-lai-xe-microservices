@@ -11,8 +11,8 @@ import {
   ManeuverErrorRecord,
   ManeuverRecord,
   SimulationRepository,
-  SimulationSessionResultRecord,
   SimulationSessionRecord,
+  SimulationSessionResultRecord,
 } from '../../../domain/repositories/simulation.repository';
 import { PrismaService } from './prisma.service';
 

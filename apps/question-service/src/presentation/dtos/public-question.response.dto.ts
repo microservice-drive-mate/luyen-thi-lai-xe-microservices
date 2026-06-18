@@ -1,14 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  LicenseCategory,
-  QuestionDifficulty,
-  QuestionType,
-} from '../../domain/aggregates/question/question.types';
-import {
   ListQuestionsResult,
   QuestionOptionResult,
   QuestionResult,
 } from '../../application/use-cases/shared/question.result';
+import {
+  LicenseCategory,
+  QuestionDifficulty,
+  QuestionType,
+} from '../../domain/aggregates/question/question.types';
 
 export class PublicQuestionOptionResponseDto {
   @ApiProperty() id: string;

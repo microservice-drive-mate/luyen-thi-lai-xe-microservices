@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEventEnvelope } from '@repo/common';
 import { Prisma } from '@prisma/course-client';
+import { AuditEventEnvelope } from '@repo/common';
 import { Course } from '../../../domain/aggregates/course/course.aggregate';
 import {
   CourseRepository,

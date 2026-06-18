@@ -5,8 +5,8 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { RoleMatchingMode, META_ROLES } from 'nest-keycloak-connect';
 import type { JwtPayload } from 'jsonwebtoken';
+import { META_ROLES, RoleMatchingMode } from 'nest-keycloak-connect';
 
 interface RolesOption {
   roles: string[];

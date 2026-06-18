@@ -11,13 +11,13 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
+import { GetNotificationPreferencesUseCase } from '../../application/use-cases/get-notification-preferences/get-notification-preferences.use-case';
 import { ListNotificationsQuery } from '../../application/use-cases/list-notifications/list-notifications.query';
 import { ListNotificationsUseCase } from '../../application/use-cases/list-notifications/list-notifications.use-case';
-import { MarkNotificationReadCommand } from '../../application/use-cases/mark-notification-read/mark-notification-read.command';
-import { MarkNotificationReadUseCase } from '../../application/use-cases/mark-notification-read/mark-notification-read.use-case';
-import { GetNotificationPreferencesUseCase } from '../../application/use-cases/get-notification-preferences/get-notification-preferences.use-case';
 import { MarkAllNotificationsReadCommand } from '../../application/use-cases/mark-all-notifications-read/mark-all-notifications-read.command';
 import { MarkAllNotificationsReadUseCase } from '../../application/use-cases/mark-all-notifications-read/mark-all-notifications-read.use-case';
+import { MarkNotificationReadCommand } from '../../application/use-cases/mark-notification-read/mark-notification-read.command';
+import { MarkNotificationReadUseCase } from '../../application/use-cases/mark-notification-read/mark-notification-read.use-case';
 import { QueueAcademicWarningsCommand } from '../../application/use-cases/queue-academic-warnings/queue-academic-warnings.command';
 import { QueueAcademicWarningsUseCase } from '../../application/use-cases/queue-academic-warnings/queue-academic-warnings.use-case';
 import { UpdateNotificationPreferencesCommand } from '../../application/use-cases/update-notification-preferences/update-notification-preferences.command';
@@ -28,8 +28,8 @@ import {
   ListNotificationsQueryDto,
   ListNotificationsResponseDto,
   MarkAllNotificationsReadResponseDto,
-  NotificationResponseDto,
   NotificationPreferencesResponseDto,
+  NotificationResponseDto,
   SendAcademicWarningRequestDto,
   UpdateNotificationPreferencesRequestDto,
 } from '../dtos/notification.dtos';

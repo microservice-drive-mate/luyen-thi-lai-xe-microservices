@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEventEnvelope } from '@repo/common';
 import {
+  Prisma,
   Gender as PrismaGender,
   LicenseTier as PrismaLicenseTier,
-  Prisma,
   Role as PrismaRole,
 } from '@prisma/user-client';
+import { AuditEventEnvelope } from '@repo/common';
 import { UserProfile } from '../../../domain/aggregates/user-profile/user-profile.aggregate';
 import {
   Gender,

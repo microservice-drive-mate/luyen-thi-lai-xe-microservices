@@ -7,13 +7,15 @@ Tài liệu chính nằm trong [docs](./docs/README.md). Nếu bạn mới vào 
 ## Tổng Quan Kiến Trúc
 
 - `apps/*`: các NestJS microservice.
-- `packages/*`: package dùng chung, gồm `@repo/common`, cấu hình ESLint và TypeScript.
+- `packages/*`: package dùng chung, gồm `@repo/common`, `@repo/performance-tests` (K6 load tests), cấu hình ESLint và TypeScript.
 - `docker-compose.infra.yml`: hạ tầng local cho chế độ hybrid.
 - `docker-compose.yaml`: full stack Docker.
+- `docker-compose.observability.yml`: Observability stack riêng cho K6 (InfluxDB + Grafana).
 - `kong/kong.dev.yaml`: Kong cho hybrid local, route tới service chạy trên máy qua `host.docker.internal`.
 - `kong/kong.yaml`: Kong cho full Docker, route qua Docker DNS.
 - `charts/luyen-thi-lai-xe`: Helm chart cho Kubernetes/GCP.
 - `scripts/*`: script seed Consul, Prisma migration/seed, smoke test, backup và DevOps metrics.
+- `docker/grafana/`: Dashboard K6 tự động được Grafana load khi chạy observability stack.
 
 ## Service Hiện Có
 
@@ -226,6 +228,16 @@ pnpm run db:backup:once
 pnpm run keycloak:backup:once
 pnpm run db:restore:test
 pnpm run dora:report
+
+# K6 Performance Testing
+pnpm run perf:install      # Cài deps lần đầu cho packages/performance-tests
+pnpm run perf:build        # Build TypeScript → JavaScript (dist/)
+pnpm run observability:up  # Khởi động InfluxDB + Grafana (http://localhost:3001)
+pnpm run perf:smoke        # Smoke test - 3 VUs, 30s (dùng cho PR check)
+pnpm run perf:load         # Load test  - 50 VUs, 15 phút (dùng nightly)
+pnpm run perf:soak         # Soak test  - 30 VUs, 2 giờ (dùng trước release)
+pnpm run perf:security     # Security test - rate limit & brute force
+pnpm run observability:down # Tắt stack quan sát
 ```
 
 ## Cấu Hình Consul
@@ -313,7 +325,20 @@ Tài liệu liên quan:
 - [OpenTelemetry và Jaeger](./docs/devops/opentelemetry-jaeger-tracing.md)
 - [Business Metrics](./docs/devops/business-metrics.md)
 
-## DevOps Và Deploy
+## Testing
+
+Tài liệu kiểm thử đầy đủ nằm tại [`docs/testing/local-testing-guide.md`](./docs/testing/local-testing-guide.md), bao gồm:
+
+- Unit Testing (Jest + cô lập hoàn toàn, không DB thật)
+- E2E Testing (Testcontainers + PostgreSQL, không SQLite)
+- **K6 Performance Testing** (TypeScript, esbuild, InfluxDB + Grafana)
+
+Xem thêm các tài liệu kiểm thử chi tiết:
+
+- [Local Testing Guide](./docs/testing/local-testing-guide.md) — Hướng dẫn đầy đủ các tầng kiểm thử
+- [Services Test Guide](./docs/testing/services-test-guide.md) — Test cases theo từng service
+- [Performance Testing Changelog](./docs/testing/performance-testing-setup.md) — Nhật ký thiết lập K6 Enterprise
+
 
 Repo đã có baseline cho:
 

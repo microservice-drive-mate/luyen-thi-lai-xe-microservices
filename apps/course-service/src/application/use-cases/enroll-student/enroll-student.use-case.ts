@@ -1,22 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
+import { CourseStatus } from '../../../domain/aggregates/course/course.types';
 import { CourseEnrollment } from '../../../domain/aggregates/course-enrollment/course-enrollment.aggregate';
 import { EnrollmentStatus } from '../../../domain/aggregates/course-enrollment/course-enrollment.types';
-import { CourseStatus } from '../../../domain/aggregates/course/course.types';
+import { CourseEnrollmentCreatedEvent } from '../../../domain/events/course-enrollment-created.event';
 import { CourseCapacityExceededException } from '../../../domain/exceptions/course-capacity-exceeded.exception';
-import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
 import { CourseNotActiveException } from '../../../domain/exceptions/course-not-active.exception';
+import { CourseNotFoundException } from '../../../domain/exceptions/course-not-found.exception';
 import { EnrollmentAlreadyExistsException } from '../../../domain/exceptions/enrollment-already-exists.exception';
 import { StudentLicenseMismatchException } from '../../../domain/exceptions/student-license-mismatch.exception';
 import { StudentLicenseNotAssignedException } from '../../../domain/exceptions/student-license-not-assigned.exception';
-import { CourseEnrollmentRepository } from '../../../domain/repositories/course-enrollment.repository';
 import { CourseRepository } from '../../../domain/repositories/course.repository';
+import { CourseEnrollmentRepository } from '../../../domain/repositories/course-enrollment.repository';
 import { StudentLicenseProfileRepository } from '../../../domain/repositories/student-license-profile.repository';
+import { CourseCachePort } from '../../ports/course-cache.port';
 import { EventPublisher } from '../../ports/event-publisher.port';
-import { CourseEnrollmentCreatedEvent } from '../../../domain/events/course-enrollment-created.event';
 import { EnrollmentResult } from '../shared/enrollment.result';
 import { EnrollStudentCommand } from './enroll-student.command';
-import { CourseCachePort } from '../../ports/course-cache.port';
 
 @Injectable()
 export class EnrollStudentUseCase

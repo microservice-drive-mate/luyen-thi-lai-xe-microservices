@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { ConfigFactory } from '@nestjs/config';
-import { ConsulConfigService } from './consul-config.service';
 import Joi from 'joi';
+import { ConsulConfigService } from './consul-config.service';
 
 type ConfigRecord = Record<string, unknown>;
 
@@ -280,13 +280,17 @@ export class ConsulConfigFactory {
         : undefined,
       retry:
         env.NOTIFICATION_RETRY_MAX_ATTEMPTS ||
-        env.NOTIFICATION_RETRY_INTERVAL_MS
+        env.NOTIFICATION_RETRY_INTERVAL_MS ||
+        env.NOTIFICATION_RETRY_DELAYS_MS
           ? {
               maxAttempts: env.NOTIFICATION_RETRY_MAX_ATTEMPTS
                 ? parseInt(env.NOTIFICATION_RETRY_MAX_ATTEMPTS, 10)
                 : undefined,
               intervalMs: env.NOTIFICATION_RETRY_INTERVAL_MS
                 ? parseInt(env.NOTIFICATION_RETRY_INTERVAL_MS, 10)
+                : undefined,
+              delaysMs: env.NOTIFICATION_RETRY_DELAYS_MS
+                ? parseNumberList(env.NOTIFICATION_RETRY_DELAYS_MS)
                 : undefined,
             }
           : undefined,
@@ -538,4 +542,11 @@ function parseBoolean(value: string | undefined): boolean | undefined {
   }
 
   return undefined;
+}
+
+function parseNumberList(value: string): number[] {
+  return value
+    .split(',')
+    .map((item) => Number.parseInt(item.trim(), 10))
+    .filter((item) => Number.isFinite(item) && item > 0);
 }

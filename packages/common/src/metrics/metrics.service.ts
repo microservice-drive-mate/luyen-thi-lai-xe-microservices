@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
-  collectDefaultMetrics,
   Counter,
+  collectDefaultMetrics,
   Histogram,
   Registry,
 } from 'prom-client';
@@ -69,6 +69,10 @@ export class MetricsService {
     string,
     Histogram<string>
   >();
+  private static readonly rabbitMqConsumerDurationHistograms = new Map<
+    string,
+    Histogram<string>
+  >();
   private static readonly rabbitMqMessageCounters = new Map<
     string,
     Counter<string>
@@ -113,6 +117,7 @@ export class MetricsService {
   readonly registry: Registry;
   private readonly requestCounter: Counter<string>;
   private readonly requestDurationHistogram: Histogram<string>;
+  private readonly rabbitMqConsumerDurationHistogram: Histogram<string>;
   private readonly rabbitMqMessageCounter: Counter<string>;
   private readonly rabbitMqRetryCounter: Counter<string>;
   private readonly rabbitMqDeadLetterCounter: Counter<string>;
@@ -130,6 +135,8 @@ export class MetricsService {
     this.requestCounter = this.getOrCreateRequestCounter(serviceName);
     this.requestDurationHistogram =
       this.getOrCreateRequestDurationHistogram(serviceName);
+    this.rabbitMqConsumerDurationHistogram =
+      this.getOrCreateRabbitMqConsumerDurationHistogram(serviceName);
     this.rabbitMqMessageCounter =
       this.getOrCreateRabbitMqMessageCounter(serviceName);
     this.rabbitMqRetryCounter =
@@ -162,8 +169,21 @@ export class MetricsService {
     this.requestDurationHistogram.observe(labels, input.durationSeconds);
   }
 
-  recordRabbitMqMessage(queue: string, outcome: 'success' | 'retry' | 'dlq') {
-    this.rabbitMqMessageCounter.inc({ queue, outcome });
+  recordRabbitMqMessage(
+    queue: string,
+    outcome: 'success' | 'retry' | 'dlq',
+  ): void {
+    this.rabbitMqMessageCounter.inc({
+      queue: normalizeLabel(queue),
+      outcome: normalizeLabel(outcome),
+    });
+  }
+
+  recordRabbitMqConsumerDuration(queue: string, durationSeconds: number): void {
+    this.rabbitMqConsumerDurationHistogram.observe(
+      { queue: normalizeLabel(queue) },
+      durationSeconds,
+    );
   }
 
   recordRabbitMqRetry(input: RabbitMqRetryMetricInput): void {
@@ -300,6 +320,30 @@ export class MetricsService {
     });
 
     MetricsService.requestDurationHistograms.set(serviceName, histogram);
+    return histogram;
+  }
+
+  private getOrCreateRabbitMqConsumerDurationHistogram(
+    serviceName: string,
+  ): Histogram<string> {
+    const existing =
+      MetricsService.rabbitMqConsumerDurationHistograms.get(serviceName);
+    if (existing) {
+      return existing;
+    }
+
+    const histogram = new Histogram({
+      name: 'rabbitmq_consumer_duration_seconds',
+      help: 'RabbitMQ consumer processing duration in seconds.',
+      labelNames: ['queue'],
+      buckets: [0.1, 0.5, 1.0, 2.0, 5.0],
+      registers: [this.registry],
+    });
+
+    MetricsService.rabbitMqConsumerDurationHistograms.set(
+      serviceName,
+      histogram,
+    );
     return histogram;
   }
 

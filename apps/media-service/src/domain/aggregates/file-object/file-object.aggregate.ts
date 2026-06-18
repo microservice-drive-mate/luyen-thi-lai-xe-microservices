@@ -1,8 +1,8 @@
 import { AggregateRoot } from '@repo/common';
-import { FileSize } from '../../value-objects/file-size.vo';
-import { MimeType } from '../../value-objects/mime-type.vo';
 import { FileDeletedEvent } from '../../events/file-deleted.event';
 import { FileUploadedEvent } from '../../events/file-uploaded.event';
+import { FileSize } from '../../value-objects/file-size.vo';
+import { MimeType } from '../../value-objects/mime-type.vo';
 import {
   CreateFileObjectProps,
   FileStatus,

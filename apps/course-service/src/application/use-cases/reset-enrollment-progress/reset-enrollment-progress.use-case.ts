@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { createAuditEvent, IUseCase } from '@repo/common';
 import { EnrollmentNotFoundException } from '../../../domain/exceptions/enrollment-not-found.exception';
-import { EnrollmentUnauthorizedException } from '../../../domain/exceptions/enrollment-unauthorized.exception';
 import { EnrollmentResetCooldownException } from '../../../domain/exceptions/enrollment-reset-cooldown.exception';
+import { EnrollmentUnauthorizedException } from '../../../domain/exceptions/enrollment-unauthorized.exception';
 import { CourseEnrollmentRepository } from '../../../domain/repositories/course-enrollment.repository';
 import { EventPublisher } from '../../ports/event-publisher.port';
 import { EnrollmentResult } from '../shared/enrollment.result';

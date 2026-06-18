@@ -6,12 +6,12 @@ import {
   HttpStatus,
   Param,
   Post,
-  Req,
   Query,
+  Req,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { buildAuditRequestContext } from '@repo/common';
 import type { Request } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { EnrollStudentCommand } from '../../application/use-cases/enroll-student/enroll-student.command';
 import { EnrollStudentUseCase } from '../../application/use-cases/enroll-student/enroll-student.use-case';

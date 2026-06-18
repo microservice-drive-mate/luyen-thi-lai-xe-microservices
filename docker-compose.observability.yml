@@ -1,0 +1,26 @@
+networks:
+  observability:
+    driver: bridge
+
+volumes:
+  influxdb_data:
+
+services:
+  influxdb:
+    image: influxdb:1.8
+    container_name: k6-influxdb
+    restart: unless-stopped
+    networks:
+      - observability
+    ports:
+      - "8086:8086"
+    environment:
+      INFLUXDB_DB: k6
+      INFLUXDB_HTTP_AUTH_ENABLED: "false"
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

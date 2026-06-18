@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import {
+  addDays,
+  toDateKey,
+} from '../../../domain/dashboard/instructor-dashboard.period';
+import {
   InstructorCourseProjectionInput,
   InstructorDashboard,
   InstructorDashboardQueryPeriod,
@@ -7,10 +11,6 @@ import {
   InstructorExamProjectionInput,
   InstructorScheduleProjectionInput,
 } from '../../../domain/dashboard/instructor-dashboard.types';
-import {
-  addDays,
-  toDateKey,
-} from '../../../domain/dashboard/instructor-dashboard.period';
 import { InstructorDashboardRepository } from '../../../domain/repositories/instructor-dashboard.repository';
 import { PrismaService } from './prisma.service';
 

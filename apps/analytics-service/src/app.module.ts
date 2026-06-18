@@ -2,6 +2,16 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import {
+  AppLoggerModule,
+  ConsulConfigFactory,
+  HealthModule,
+  MetricsModule,
+  TokenBlacklistGuard,
+  TokenBlacklistModule,
+} from '@repo/common';
+import Redis from 'ioredis';
+import Joi from 'joi';
+import {
   AuthGuard,
   KeycloakConnectModule,
   KeycloakConnectOptions,
@@ -10,35 +20,25 @@ import {
   RoleGuard,
   TokenValidation,
 } from 'nest-keycloak-connect';
-import Redis from 'ioredis';
-import {
-  AppLoggerModule,
-  ConsulConfigFactory,
-  HealthModule,
-  MetricsModule,
-  TokenBlacklistModule,
-  TokenBlacklistGuard,
-} from '@repo/common';
-import Joi from 'joi';
+import { BackfillAdminDashboardUseCase } from './application/use-cases/backfill-admin-dashboard/backfill-admin-dashboard.use-case';
 import { GetAdminDashboardUseCase } from './application/use-cases/get-admin-dashboard/get-admin-dashboard.use-case';
 import { GetInstructorDashboardUseCase } from './application/use-cases/get-instructor-dashboard/get-instructor-dashboard.use-case';
-import { LearningProgressRepository } from './domain/repositories/learning-progress.repository';
+import { GetProgressUseCase } from './application/use-cases/get-progress/get-progress.use-case';
+import { RecordDashboardEventUseCase } from './application/use-cases/record-dashboard-event/record-dashboard-event.use-case';
+import { RecordLearningEventUseCase } from './application/use-cases/record-events/record-events.use-case';
 import { AdminDashboardRepository } from './domain/repositories/admin-dashboard.repository';
 import { InstructorDashboardRepository } from './domain/repositories/instructor-dashboard.repository';
+import { LearningProgressRepository } from './domain/repositories/learning-progress.repository';
 import {
   ProgressCacheService,
   REDIS_CLIENT,
 } from './infrastructure/cache/progress-cache.service';
+import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
 import { PrismaAdminDashboardRepository } from './infrastructure/persistence/prisma/prisma-admin-dashboard.repository';
 import { PrismaInstructorDashboardRepository } from './infrastructure/persistence/prisma/prisma-instructor-dashboard.repository';
 import { PrismaLearningProgressRepository } from './infrastructure/persistence/prisma/prisma-learning-progress.repository';
-import { PrismaService } from './infrastructure/persistence/prisma/prisma.service';
-import { GetProgressUseCase } from './application/use-cases/get-progress/get-progress.use-case';
-import { RecordLearningEventUseCase } from './application/use-cases/record-events/record-events.use-case';
-import { RecordDashboardEventUseCase } from './application/use-cases/record-dashboard-event/record-dashboard-event.use-case';
-import { BackfillAdminDashboardUseCase } from './application/use-cases/backfill-admin-dashboard/backfill-admin-dashboard.use-case';
-import { AnalyticsController } from './presentation/http/analytics.controller';
 import { AdminDashboardController } from './presentation/http/admin-dashboard.controller';
+import { AnalyticsController } from './presentation/http/analytics.controller';
 import { InstructorDashboardController } from './presentation/http/instructor-dashboard.controller';
 import { MessagingController } from './presentation/messaging/messaging.controller';
 

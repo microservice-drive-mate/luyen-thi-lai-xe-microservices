@@ -1,8 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { ScalarLandingController } from './scalar-landing.controller';
 import {
   AppLoggerModule,
   ConsulConfigFactory,
@@ -10,6 +7,9 @@ import {
   MetricsModule,
 } from '@repo/common';
 import Joi from 'joi';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { ScalarLandingController } from './scalar-landing.controller';
 
 @Module({
   imports: [

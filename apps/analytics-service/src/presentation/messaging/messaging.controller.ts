@@ -3,8 +3,8 @@ import { EventPattern, Payload } from '@nestjs/microservices';
 import { RecordDashboardEventUseCase } from '../../application/use-cases/record-dashboard-event/record-dashboard-event.use-case';
 import { RecordLearningEventUseCase } from '../../application/use-cases/record-events/record-events.use-case';
 import type { DashboardActivityType } from '../../domain/dashboard/admin-dashboard.types';
-import type { ExamCompletedPayload } from '../../domain/repositories/learning-progress.repository';
 import { InstructorDashboardRepository } from '../../domain/repositories/instructor-dashboard.repository';
+import type { ExamCompletedPayload } from '../../domain/repositories/learning-progress.repository';
 import { ProgressCacheService } from '../../infrastructure/cache/progress-cache.service';
 
 type DashboardEventPayload = Record<string, unknown>;

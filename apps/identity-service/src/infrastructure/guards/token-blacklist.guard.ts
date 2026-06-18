@@ -1,8 +1,8 @@
 import {
+  CanActivate,
   ExecutionContext,
   Injectable,
   UnauthorizedException,
-  CanActivate,
 } from '@nestjs/common';
 import { TokenBlacklistService } from '../token-blacklist/token-blacklist.service';
 

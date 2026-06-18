@@ -1,3 +1,7 @@
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { inflateRawSync } from 'node:zlib';
 import {
   BlobServiceClient,
   StorageSharedKeyCredential,
@@ -9,10 +13,6 @@ import {
 } from '@prisma/media-client';
 import { PrismaClient as QuestionPrismaClient } from '@prisma/question-client';
 import axios from 'axios';
-import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import { inflateRawSync } from 'node:zlib';
 
 const CONSUL_URL = process.env.CONSUL_URL || 'http://127.0.0.1:8500';
 const DOCX_PATH = path.resolve(process.cwd(), 'seed/600-cau-hoi.docx');

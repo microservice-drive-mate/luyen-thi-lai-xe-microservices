@@ -1,10 +1,10 @@
 import { EventPublisher } from './application/ports/event-publisher.port';
 import { QuestionPoolClient } from './application/ports/question-pool.client';
 import { UserProfileClient } from './application/ports/user-profile.client';
-import { ListAvailableExamsQuery } from './application/use-cases/list-available-exams/list-available-exams.query';
-import { ListAvailableExamsUseCase } from './application/use-cases/list-available-exams/list-available-exams.use-case';
 import { GetSessionResultQuery } from './application/use-cases/get-session-result/get-session-result.query';
 import { GetSessionResultUseCase } from './application/use-cases/get-session-result/get-session-result.use-case';
+import { ListAvailableExamsQuery } from './application/use-cases/list-available-exams/list-available-exams.query';
+import { ListAvailableExamsUseCase } from './application/use-cases/list-available-exams/list-available-exams.use-case';
 import { StartSessionCommand } from './application/use-cases/start-session/start-session.command';
 import { StartSessionUseCase } from './application/use-cases/start-session/start-session.use-case';
 import { SubmitSessionCommand } from './application/use-cases/submit-session/submit-session.command';
@@ -15,8 +15,8 @@ import { ExamTemplate } from './domain/aggregates/exam-template/exam-template.ag
 import { LicenseCategory } from './domain/aggregates/exam-template/exam-template.types';
 import {
   ExamSessionAlreadyFinishedException,
-  InvalidExamTemplateException,
   InsufficientQuestionPoolException,
+  InvalidExamTemplateException,
   StudentLicenseMismatchException,
   StudentProfileInvalidException,
 } from './domain/exceptions/exam.exceptions';

@@ -1,10 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { EnrollmentStatus } from '../../domain/aggregates/course-enrollment/course-enrollment.types';
-import { LicenseCategory } from '../../domain/aggregates/course/course.types';
 import {
   AdminStudentEnrollmentResult,
   ListAdminStudentEnrollmentsResult,
 } from '../../application/use-cases/list-admin-student-enrollments/list-admin-student-enrollments.result';
+import { LicenseCategory } from '../../domain/aggregates/course/course.types';
+import { EnrollmentStatus } from '../../domain/aggregates/course-enrollment/course-enrollment.types';
 
 export class AdminEnrollmentResponseDto {
   @ApiProperty() enrollmentId!: string;

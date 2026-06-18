@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { createAuditEvent, IUseCase } from '@repo/common';
 import { IdentityUser } from '../../../domain/aggregates/identity-user/identity-user.aggregate';
 import { IdentityUserRepository } from '../../../domain/repositories/identity-user.repository';
+import { AuditPublisherPort } from '../../ports/audit-publisher.port';
 import { IdentityEventPublisherPort } from '../../ports/identity-event-publisher.port';
 import { IdentityProviderPort } from '../../ports/identity-provider.port';
-import { AuditPublisherPort } from '../../ports/audit-publisher.port';
 import { CreateIdentityUserCommand } from './create-identity-user.command';
 import { CreateIdentityUserResult } from './create-identity-user.result';
 

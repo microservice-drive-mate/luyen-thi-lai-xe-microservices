@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { FileObjectResult } from '../../application/use-cases/shared/file-object.result';
 import { ListFilesResult } from '../../application/use-cases/list-files/list-files.use-case';
+import { FileObjectResult } from '../../application/use-cases/shared/file-object.result';
 
 export class FileObjectResponseDto {
   @ApiProperty()

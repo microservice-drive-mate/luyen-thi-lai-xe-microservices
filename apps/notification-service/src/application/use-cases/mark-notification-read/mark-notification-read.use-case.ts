@@ -1,16 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IUseCase } from '@repo/common';
-import {
-  NOTIFICATION_WS_EVENTS,
-  NotificationUnreadCountPayload,
-  WsEmitterPort,
-} from '../../ports/ws-emitter.port';
 import { NotificationNotFoundException } from '../../../domain/exceptions/notification-not-found.exception';
 import {
   Notification,
   NotificationRecord,
   NotificationRepository,
 } from '../../../domain/repositories/notification.repository';
+import {
+  NOTIFICATION_WS_EVENTS,
+  NotificationUnreadCountPayload,
+  WsEmitterPort,
+} from '../../ports/ws-emitter.port';
 import { MarkNotificationReadCommand } from './mark-notification-read.command';
 
 @Injectable()

@@ -452,7 +452,7 @@ RabbitMQ resilience được cung cấp bởi `@repo/common`:
 - Retry queues: `notification_service_events.retry.1`, `notification_service_events.retry.2`, ...
 - DLQ: `notification_service_events.dlq`
 
-`retry.maxAttempts` quyết định số retry queues được tạo. Khi không override, các retry queue dùng default TTL `5000`, `30000`, `120000` ms. `retry.intervalMs` chỉ dùng khi muốn mọi retry queue dùng cùng một TTL custom.
+`retry.maxAttempts` quyết định số retry queues được tạo. Khi không override, các retry queue dùng default TTL `5000`, `60000`, `300000` ms. `retry.delaysMs` cho phép cấu hình backoff theo từng lần retry; `retry.intervalMs` chỉ dùng khi muốn mọi retry queue dùng cùng một TTL custom.
 ## Endpoint Gap Batch Additions
 
 ### PATCH `/notifications/mark-all-read`

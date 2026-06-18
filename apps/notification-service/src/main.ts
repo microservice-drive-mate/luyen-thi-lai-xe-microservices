@@ -1,7 +1,6 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
-import type { NextFunction, Request, Response } from 'express';
 import {
   AccessLogInterceptor,
   ApiExceptionFilter,
@@ -22,6 +21,7 @@ import {
   TracingMiddleware,
   WINSTON_MODULE_NEST_PROVIDER,
 } from '@repo/common';
+import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 import { RedisSocketIoAdapter } from './infrastructure/websockets/redis-socket-io.adapter';
@@ -46,6 +46,8 @@ async function bootstrap() {
   await assertRabbitMqResilienceTopology(rabbitmqUrl, {
     queue: rabbitmqQueue,
     retryDelaysMs,
+    resetRetryQueuesOnTtlMismatch:
+      configService.get<string>('nodeEnv') === 'development-local',
   });
   const port = configService.get<number>('port') ?? 3000;
 
@@ -99,8 +101,13 @@ async function bootstrap() {
 void runBootstrapWithRetries(serviceName, bootstrap);
 
 function createRetryDelays(configService: ConfigService): number[] {
+  const configuredDelaysMs = configService.get<number[]>('retry.delaysMs');
   const configuredMaxAttempts = configService.get<number>('retry.maxAttempts');
   const configuredIntervalMs = configService.get<number>('retry.intervalMs');
+
+  if (configuredDelaysMs?.length) {
+    return configuredDelaysMs.map((delayMs) => Math.max(1000, delayMs));
+  }
 
   if (
     configuredMaxAttempts === undefined &&

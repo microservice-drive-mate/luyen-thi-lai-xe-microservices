@@ -1,9 +1,9 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Gender, LicenseTier, PrismaClient, Role } from '@prisma/user-client';
 import {
+  allDemoUsers,
   DEMO_IDS,
   DEMO_USERS,
-  allDemoUsers,
 } from '../../../scripts/demo-seed-data';
 
 const connectionString = process.env.DATABASE_URL;

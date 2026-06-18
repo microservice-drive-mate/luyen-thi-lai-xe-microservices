@@ -13,12 +13,6 @@ import {
   IsUUID,
 } from 'class-validator';
 import {
-  ManeuverErrorRecord,
-  ManeuverRecord,
-  SimulationSessionResultRecord,
-  SimulationSessionRecord,
-} from '../../domain/repositories/simulation.repository';
-import {
   Practice2dFeedbackResult,
   Practice2dSessionResult,
 } from '../../application/use-cases/practice2d/practice2d.result';
@@ -26,6 +20,12 @@ import {
   FeedbackSeverity,
   Practice2dSessionStatus,
 } from '../../domain/aggregates/practice2d/practice2d-session.types';
+import {
+  ManeuverErrorRecord,
+  ManeuverRecord,
+  SimulationSessionRecord,
+  SimulationSessionResultRecord,
+} from '../../domain/repositories/simulation.repository';
 
 export class LicenseCategoryQueryDto {
   @ApiProperty({ enum: LicenseCategory })

@@ -3,9 +3,9 @@ import { createAuditEvent, IUseCase } from '@repo/common';
 import { IdentityUser } from '../../../domain/aggregates/identity-user/identity-user.aggregate';
 import { IdentityUserNotFoundException } from '../../../domain/exceptions/identity-user-not-found.exception';
 import { IdentityUserRepository } from '../../../domain/repositories/identity-user.repository';
+import { AuditPublisherPort } from '../../ports/audit-publisher.port';
 import { IdentityEventPublisherPort } from '../../ports/identity-event-publisher.port';
 import { IdentityProviderPort } from '../../ports/identity-provider.port';
-import { AuditPublisherPort } from '../../ports/audit-publisher.port';
 import { ChangeUserRoleCommand } from './change-user-role.command';
 import { ChangeUserRoleResult } from './change-user-role.result';
 

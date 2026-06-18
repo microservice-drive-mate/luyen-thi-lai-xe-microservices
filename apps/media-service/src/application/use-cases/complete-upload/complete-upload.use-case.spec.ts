@@ -1,7 +1,7 @@
 import { FileObject } from '../../../domain/aggregates/file-object/file-object.aggregate';
 import { FileStatus } from '../../../domain/aggregates/file-object/file-object.types';
-import { FileUploadNotCompletedException } from '../../../domain/exceptions/file-upload-not-completed.exception';
 import { FileNotFoundException } from '../../../domain/exceptions/file-not-found.exception';
+import { FileUploadNotCompletedException } from '../../../domain/exceptions/file-upload-not-completed.exception';
 import { FileObjectRepository } from '../../../domain/repositories/file-object.repository';
 import { StoragePort } from '../../ports/storage.port';
 import { CompleteUploadCommand } from './complete-upload.command';

@@ -9,9 +9,9 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { buildAuditRequestContext } from '@repo/common';
 import type { Request } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, Roles } from 'nest-keycloak-connect';
 import { CompleteLessonCommand } from '../../application/use-cases/complete-lesson/complete-lesson.command';
 import { CompleteLessonUseCase } from '../../application/use-cases/complete-lesson/complete-lesson.use-case';
