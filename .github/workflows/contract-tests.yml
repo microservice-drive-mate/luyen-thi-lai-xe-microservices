@@ -59,7 +59,7 @@ jobs:
   report-pending-status:
     name: Mark PR as Pending
     runs-on: ubuntu-latest
-    if: ${{ (inputs.pact_consumer_commit_sha || github.event.client_payload.pact_consumer_commit_sha || '') != '' }}
+    if: (inputs.pact_consumer_commit_sha || github.event.client_payload.pact_consumer_commit_sha || '') != ''
     steps:
       - name: Send Pending Status
         env:
@@ -193,7 +193,7 @@ jobs:
     name: Report Final Status
     needs: [provider-verify]
     runs-on: ubuntu-latest
-    if: ${{ always() && (inputs.pact_consumer_commit_sha || github.event.client_payload.pact_consumer_commit_sha || '') != '' }}
+    if: always() && (inputs.pact_consumer_commit_sha || github.event.client_payload.pact_consumer_commit_sha || '') != ''
     steps:
       - name: Resolve Status and Send
         env:
