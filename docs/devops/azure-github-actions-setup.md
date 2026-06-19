@@ -282,17 +282,23 @@ confirm_production=true
 Configure GitHub Environment `production` with required reviewers. Do not add a production auto trigger. Production should use environment-scoped variables/secrets:
 
 ```text
+PRODUCTION_DEPLOY_ENABLED=false
 GHCR_OWNER=microservice-drive-mate
-AZURE_AKS_RESOURCE_GROUP
-AZURE_AKS_CLUSTER_NAME
+AZURE_AKS_RESOURCE_GROUP=rg-lttl-production-sea
+AZURE_AKS_CLUSTER_NAME=aks-lttl-production
 PRODUCTION_API_HOST
 PRODUCTION_AUTH_HOST
 PRODUCTION_FRONTEND_ORIGIN
 PRODUCTION_API_SCHEME
+PRODUCTION_NEON_ENABLED=true
+PRODUCTION_NEON_HOST
+PRODUCTION_POSTGRES_USER
+PRODUCTION_SEED_ENABLED=false
 AZURE_CLIENT_ID
 AZURE_TENANT_ID
 AZURE_SUBSCRIPTION_ID
 PRODUCTION_POSTGRES_PASSWORD
+PRODUCTION_REDIS_PASSWORD
 PRODUCTION_RABBITMQ_PASSWORD
 PRODUCTION_RABBITMQ_ERLANG_COOKIE
 PRODUCTION_KEYCLOAK_ADMIN_PASSWORD
@@ -300,6 +306,8 @@ PRODUCTION_KEYCLOAK_CLIENT_SECRET
 PRODUCTION_STORAGE_ACCOUNT_NAME
 PRODUCTION_STORAGE_ACCOUNT_KEY
 ```
+
+Keep `PRODUCTION_DEPLOY_ENABLED=false` until production has its own AKS cluster. Do not point the production environment at `aks-lttl-staging`; the production workflow intentionally fails if the AKS resource group or cluster name still looks like staging.
 
 Azure OIDC federated credential for production must use the production environment subject:
 

@@ -30,21 +30,11 @@ env:
   GHCR_OWNER: ${{ vars.GHCR_OWNER || github.repository_owner }}
 
 jobs:
-  production-disabled:
-    name: Production Deploy Disabled
-    runs-on: ubuntu-latest
-    if: vars.PRODUCTION_DEPLOY_ENABLED != 'true'
-    steps:
-      - name: Explain production status
-        run: |
-          echo "Production deploy is intentionally disabled for now."
-          echo "Current AKS capacity is reserved for staging; set PRODUCTION_DEPLOY_ENABLED=true after choosing a separate production platform."
-
   deploy-production:
     name: Deploy Production Kubernetes
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    if: inputs.confirm_production == true && vars.PRODUCTION_DEPLOY_ENABLED == 'true'
+    if: inputs.confirm_production == true
     environment:
       name: ${{ inputs.target_environment }}
     concurrency:
@@ -52,6 +42,7 @@ jobs:
       cancel-in-progress: false
     env:
       IMAGE_TAG: ${{ inputs.image_tag }}
+      PRODUCTION_DEPLOY_ENABLED: ${{ vars.PRODUCTION_DEPLOY_ENABLED || 'false' }}
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -61,13 +52,18 @@ jobs:
       AUTH_HOST: ${{ vars.PRODUCTION_AUTH_HOST }}
       FRONTEND_ORIGIN: ${{ vars.PRODUCTION_FRONTEND_ORIGIN }}
       API_SCHEME: ${{ vars.PRODUCTION_API_SCHEME }}
+      PRODUCTION_SEED_ENABLED: ${{ vars.PRODUCTION_SEED_ENABLED || 'false' }}
+      NEON_ENABLED: ${{ vars.PRODUCTION_NEON_ENABLED || 'false' }}
+      NEON_HOST: ${{ vars.PRODUCTION_NEON_HOST }}
       GHCR_PULL_USERNAME: ${{ secrets.GHCR_PULL_USERNAME }}
       GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+      POSTGRES_USER: ${{ secrets.PRODUCTION_POSTGRES_USER || vars.PRODUCTION_POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.PRODUCTION_POSTGRES_PASSWORD }}
       RABBITMQ_DEFAULT_PASS: ${{ secrets.PRODUCTION_RABBITMQ_PASSWORD }}
       RABBITMQ_ERLANG_COOKIE: ${{ secrets.PRODUCTION_RABBITMQ_ERLANG_COOKIE }}
       KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.PRODUCTION_KEYCLOAK_ADMIN_PASSWORD }}
       KEYCLOAK_CLIENT_SECRET: ${{ secrets.PRODUCTION_KEYCLOAK_CLIENT_SECRET }}
+      REDIS_PASSWORD: ${{ secrets.PRODUCTION_REDIS_PASSWORD }}
       STORAGE_ACCOUNT_NAME: ${{ secrets.PRODUCTION_STORAGE_ACCOUNT_NAME }}
       STORAGE_ACCOUNT_KEY: ${{ secrets.PRODUCTION_STORAGE_ACCOUNT_KEY }}
     steps:
@@ -103,6 +99,7 @@ jobs:
             FRONTEND_ORIGIN
             GHCR_PULL_USERNAME
             GHCR_PULL_TOKEN
+            POSTGRES_USER
             POSTGRES_PASSWORD
             RABBITMQ_DEFAULT_PASS
             RABBITMQ_ERLANG_COOKIE
@@ -119,12 +116,43 @@ jobs:
             fi
           done
 
+          production_deploy_enabled="$(printf '%s' "${PRODUCTION_DEPLOY_ENABLED:-false}" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$production_deploy_enabled" != "true" ]]; then
+            echo "Production deploy is intentionally disabled." >&2
+            echo "Set PRODUCTION_DEPLOY_ENABLED=true in the GitHub Environment 'production' only after the separate production AKS target is ready." >&2
+            exit 1
+          fi
+
+          aks_resource_group_lower="$(printf '%s' "$AZURE_AKS_RESOURCE_GROUP" | tr '[:upper:]' '[:lower:]')"
+          aks_cluster_name_lower="$(printf '%s' "$AZURE_AKS_CLUSTER_NAME" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$aks_resource_group_lower" == *staging* || "$aks_cluster_name_lower" == *staging* ]]; then
+            echo "Refusing production deploy because the AKS target still looks like staging." >&2
+            echo "AZURE_AKS_RESOURCE_GROUP=$AZURE_AKS_RESOURCE_GROUP" >&2
+            echo "AZURE_AKS_CLUSTER_NAME=$AZURE_AKS_CLUSTER_NAME" >&2
+            echo "Create/use a separate production AKS cluster before enabling Production Release." >&2
+            exit 1
+          fi
+
+          neon_enabled="$(printf '%s' "${NEON_ENABLED:-false}" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$neon_enabled" != "true" ]]; then
+            echo "Refusing production deploy because PRODUCTION_NEON_ENABLED must be true for the production milestone." >&2
+            echo "This prevents accidental in-cluster PostgreSQL deployment or mixed Neon credentials." >&2
+            exit 1
+          fi
+
+          if [[ -z "${NEON_HOST:-}" ]]; then
+            echo "Missing required value: PRODUCTION_NEON_HOST" >&2
+            exit 1
+          fi
+
           echo "Repository: ${{ github.repository }}"
           echo "GHCR owner: $GHCR_OWNER"
           echo "Image tag: $IMAGE_TAG"
           echo "Azure resource group: $AZURE_AKS_RESOURCE_GROUP"
           echo "Azure AKS cluster: $AZURE_AKS_CLUSTER_NAME"
           echo "Kubernetes namespace: production"
+          echo "External database enabled: $neon_enabled"
+          echo "Production seed enabled: ${PRODUCTION_SEED_ENABLED:-false}"
 
       - name: Normalize image tag
         shell: bash
@@ -221,9 +249,11 @@ jobs:
           set -euo pipefail
           export HELM_VALUES_FILE="$RUNNER_TEMP/production-values.json"
           API_SCHEME="${API_SCHEME:-http}"
+          NEON_ENABLED="$(printf '%s' "${NEON_ENABLED:-false}" | tr '[:upper:]' '[:lower:]')"
+          PRODUCTION_SEED_ENABLED="$(printf '%s' "${PRODUCTION_SEED_ENABLED:-false}" | tr '[:upper:]' '[:lower:]')"
           GATEWAY_PUBLIC_URL="${API_SCHEME}://${API_HOST}"
           KEYCLOAK_PUBLIC_URL="${API_SCHEME}://${AUTH_HOST}"
-          export API_SCHEME GATEWAY_PUBLIC_URL KEYCLOAK_PUBLIC_URL
+          export API_SCHEME NEON_ENABLED PRODUCTION_SEED_ENABLED GATEWAY_PUBLIC_URL KEYCLOAK_PUBLIC_URL
 
           node <<'NODE'
           const fs = require('node:fs');
@@ -269,6 +299,12 @@ jobs:
             tracing: {
               enabled: false,
             },
+            externalDatabase: {
+              enabled: env.NEON_ENABLED === 'true',
+              host: env.NEON_HOST || '',
+              port: 5432,
+              sslmode: 'require',
+            },
             appDefaults: {
               replicaCount: 1,
               resources: {
@@ -278,18 +314,20 @@ jobs:
               hpa: { enabled: false },
             },
             seed: {
-              enabled: false,
+              enabled: env.PRODUCTION_SEED_ENABLED === 'true',
               resources: {
                 requests: { cpu: '100m', memory: '256Mi' },
                 limits: { cpu: '500m', memory: '768Mi' },
               },
             },
             secrets: {
+              postgresUser: env.POSTGRES_USER,
               postgresPassword: env.POSTGRES_PASSWORD,
               rabbitmqPassword: env.RABBITMQ_DEFAULT_PASS,
               rabbitmqErlangCookie: env.RABBITMQ_ERLANG_COOKIE,
               keycloakAdminPassword: env.KEYCLOAK_ADMIN_PASSWORD,
               keycloakClientSecret: env.KEYCLOAK_CLIENT_SECRET,
+              redisPassword: env.REDIS_PASSWORD || 'change-me',
               storageAccountName: env.STORAGE_ACCOUNT_NAME || '',
               storageAccountKey: env.STORAGE_ACCOUNT_KEY || '',
               storageContainerName: 'media',

@@ -9,17 +9,23 @@ Runbook nay dung de demo production milestone tren Azure AKS, tap trung vao cac 
 
 ## 1. Deployment Model
 
-V1 dung cung AKS hien tai de tiet kiem chi phi demo:
+Production milestone dung AKS rieng de tranh anh huong staging:
 
 ```text
-AKS cluster: aks-lttl-staging
-staging namespace: auto deploy sau Main Image Release
-production namespace: manual deploy qua Production Release
+staging AKS cluster: aks-lttl-staging
+staging namespace: staging
+staging policy: auto deploy sau Main Image Release
+
+production AKS cluster: aks-lttl-production
+production namespace: production
+production policy: manual deploy qua Production Release
 ```
 
 Production khong auto deploy. Workflow `Production Release` chi chay bang `workflow_dispatch`, yeu cau `confirm_production=true` va GitHub Environment `production`.
 
 Production image tag phai la Git SHA da duoc `Main Image Release` build/push len GHCR va nen la SHA da pass staging smoke test.
+
+Safety rule: production workflow se fail neu `AZURE_AKS_RESOURCE_GROUP` hoac `AZURE_AKS_CLUSTER_NAME` cua Environment `production` co chua chu `staging`.
 
 ## 2. GitHub Environment Setup
 
@@ -38,14 +44,21 @@ Khuyen nghi:
 Variables:
 
 ```text
+PRODUCTION_DEPLOY_ENABLED=false
 GHCR_OWNER=microservice-drive-mate
-AZURE_AKS_RESOURCE_GROUP=rg-lttl-staging-sea
-AZURE_AKS_CLUSTER_NAME=aks-lttl-staging
+AZURE_AKS_RESOURCE_GROUP=rg-lttl-production-sea
+AZURE_AKS_CLUSTER_NAME=aks-lttl-production
 PRODUCTION_API_SCHEME=http
-PRODUCTION_API_HOST=api.<external-ip>.nip.io
-PRODUCTION_AUTH_HOST=auth.<external-ip>.nip.io
+PRODUCTION_API_HOST=api-prod.<production-ingress-ip>.nip.io
+PRODUCTION_AUTH_HOST=auth-prod.<production-ingress-ip>.nip.io
 PRODUCTION_FRONTEND_ORIGIN=http://localhost:5173
+PRODUCTION_NEON_ENABLED=true
+PRODUCTION_NEON_HOST=<production-neon-host>
+PRODUCTION_POSTGRES_USER=<production-neon-user>
+PRODUCTION_SEED_ENABLED=false
 ```
+
+Keep `PRODUCTION_DEPLOY_ENABLED=false` until the production AKS cluster, ingress-nginx, Neon database, and GitHub secrets are ready. Then change it to `true` before the first manual production release.
 
 Secrets:
 
@@ -56,6 +69,7 @@ AZURE_SUBSCRIPTION_ID
 GHCR_PULL_USERNAME
 GHCR_PULL_TOKEN
 PRODUCTION_POSTGRES_PASSWORD
+PRODUCTION_REDIS_PASSWORD
 PRODUCTION_RABBITMQ_PASSWORD
 PRODUCTION_RABBITMQ_ERLANG_COOKIE
 PRODUCTION_KEYCLOAK_ADMIN_PASSWORD
@@ -68,6 +82,45 @@ For GitHub OIDC, Azure federated credential subject must match:
 
 ```text
 repo:<owner>/<repo>:environment:production
+```
+
+Do not remove or rename existing repo-level staging secrets/variables while setting up production. Staging remains the priority environment.
+
+## 2.1. Production Infrastructure Setup
+
+Do not edit or apply `terraform/azure-aks/terraform.tfvars` for production because that file is the current staging config.
+
+Create a separate production var file from:
+
+```powershell
+Copy-Item terraform\azure-aks\production.tfvars.example terraform\azure-aks\production.tfvars
+```
+
+Edit only `terraform/azure-aks/production.tfvars`, then use a separate Terraform workspace or backend state for production:
+
+```powershell
+terraform -chdir=terraform/azure-aks workspace new production
+terraform -chdir=terraform/azure-aks workspace select production
+terraform -chdir=terraform/azure-aks plan -var-file=production.tfvars
+terraform -chdir=terraform/azure-aks apply -var-file=production.tfvars
+```
+
+After apply:
+
+```powershell
+az aks get-credentials `
+  --resource-group rg-lttl-production-sea `
+  --name aks-lttl-production `
+  --overwrite-existing
+
+kubectl get nodes -o wide
+```
+
+Install ingress-nginx on the production cluster before the first Production Release. After the LoadBalancer IP appears, update:
+
+```text
+PRODUCTION_API_HOST=api-prod.<production-ingress-ip>.nip.io
+PRODUCTION_AUTH_HOST=auth-prod.<production-ingress-ip>.nip.io
 ```
 
 ## 3. Centralized Config And Secrets
@@ -181,12 +234,12 @@ Current implementation:
 
 Local Docker Compose is a full lab stack. AKS Student staging is optimized for limited CPU/RAM:
 
-| Area | Local Docker Compose | AKS Student staging |
-| --- | --- | --- |
-| Databases | One PostgreSQL container per service database | One PostgreSQL StatefulSet with multiple logical databases |
-| Metrics UI | Prometheus + Grafana always available in local infra | Optional lightweight Prometheus + Grafana, disabled by default |
-| Tracing UI | Jaeger in local infra | Optional Jaeger, disabled by default |
-| Central logs | Elasticsearch + Logstash + Kibana | `kubectl logs`, Lens/k9s, optional Azure Monitor/Log Analytics |
+| Area         | Local Docker Compose                                 | AKS Student staging                                            |
+| ------------ | ---------------------------------------------------- | -------------------------------------------------------------- |
+| Databases    | One PostgreSQL container per service database        | One PostgreSQL StatefulSet with multiple logical databases     |
+| Metrics UI   | Prometheus + Grafana always available in local infra | Optional lightweight Prometheus + Grafana, disabled by default |
+| Tracing UI   | Jaeger in local infra                                | Optional Jaeger, disabled by default                           |
+| Central logs | Elasticsearch + Logstash + Kibana                    | `kubectl logs`, Lens/k9s, optional Azure Monitor/Log Analytics |
 
 Keep the in-cluster observability stack disabled during normal auto deploy. Enable it manually only when demo capacity is available.
 
