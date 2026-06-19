@@ -393,6 +393,22 @@ keycloak:
   hostnameStrict: "false"
   httpEnabled: "true"
   proxyHeaders: xforwarded
+  startupProbe:
+    enabled: true
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 60
+  readinessProbe:
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+  livenessProbe:
+    initialDelaySeconds: 300
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 6
   resources:
     requests:
       cpu: 500m

@@ -90,19 +90,29 @@ spec:
               value: {{ .Values.keycloak.proxyHeaders | quote }}
             - name: KC_HEALTH_ENABLED
               value: "true"
+          {{- if .Values.keycloak.startupProbe.enabled }}
+          startupProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: {{ .Values.keycloak.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.keycloak.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.keycloak.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.keycloak.startupProbe.failureThreshold }}
+          {{- end }}
           readinessProbe:
             tcpSocket:
               port: http
-            initialDelaySeconds: 40
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 12
+            initialDelaySeconds: {{ .Values.keycloak.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.keycloak.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.keycloak.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.keycloak.readinessProbe.failureThreshold }}
           livenessProbe:
             tcpSocket:
               port: http
-            initialDelaySeconds: 80
-            periodSeconds: 20
-            timeoutSeconds: 5
+            initialDelaySeconds: {{ .Values.keycloak.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.keycloak.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.keycloak.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.keycloak.livenessProbe.failureThreshold }}
           resources:
             {{- toYaml .Values.keycloak.resources | nindent 12 }}
           volumeMounts:
