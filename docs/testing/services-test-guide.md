@@ -583,6 +583,22 @@ pnpm.cmd exec turbo run check-types
 pnpm.cmd exec turbo run test
 ```
 
+For consumer-driven API changes in `identity-service` or `exam-service`, run Pact provider verification with pact artifacts from DriveMate-FE/Admin:
+
+```powershell
+$env:PACT_DIR="D:\path\to\pacts"
+pnpm.cmd run test:pact:provider
+```
+
+If pact files are not available yet but you need to verify the provider harness compiles and starts:
+
+```powershell
+$env:PACT_SKIP_MISSING="true"
+pnpm.cmd run test:pact:provider
+```
+
+Full contract-testing workflow: `docs/testing/contract-testing.md`.
+
 Manual smoke checklist:
 
 - Login, refresh, logout work.

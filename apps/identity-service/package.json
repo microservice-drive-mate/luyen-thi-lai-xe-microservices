@@ -23,6 +23,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:pact:provider": "tsx test/pact/identity.pact.provider.ts",
     "db:generate": "prisma generate --schema ./prisma/schema.prisma",
     "db:migrate": "tsx ../../scripts/with-consul-env.ts identity-service -- prisma migrate dev --schema ./prisma/schema.prisma",
     "db:deploy": "tsx ../../scripts/with-consul-env.ts identity-service -- prisma migrate deploy --schema ./prisma/schema.prisma",

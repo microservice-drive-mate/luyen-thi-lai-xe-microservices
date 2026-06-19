@@ -219,6 +219,8 @@ pnpm run consul:get
 # Kiểm tra và vận hành
 pnpm run smoke
 pnpm run test
+pnpm run test:contract
+pnpm run test:pact:provider
 pnpm run test:cov
 pnpm run test:integration
 pnpm run observability:smoke
@@ -331,12 +333,14 @@ Tài liệu kiểm thử đầy đủ nằm tại [`docs/testing/local-testing-g
 
 - Unit Testing (Jest + cô lập hoàn toàn, không DB thật)
 - E2E Testing (Testcontainers + PostgreSQL, không SQLite)
+- **Contract Testing** (Pact V4, consumer-driven cho identity/exam)
 - **K6 Performance Testing** (TypeScript, esbuild, InfluxDB + Grafana)
 
 Xem thêm các tài liệu kiểm thử chi tiết:
 
 - [Local Testing Guide](./docs/testing/local-testing-guide.md) — Hướng dẫn đầy đủ các tầng kiểm thử
 - [Services Test Guide](./docs/testing/services-test-guide.md) — Test cases theo từng service
+- [Contract Testing](./docs/testing/contract-testing.md) — Pact V4 cho DriveMate mobile/admin và identity/exam
 - [Performance Testing Changelog](./docs/testing/performance-testing-setup.md) — Nhật ký thiết lập K6 Enterprise
 
 

@@ -25,6 +25,13 @@ Tài liệu này cung cấp toàn bộ quy chuẩn, cấu hình và lệnh chạ
    - **Package**: `packages/performance-tests` - module TypeScript độc lập trong Monorepo.
    - **Nguyên tắc cốt lõi**: Zero-Data Bloat (dọn sạch DB sau mỗi run), SLO Thresholds cứng, Observability (X-K6-Trace-Id tự động nhúng vào mọi request).
 
+4. **Contract Testing (CDCT — Consumer-Driven Contract Testing)**:
+   - **Mục tiêu**: Đảm bảo frontend/mobile không bị break khi backend thay đổi API shape — phát hiện drift giữa consumer và provider *trước khi merge*.
+   - **Công cụ**: [Pact V4](https://docs.pact.io/) + shared `@repo/pact-matchers` + GitHub Actions pipeline.
+   - **Phạm vi P1**: `identity-service` và `exam-service` (2 consumer: `drivemate-mobile`, `drivemate-admin`).
+   - **Nguyên tắc cốt lõi**: Consumer định nghĩa shape theo nhu cầu thật → provider verify *không cần DB/Keycloak thật* → CI gate chặn merge nếu contract bị break.
+   - **Tài liệu chi tiết**: [`docs/testing/contract-testing.md`](./contract-testing.md).
+
 ---
 
 ## 2. Hướng dẫn chạy Unit & E2E Test
@@ -90,7 +97,125 @@ Tham khảo `notification-service` hoặc `exam-service` để nắm pattern Inj
 
 ---
 
-## 4. Performance Testing với K6 (Enterprise Setup)
+## 4. Contract Testing (CDCT) — Local Workflow
+
+Contract test chạy hoàn toàn offline, không cần DB hay Keycloak. Có 2 chiều: **provider verify** (từ backend) và **consumer generate** (từ FE/Admin).
+
+### 4.1. Provider verification (backend)
+
+Chạy khi muốn verify backend đáp ứng đúng contract đã được consumer định nghĩa.
+
+**Yêu cầu**: Có file pact JSON trong thư mục `./pacts/` hoặc set `PACT_DIR`.
+
+```powershell
+# Bước 1 — build shared packages (chỉ cần chạy lần đầu hoặc sau khi đổi packages/)
+pnpm exec turbo run build --filter=@repo/common --filter=@repo/pact-matchers
+
+# Bước 2 — chạy verification
+# Tất cả services cùng lúc (turbo, concurrency=1 để tránh port conflict)
+pnpm run test:pact:provider
+
+# hoặc từng service riêng
+pnpm run test:pact:provider:identity
+pnpm run test:pact:provider:exam
+```
+
+Nếu chưa có pact files và chỉ muốn kiểm tra harness compile + start đúng:
+
+```powershell
+$env:PACT_SKIP_MISSING="true"
+pnpm run test:pact:provider
+```
+
+Chỉ định thư mục pact tùy chỉnh:
+
+```powershell
+$env:PACT_DIR="D:\path\to\your\pacts"
+pnpm run test:pact:provider
+```
+
+### 4.2. Consumer test (tạo pact files từ DriveMate-FE)
+
+Chạy trong repo `DriveMate-FE`. Kết quả là các file JSON trong `pacts/`.
+
+**Yêu cầu**: `@repo/pact-matchers` phải đã được build (xem bước 1 ở trên).
+
+```powershell
+# Từ repo DriveMate-FE
+npm run test:pact
+
+# Kết quả:
+# pacts/drivemate-mobile-identity-service.json
+# pacts/drivemate-mobile-exam-service.json
+```
+
+### 4.3. Consumer test (tạo pact files từ DriveMate-Admin)
+
+Admin dùng Vitest thay Jest. Flag `--pool=forks` cần thiết vì Pact mock server dùng native binding.
+
+```powershell
+# Từ repo DriveMate-Admin
+npm run test:pact
+
+# Kết quả:
+# pacts/drivemate-admin-identity-service.json
+# pacts/drivemate-admin-exam-service.json
+```
+
+### 4.4. Flow local đầy đủ (end-to-end)
+
+Chạy cả 2 chiều trên máy local để verify toàn bộ P1 contract trước khi push:
+
+```powershell
+# 1. Build shared packages một lần
+pnpm exec turbo run build --filter=@repo/common --filter=@repo/pact-matchers
+
+# 2. Sinh pact files từ cả 2 consumer
+#    (chạy từ từng repo, output vào ./pacts/)
+push-location "D:\uit\nam3-ky2\microservice\DriveMate-FE"
+npm run test:pact
+pop-location
+
+push-location "D:\uit\nam3-ky2\microservice\DriveMate-Admin"
+npm run test:pact
+pop-location
+
+# 3. Copy pact files vào backend pacts/ dir
+#    (hoặc set PACT_DIR trỏ đến thư mục chứa tất cả)
+Copy-Item "D:\uit\nam3-ky2\microservice\DriveMate-FE\pacts\*.json" ".\pacts\"
+Copy-Item "D:\uit\nam3-ky2\microservice\DriveMate-Admin\pacts\*.json" ".\pacts\"
+
+# 4. Verify
+pnpm run test:pact:provider
+```
+
+### 4.5. Thêm interaction mới
+
+| Bước | Việc cần làm |
+| --- | --- |
+| 1 | Thêm matcher vào `packages/pact-matchers/src/index.ts` nếu shape mới chưa có. |
+| 2 | Build lại: `pnpm --filter @repo/pact-matchers run build`. |
+| 3 | Thêm `it(...)` vào consumer pact spec (`auth.pact.test.ts` hoặc `exam.pact.test.ts`). |
+| 4 | Chạy `npm run test:pact` từ consumer repo → sinh pact JSON mới. |
+| 5 | Thêm state vào `stateHandlers` trong provider harness nếu dùng state mới. |
+| 6 | Chạy `pnpm run test:pact:provider` để verify. |
+
+> Nếu bước 6 fail: provider chưa implement endpoint → đây là lúc CDCT phát huy tác dụng.
+> Backend team phải implement đúng trước khi consumer được phép merge.
+
+### 4.6. Troubleshooting thường gặp
+
+| Triệu chứng | Nguyên nhân | Giải pháp |
+| --- | --- | --- |
+| `No pact files found` | `pacts/` trống hoặc `PACT_DIR` sai | Set `PACT_SKIP_MISSING=true` để dry-run, hoặc chạy consumer test trước. |
+| `Cannot find module '@repo/pact-matchers'` | Package chưa được build | `pnpm --filter @repo/pact-matchers run build`. |
+| `Port already in use` | Pact mock server chưa đóng sạch | Kill process trên port 8443–8450 hoặc restart terminal. |
+| Provider state `not found` | State consumer dùng chưa có trong `stateHandlers` | Thêm vào harness (xem `contract-testing.md`, mục Provider States). |
+| `DomainExceptionFilter` không bắt lỗi | State handler throw NestJS exception thay DomainException | Dùng domain exception class thật (vd. `ExamTemplateVersionConflictException`). |
+
+---
+
+## 5. Performance Testing với K6 (Enterprise Setup)
 
 Bộ test hiệu năng được đặt tại `packages/performance-tests`, là một package TypeScript chính thức trong Monorepo.
 
@@ -256,13 +381,20 @@ Các panel chính:
 
 ---
 
-## 5. Tóm tắt lệnh nhanh
+## 6. Tóm tắt lệnh nhanh
 
 ```bash
 # ===== UNIT & E2E =====
 pnpm test:all              # Tất cả unit test (10 services)
 pnpm test:e2e:all          # Tất cả E2E test
 pnpm test:core             # Unit test Core Services (Identity, Exam, Course)
+
+# ===== CONTRACT TEST (CDCT) =====
+pnpm run test:pact:provider          # Verify tất cả P1 providers (identity + exam)
+pnpm run test:pact:provider:identity # Chỉ identity-service
+pnpm run test:pact:provider:exam     # Chỉ exam-service
+# (Consumer: cd DriveMate-FE && npm run test:pact)
+# (Consumer: cd DriveMate-Admin && npm run test:pact)
 
 # ===== K6 PERFORMANCE =====
 pnpm perf:build            # Build TS -> JS

@@ -14,7 +14,11 @@
     "RABBITMQ_DEBUG_CONFIG",
     "REDIS_URL",
     "LOGSTASH_HOST",
-    "LOGSTASH_PORT"
+    "LOGSTASH_PORT",
+    "PACT_DIR",
+    "PACT_LOG_LEVEL",
+    "PACT_SKIP_MISSING",
+    "PACT_URLS"
   ],
   "tasks": {
     "build": {
@@ -37,6 +41,10 @@
       "outputs": ["coverage/**"]
     },
     "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "test:pact:provider": {
       "dependsOn": ["^build"],
       "cache": false
     },

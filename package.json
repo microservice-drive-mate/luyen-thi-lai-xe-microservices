@@ -24,6 +24,10 @@
     "test:all": "turbo run test --concurrency=4",
     "test:e2e:all": "turbo run test:e2e --concurrency=2",
     "test:core": "turbo run test --filter=identity-service --filter=exam-service --filter=course-service --concurrency=4",
+    "test:contract": "pnpm run test:pact:provider",
+    "test:pact:provider": "turbo run test:pact:provider --filter=identity-service --filter=exam-service --concurrency=1",
+    "test:pact:provider:identity": "pnpm --filter identity-service run test:pact:provider",
+    "test:pact:provider:exam": "pnpm --filter exam-service run test:pact:provider",
     "test:cov": "turbo run test:cov",
     "test:integration": "jest --config tests/jest.integration.json",
     "observability:smoke": "tsx scripts/observability-smoke.ts",
@@ -72,6 +76,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",
+    "@pact-foundation/pact": "16.5.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.6.0",
     "husky": "^9.1.7",

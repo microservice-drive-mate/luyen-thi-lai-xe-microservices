@@ -66,6 +66,7 @@ Nhóm này là nguồn chính cho API contract của service. Mỗi file nên m�
 ## Kiểm Thử Và Demo
 
 - [Services Test Guide](./testing/services-test-guide.md)
+- [Contract Testing](./testing/contract-testing.md)
 - [ASR Testing Guide](./testing/asr-testing-guide.md)
 - [Requirements Traceability Matrix](./testing/requirements-traceability-matrix.md)
 - [Test Summary Report](./testing/test-summary-report.md)
