@@ -1,0 +1,46 @@
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+project_name = "lttl"
+environment  = "production"
+location     = "southeastasia"
+
+# Production must not reuse the staging AKS target.
+resource_group_name = "rg-lttl-production-sea"
+aks_cluster_name    = "aks-lttl-production"
+
+# Leave empty to let Azure choose the default supported Kubernetes version.
+kubernetes_version = ""
+
+# Cost guardrail for Azure Student/demo production.
+# Start with one 4 vCPU / 16 GiB node and keep app workloads on the system pool.
+# Add a user node pool later only if scheduling pressure appears.
+node_count           = 1
+node_vm_size         = "Standard_D4s_v4"
+node_os_disk_size_gb = 128
+enable_auto_scaling  = false
+min_node_count       = 1
+max_node_count       = 2
+
+app_node_pool_enabled    = false
+app_node_count           = 1
+app_node_vm_size         = "Standard_B2s_v2"
+app_node_os_disk_size_gb = 64
+
+# Must be globally unique, 3-24 lowercase letters/numbers.
+storage_account_name   = "lttlmediaprod000000"
+storage_container_name = "media"
+
+blob_cors_allowed_origins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+  "http://frontend.production.example.com",
+  "http://api-prod.production.example.com",
+  "http://auth-prod.production.example.com",
+]
+
+# Keep disabled for the first production demo cluster to avoid surprise ingest cost.
+# Enable later only when you intentionally demo Azure Monitor.
+enable_log_analytics = false
