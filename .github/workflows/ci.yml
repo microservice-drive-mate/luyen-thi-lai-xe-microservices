@@ -24,7 +24,6 @@ env:
 
 jobs:
   quality-gate:
-    name: Code Quality & Testing
     uses: ./.github/workflows/reusable-quality-gate.yml
 
   detect-changes:
