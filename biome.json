@@ -11,6 +11,8 @@
       "!**/.turbo",
       "!**/coverage",
       "!**/dist",
+      "!**/.terraform",
+      "!terraform/**/.terraform",
       "!**/node_modules",
       "!reports",
       "!**/backups"
