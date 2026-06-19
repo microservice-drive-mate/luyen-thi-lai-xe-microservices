@@ -160,14 +160,14 @@ describe('Question service HTTP contract (e2e smoke)', () => {
       .set('x-user-id', 'student-1')
       .expect(200)
       .expect((response) => {
-        expect(response.body.data.items[0].options[0]).toEqual({
+        const [question] = response.body.data.items;
+        expect(question.correctOptionId).toBe('option-1');
+        expect(question.options[0]).toEqual({
           id: 'option-1',
           content: 'Dung xe',
           displayOrder: 1,
         });
-        expect(
-          response.body.data.items[0].options[0].isCorrect,
-        ).toBeUndefined();
+        expect(question.options[0].isCorrect).toBeUndefined();
       });
   });
 

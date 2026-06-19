@@ -36,6 +36,7 @@ export class PublicPracticeQuestionResponseDto {
   @ApiPropertyOptional() imageUrl: string | null;
   @ApiPropertyOptional() mediaFileId: string | null;
   @ApiProperty() topicId: string;
+  @ApiProperty() correctOptionId: string;
   @ApiProperty({ type: [PublicQuestionOptionResponseDto] })
   options: PublicQuestionOptionResponseDto[];
 
@@ -49,6 +50,8 @@ export class PublicPracticeQuestionResponseDto {
     dto.imageUrl = result.imageUrl;
     dto.mediaFileId = result.mediaFileId;
     dto.topicId = result.topicId;
+    dto.correctOptionId =
+      result.options.find((option) => option.isCorrect)?.id ?? '';
     dto.options = result.options.map(
       PublicQuestionOptionResponseDto.fromResult,
     );
