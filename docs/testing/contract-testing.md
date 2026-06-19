@@ -236,7 +236,7 @@ L3 cache đảm bảo provider-verify jobs không rebuild shared packages nếu 
 | Secret/Var | Repo | Ý nghĩa |
 | --- | --- | --- |
 | `secrets.BACKEND_DISPATCH_TOKEN` | DriveMate-FE, DriveMate-Admin | PAT hoặc GitHub App token có quyền `workflow` trên backend repo. |
-| `vars.BACKEND_REPO` | DriveMate-FE, DriveMate-Admin | Tên backend repo, ví dụ `org/luyen-thi-lai-xe-microservices`. |
+| `vars.BACKEND_REPO` | DriveMate-FE, DriveMate-Admin | Tên backend repo, ví dụ `microservice-drive-mate/luyen-thi-lai-xe-microservices`. |
 
 Provider verification fail thì PR bị chặn. Nếu consumer thêm interaction mới mà provider chưa đáp ứng, provider team phải sửa backend hoặc thống nhất lại contract trước khi merge.
 
