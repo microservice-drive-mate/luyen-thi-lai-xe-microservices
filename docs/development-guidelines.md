@@ -23,6 +23,7 @@ Trước khi sửa bất kỳ service nào, đọc theo thứ tự này:
    - [Observability Runbook](./devops/observability-runbook.md)
 7. Nếu thay đổi test/demo:
    - [Services Test Guide](./testing/services-test-guide.md)
+   - [Contract Testing](./testing/contract-testing.md) nếu thay đổi API contract frontend-provider của identity/exam
    - [Requirements Traceability Matrix](./testing/requirements-traceability-matrix.md)
    - [ASR Testing Guide](./testing/asr-testing-guide.md)
    - [Performance Testing Setup](./testing/performance-testing-setup.md) nếu thay đổi K6, dashboard hoặc metric quan sát hiệu năng
@@ -44,6 +45,7 @@ Không bắt đầu implement endpoint hoặc sửa behavior public khi chưa đ
 | Config Consul/env                                                    | `docs/devops/consul-workflow.md`             |
 | Docker/Kong/Kubernetes/Azure/CI/CD/observability                     | `docs/devops/*.md`                           |
 | Test scenario, traceability, demo                                    | `docs/testing/*.md`                          |
+| Contract test identity/exam                                          | `docs/testing/contract-testing.md`           |
 | K6 performance test, InfluxDB dashboard, Prometheus metric mới       | `docs/testing/performance-testing-setup.md`  |
 | Requirement/SRS/ASR                                                  | `docs/requirements/*.md`                     |
 

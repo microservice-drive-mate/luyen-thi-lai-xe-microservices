@@ -1,0 +1,37 @@
+{
+  "name": "@repo/pact-matchers",
+  "version": "1.0.0",
+  "description": "Shared Pact matcher builders for DriveMate consumer-driven contract tests",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "commonjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check-types": "tsc --noEmit -p tsconfig.json",
+    "test": "jest --config jest.config.js"
+  },
+  "keywords": [
+    "pact",
+    "contract-testing",
+    "drivemate"
+  ],
+  "author": "",
+  "license": "ISC",
+  "peerDependencies": {
+    "@pact-foundation/pact": ">=16.0.0"
+  },
+  "devDependencies": {
+    "@pact-foundation/pact": "16.5.0",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
+    "typescript": "5.9.2"
+  }
+}

@@ -1,0 +1,218 @@
+name: Contract Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      pact_artifact_repo:
+        description: "Repo that produced the pact artifact (owner/repo)"
+        required: false
+        default: ""
+      pact_artifact_run_id:
+        description: "Run ID that uploaded the pact artifact (skip consumer build)"
+        required: false
+        default: ""
+      pact_artifact_name:
+        description: "Artifact name containing pact JSON files"
+        required: false
+        default: "drivemate-pacts"
+      pact_consumer_commit_sha:
+        description: "Commit SHA of the consumer PR to report status back"
+        required: false
+        default: ""
+  workflow_call:
+    inputs:
+      pact_artifact_repo:
+        required: false
+        type: string
+        default: ""
+      pact_artifact_run_id:
+        required: false
+        type: string
+        default: ""
+      pact_artifact_name:
+        required: false
+        type: string
+        default: "drivemate-pacts"
+      pact_consumer_commit_sha:
+        required: false
+        type: string
+        default: ""
+  repository_dispatch:
+    types: [contract-pacts-ready]
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  PACT_ARTIFACT_NAME: ${{ inputs.pact_artifact_name || github.event.client_payload.pact_artifact_name || 'drivemate-pacts' }}
+  PACT_ARTIFACT_REPO: ${{ inputs.pact_artifact_repo || github.event.client_payload.pact_artifact_repo || github.repository }}
+  PACT_ARTIFACT_RUN_ID: ${{ inputs.pact_artifact_run_id || github.event.client_payload.pact_artifact_run_id || '' }}
+  CONSUMER_SHA: ${{ inputs.pact_consumer_commit_sha || github.event.client_payload.pact_consumer_commit_sha || '' }}
+
+jobs:
+  report-pending-status:
+      name: Mark PR as Pending
+      runs-on: ubuntu-latest
+      if: env.CONSUMER_SHA != ''
+      steps:
+        - name: Send Pending Status
+          env:
+            GH_TOKEN: ${{ secrets.BACKEND_DISPATCH_TOKEN }}
+          run: |
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/$PACT_ARTIFACT_REPO/statuses/$CONSUMER_SHA" \
+              -f state="pending" \
+              -f context="Pact Contract Verification" \
+              -f description="Backend is verifying contracts..." \
+              -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+  
+  build-shared:
+    name: Build shared packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      cache-hit: ${{ steps.cache-shared.outputs.cache-hit }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Cache shared package dist
+        id: cache-shared
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/common/dist
+            packages/pact-matchers/dist
+          key: shared-dist-${{ hashFiles('packages/common/src/**', 'packages/pact-matchers/src/**', 'pnpm-lock.yaml') }}
+          restore-keys: shared-dist-
+
+      - name: Build shared packages (if not cached)
+        if: steps.cache-shared.outputs.cache-hit != 'true'
+        run: pnpm exec turbo run build --filter=@repo/common --filter=@repo/pact-matchers
+
+  download-pacts:
+    name: Download pact artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      artifact-downloaded: ${{ steps.download.outcome == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download pact artifact from consumer run
+        id: download
+        if: env.PACT_ARTIFACT_RUN_ID != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download "$PACT_ARTIFACT_RUN_ID" \
+            --repo "$PACT_ARTIFACT_REPO" \
+            --name "$PACT_ARTIFACT_NAME" \
+            --dir pacts
+
+      - name: Verify pact files present
+        run: |
+          if ! find pacts -name '*.json' -print -quit | grep -q .; then
+            echo "::error::No pact JSON files found in ./pacts — provide pact_artifact_run_id or commit pact files."
+            exit 1
+          fi
+          echo "Pact files:"
+          find pacts -maxdepth 2 -name '*.json' -print
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pacts-workspace
+          path: pacts/
+          retention-days: 1
+
+  provider-verify:
+    name: Verify ${{ matrix.service }}
+    needs: [build-shared, download-pacts]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [identity-service, exam-service]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Restore shared package dist
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/common/dist
+            packages/pact-matchers/dist
+          key: shared-dist-${{ hashFiles('packages/common/src/**', 'packages/pact-matchers/src/**', 'pnpm-lock.yaml') }}
+          restore-keys: shared-dist-
+          fail-on-cache-miss: false
+
+      # Fallback: if cache missed (e.g. first run), build it now
+      - name: Build shared packages (cache miss fallback)
+        if: needs.build-shared.outputs.cache-hit != 'true'
+        run: pnpm exec turbo run build --filter=@repo/common --filter=@repo/pact-matchers
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: pacts-workspace
+          path: pacts/
+
+      - name: Run provider verification
+        env:
+          PACT_DIR: ${{ github.workspace }}/pacts
+          PACT_LOG_LEVEL: warn
+        run: pnpm --filter ${{ matrix.service }} test:pact:provider
+
+  report-final-status:
+    name: Report Final Status
+    needs: [provider-verify]
+    runs-on: ubuntu-latest
+    if: always() && env.CONSUMER_SHA != ''
+    steps:
+      - name: Resolve Status and Send
+        env:
+          GH_TOKEN: ${{ secrets.BACKEND_DISPATCH_TOKEN }}
+        run: |
+          STATUS="failure"
+          DESC="Contract verification failed. Check logs."          
+          if [[ "${{ needs.provider-verify.result }}" == "success" ]]; then
+            STATUS="success"
+            DESC="Contracts verified successfully by provider."
+          elif [[ "${{ needs.provider-verify.result }}" == "cancelled" ]]; then
+            STATUS="error"
+            DESC="Contract verification was cancelled."
+          fi
+
+          echo "Reporting status: $STATUS"
+
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/$PACT_ARTIFACT_REPO/statuses/$CONSUMER_SHA" \
+            -f state="$STATUS" \
+            -f context="Pact Contract Verification" \
+            -f description="$DESC" \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

@@ -1215,21 +1215,25 @@ Returns recently missed question snapshots for review. Response does not include
   "message": "OK",
   "timestamp": "2026-05-21T10:00:00.000Z",
   "path": "/exams/review/missed-questions?limit=20",
-  "data": [
-    {
-      "questionId": "9fd83d2d-64e6-5e87-b7a0-0edb40bd8fa6",
-      "content": "Người điều khiển phương tiện phải làm gì khi gặp biển báo này?",
-      "topicId": "10000000-0000-0000-0000-000000000103",
-      "topicName": "Biển báo hiệu đường bộ",
-      "options": [
-        {
-          "id": "1265a10e-52ab-5234-8b83-38203cd811f2",
-          "content": "Giảm tốc độ và quan sát"
-        }
-      ],
-      "lastAnsweredAt": "2026-05-21T09:55:00.000Z"
-    }
-  ]
+  "data": {
+    "items": [
+      {
+        "questionId": "9fd83d2d-64e6-5e87-b7a0-0edb40bd8fa6",
+        "content": "Người điều khiển phương tiện phải làm gì khi gặp biển báo này?",
+        "imageUrl": null,
+        "mediaFileId": null,
+        "options": [
+          {
+            "id": "1265a10e-52ab-5234-8b83-38203cd811f2",
+            "content": "Giảm tốc độ và quan sát",
+            "displayOrder": 1
+          }
+        ],
+        "lastAnsweredAt": "2026-05-21T09:55:00.000Z",
+        "missedCount": 3
+      }
+    ]
+  }
 }
 ```
 
