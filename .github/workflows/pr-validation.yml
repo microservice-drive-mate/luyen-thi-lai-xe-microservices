@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: ["main"]
 
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: read
@@ -17,33 +21,7 @@ env:
 jobs:
   quality-gate:
     name: Code Quality & Testing
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "pnpm"
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma Client
-        run: pnpm exec turbo run prisma:generate
-
-      - name: Format & Lint Check
-        run: pnpm exec biome ci .
-
-      - name: TypeScript Check
-        run: pnpm exec turbo run check-types
-
-      - name: Run Tests
-        run: pnpm exec turbo run test
+    uses: ./.github/workflows/reusable-quality-gate.yml
 
   detect-changes:
     name: Detect Changed Services
@@ -325,3 +303,33 @@ jobs:
             echo "| Image Push | skipped for pull requests |"
             echo "| SHA | \`${{ github.sha }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  pr-validation-gate:
+    name: PR Validation Gate
+    needs:
+      [quality-gate, detect-changes, label-pr, build, build-migration-runner]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Resolve overall PR status
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          node <<'NODE'
+          const needs = JSON.parse(process.env.NEEDS_JSON);
+          const optionalWhenSkipped = new Set(['build']);
+          const failures = [];
+
+          for (const [job, detail] of Object.entries(needs)) {
+            if (detail.result === 'success') continue;
+            if (detail.result === 'skipped' && optionalWhenSkipped.has(job)) continue;
+            failures.push(`${job}: ${detail.result}`);
+          }
+
+          if (failures.length > 0) {
+            console.error(`PR validation failed: ${failures.join(', ')}`);
+            process.exit(1);
+          }
+
+          console.log('PR validation passed.');
+          NODE

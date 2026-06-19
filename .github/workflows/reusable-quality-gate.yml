@@ -1,0 +1,47 @@
+name: Reusable Quality Gate
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: Node.js version used by backend quality checks.
+        required: false
+        type: string
+        default: "22"
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  quality-gate:
+    name: Code Quality & Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm exec turbo run prisma:generate
+
+      - name: Format & Lint Check
+        run: pnpm exec biome ci .
+
+      - name: TypeScript Check
+        run: pnpm exec turbo run check-types
+
+      - name: Run Tests
+        run: pnpm exec turbo run test

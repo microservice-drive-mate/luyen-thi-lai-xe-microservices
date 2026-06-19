@@ -40,6 +40,10 @@ on:
   repository_dispatch:
     types: [contract-pacts-ready]
 
+concurrency:
+  group: contract-tests-${{ inputs.pact_consumer_commit_sha || github.event.client_payload.pact_consumer_commit_sha || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   actions: read
@@ -53,24 +57,24 @@ env:
 
 jobs:
   report-pending-status:
-      name: Mark PR as Pending
-      runs-on: ubuntu-latest
-      if: env.CONSUMER_SHA != ''
-      steps:
-        - name: Send Pending Status
-          env:
-            GH_TOKEN: ${{ secrets.BACKEND_DISPATCH_TOKEN }}
-          run: |
-            gh api \
-              --method POST \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "/repos/$PACT_ARTIFACT_REPO/statuses/$CONSUMER_SHA" \
-              -f state="pending" \
-              -f context="Pact Contract Verification" \
-              -f description="Backend is verifying contracts..." \
-              -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-  
+    name: Mark PR as Pending
+    runs-on: ubuntu-latest
+    if: env.CONSUMER_SHA != ''
+    steps:
+      - name: Send Pending Status
+        env:
+          GH_TOKEN: ${{ secrets.BACKEND_DISPATCH_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/$PACT_ARTIFACT_REPO/statuses/$CONSUMER_SHA" \
+            -f state="pending" \
+            -f context="Pact Contract Verification" \
+            -f description="Backend is verifying contracts..." \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
   build-shared:
     name: Build shared packages
     runs-on: ubuntu-latest
@@ -116,7 +120,7 @@ jobs:
         id: download
         if: env.PACT_ARTIFACT_RUN_ID != ''
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.BACKEND_DISPATCH_TOKEN || github.token }}
         run: |
           gh run download "$PACT_ARTIFACT_RUN_ID" \
             --repo "$PACT_ARTIFACT_REPO" \

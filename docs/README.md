@@ -45,6 +45,7 @@ Nhóm này là nguồn chính cho API contract của service. Mỗi file nên m�
 - [Azure GitHub Actions Setup](./devops/azure-github-actions-setup.md)
 - [Azure Demo Runbook](./devops/azure-demo-runbook.md)
 - [GitHub Actions Release Safety](./devops/github-actions-release-safety.md)
+- [Workflow Gates And Branch Protection](./devops/workflow-gates.md)
 - [Backup Strategy](./devops/backup-strategy.md)
 - [Deployment Event Store](./devops/deployment-event-store.md)
 - [DORA Metrics Guide](./devops/dora-metrics-guide.md)
