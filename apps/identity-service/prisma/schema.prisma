@@ -13,6 +13,7 @@ model IdentityUser {
   email       String    @unique
   name        String
   role        String
+  status      String    @default("PENDING") // PENDING, ACTIVE, CREATION_FAILED
   isActive    Boolean   @default(true)
   isDeleted   Boolean   @default(false)
   deletedAt   DateTime?
@@ -21,4 +22,16 @@ model IdentityUser {
   updatedAt   DateTime  @updatedAt
 
   @@map("identity_users")
+}
+
+model SagaState {
+  id        String   @id @default(uuid())
+  sagaName  String   // e.g. "USER_CREATION_SAGA"
+  sagaId    String   @unique // Map with userId
+  status    String   // STARTED, PROFILE_CREATED, COMPLETED, FAILED, COMPENSATING, ROLLBACKED
+  payload   Json     // Store backup data or metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("saga_states")
 }

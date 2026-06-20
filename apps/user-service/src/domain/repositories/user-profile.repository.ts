@@ -25,5 +25,6 @@ export abstract class UserProfileRepository {
     profile: UserProfile,
     auditEvent?: AuditEventEnvelope,
   ): Promise<void>;
+  abstract delete(id: string): Promise<void>;
   abstract list(filter: ListUsersFilter): Promise<ListUsersPage>;
 }

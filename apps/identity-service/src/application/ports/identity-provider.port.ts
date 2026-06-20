@@ -45,4 +45,6 @@ export abstract class IdentityProviderPort {
     currentPassword: string,
     newPassword: string,
   ): Promise<void>;
+  abstract deleteUser(userId: string): Promise<void>;
+  abstract getServiceToken(): Promise<string>;
 }

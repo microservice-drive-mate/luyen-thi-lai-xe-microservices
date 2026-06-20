@@ -37,6 +37,7 @@ import { GetProgressUseCase } from './application/use-cases/get-progress/get-pro
 import { RecordLearningEventUseCase } from './application/use-cases/record-events/record-events.use-case';
 import { RecordDashboardEventUseCase } from './application/use-cases/record-dashboard-event/record-dashboard-event.use-case';
 import { BackfillAdminDashboardUseCase } from './application/use-cases/backfill-admin-dashboard/backfill-admin-dashboard.use-case';
+import { DeleteStudentProfileUseCase } from './application/use-cases/delete-student-profile/delete-student-profile.use-case';
 import { AnalyticsController } from './presentation/http/analytics.controller';
 import { AdminDashboardController } from './presentation/http/admin-dashboard.controller';
 import { InstructorDashboardController } from './presentation/http/instructor-dashboard.controller';
@@ -160,6 +161,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     RecordLearningEventUseCase,
     RecordDashboardEventUseCase,
     BackfillAdminDashboardUseCase,
+    DeleteStudentProfileUseCase,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: TokenBlacklistGuard },
     { provide: APP_GUARD, useClass: RoleGuard },

@@ -202,4 +202,10 @@ export class PrismaUserProfileRepository extends UserProfileRepository {
       total,
     };
   }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.userProfile.delete({
+      where: { id },
+    });
+  }
 }

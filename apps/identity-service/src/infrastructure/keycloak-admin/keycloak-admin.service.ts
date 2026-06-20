@@ -391,6 +391,25 @@ export class KeycloakAdminService extends IdentityProviderPort {
     await this.resetPassword(userId, newPassword, false);
   }
 
+  async deleteUser(userId: string): Promise<void> {
+    const token = await this.getAdminToken();
+    const url = `${this.adminBaseUrl}/users/${userId}`;
+    try {
+      await lastValueFrom(
+        this.httpService.delete(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      this.logger.log(`Deleted Keycloak user ${userId}`);
+    } catch (error) {
+      this.handleKeycloakError(error, 'deleteUser');
+    }
+  }
+
+  async getServiceToken(): Promise<string> {
+    return this.getAdminToken();
+  }
+
   private get adminBaseUrl(): string {
     const authServerUrl = this.configService.getOrThrow<string>(
       'keycloak.authServerUrl',

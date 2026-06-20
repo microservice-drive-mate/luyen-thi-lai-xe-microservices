@@ -13,6 +13,7 @@ import { LockUserUseCase } from './application/use-cases/lock-user/lock-user.use
 import { SyncUserIdentityUseCase } from './application/use-cases/sync-user-identity/sync-user-identity.use-case';
 import { SyncUserRoleUseCase } from './application/use-cases/sync-user-role/sync-user-role.use-case';
 import { UpdateUserProfileUseCase } from './application/use-cases/update-user-profile/update-user-profile.use-case';
+import { DeleteUserProfileUseCase } from './application/use-cases/delete-user-profile/delete-user-profile.use-case';
 import { UserProfileRepository } from './domain/repositories/user-profile.repository';
 import { DomainExceptionFilter } from './infrastructure/filters/domain-exception.filter';
 import {
@@ -86,6 +87,7 @@ import { MessagingController } from './presentation/messaging/messaging.controll
     ListUserDocumentsUseCase,
     SyncUserIdentityUseCase,
     SyncUserRoleUseCase,
+    DeleteUserProfileUseCase,
   ],
 })
 export class UserModule {}

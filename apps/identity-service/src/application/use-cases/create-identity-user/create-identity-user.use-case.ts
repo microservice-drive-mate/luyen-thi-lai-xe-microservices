@@ -1,12 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { createAuditEvent, IUseCase } from '@repo/common';
-import { IdentityUser } from '../../../domain/aggregates/identity-user/identity-user.aggregate';
 import { IdentityUserRepository } from '../../../domain/repositories/identity-user.repository';
-import { IdentityEventPublisherPort } from '../../ports/identity-event-publisher.port';
-import { IdentityProviderPort } from '../../ports/identity-provider.port';
 import { AuditPublisherPort } from '../../ports/audit-publisher.port';
 import { CreateIdentityUserCommand } from './create-identity-user.command';
 import { CreateIdentityUserResult } from './create-identity-user.result';
+import { UserCreationSagaOrchestrator } from '../../saga/user-creation.saga-orchestrator';
 
 const SERVICE_NAME = 'identity-service';
 
@@ -15,31 +13,25 @@ export class CreateIdentityUserUseCase
   implements IUseCase<CreateIdentityUserCommand, CreateIdentityUserResult>
 {
   constructor(
-    private readonly identityProvider: IdentityProviderPort,
+    private readonly sagaOrchestrator: UserCreationSagaOrchestrator,
     private readonly identityUserRepository: IdentityUserRepository,
-    private readonly eventPublisher: IdentityEventPublisherPort,
     private readonly auditPublisher: AuditPublisherPort,
   ) {}
 
   async execute(
     command: CreateIdentityUserCommand,
   ): Promise<CreateIdentityUserResult> {
-    const userId = await this.identityProvider.createUser(
-      command.email,
-      command.temporaryPassword,
-      command.fullName,
-    );
-    await this.identityProvider.assignRealmRole(userId, command.role);
-
-    const user = IdentityUser.create({
-      id: userId,
+    const userId = await this.sagaOrchestrator.execute({
       email: command.email,
       fullName: command.fullName,
       role: command.role,
+      password: command.temporaryPassword,
     });
 
-    await this.identityUserRepository.save(user);
-    await this.publishEvents(user);
+    const user = await this.identityUserRepository.findById(userId);
+    if (!user) {
+      throw new Error(`Saga completed but user ${userId} not found locally`);
+    }
 
     void this.auditPublisher.publish(
       createAuditEvent({
@@ -65,13 +57,5 @@ export class CreateIdentityUserUseCase
       user.fullName,
       user.role,
     );
-  }
-
-  private async publishEvents(user: IdentityUser): Promise<void> {
-    const events = user.getDomainEvents();
-    user.clearDomainEvents();
-    for (const event of events) {
-      await this.eventPublisher.publish(event);
-    }
   }
 }

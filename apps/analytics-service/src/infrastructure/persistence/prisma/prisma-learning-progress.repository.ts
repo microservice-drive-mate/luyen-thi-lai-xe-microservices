@@ -167,6 +167,14 @@ export class PrismaLearningProgressRepository extends LearningProgressRepository
     ]);
   }
 
+  async deleteStudent(studentId: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.studentLearningProfile.deleteMany({ where: { studentId } }),
+      this.prisma.dailyActivity.deleteMany({ where: { studentId } }),
+      this.prisma.questionAccuracyTracker.deleteMany({ where: { studentId } }),
+    ]);
+  }
+
   async getDashboard(studentId: string): Promise<ProgressDashboard> {
     await this.ensureStudent(studentId);
     const [profile, trendRows, weakRows] = await this.prisma.$transaction([

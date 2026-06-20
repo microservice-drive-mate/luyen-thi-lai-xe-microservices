@@ -18,5 +18,6 @@ export abstract class LearningProgressRepository {
     minutes: number,
   ): Promise<void>;
   abstract resetProgress(studentId: string): Promise<void>;
+  abstract deleteStudent(studentId: string): Promise<void>;
   abstract getDashboard(studentId: string): Promise<ProgressDashboard>;
 }

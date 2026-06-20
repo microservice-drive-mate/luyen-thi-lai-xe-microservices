@@ -24,6 +24,7 @@ import { RefreshTokenUseCase } from './application/use-cases/refresh-token/refre
 import { ResetPasswordUseCase } from './application/use-cases/reset-password/reset-password.use-case';
 import { UpdateIdentityUserUseCase } from './application/use-cases/update-identity-user/update-identity-user.use-case';
 import { IdentityUserRepository } from './domain/repositories/identity-user.repository';
+import { UserCreationSagaOrchestrator } from './application/saga/user-creation.saga-orchestrator';
 import { KeycloakAdminService } from './infrastructure/keycloak-admin/keycloak-admin.service';
 import {
   ANALYTICS_SERVICE_CLIENT,
@@ -97,6 +98,7 @@ import { AuthController } from './presentation/http/auth.controller';
     ResetPasswordUseCase,
     ChangePasswordUseCase,
     CreateIdentityUserUseCase,
+    UserCreationSagaOrchestrator,
     ListIdentityUsersUseCase,
     GetIdentityUserUseCase,
     UpdateIdentityUserUseCase,

@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   Req,
+  Delete,
 } from '@nestjs/common';
 import { buildAuditRequestContext } from '@repo/common';
 import type { Request } from 'express';
@@ -37,6 +38,8 @@ import { UpdateUserProfileCommand } from '../../application/use-cases/update-use
 import { UpdateUserProfileUseCase } from '../../application/use-cases/update-user-profile/update-user-profile.use-case';
 import { AssignLicenseTierRequestDto } from '../dtos/assign-license-tier.request.dto';
 import { CreateUserRequestDto } from '../dtos/create-user.request.dto';
+import { DeleteUserProfileCommand } from '../../application/use-cases/delete-user-profile/delete-user-profile.command';
+import { DeleteUserProfileUseCase } from '../../application/use-cases/delete-user-profile/delete-user-profile.use-case';
 import { ListUsersQueryDto } from '../dtos/list-users.query.dto';
 import { LockUserRequestDto } from '../dtos/lock-user.request.dto';
 import { UpdateUserRequestDto } from '../dtos/update-user.request.dto';
@@ -67,6 +70,7 @@ export class AdminUserController {
     private readonly assignLicenseTierUseCase: AssignLicenseTierUseCase,
     private readonly createUserDocumentUseCase: CreateUserDocumentUseCase,
     private readonly listUserDocumentsUseCase: ListUserDocumentsUseCase,
+    private readonly deleteUserProfileUseCase: DeleteUserProfileUseCase,
   ) {}
 
   @Post()
@@ -205,5 +209,15 @@ export class AdminUserController {
       ),
     );
     return UserProfileResponseDto.fromResult(result);
+  }
+
+  @Delete(':id')
+  @Roles({ roles: ['realm:ADMIN'] })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Physically delete user profile (Saga Rollback)' })
+  async deleteUser(@Param('id') id: string): Promise<void> {
+    await this.deleteUserProfileUseCase.execute(
+      new DeleteUserProfileCommand(id),
+    );
   }
 }
