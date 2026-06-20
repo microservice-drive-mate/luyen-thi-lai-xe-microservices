@@ -73,6 +73,10 @@ services:
   - name: question-service
     url: http://host.docker.internal:3005
     routes:
+      - name: question-route
+        paths:
+          - /questions
+        strip_path: false
       - name: question-admin-route
         paths:
           - /admin/questions
