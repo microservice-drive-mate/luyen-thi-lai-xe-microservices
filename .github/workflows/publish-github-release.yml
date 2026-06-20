@@ -1,0 +1,161 @@
+name: Publish GitHub Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Immutable Git SHA already built by Main Image Release and deployed to production"
+        required: true
+        type: string
+      release_version:
+        description: "GitHub release tag, for example v1.0.0 or v2026.06.20.1"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark this release as a prerelease"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  GHCR_OWNER: ${{ vars.GHCR_OWNER || github.repository_owner }}
+
+jobs:
+  publish-release:
+    name: Create Git Tag And GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          image_tag="${{ inputs.image_tag }}"
+          release_version="${{ inputs.release_version }}"
+
+          if [[ ! "$image_tag" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+            echo "image_tag must be a Git SHA built by Main Image Release." >&2
+            exit 1
+          fi
+
+          if [[ ! "$release_version" =~ ^v[0-9]+(\.[0-9]+){2}([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "release_version must look like v1.0.0 or v2026.06.20.1." >&2
+            exit 1
+          fi
+
+          full_sha="$(git rev-parse --verify "${image_tag}^{commit}")"
+          echo "IMAGE_TAG=$full_sha" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
+
+      - name: Verify tag target
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --tags --force
+
+          if git rev-parse --verify "refs/tags/${RELEASE_VERSION}" >/dev/null 2>&1; then
+            tag_sha="$(git rev-list -n 1 "refs/tags/${RELEASE_VERSION}")"
+            if [[ "$tag_sha" != "$IMAGE_TAG" ]]; then
+              echo "Tag ${RELEASE_VERSION} already exists but points to ${tag_sha}, not ${IMAGE_TAG}." >&2
+              echo "Use a new release_version or delete the incorrect tag intentionally." >&2
+              exit 1
+            fi
+            echo "Tag ${RELEASE_VERSION} already exists and points to ${IMAGE_TAG}."
+          else
+            echo "Tag ${RELEASE_VERSION} does not exist yet and will be created."
+          fi
+
+      - name: Generate release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          previous_tag="$(git describe --tags --abbrev=0 --match 'v*' "${IMAGE_TAG}^" 2>/dev/null || true)"
+          short_sha="$(git rev-parse --short "$IMAGE_TAG")"
+
+          {
+            echo "## ${RELEASE_VERSION}"
+            echo ""
+            echo "| Field | Value |"
+            echo "| :--- | :--- |"
+            echo "| Image SHA | \`${IMAGE_TAG}\` |"
+            echo "| Short SHA | \`${short_sha}\` |"
+            echo "| GHCR owner | \`${GHCR_OWNER}\` |"
+            echo "| Repository | \`${{ github.repository }}\` |"
+            echo "| Workflow run | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |"
+            echo ""
+            echo "## Docker Images"
+            echo ""
+            echo "All production images are published to GHCR with immutable tag:"
+            echo ""
+            echo "\`${IMAGE_TAG}\`"
+            echo ""
+            echo "## Changes"
+            echo ""
+
+            if [[ -n "$previous_tag" ]]; then
+              echo "Changes since \`${previous_tag}\`:"
+              echo ""
+              git log --pretty=format:'- %s (%h)' "${previous_tag}..${IMAGE_TAG}"
+            else
+              echo "Recent commits included in this release:"
+              echo ""
+              git log --pretty=format:'- %s (%h)' "${IMAGE_TAG}" -n 30
+            fi
+          } > release-notes.md
+
+          cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create or verify Git tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git rev-parse --verify "refs/tags/${RELEASE_VERSION}" >/dev/null 2>&1; then
+            echo "Git tag ${RELEASE_VERSION} already exists. Keeping existing tag."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$RELEASE_VERSION" "$IMAGE_TAG" -m "Release ${RELEASE_VERSION}"
+          git push origin "refs/tags/${RELEASE_VERSION}"
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_flags=()
+          if [[ "${{ inputs.prerelease }}" == "true" ]]; then
+            release_flags+=(--prerelease)
+          else
+            release_flags+=(--latest)
+          fi
+
+          if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "GitHub Release ${RELEASE_VERSION} already exists. Updating release notes."
+            gh release edit "$RELEASE_VERSION" \
+              --title "$RELEASE_VERSION" \
+              --notes-file release-notes.md \
+              "${release_flags[@]}"
+          else
+            gh release create "$RELEASE_VERSION" \
+              --target "$IMAGE_TAG" \
+              --title "$RELEASE_VERSION" \
+              --notes-file release-notes.md \
+              "${release_flags[@]}"
+          fi
