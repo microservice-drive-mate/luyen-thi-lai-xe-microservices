@@ -473,14 +473,20 @@ services:
     restart: unless-stopped
 
   dora-metrics-exporter:
-    image: prom/node-exporter:v1.8.2
-    command:
-      - --collector.disable-defaults
-      - --collector.textfile
-      - --collector.textfile.directory=/textfile
-      - --web.listen-address=:9100
+    image: node:22-alpine
+    entrypoint: ["/bin/sh", "/app/docker/dora-exporter/entrypoint.sh"]
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      DORA_REPOSITORY: ${DORA_REPOSITORY:-NHACTAOHOCBAI/luyen-thi-lai-xe-microservices}
+      DORA_DAYS: ${DORA_DAYS:-30}
+      DORA_OUTPUT: /app/reports/dora/dora-report.md
+      DORA_JSON_OUTPUT: /app/reports/dora/dora-report.json
+      DORA_PROM_OUTPUT: /app/reports/dora/dora.prom
     volumes:
-      - ./reports/dora:/textfile:ro
+      - .:/app:ro
+      - dora_reports:/app/reports/dora
+    ports:
+      - "9100:9100"
     restart: unless-stopped
 
   # ── Observability (Metrics) ───────────────────────────────────────────────
@@ -551,3 +557,4 @@ volumes:
   prometheus_data:
   grafana_data:
   alertmanager_data:
+  dora_reports:
