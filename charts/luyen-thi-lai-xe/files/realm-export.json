@@ -1,6 +1,6 @@
 {
   "id": "7133ad8a-f505-4829-91bc-1200f13b3e40",
-  "realm": "luyen-thi-lai-xe-realm",
+  "realm": "{{ .Values.secrets.keycloakRealm }}",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": false,
@@ -700,7 +700,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "TJeHbSwgzqRbv2NDayeu7H5odjr29O1C",
+      "secret": "{{ .Values.secrets.keycloakClientSecret }}",
       "redirectUris": ["/*"],
       "webOrigins": ["/*"],
       "notBefore": 0,

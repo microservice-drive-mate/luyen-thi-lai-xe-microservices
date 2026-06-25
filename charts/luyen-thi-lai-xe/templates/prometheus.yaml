@@ -31,6 +31,14 @@ data:
             labels:
               environment: {{ .Values.global.nodeEnv | quote }}
 
+      - job_name: dora
+        metrics_path: /metrics
+        static_configs:
+          - targets:
+              - localhost:9100
+            labels:
+              environment: {{ .Values.global.nodeEnv | quote }}
+
       - job_name: rabbitmq
         metrics_path: /metrics
         static_configs:
@@ -173,10 +181,29 @@ spec:
               mountPath: /etc/prometheus
             - name: prometheus-data
               mountPath: /prometheus
+        - name: dora-exporter
+          image: busybox:1.36
+          command: ["sh", "-c", "httpd -f -p 9100 -h /textfile"]
+          ports:
+            - name: dora-http
+              containerPort: 9100
+          volumeMounts:
+            - name: dora-metrics
+              mountPath: /textfile
+          resources:
+            limits:
+              cpu: 50m
+              memory: 32Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
       volumes:
         - name: prometheus-config
           configMap:
             name: {{ include "lttl.fullname" . }}-prometheus
+        - name: dora-metrics
+          configMap:
+            name: {{ include "lttl.fullname" . }}-dora-metrics
   volumeClaimTemplates:
     - metadata:
         name: prometheus-data
