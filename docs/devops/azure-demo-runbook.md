@@ -333,3 +333,46 @@ This is not just a local microservices demo. The project has service boundaries,
 - Media direct upload works.
 - One dashboard/API screen has seeded data.
 - Rollback revision exists.
+
+## Cost Management — Tắt/Bật Staging
+
+Để tiết kiệm chi phí Azure khi không cần demo, tắt AKS cluster. Dữ liệu trong Persistent Volume Claims (PostgreSQL, Prometheus) được **GIỮ NGUYÊN**.
+
+> [!NOTE]
+> Azure vẫn tính phí lưu trữ (PVC/Disk) và Static IP khi cluster đã stopped. Chi phí compute (VM nodes) sẽ bằng 0.
+
+### Tắt Staging (sau khi demo xong)
+
+```powershell
+pnpm staging:stop
+# hoặc trực tiếp:
+az aks stop --name aks-lttl-staging --resource-group rg-lttl-staging-sea
+```
+
+### Khởi động Staging (trước khi demo)
+
+```powershell
+pnpm staging:start
+# hoặc trực tiếp:
+az aks start --name aks-lttl-staging --resource-group rg-lttl-staging-sea
+```
+
+Script `staging-start.ps1` sẽ:
+1. Start AKS cluster
+2. Cập nhật kubeconfig
+3. Đợi tất cả pods sẵn sàng (tối đa 5 phút)
+4. Hiển thị toàn bộ endpoints và lệnh port-forward cần thiết
+
+### Kiểm tra trạng thái
+
+```powershell
+az aks list --query "[].{name:name, powerState:powerState.code}" -o table
+```
+
+### Pre-Start Checklist (trước demo sau khi start)
+
+- [ ] Tất cả pods ở trạng thái `Running`
+- [ ] API health check: `curl http://api.52.139.233.166.nip.io/identity-service/health/live`
+- [ ] Port-forward Grafana: `kubectl port-forward svc/luyen-thi-lai-xe-grafana 30000:3000 -n staging`
+- [ ] Đồng bộ DORA metrics (nếu cần): `kubectl create configmap luyen-thi-lai-xe-dora-metrics --from-file=metrics=reports/dora/dora.prom -n staging --dry-run=client -o yaml | kubectl apply -f -`
+- [ ] Seed business metrics nếu cần demo Grafana: `$env:BASE_URL="http://api.52.139.233.166.nip.io"; pnpm observability:seed-business`

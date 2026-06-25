@@ -1,0 +1,13 @@
+{{- if and .Values.observability.enabled .Values.observability.prometheus.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lttl.fullname" . }}-dora-metrics
+  labels:
+    {{- include "lttl.labels" . | nindent 4 }}
+data:
+  metrics: |
+    # HELP dora_deployments_total Tổng số lần deploy được DORA report ghi nhận.
+    # TYPE dora_deployments_total gauge
+    dora_deployments_total{repository="unknown"} 0
+{{- end }}

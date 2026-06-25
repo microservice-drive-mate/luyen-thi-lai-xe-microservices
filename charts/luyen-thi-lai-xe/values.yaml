@@ -182,6 +182,7 @@ services:
   - name: user-service
     image: luyen-thi-lai-xe-user-service
     dbName: user_db
+    usesRedis: true
     routes:
       - name: user-route
         paths: ["/users"]
@@ -195,6 +196,7 @@ services:
   - name: exam-service
     image: luyen-thi-lai-xe-exam-service
     dbName: exam_db
+    usesRedis: true
     resources:
       requests:
         cpu: 250m
@@ -244,6 +246,7 @@ services:
   - name: question-service
     image: luyen-thi-lai-xe-question-service
     dbName: question_db
+    usesRedis: true
     routes:
       - name: question-admin-route
         paths: ["/admin/questions"]
@@ -312,6 +315,7 @@ services:
   - name: media-service
     image: luyen-thi-lai-xe-media-service
     dbName: media_db
+    usesRedis: true
     resources:
       requests:
         cpu: 200m
@@ -332,6 +336,7 @@ services:
   - name: audit-service
     image: luyen-thi-lai-xe-audit-service
     dbName: audit_db
+    usesRedis: true
     routes:
       - name: audit-admin-route
         paths: ["/admin/audit-logs"]
