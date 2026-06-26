@@ -612,6 +612,7 @@ Remove-Item body.json
 3. **Truy vết qua log hệ thống:**
 
 Khi request tạo user được gửi, chuỗi sự kiện sau diễn ra:
+
 - **`identity-service`** nhận request HTTP -> Lưu vào Keycloak -> Phát sự kiện `identity.user.created` vào **RabbitMQ** kèm theo correlation-id.
 - Các service tiêu thụ sự kiện này: **`user-service`** (khởi tạo profile), **`notification-service`** (gửi thông báo chào mừng), và **`analytics-service`** (ghi nhận thống kê).
 - Nhờ `CorrelationIdInterceptor` và `AsyncLocalStorage`, tất cả log của các service này đều dùng chung thuộc tính `correlationId` trị giá `$cid`.
@@ -621,6 +622,7 @@ Khi request tạo user được gửi, chuỗi sự kiện sau diễn ra:
 *Lưu ý cấu hình Local:* Để dịch vụ đẩy log lên Logstash dưới local, hãy chắc chắn đã cấu hình `LOGSTASH_ENABLED=true` trong file `.env` ở thư mục gốc và khởi động lại dịch vụ bằng lệnh `pnpm dev`.
 
 *Truy vấn trực tiếp qua Elasticsearch (nếu chạy local có ELK):*
+
 ```powershell
 curl.exe "http://localhost:9200/microservices-logs-*/_search?q=correlationId:$cid&pretty"
 ```
@@ -628,17 +630,18 @@ curl.exe "http://localhost:9200/microservices-logs-*/_search?q=correlationId:$ci
 *Hoặc qua giao diện Kibana (http://localhost:5601):*
 
 1. **Tạo Data View (nếu chạy lần đầu):**
+
    - Vào **Stack Management** -> **Data Views** -> **Create data view**.
    - Điền Name và Index pattern là `microservices-logs-*`. (F5 tải lại trang nếu Kibana báo không match do index mới được tạo).
    - Chọn Timestamp field là `@timestamp` -> Bấm **Save data view to Kibana**.
-
 2. **Truy vết trong Discover:**
+
    - Vào **Discover** -> Chọn Data View là `microservices-logs-*`.
    - **Tối ưu hiển thị:** Tại danh sách trường bên trái (Available fields), rê chuột và nhấn dấu `+` (Add as column) cho các trường: `serviceName`, `level`, `message`, `correlationId`.
    - Nhập ô tìm kiếm KQL ở trên cùng: `correlationId: "demo-trace-user-xxxx"` (với xxxx là số ngẫu nhiên ở trên).
    - Bạn sẽ thấy log đồng thời từ `identity-service`, `user-service`, `notification-service` và `analytics-service` xuất hiện liền mạch cùng nhau chia sẻ chung mã truy vết.
-
 3. **Truy vết trực quan qua Jaeger (Distributed Tracing):**
+
    - *Lưu ý cấu hình Local:* Để hệ thống bật OpenTelemetry và đẩy dữ liệu vết về Jaeger, hãy chắc chắn cấu hình `OTEL_TRACING_ENABLED=true` trong file `.env` ở thư mục gốc và khởi động lại dịch vụ bằng lệnh `pnpm dev`.
    - Truy cập **Jaeger UI** tại: `http://localhost:16686`
    - Tại cột bên trái, mục **Service**, chọn `identity-service`.
@@ -709,6 +712,7 @@ foreach ($i in 1..150) {
 ```
 
 Kỳ vọng:
+
 - Các request đầu trả `200`.
 - Khi vượt ngưỡng trong thời gian ngắn (nếu hạ rate limit hoặc bắn đủ nhanh), Kong trả `429`.
 - Nếu chưa thấy `429`, có thể do request tuần tự không đủ nhanh hoặc rate limit tính theo client/IP trong cửa sổ ngắn. Khi đó dùng `autocannon` ở cách 1 hoặc show các header rate limit là đủ an toàn cho demo.
