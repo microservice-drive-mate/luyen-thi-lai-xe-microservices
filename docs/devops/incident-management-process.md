@@ -1,4 +1,4 @@
-﻿
+
 <!-- Merged from docs/devops/incident-management-process.md -->
 # Runbook xử lý sự cố
 
@@ -353,7 +353,7 @@ Quy tắc:
 | `rollback` | Cần rollback hoặc redeploy về tag cũ |
 | `needs-postmortem` | Incident cần postmortem |
 
-Workflow `.github/workflows/incident-labeler.yml` sẽ tự thêm phần lớn label dựa trên nội dung issue form. Nếu workflow không chạy, người tạo issue gắn label thủ công theo bảng trên.
+Người tạo issue sẽ gắn các label tương ứng thủ công theo bảng trên để DORA script có thể phân tích và tính toán chính xác dữ liệu.
 
 ## 4. Quy trình xử lý incident
 
@@ -413,5 +413,6 @@ Nếu incident chưa đóng, script vẫn liệt kê nhưng chưa tính vào MTT
 
 ## 7. Câu nói demo
 
-> Quy trình incident/postmortem giúp biến incident thành dữ liệu đo lường. Khi có sự cố, nhóm tạo issue theo template, workflow tự gắn label môi trường/severity/change-failure. Khi issue đóng, DORA report tính được MTTR. Nếu incident liên quan deploy hoặc rollback, report cũng phản ánh vào Change Failure Rate.
+> Quy trình incident/postmortem giúp biến incident thành dữ liệu đo lường. Khi có sự cố, nhóm tạo issue theo template, người dùng gắn các label tương ứng cho môi trường/severity/change-failure. Khi issue đóng, DORA report tính được MTTR. Nếu incident liên quan deploy hoặc rollback, report cũng phản ánh vào Change Failure Rate.
+
 
