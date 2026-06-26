@@ -10,9 +10,9 @@ Tài liệu này cung cấp hướng dẫn từng bước chi tiết (Demo Scrip
 2. [Thu thập &amp; Cảnh báo Chỉ số (Prometheus &amp; Alertmanager)](#2-thu-thập--cảnh-báo-chỉ-số-prometheus--alertmanager)
 3. [Giao diện Giám sát Trực quan (Grafana Dashboard)](#3-giao-diện-giám-sát-trực-quan-grafana-dashboard)
 4. [Quản lý Nhật ký Log tập trung (ELK Stack)](#4-quản-lý-nhật-ký-log-tập-trung-elk-stack)
-5. [Truy vết giao dịch Phân tán (Distributed Tracing với OpenTelemetry & Jaeger)](#5-truy-vết-giao-dịch-phân-tán-distributed-tracing-với-opentelemetry--jaeger)
-5.1. [Mô phỏng sự cố kích hoạt biểu đồ (5xx Error, Alerts, RabbitMQ DLQ)](#51-hướng-dẫn-mô-phỏng-sự-cố-để-hiển-thị-dữ-liệu-5xx-error-firing-alerts-và-rabbitmq-dlq)
-6. [Checklist chuẩn bị & Troubleshooting nhanh](#6-checklist-chuẩn-bị--troubleshooting-nhanh)
+5. [Truy vết giao dịch Phân tán (Distributed Tracing với OpenTelemetry &amp; Jaeger)](#5-truy-vết-giao-dịch-phân-tán-distributed-tracing-với-opentelemetry--jaeger)
+   5.1. [Mô phỏng sự cố kích hoạt biểu đồ (5xx Error, Alerts, RabbitMQ DLQ)](#51-hướng-dẫn-mô-phỏng-sự-cố-để-hiển-thị-dữ-liệu-5xx-error-firing-alerts-và-rabbitmq-dlq)
+6. [Checklist chuẩn bị &amp; Troubleshooting nhanh](#6-checklist-chuẩn-bị--troubleshooting-nhanh)
 
 ---
 
@@ -114,18 +114,19 @@ http://localhost:9090/alerts
 Để hội đồng thấy cảnh báo thực sự được kích hoạt khi có sự cố xảy ra chứ không chỉ là cấu hình tĩnh, hãy giả lập tình huống sập dịch vụ:
 
 1. **Bước 1: Kiểm tra trạng thái bình thường**
+
    - Đảm bảo terminal chạy các microservices (`pnpm dev`) đang hoạt động.
    - Mở `http://localhost:9090/targets` để thấy tất cả target `microservices-local` đều có màu xanh (`UP`).
-
 2. **Bước 2: Tắt dịch vụ (Giả lập sự cố)**
-   - Nhấn `Ctrl+C` tại terminal chạy `pnpm dev` để tắt toàn bộ dịch vụ (hoặc tắt terminal đó).
 
+   - Nhấn `Ctrl+C` tại terminal chạy `pnpm dev` để tắt toàn bộ dịch vụ (hoặc tắt terminal đó).
 3. **Bước 3: Xem trạng thái Đang quét lỗi (Pending Alert)**
+
    - F5 lại trang `http://localhost:9090/targets`, lúc này toàn bộ target sẽ chuyển sang màu đỏ (`DOWN`).
    - Mở tab Alerts `http://localhost:9090/alerts`. Bạn sẽ thấy alert **`ServiceMetricsEndpointDown`** lập tức chuyển sang màu vàng nhạt (**Pending**).
    - *Giải thích cho Thầy:* Hệ thống đã nhận diện được sự cố, nhưng chưa phát cảnh báo ngay lập tức để tránh hiện tượng báo động giả (alert flapping). Prometheus đang đếm ngược thời gian `for: 2m` (2 phút).
-
 4. **Bước 4: Xem trạng thái Phát cảnh báo (Firing Alert) trong Alertmanager**
+
    - Sau 2 phút, rule trong Prometheus sẽ chuyển sang màu đỏ (**Firing**).
    - Truy cập giao diện Alertmanager tại `http://localhost:9093`. Lúc này các cảnh báo sập nguồn sẽ được hiển thị trực quan và gom nhóm theo từng service.
 
@@ -173,6 +174,7 @@ Trực quan hóa toàn bộ hoạt động của hệ thống từ hạ tầng p
      ```powershell
      pnpm observability:seed-business
      ```
+
      *(Lệnh này sẽ tự động mô phỏng đầy đủ luồng nghiệp vụ: Đăng nhập admin -> Tạo người dùng mới -> Đăng nhập học viên -> Bắt đầu thi -> Nộp bài thi -> Đăng ký học -> Học & hoàn tất toàn bộ bài học của khóa học -> Upload file).*
    - Quay lại Grafana và bấm nút **Refresh** (hoặc đợi 15s). Các biểu đồ hình hộp, cột và tròn đại diện cho các hành vi học tập nghiệp vụ thực tế của học viên sẽ lập tức được vẽ đầy đủ.
    - *Giải thích cho Thầy:* Hệ thống DriveMate đã cấu hình các bộ đếm (counter) nghiệp vụ ngay trong code use case NestJS của từng service để thu thập các số liệu vận hành nghiệp vụ thực tế như số lượng tài khoản mới tạo, lượng bài thi đã nộp, tỉ lệ thi đỗ/trượt, tiến độ học tập của học viên, trạng thái gửi thông báo và upload tài liệu. Việc này giúp đội ngũ vận hành sản phẩm có cái nhìn trực quan về mức độ sử dụng thực tế của học viên mà không chỉ giới hạn ở các chỉ số kỹ thuật thô như CPU, RAM hay Network Latency.
@@ -189,16 +191,16 @@ Trực quan hóa toàn bộ hoạt động của hệ thống từ hạ tầng p
    ```
 
    Sau đó mở `http://localhost:30000` trên trình duyệt để kiểm tra biểu đồ runtime của môi trường staging.
-
 3. **Trình diễn Business Metrics trên Staging**:
+
    - Trong Grafana Staging (sau khi port-forward), chuyển sang dashboard **`Business Metrics`**.
    - Mở một cửa sổ PowerShell mới ở máy local và chạy lệnh sau để tự động thực hiện các hành động nghiệp vụ trực tiếp lên Gateway Staging:
      ```powershell
      $env:BASE_URL="http://api.52.139.233.166.nip.io"; pnpm observability:seed-business
      ```
    - Quay lại Grafana Staging và bấm nút **Refresh** (hoặc đợi 15s) để thấy dữ liệu nghiệp vụ được vẽ đầy đủ trên cloud.
-
 4. **Đồng bộ DORA Metrics lên Staging**:
+
    - Dữ liệu DORA được tính toán ngoại tuyến (Offline) dựa trên lịch sử GitHub workflow và các incident issues.
    - Để đồng bộ dữ liệu DORA từ máy local (sau khi chạy `pnpm run dora:export-prometheus`) lên Grafana Staging, hãy đẩy file `dora.prom` vào Kubernetes ConfigMap:
      ```powershell
@@ -212,55 +214,58 @@ Trực quan hóa toàn bộ hoạt động của hệ thống từ hạ tầng p
 
    > [!TIP]
    > **Xử lý sự cố (Troubleshooting) khi seed thất bại:**
-   > 
+   >
    > **Trường hợp 1: Bị lỗi `UNAUTHORIZED` (do Staging chưa seed database mẫu ban đầu):**
    > Chạy lệnh Helm upgrade để kích hoạt Job Seed trên Staging:
+   >
    > ```powershell
    > helm upgrade luyen-thi-lai-xe ./charts/luyen-thi-lai-xe -n staging --reuse-values --set seed.enabled=true
    > ```
-   > 
-    > **Trường hợp 2: Bị lỗi `Keycloak createUser failed` hoặc truy cập Keycloak bị lỗi `HTTPS required`:**
-    > Mặc định Keycloak yêu cầu HTTPS đối với các kết nối từ ngoài. Chúng tôi đã cấu hình `"sslRequired": "none"` trong `realm-export.json` của Helm để tắt bắt buộc SSL trên Staging, giúp kết nối HTTP thông thường chạy mượt mà.
-    > 
-    > Nếu gặp lỗi này hoặc cần cấu hình lại bằng tay, bạn có thể thực hiện thông qua CLI của pod Keycloak cực kỳ nhanh chóng:
-    > 1. **Lấy thông tin đăng nhập Admin Staging:**
-    >    ```powershell
-    >    $admin = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String((kubectl get secret luyen-thi-lai-xe-secrets -n staging -o jsonpath='{.data.KEYCLOAK_ADMIN}')))
-    >    $pass = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String((kubectl get secret luyen-thi-lai-xe-secrets -n staging -o jsonpath='{.data.KEYCLOAK_ADMIN_PASSWORD}')))
-    >    Write-Host "Admin: $admin / Pass: $pass"
-    >    ```
-    > 2. **Tắt bắt buộc SSL trên Staging qua CLI:**
-    >    ```powershell
-    >    # Đăng nhập CLI bên trong pod
-    >    kubectl exec -n staging deploy/luyen-thi-lai-xe-keycloak -- /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password $pass
-    >    # Cập nhật cấu hình sslRequired = none cho cả 2 realm
-    >    kubectl exec -n staging deploy/luyen-thi-lai-xe-keycloak -- /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=none
-    >    kubectl exec -n staging deploy/luyen-thi-lai-xe-keycloak -- /opt/keycloak/bin/kcadm.sh update realms/luyen-thi-lai-xe-realm -s sslRequired=none
-    >    ```
-    > 3. **Phân quyền Client Service Account bằng CLI (nếu gieo dữ liệu báo lỗi quyền):**
-    >    ```powershell
-    >    # Lấy UUID của tài khoản service-account-nestjs-backend
-    >    $user_id = (kubectl exec -n staging deploy/luyen-thi-lai-xe-keycloak -- /opt/keycloak/bin/kcadm.sh get users -r luyen-thi-lai-xe-realm --fields id,username | ConvertFrom-Json | Where-Object username -eq "service-account-nestjs-backend").id
-    >    # Gán các vai trò quản trị (manage-users, view-realm) trực tiếp cho service account
-    >    kubectl exec -n staging deploy/luyen-thi-lai-xe-keycloak -- /opt/keycloak/bin/kcadm.sh add-roles -r luyen-thi-lai-xe-realm --uusername service-account-nestjs-backend --crolename manage-users --crolename view-realm --target-client realm-management
-    >    ```
-
+   >
+   > **Trường hợp 2: Bị lỗi `Keycloak createUser failed` hoặc truy cập Keycloak bị lỗi `HTTPS required`:**
+   > Mặc định Keycloak yêu cầu HTTPS đối với các kết nối từ ngoài. Chúng tôi đã cấu hình `"sslRequired": "none"` trong `realm-export.json` của Helm để tắt bắt buộc SSL trên Staging, giúp kết nối HTTP thông thường chạy mượt mà.
+   >
+   > Nếu gặp lỗi này hoặc cần cấu hình lại bằng tay, bạn có thể thực hiện thông qua CLI của pod Keycloak cực kỳ nhanh chóng:
+   >
+   > 1. **Lấy thông tin đăng nhập Admin Staging:**
+   >    ```powershell
+   >    $admin = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String((kubectl get secret luyen-thi-lai-xe-secrets -n staging -o jsonpath='{.data.KEYCLOAK_ADMIN}')))
+   >    $pass = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String((kubectl get secret luyen-thi-lai-xe-secrets -n staging -o jsonpath='{.data.KEYCLOAK_ADMIN_PASSWORD}')))
+   >    Write-Host "Admin: $admin / Pass: $pass"
+   >    ```
+   > 2. **Tắt bắt buộc SSL trên Staging qua CLI:**
+   >    ```powershell
+   >    # Đăng nhập CLI bên trong pod
+   >    kubectl exec -n staging deploy/luyen-thi-lai-xe-keycloak -- /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password $pass
+   >    # Cập nhật cấu hình sslRequired = none cho cả 2 realm
+   >    kubectl exec -n staging deploy/luyen-thi-lai-xe-keycloak -- /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=none
+   >    kubectl exec -n staging deploy/luyen-thi-lai-xe-keycloak -- /opt/keycloak/bin/kcadm.sh update realms/luyen-thi-lai-xe-realm -s sslRequired=none
+   >    ```
+   > 3. **Phân quyền Client Service Account bằng CLI (nếu gieo dữ liệu báo lỗi quyền):**
+   >    ```powershell
+   >    # Lấy UUID của tài khoản service-account-nestjs-backend
+   >    $user_id = (kubectl exec -n staging deploy/luyen-thi-lai-xe-keycloak -- /opt/keycloak/bin/kcadm.sh get users -r luyen-thi-lai-xe-realm --fields id,username | ConvertFrom-Json | Where-Object username -eq "service-account-nestjs-backend").id
+   >    # Gán các vai trò quản trị (manage-users, view-realm) trực tiếp cho service account
+   >    kubectl exec -n staging deploy/luyen-thi-lai-xe-keycloak -- /opt/keycloak/bin/kcadm.sh add-roles -r luyen-thi-lai-xe-realm --uusername service-account-nestjs-backend --crolename manage-users --crolename view-realm --target-client realm-management
+   >    ```
+   >
 
 ### C. Hướng dẫn đổ tải lên Staging (Cloud) để thấy biến động đồ thị trực quan
 
 Để biểu đồ Grafana trên Cloud nhảy số động và vẽ các đồ thị tải thực tế (Request Rate, Latency P95, CPU/RAM) trước mặt Hội đồng thay vì chỉ show biểu đồ trống, bạn hãy sử dụng công cụ K6 từ máy local để bắn tải lên Cloud Gateway:
 
 1. **Bước 1: Mở sẵn Dashboard Grafana Staging**
+
    - Truy cập `http://localhost:30000` trên trình duyệt (sau khi chạy lệnh `port-forward` ở phần B).
    - Mở sẵn Dashboard giám sát HTTP Request và tài nguyên.
-
 2. **Bước 2: Thực thi bắn tải K6 lên Staging**
    Mở một tab terminal PowerShell local riêng biệt, chạy kịch bản K6 giả lập 15 Virtual Users gọi liên tục lên địa chỉ API Gateway Staging trong vòng 1 phút, sử dụng cờ `--no-thresholds` để tránh báo đỏ build:
+
    ```powershell
    pnpm --filter @repo/performance-tests run test:smoke:no-influx -- -e BASE_URL=http://api.52.139.233.166.nip.io --vus 15 --duration 1m --no-thresholds
    ```
-
 3. **Bước 3: Trình bày sự biến động đồ thị**
+
    - Quay lại giao diện Grafana, bạn sẽ thấy đồ thị **Request Rate** (số request mỗi giây) lập tức tăng vọt lên khoảng 30-50 req/s.
    - Các đồ thị **Latency P95/P99** bắt đầu vẽ các đường dữ liệu biến động thời gian thực.
    - Chỉ ra cho Hội đồng thấy CPU/RAM của các Pod trong cluster nhích lên tương ứng với lượng tải tăng.
@@ -384,6 +389,7 @@ http://localhost:16686
 Mặc định khi hệ thống hoạt động bình thường và khỏe mạnh, các biểu đồ **5xx Error Ratio**, **Firing Alerts**, và **RabbitMQ Retry / DLQ** trên Grafana sẽ hiển thị **"No data"** hoặc bằng `0`. Để thuyết phục Hội đồng bằng các số liệu biến động thực tế, bạn có thể chủ động mô phỏng các lỗi sau một cách an toàn:
 
 ### 1. Mô phỏng "5xx Error Ratio" (Tỷ lệ lỗi 5xx hệ thống)
+
 * **Giải thích nguyên nhân bước cũ không hoạt động:** Dịch vụ `/auth/login` thực chất xác thực qua **Keycloak** (sử dụng database `db-keycloak` chứ không kết nối trực tiếp đến `db-identity`). Đồng thời, việc nhập sai mật khẩu chỉ trả về lỗi **`401 Unauthorized`** (lỗi 4xx phía client), nên biểu đồ **5xx Error Ratio** trên Grafana (chỉ theo dõi lỗi 5xx phía server) sẽ không thay đổi.
 * **Cách thực hiện đúng để tạo lỗi 5xx:**
   1. **Bước 1: Khởi động lại db-identity** (nếu đã lỡ stop):
@@ -403,22 +409,25 @@ Mặc định khi hệ thống hoạt động bình thường và khỏe mạnh,
      ```powershell
      Invoke-RestMethod -Method Get -Uri "http://localhost:8000/users/me" -Headers @{ Authorization = "Bearer $AccessToken" }
      ```
+
      *Kỳ vọng:* Hệ thống trả về lỗi **`500 Internal Server Error`** do `user-service` không thể kết nối tới `db-user` để lấy thông tin.
 * **Kết quả trên Grafana:** Biểu đồ **5xx Error Ratio** sẽ lập tức xuất hiện cột sóng biểu thị tỷ lệ lỗi 5xx tăng vọt.
 * **Khôi phục:** Bật lại container database để dịch vụ hoạt động bình thường:
-     ```powershell
-     docker compose -f docker-compose.infra.yml start db-user
-     ```
+  ```powershell
+  docker compose -f docker-compose.infra.yml start db-user
+  ```
 
 ---
 
 ### 2. Mô phỏng "Firing Alerts" (Các cảnh báo đang hoạt động)
+
 * **Cách thực hiện:** Tắt terminal chạy các microservices (`pnpm dev`) như hướng dẫn ở **Mục 2 - Bước 2**.
 * **Kết quả trên Grafana:** Sau 2 phút, khi Prometheus chính thức chuyển trạng thái cảnh báo sang **Firing**, góc biểu đồ **Firing Alerts** trên Grafana sẽ chuyển từ "No data" sang hiển thị số lượng cảnh báo đỏ đang có hiệu lực (ví dụ: `11`).
 
 ---
 
 ### 3. Mô phỏng "RabbitMQ Retry & DLQ Rate / Queue Depth" (Cơ chế tự sửa lỗi & hàng đợi thư chết)
+
 Theo thiết kế kiên cố của hệ thống, khi một microservice consume một message từ RabbitMQ mà gặp lỗi (ví dụ lỗi logic, thiếu trường dữ liệu bắt buộc khi ghi DB), [RabbitMqRetryInterceptor](file:///c:/Users/Ngo%20Minh%20Tri/workspace/uit/microservices/luyen-thi-lai-xe-microservices/packages/common/src/messaging/rabbitmq-resilience.ts#L138) sẽ tự động ném message vào chuỗi retry queue (`.retry.1`, `.retry.2`, `.retry.3`). Sau 3 lần tự động thử lại thất bại, message sẽ được đưa vào hàng đợi thư chết `.dlq` (Dead Letter Queue) để quản trị viên xử lý.
 
 * **Cách thực hiện:**

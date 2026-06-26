@@ -1,3 +1,5 @@
+a
+
 # Hướng Dẫn Demo Observability
 
 Tài liệu này dùng để chuẩn bị demo phần **Logging, Metrics, Tracing và Correlation ID** cho hệ thống Luyện Thi Lái Xe Microservices. Mục tiêu là vừa chạy được lệnh, vừa có lời giải thích ngắn gọn để trình bày với thầy.
@@ -21,15 +23,15 @@ Trong codebase hiện tại:
 
 ## 2. Bản Đồ Thành Phần
 
-| Thành phần | Chạy local | Chạy AKS | Vai trò demo |
-|---|---:|---:|---|
-| Service `/metrics` | Có | Có | Xuất metric runtime/business/HTTP |
-| Prometheus | Có trong Compose | Optional Helm | Scrape `/metrics` |
-| Grafana | Có trong Compose | Optional Helm | Dashboard trực quan |
-| Jaeger | Có trong Compose | Optional Helm | Xem distributed trace |
-| ELK/Kibana | Có trong Compose | Không bật trên AKS Student | Tìm log tập trung |
-| Lens/k9s | Không bắt buộc | Có | Xem pod, log, resource realtime |
-| Azure Monitor/Log Analytics | Không | Optional Terraform | Logs/metrics cloud-native |
+| Thành phần                |       Chạy local |                     Chạy AKS | Vai trò demo                      |
+| --------------------------- | ----------------: | ----------------------------: | ---------------------------------- |
+| Service`/metrics`         |               Có |                           Có | Xuất metric runtime/business/HTTP |
+| Prometheus                  | Có trong Compose |                 Optional Helm | Scrape`/metrics`                 |
+| Grafana                     | Có trong Compose |                 Optional Helm | Dashboard trực quan               |
+| Jaeger                      | Có trong Compose |                 Optional Helm | Xem distributed trace              |
+| ELK/Kibana                  | Có trong Compose | Không bật trên AKS Student | Tìm log tập trung                |
+| Lens/k9s                    | Không bắt buộc |                           Có | Xem pod, log, resource realtime    |
+| Azure Monitor/Log Analytics |            Không |            Optional Terraform | Logs/metrics cloud-native          |
 
 Điểm cần nói rõ với thầy:
 
@@ -53,15 +55,15 @@ docker compose -f docker-compose.infra.yml ps
 
 Các UI thường dùng:
 
-| UI | URL | Demo gì |
-|---|---|---|
-| Kong Gateway | `http://localhost:8000` | Gọi API qua gateway |
-| RabbitMQ | `http://localhost:15672` | Queue, message, DLQ |
-| Consul | `http://localhost:8500` | Centralized config KV |
-| Kibana | `http://localhost:5601` | Search log |
-| Prometheus | `http://localhost:9090` | Targets, PromQL |
-| Grafana | `http://localhost:30000` | Dashboard |
-| Jaeger | `http://localhost:16686` | Tracing |
+| UI           | URL                        | Demo gì              |
+| ------------ | -------------------------- | --------------------- |
+| Kong Gateway | `http://localhost:8000`  | Gọi API qua gateway  |
+| RabbitMQ     | `http://localhost:15672` | Queue, message, DLQ   |
+| Consul       | `http://localhost:8500`  | Centralized config KV |
+| Kibana       | `http://localhost:5601`  | Search log            |
+| Prometheus   | `http://localhost:9090`  | Targets, PromQL       |
+| Grafana      | `http://localhost:30000` | Dashboard             |
+| Jaeger       | `http://localhost:16686` | Tracing               |
 
 Nếu service chạy bằng terminal thay vì Compose full stack, nhớ bật các biến tracing/logging trước khi start service:
 
@@ -319,7 +321,7 @@ Kong
 ```powershell
 $login = Invoke-RestMethod -Uri "http://localhost:8000/auth/login" -Method POST `
   -ContentType "application/json" `
-  -Body '{"username":"student.b1@test.com","password":"123456"}'
+  -Body '{"username":"student.a1@test.com","password":"123456"}'
 
 $token = $login.data.accessToken
 
@@ -608,30 +610,31 @@ Bạn có thể nói theo flow này:
 1. **Mở k9s/Lens hoặc Docker ps**
 
    > Đây là hệ thống microservices đang chạy. Mỗi service expose health check và metrics riêng, còn gateway gom traffic public vào một entrypoint.
-
+   >
 2. **Gọi API có correlation ID**
 
    > Em gắn một `x-correlation-id` vào request. ID này đi theo request để khi lỗi xảy ra có thể search toàn bộ log liên quan.
-
+   >
 3. **Mở log/Kibana**
 
    > Các log được chuẩn hóa dạng JSON và có correlation ID. Đây là cách debug phù hợp với microservices vì một request có thể đi qua nhiều service.
-
+   >
 4. **Mở Prometheus Targets**
 
    > Prometheus scrape `/metrics` định kỳ. Target UP nghĩa là service đang expose metric bình thường; target DOWN là tín hiệu cảnh báo sớm.
-
+   >
 5. **Mở Grafana**
 
    > Grafana trực quan hóa request rate, error rate, latency và business metrics. Đây là dashboard dành cho vận hành và demo tình trạng hệ thống.
-
+   >
 6. **Mở Jaeger**
 
    > Jaeger cho thấy timeline xử lý request. Với HTTP call, trace context có thể nối các service với nhau. Với RabbitMQ, hiện hệ thống đảm bảo correlation ID xuyên suốt event flow, còn trace context qua message header là hướng nâng cấp tiếp theo.
-
+   >
 7. **Kết luận**
 
    > Observability giúp nhóm không chỉ biết hệ thống đang chạy hay không, mà còn biết chạy khỏe không, lỗi ở đâu, và request đi qua những thành phần nào.
+   >
 
 ## 11. Troubleshooting Nhanh
 

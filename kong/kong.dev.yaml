@@ -208,6 +208,6 @@ plugins:
       sample_ratio: 1
   - name: rate-limiting
     config:
-      second: 100
+      second: 5
       hour: 10000
       policy: local

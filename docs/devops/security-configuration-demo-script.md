@@ -485,8 +485,8 @@ Show trong output:
 Origin hợp lệ:
 
 ```powershell
-curl.exe -i -X OPTIONS "${Scheme}://${ApiHost}/auth/login" `
-  -H "Origin: https://drive-mate-admin.vercel.app" `
+curl.exe -i -X OPTIONS "http://localhost:8000/auth/login" `
+  -H "Origin: http://localhost:5173" `
   -H "Access-Control-Request-Method: POST" `
   -H "Access-Control-Request-Headers: content-type,authorization"
 ```
@@ -500,8 +500,8 @@ schannel: SEC_E_UNTRUSTED_ROOT
 Khi đó dùng `-k` để bỏ qua kiểm tra certificate cho **mục đích demo CORS**:
 
 ```powershell
-curl.exe -k -i -X OPTIONS "${Scheme}://${ApiHost}/auth/login" `
-  -H "Origin: https://drive-mate-admin.vercel.app" `
+curl.exe -k -i -X OPTIONS "http://localhost:8000/auth/login" `
+  -H "Origin: http://localhost:5173" `
   -H "Access-Control-Request-Method: POST" `
   -H "Access-Control-Request-Headers: content-type,authorization"
 ```
@@ -511,7 +511,7 @@ Không dùng `-k` như best practice production. Production thật nên dùng ce
 Origin không hợp lệ:
 
 ```powershell
-curl.exe -k -i -X OPTIONS "${Scheme}://${ApiHost}/auth/login" `
+curl.exe -k -i -X OPTIONS "http://localhost:8000/auth/login" `
   -H "Origin: https://evil.example.com" `
   -H "Access-Control-Request-Method: POST" `
   -H "Access-Control-Request-Headers: content-type,authorization"
@@ -531,13 +531,13 @@ Ghi chú quan trọng khi đọc kết quả CORS:
 Lọc header cho dễ nhìn:
 
 ```powershell
-curl.exe -k -i -X OPTIONS "${Scheme}://${ApiHost}/auth/login" `
-  -H "Origin: https://drive-mate-admin.vercel.app" `
+curl.exe -k -i -X OPTIONS "http://localhost:8000/auth/login" `
+  -H "Origin: http://localhost:5173" `
   -H "Access-Control-Request-Method: POST" `
   -H "Access-Control-Request-Headers: content-type,authorization" |
   Select-String "HTTP/|Access-Control-Allow-Origin|Access-Control-Allow-Credentials"
 
-curl.exe -k -i -X OPTIONS "${Scheme}://${ApiHost}/auth/login" `
+curl.exe -k -i -X OPTIONS "http://localhost:8000/auth/login" `
   -H "Origin: https://evil.example.com" `
   -H "Access-Control-Request-Method: POST" `
   -H "Access-Control-Request-Headers: content-type,authorization" |
