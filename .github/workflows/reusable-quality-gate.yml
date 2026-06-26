@@ -43,5 +43,8 @@ jobs:
       - name: TypeScript Check
         run: pnpm exec turbo run check-types
 
-      - name: Run Tests
+      - name: Run Unit Tests
         run: pnpm exec turbo run test
+
+      - name: Run E2E Tests
+        run: pnpm exec turbo run test:e2e
